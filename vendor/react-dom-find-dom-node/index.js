@@ -16,6 +16,16 @@ export function findDOMNode(componentOrElement) {
   if (typeof componentOrElement.nodeType === 'number') {
     return componentOrElement;
   }
+  // Классовый компонент (react-transition-group зовёт findDOMNode(this) из
+  // Transition — так MUI v4 Grow/Popover получают узел): спускаемся по fiber
+  // до первого host-узла. _reactInternals присутствует в React 19 (проверено).
+  let fiber = componentOrElement._reactInternals;
+  while (fiber) {
+    if (fiber.stateNode && typeof fiber.stateNode.nodeType === 'number') {
+      return fiber.stateNode;
+    }
+    fiber = fiber.child;
+  }
   return null;
 }
 

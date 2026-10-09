@@ -63,6 +63,10 @@ export interface EditorThemeDefinition {
   chipAccent: string;
   /** Текст на чипе. */
   chipAccentContrastText: string;
+  /** Фон нейтральной кнопки-пилюли («Предпросмотр» в TopBar). */
+  secondaryButtonBackground: string;
+  /** Фон hover нейтральной кнопки-пилюли. */
+  secondaryButtonHoverBackground: string;
   canvas: EditorCanvasPalette;
 }
 
@@ -82,6 +86,8 @@ const lightTheme: EditorThemeDefinition = {
   switchOffTrack: '#cbced5',
   chipAccent: '#596ce0',
   chipAccentContrastText: '#ffffff',
+  secondaryButtonBackground: '#e7e9ed',
+  secondaryButtonHoverBackground: '#d0d3dc',
   canvas: {
     background: '#f9f9fb',
     dots: '#e7e9ed',
@@ -115,6 +121,8 @@ export type EditorTheme = Theme & {
     chipAccent: string;
     chipAccentContrastText: string;
     switchOffTrack: string;
+    secondaryButtonBackground: string;
+    secondaryButtonHoverBackground: string;
     canvas: EditorCanvasPalette;
   };
 };
@@ -182,6 +190,8 @@ export function createEditorTheme(name: EditorThemeName = 'light'): EditorTheme 
       chipAccent: definition.chipAccent,
       chipAccentContrastText: definition.chipAccentContrastText,
       switchOffTrack: definition.switchOffTrack,
+      secondaryButtonBackground: definition.secondaryButtonBackground,
+      secondaryButtonHoverBackground: definition.secondaryButtonHoverBackground,
       canvas: { ...definition.canvas },
     },
   });
