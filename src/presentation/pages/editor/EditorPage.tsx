@@ -4,6 +4,11 @@ import { useContainer } from '@presentation/app/App';
 import { EditorThemeProvider } from '@presentation/theme/editor-theme-provider';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { EditorCanvas } from '@presentation/features/canvas/editor-canvas';
+import { EmptyCanvasState } from '@presentation/features/canvas/empty-canvas-state';
+import {
+  EditorNotificationsProvider,
+  useEditorNotifications,
+} from '@presentation/features/notifications/editor-notifications';
 import { EditorTopBar } from '@presentation/features/top-bar/editor-top-bar';
 import { EditorToolbar, type EditorSidePanel } from '@presentation/features/toolbar/editor-toolbar';
 
@@ -32,7 +37,11 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
 export function EditorPage() {
   return (
     <EditorThemeProvider>
-      <EditorPageLayout />
+      {/* Единый Snackbar-фасад страницы (T-023): уведомления живут в одном
+          провайдере, а не размазаны по компонентам. */}
+      <EditorNotificationsProvider>
+        <EditorPageLayout />
+      </EditorNotificationsProvider>
     </EditorThemeProvider>
   );
 }
@@ -47,16 +56,24 @@ function EditorPageLayout() {
   const container = useContainer();
   const commandBus = container.cradle.commandBus;
   const elementSchemas = container.cradle.elementSchemaProvider.listSchemas();
+  const notifications = useEditorNotifications();
 
   // Панели-заглушки кнопок 3–4 тулбара (Q-1: назначение не подтверждено).
   const [sidePanel, setSidePanel] = useState<EditorSidePanel | null>(null);
   // Выделение элемента появится с узлами/элементами (T-031) и schema-driven
   // панелью атрибутов (T-041); пока селектора нет — панель всегда скрыта.
   const [selectedElementId] = useState<string | null>(null);
+  // Хранилища графа в presentation ещё нет (появится в T-030/T-035) — источник
+  // «есть ли узлы» пока локальное состояние-константа; подписка на ServiceGraph
+  // заменит его в T-030+. Узлов нет всегда, поэтому заглушка пустого состояния
+  // (T-024) видна поверх канваса.
+  const [hasNodes] = useState(false);
 
   return (
     <Box display="flex" flexDirection="column" height="100vh" bgcolor="background.default">
-      <EditorTopBar />
+      {/* Реального сохранения нет (T-053): кнопка подключена к фасаду
+          уведомлений как заглушка успеха. */}
+      <EditorTopBar onSave={notifications.showSaveSuccess} />
       <Box display="flex" flexGrow={1} minHeight={0}>
         {sidePanel !== null ? (
           <>
@@ -73,6 +90,9 @@ function EditorPageLayout() {
           {/* Undo/redo берут доступность из стеков CommandBus; обработчики
               появятся вместе с хранилищем графа в presentation (T-035+). */}
           <EditorCanvas canUndo={commandBus.canUndo()} canRedo={commandBus.canRedo()} />
+          {/* Пустое состояние (T-024): поверх канваса, не перехватывает
+              события мыши — pan/zoom и тулбар работают сквозь него. */}
+          <EmptyCanvasState hasNodes={hasNodes} />
           <Box
             position="absolute"
             left={0}

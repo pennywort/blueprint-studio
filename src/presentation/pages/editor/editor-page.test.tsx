@@ -37,4 +37,19 @@ describe('EditorPage (T-022)', () => {
     fireEvent.click(screen.getByLabelText('Навигация'));
     expect(screen.queryByTestId('side-panel-navigation')).toBeNull();
   });
+
+  it('без узлов показывает заглушку пустого состояния поверх канваса (T-024)', async () => {
+    await renderEditorPage();
+
+    expect(screen.getByTestId('empty-canvas-state')).not.toBeNull();
+    expect(screen.getByText('Здесь пока пусто')).not.toBeNull();
+  });
+
+  it('кнопка «Сохранить» показывает snackbar «Сохранено» (T-023)', async () => {
+    await renderEditorPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить' }));
+
+    expect(screen.getByText('Сохранено')).not.toBeNull();
+  });
 });
