@@ -1,0 +1,50 @@
+{
+  "name": "blueprint-studio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Визуальный редактор архитектурных карт ServiceBlueprint для микроприложений на движке lib-app-core",
+  "type": "module",
+  "scripts": {
+    "dev": "rsbuild dev",
+    "build": "rsbuild build",
+    "preview": "rsbuild preview",
+    "lint": "eslint . && tsc --noEmit",
+    "test": "vitest run",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@sber-friend/flamingo-animations": "4.9.17",
+    "@sber-friend/flamingo-components": "4.9.17",
+    "@sber-friend/flamingo-core": "4.9.17",
+    "@sber-friend/flamingo-icons": "4.9.17",
+    "@sber-friend/flamingo-pickers": "4.9.17",
+    "awilix": "13.0.5",
+    "immer": "11.1.18",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router-dom": "7.18.3",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.2.2",
+    "@commitlint/config-conventional": "21.2.2",
+    "@eslint/js": "9.39.5",
+    "@rsbuild/core": "2.2.0",
+    "@rsbuild/plugin-react": "2.1.1",
+    "@testing-library/react": "16.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@typescript-eslint/eslint-plugin": "8.71.1",
+    "@typescript-eslint/parser": "8.71.1",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-import-resolver-typescript": "3.10.1",
+    "eslint-plugin-boundaries": "7.2.0",
+    "husky": "9.1.7",
+    "jsdom": "27.2.0",
+    "lint-staged": "16.2.6",
+    "prettier": "3.9.6",
+    "typescript": "5.7.3",
+    "vitest": "5.0.0"
+  }
+}
