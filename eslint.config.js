@@ -14,10 +14,19 @@ const LAYERS = {
 
 // Пакеты, запрещённые в чистом domain-слое (конституция: «НОЛЬ внешних импортов»,
 // zod допустим только в domain/model схемах — поэтому он исключён из списка).
-const DOMAIN_FORBIDDEN = ['react', 'react-dom', 'effector', 'patronum', 'awilix', 'xstate', '@xyflow/*', '@sber-friend/*'];
+const DOMAIN_FORBIDDEN = [
+  'react',
+  'react-dom',
+  'effector',
+  'patronum',
+  'awilix',
+  'xstate',
+  '@xyflow/*',
+  '@sber-friend/*',
+];
 
 export default [
-  { ignores: ['dist/**', 'node_modules/**', 'coverage/**'] },
+  { ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'vendor/**'] },
   js.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
@@ -88,8 +97,14 @@ export default [
         'error',
         {
           patterns: [
-            ...DOMAIN_FORBIDDEN.map((p) => ({ group: [p], message: 'domain-слой не может импортировать внешние пакеты (конституция, раздел 3)' })),
-            { group: ['@application/*', '@infrastructure/*', '@presentation/*'], message: 'domain импортирует только domain (конституция, раздел 3)' },
+            ...DOMAIN_FORBIDDEN.map((p) => ({
+              group: [p],
+              message: 'domain-слой не может импортировать внешние пакеты (конституция, раздел 3)',
+            })),
+            {
+              group: ['@application/*', '@infrastructure/*', '@presentation/*'],
+              message: 'domain импортирует только domain (конституция, раздел 3)',
+            },
           ],
         },
       ],
@@ -103,8 +118,14 @@ export default [
         'error',
         {
           patterns: [
-            { group: ['@infrastructure/*', '@presentation/*'], message: 'application не импортирует infrastructure/presentation (конституция, раздел 3)' },
-            { group: ['react', 'react-dom', '@xyflow/*', '@sber-friend/*', 'xstate', 'awilix'], message: 'application — чистый слой use-cases (конституция, раздел 3)' },
+            {
+              group: ['@infrastructure/*', '@presentation/*'],
+              message: 'application не импортирует infrastructure/presentation (конституция, раздел 3)',
+            },
+            {
+              group: ['react', 'react-dom', '@xyflow/*', '@sber-friend/*', 'xstate', 'awilix'],
+              message: 'application — чистый слой use-cases (конституция, раздел 3)',
+            },
           ],
         },
       ],
@@ -118,7 +139,10 @@ export default [
         'error',
         {
           patterns: [
-            { group: ['@presentation/*', 'react', 'react-dom', '@xyflow/*'], message: 'infrastructure не импортирует presentation и UI-пакеты (конституция, раздел 3)' },
+            {
+              group: ['@presentation/*', 'react', 'react-dom', '@xyflow/*'],
+              message: 'infrastructure не импортирует presentation и UI-пакеты (конституция, раздел 3)',
+            },
           ],
         },
       ],
@@ -132,7 +156,10 @@ export default [
         'error',
         {
           patterns: [
-            { group: ['@infrastructure/*', '!@infrastructure/container'], message: 'presentation импортирует только infrastructure/container (конституция, раздел 3)' },
+            {
+              group: ['@infrastructure/*', '!@infrastructure/container'],
+              message: 'presentation импортирует только infrastructure/container (конституция, раздел 3)',
+            },
           ],
         },
       ],

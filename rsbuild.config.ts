@@ -6,7 +6,13 @@ export default defineConfig({
   plugins: [pluginReact()],
   source: {
     entry: { index: './src/index.tsx' },
+  },
+  resolve: {
     alias: {
+      // TEMPORARY: polyfill findDOMNode для MUI v4-подмены Flamingo (react-dom 19
+      // удалил findDOMNode). '$' — только точный импорт 'react-dom', подпути
+      // ('react-dom/client' и т.п.) не затрагиваются. Удалить вместе с vendor/flamingo.
+      'react-dom$': path.resolve(__dirname, 'vendor/react-dom-find-dom-node/index.js'),
       '@domain': path.resolve(__dirname, 'src/domain'),
       '@application': path.resolve(__dirname, 'src/application'),
       '@infrastructure': path.resolve(__dirname, 'src/infrastructure'),

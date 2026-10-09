@@ -13,11 +13,13 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@sber-friend/flamingo-animations": "4.9.17",
-    "@sber-friend/flamingo-components": "4.9.17",
-    "@sber-friend/flamingo-core": "4.9.17",
-    "@sber-friend/flamingo-icons": "4.9.17",
-    "@sber-friend/flamingo-pickers": "4.9.17",
+    "@material-ui/core": "4.12.4",
+    "@material-ui/icons": "4.11.3",
+    "@sber-friend/flamingo-animations": "file:vendor/flamingo/animations",
+    "@sber-friend/flamingo-components": "file:vendor/flamingo/components",
+    "@sber-friend/flamingo-core": "file:vendor/flamingo/core",
+    "@sber-friend/flamingo-icons": "file:vendor/flamingo/icons",
+    "@sber-friend/flamingo-pickers": "file:vendor/flamingo/pickers",
     "awilix": "13.0.5",
     "immer": "11.1.18",
     "react": "19.3.0",
@@ -32,6 +34,7 @@
     "@rsbuild/core": "2.2.0",
     "@rsbuild/plugin-react": "2.1.1",
     "@testing-library/react": "16.3.3",
+    "@types/node": "24.19.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@typescript-eslint/eslint-plugin": "8.71.1",
@@ -45,6 +48,7 @@
     "lint-staged": "16.2.6",
     "prettier": "3.9.6",
     "typescript": "5.7.3",
+    "vite": "7.3.7",
     "vitest": "5.0.0"
   }
 }

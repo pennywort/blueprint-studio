@@ -1,0 +1,13 @@
+// TEMPORARY SHIM — see index.js.
+export { default as Add } from '@material-ui/icons/Add';
+export { default as Delete } from '@material-ui/icons/Delete';
+export { default as Search } from '@material-ui/icons/Search';
+export { default as Undo } from '@material-ui/icons/Undo';
+export { default as Redo } from '@material-ui/icons/Redo';
+export { default as ZoomIn } from '@material-ui/icons/ZoomIn';
+export { default as ZoomOut } from '@material-ui/icons/ZoomOut';
+export { default as Code } from '@material-ui/icons/Code';
+export { default as AccountTree } from '@material-ui/icons/AccountTree';
+export { default as Close } from '@material-ui/icons/Close';
+export { default as ExpandMore } from '@material-ui/icons/ExpandMore';
+export { default as ExpandLess } from '@material-ui/icons/ExpandLess';
