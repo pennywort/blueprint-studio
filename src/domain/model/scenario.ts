@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { ApplicationFormIdSchema, FormComponentIdSchema, FormStepIdSchema, ScenarioIdSchema } from './ids';
+import {
+  ApplicationFormIdSchema,
+  ElementIdSchema,
+  FormComponentIdSchema,
+  FormStepIdSchema,
+  ScenarioIdSchema,
+} from './ids';
 import { FormComponentSchema } from './form-components';
 
 // Сценарии, контент страниц и формы заявок — спецификация 001-foundation, разделы 5.1–5.3.
@@ -18,6 +24,8 @@ const redirectFields = {
 };
 
 export const ListItemSchema = z.object({
+  // Стабильный id: элемент — источник связи на канвасе (Epic 002, T-004/D9).
+  id: ElementIdSchema,
   title: z.string(),
   secondaryText: z.string().optional(),
   icon: IconRefSchema.optional(),
@@ -26,6 +34,7 @@ export const ListItemSchema = z.object({
 export type ListItem = z.infer<typeof ListItemSchema>;
 
 export const WidgetCardSchema = z.object({
+  id: ElementIdSchema,
   title: z.string(),
   secondaryText: z.string().optional(),
   icon: IconRefSchema.optional(),
@@ -64,7 +73,11 @@ export const AdditionalInfoSchema = z.object({
 export type AdditionalInfo = z.infer<typeof AdditionalInfoSchema>;
 
 // Общий контент главной страницы и подсценария (спека 5.1).
+// orderIndex — персистентный порядковый номер сущности-страницы (Epic 002,
+// D13/T-004): 0, 1, 2, 3… по порядку добавления; порядок внутри колонки
+// канваса пользователь меняет drag'ом, координаты не хранятся (D2).
 const pageContentFields = {
+  orderIndex: z.number().int().nonnegative(),
   listItems: z.array(ListItemSchema),
   faq: FaqSchema.optional(),
   additionalInfo: AdditionalInfoSchema.optional(),
@@ -103,6 +116,7 @@ export const ScenarioSchema: z.ZodType<Scenario> = ScenarioBaseSchema.extend({
 // SubScenario — разводящая страница: сценарий + контент страницы (спека 5.1).
 // Вложенность через children не ограничена (БТ, раздел 7).
 export type SubScenario = z.infer<typeof ScenarioBaseSchema> & {
+  orderIndex: number;
   listItems: ListItem[];
   faq?: Faq;
   additionalInfo?: AdditionalInfo;

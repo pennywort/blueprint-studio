@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ServiceGraph } from '@domain/model/service-graph';
-import { toBlueprintId } from '@domain/model/ids';
+import { toBlueprintId, toPageId } from '@domain/model/ids';
 import type { IClock } from '@application/ports/clock';
 import { CommandBus } from './command-bus';
 import type { Command } from './command';
@@ -24,9 +24,10 @@ class RenameBlueprint implements Command {
 const graph = (title: string): ServiceGraph => ({
   id: toBlueprintId('bp-1'),
   title,
-  homePage: { listItems: [], widgetCards: [] },
+  homePage: { id: toPageId('home-1'), orderIndex: 0, listItems: [], widgetCards: [] },
   subScenarios: [],
   applicationForms: [],
+  links: [],
 });
 
 const makeBus = () => new CommandBus({ clock: new FixedClock(new Date('2026-10-09T12:00:00Z')) });

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { Attachment } from '@domain/model/form-components';
-import { toApplicationFormId, toBlueprintId, toFormComponentId, toFormStepId } from '@domain/model/ids';
+import {
+  toApplicationFormId,
+  toBlueprintId,
+  toFormComponentId,
+  toFormStepId,
+  toPageId,
+} from '@domain/model/ids';
 import { checkSingleAttachmentPerForm, SINGLE_ATTACHMENT_RULE } from './single-attachment-per-form';
 
 const attachment = (id: string): Attachment => ({
@@ -17,7 +23,7 @@ const graphWithForms = (
 ): ServiceGraph => ({
   id: toBlueprintId('bp-1'),
   title: 'Тестовая карта',
-  homePage: { listItems: [], widgetCards: [] },
+  homePage: { id: toPageId('home-1'), orderIndex: 0, listItems: [], widgetCards: [] },
   subScenarios: [],
   applicationForms: forms.map((form) => ({
     id: toApplicationFormId(form.id),
@@ -27,6 +33,7 @@ const graphWithForms = (
       components: step.components,
     })),
   })),
+  links: [],
 });
 
 describe('checkSingleAttachmentPerForm (инвариант #1)', () => {

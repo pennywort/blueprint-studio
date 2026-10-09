@@ -1,14 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import type { ServiceGraph } from '@domain/model/service-graph';
-import { toApplicationFormId, toBlueprintId, toFormComponentId, toFormStepId, toScenarioId } from '@domain/model/ids';
+import {
+  toApplicationFormId,
+  toBlueprintId,
+  toFormComponentId,
+  toFormStepId,
+  toPageId,
+  toScenarioId,
+} from '@domain/model/ids';
 import { validateGraph } from './index';
 
 const emptyGraph = (): ServiceGraph => ({
   id: toBlueprintId('bp-1'),
   title: 'Тестовая карта',
-  homePage: { listItems: [], widgetCards: [] },
+  homePage: { id: toPageId('home-1'), orderIndex: 0, listItems: [], widgetCards: [] },
   subScenarios: [],
   applicationForms: [],
+  links: [],
 });
 
 describe('validateGraph (оркестратор инвариантов)', () => {
@@ -65,6 +73,7 @@ describe('validateGraph (оркестратор инвариантов)', () => 
       id: toScenarioId('sc-1'),
       type: 'link',
       title: 'Ссылка',
+      orderIndex: 0,
       listItems: [],
       link: { url: 'https://example.com' },
       infoBlock: { content: 'Лишнее', position: 'right' },

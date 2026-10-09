@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { SubScenario } from '@domain/model/scenario';
-import { toApplicationFormId, toBlueprintId, toScenarioId } from '@domain/model/ids';
+import { toApplicationFormId, toBlueprintId, toPageId, toScenarioId } from '@domain/model/ids';
 import { checkScenarioTypeFields, SCENARIO_TYPE_FIELDS_RULE } from './scenario-type-fields';
 
 const scenario = (partial: Partial<SubScenario> & Pick<SubScenario, 'type'>): SubScenario => ({
   id: toScenarioId(`sc-${partial.type}`),
   title: 'Сценарий',
+  orderIndex: 0,
   listItems: [],
   ...partial,
 });
@@ -14,9 +15,10 @@ const scenario = (partial: Partial<SubScenario> & Pick<SubScenario, 'type'>): Su
 const graphWith = (subScenarios: SubScenario[]): ServiceGraph => ({
   id: toBlueprintId('bp-1'),
   title: 'Тестовая карта',
-  homePage: { listItems: [], widgetCards: [] },
+  homePage: { id: toPageId('home-1'), orderIndex: 0, listItems: [], widgetCards: [] },
   subScenarios,
   applicationForms: [],
+  links: [],
 });
 
 describe('checkScenarioTypeFields (инвариант формы сценария)', () => {

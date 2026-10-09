@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { Attachment, TextField } from '@domain/model/form-components';
-import { toApplicationFormId, toBlueprintId, toFormComponentId, toFormStepId } from '@domain/model/ids';
+import {
+  toApplicationFormId,
+  toBlueprintId,
+  toFormComponentId,
+  toFormStepId,
+  toPageId,
+} from '@domain/model/ids';
 import type { IClock } from '@application/ports/clock';
 import { CommandBus } from './command-bus';
 import { AddFormComponent } from './add-form-component';
@@ -32,7 +38,7 @@ const attachment = (id: string): Attachment => ({
 const graphWithForm = (): ServiceGraph => ({
   id: toBlueprintId('bp-1'),
   title: 'Карта',
-  homePage: { listItems: [], widgetCards: [] },
+  homePage: { id: toPageId('home-1'), orderIndex: 0, listItems: [], widgetCards: [] },
   subScenarios: [],
   applicationForms: [
     {
@@ -41,6 +47,7 @@ const graphWithForm = (): ServiceGraph => ({
       steps: [{ id: toFormStepId('step-1'), components: [] }],
     },
   ],
+  links: [],
 });
 
 const makeBus = () => new CommandBus({ clock: new FixedClock() });

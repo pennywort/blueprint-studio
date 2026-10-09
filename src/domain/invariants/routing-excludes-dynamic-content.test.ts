@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { FormComponent } from '@domain/model/form-components';
-import { toApplicationFormId, toBlueprintId, toFormComponentId, toFormStepId } from '@domain/model/ids';
+import {
+  toApplicationFormId,
+  toBlueprintId,
+  toFormComponentId,
+  toFormStepId,
+  toPageId,
+} from '@domain/model/ids';
 import {
   checkRoutingExcludesDynamicContent,
   CI_PICKER_ROUTING_RULE,
@@ -39,7 +45,7 @@ const components: Record<string, FormComponent> = {
 const graphWith = (component: FormComponent): ServiceGraph => ({
   id: toBlueprintId('bp-1'),
   title: 'Тестовая карта',
-  homePage: { listItems: [], widgetCards: [] },
+  homePage: { id: toPageId('home-1'), orderIndex: 0, listItems: [], widgetCards: [] },
   subScenarios: [],
   applicationForms: [
     {
@@ -48,6 +54,7 @@ const graphWith = (component: FormComponent): ServiceGraph => ({
       steps: [{ id: toFormStepId('step-1'), components: [component] }],
     },
   ],
+  links: [],
 });
 
 describe('checkRoutingExcludesDynamicContent (инварианты #3–5)', () => {
