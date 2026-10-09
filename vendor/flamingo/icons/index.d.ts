@@ -11,3 +11,5 @@ export { default as AccountTree } from '@material-ui/icons/AccountTree';
 export { default as Close } from '@material-ui/icons/Close';
 export { default as ExpandMore } from '@material-ui/icons/ExpandMore';
 export { default as ExpandLess } from '@material-ui/icons/ExpandLess';
+export { default as ZoomOutMap } from '@material-ui/icons/ZoomOutMap';
+export { default as Map } from '@material-ui/icons/Map';

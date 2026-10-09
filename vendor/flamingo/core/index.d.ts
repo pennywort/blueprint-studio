@@ -20,4 +20,5 @@ export { default as Switch } from '@material-ui/core/Switch';
 export { default as TextField } from '@material-ui/core/TextField';
 export { default as Tooltip } from '@material-ui/core/Tooltip';
 export { default as Typography } from '@material-ui/core/Typography';
-export { createMuiTheme, ThemeProvider, useTheme } from '@material-ui/core/styles';
+export { createMuiTheme, ThemeProvider, useTheme, makeStyles, createStyles } from '@material-ui/core/styles';
+export type { Theme, ThemeOptions } from '@material-ui/core/styles';
