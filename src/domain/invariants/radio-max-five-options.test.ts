@@ -32,6 +32,7 @@ const graphWith = (component: SelectList): ServiceGraph => ({
     {
       id: toApplicationFormId('form-1'),
       title: 'Форма',
+      orderIndex: 0,
       steps: [{ id: toFormStepId('step-1'), components: [component] }],
     },
   ],

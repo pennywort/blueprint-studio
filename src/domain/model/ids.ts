@@ -29,6 +29,10 @@ export type ElementId = z.infer<typeof ElementIdSchema>;
 export const PageLinkIdSchema = z.string().min(1).brand<'PageLinkId'>();
 export type PageLinkId = z.infer<typeof PageLinkIdSchema>;
 
+// Epic 002 (T-035): идентификатор сущности-страницы любого вида — Главная,
+// Подсценарий или Форма заявки (страницы в слоях на общих основаниях, D12/D13).
+export type PageEntityId = PageId | ScenarioId | ApplicationFormId;
+
 // Factory-функции: единственное место, где сырая строка становится branded id.
 // Генерация значения — за портом IIdGenerator, здесь только приведение типа.
 export const toBlueprintId = (raw: string): BlueprintId => BlueprintIdSchema.parse(raw);

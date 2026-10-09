@@ -140,6 +140,9 @@ export type FormStep = z.infer<typeof FormStepSchema>;
 export const ApplicationFormSchema = z.object({
   id: ApplicationFormIdSchema,
   title: z.string(),
+  // Форма заявки — сущность-страница в слоях на общих основаниях (Epic 002,
+  // D12): персистентный порядковый номер, как у Главной и Подсценариев (D13).
+  orderIndex: z.number().int().nonnegative(),
   // Шаги упорядочены, количество не ограничено (БТ, раздел 6.5).
   steps: z.array(FormStepSchema),
 });

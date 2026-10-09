@@ -28,6 +28,7 @@ const graphWithForms = (
   applicationForms: forms.map((form) => ({
     id: toApplicationFormId(form.id),
     title: form.id,
+    orderIndex: 0,
     steps: form.steps.map((step) => ({
       id: toFormStepId(step.id),
       components: step.components,

@@ -110,7 +110,7 @@ describe('ServiceGraphSchema: страницы верхнего уровня и 
   it('одностраничный МИП (D8): единственный узел — форма заявки', () => {
     const graph = ServiceGraphSchema.parse({
       ...minimalGraph,
-      applicationForms: [{ id: 'form-1', title: 'Заявка', steps: [] }],
+      applicationForms: [{ id: 'form-1', title: 'Заявка', orderIndex: 0, steps: [] }],
     });
     expect(graph.applicationForms).toHaveLength(1);
     expect(graph.homePage).toBeUndefined();

@@ -29,6 +29,7 @@ describe('validateGraph (оркестратор инвариантов)', () => 
     graph.applicationForms.push({
       id: toApplicationFormId('form-1'),
       title: 'Форма',
+      orderIndex: 0,
       steps: [
         {
           id: toFormStepId('step-1'),
@@ -88,6 +89,7 @@ describe('validateGraph (оркестратор инвариантов)', () => 
     graph.applicationForms.push({
       id: toApplicationFormId('form-1'),
       title: 'Форма',
+      orderIndex: 0,
       steps: [
         {
           id: toFormStepId('step-1'),
