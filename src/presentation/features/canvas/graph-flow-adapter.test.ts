@@ -73,12 +73,35 @@ describe('graphToFlow (T-030): страницы → узлы', () => {
     ]);
   });
 
-  it('данные узла несут заголовок и персистентный orderIndex (D13)', () => {
+  it('данные узла несут заголовок, персистентный orderIndex (D13) и данные рендера (T-031)', () => {
     const { nodes } = graphToFlow(makeGraph());
 
-    expect(nodes.find((node) => node.id === 'home-1')?.data).toEqual({ title: 'Главная', orderIndex: 0 });
-    expect(nodes.find((node) => node.id === 'sc-1')?.data).toEqual({ title: 'Подсценарий 1', orderIndex: 1 });
-    expect(nodes.find((node) => node.id === 'form-2')?.data).toEqual({ title: 'Форма Б', orderIndex: 4 });
+    expect(nodes.find((node) => node.id === 'home-1')?.data).toMatchObject({
+      title: 'Главная',
+      orderIndex: 0,
+      depth: 0,
+      subtitle: 'Стартовая страница сервиса',
+      formKindLabel: null,
+    });
+    const scenario = nodes.find((node) => node.id === 'sc-1');
+    expect(scenario?.data).toMatchObject({
+      title: 'Подсценарий 1',
+      orderIndex: 1,
+      depth: 1,
+      subtitle: 'Первый уровень навигации',
+    });
+    expect(scenario?.data.elements).toEqual([
+      { id: 'el-sc-1', title: 'Пункт подсценария', kindLabel: 'List item' },
+    ]);
+    const form = nodes.find((node) => node.id === 'form-1');
+    expect(form?.data).toMatchObject({
+      title: 'Форма А',
+      orderIndex: 3,
+      depth: 2,
+      formKindLabel: 'Одностраничная',
+    });
+    expect(form?.data.steps).toEqual([{ id: 'step-1', title: '', elements: [] }]);
+    expect(nodes.find((node) => node.id === 'form-2')?.data.orderIndex).toBe(4);
   });
 
   it('отсутствие Главной (D8): граф без homePage маппится без узла home', () => {

@@ -101,6 +101,36 @@ export function isLinkTargetPresent(graph: ServiceGraph, targetId: string): bool
   return findSubScenarioById(graph, targetId) !== null || findFormById(graph, targetId) !== null;
 }
 
+// Id страницы, владеющей элементом (источником связи, D9) — нужно правилу
+// слоёв (T-036): глубина источника = глубина страницы-владельца.
+export function findElementOwnerPageId(graph: ServiceGraph, elementId: string): string | null {
+  if (graph.homePage) {
+    const home = graph.homePage;
+    if (
+      home.listItems.some((item) => item.id === elementId) ||
+      home.widgetCards.some((card) => card.id === elementId)
+    ) {
+      return home.id;
+    }
+  }
+
+  for (const scenario of walkSubScenarios(graph.subScenarios)) {
+    if (scenario.listItems.some((item) => item.id === elementId)) {
+      return scenario.id;
+    }
+  }
+
+  for (const form of graph.applicationForms) {
+    for (const step of form.steps) {
+      if (step.components.some((component) => component.id === elementId)) {
+        return form.id;
+      }
+    }
+  }
+
+  return null;
+}
+
 export type ElementLocation =
   | { kind: 'homeListItem'; list: ListItem[]; index: number }
   | { kind: 'homeWidgetCard'; list: WidgetCard[]; index: number }

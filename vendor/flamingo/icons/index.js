@@ -20,3 +20,5 @@ export { default as Map } from '@material-ui/icons/Map';
 // (узлы раскладываются колонками, D7); NoteAdd — меню добавления элементов.
 export { default as ViewColumn } from '@material-ui/icons/ViewColumn';
 export { default as NoteAdd } from '@material-ui/icons/NoteAdd';
+// T-031: иконка-плейсхолдер карточки элемента (серая «пульс»-иконка с макетов).
+export { default as ShowChart } from '@material-ui/icons/ShowChart';

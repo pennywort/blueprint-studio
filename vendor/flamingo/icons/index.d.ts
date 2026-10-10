@@ -15,3 +15,4 @@ export { default as ZoomOutMap } from '@material-ui/icons/ZoomOutMap';
 export { default as Map } from '@material-ui/icons/Map';
 export { default as ViewColumn } from '@material-ui/icons/ViewColumn';
 export { default as NoteAdd } from '@material-ui/icons/NoteAdd';
+export { default as ShowChart } from '@material-ui/icons/ShowChart';

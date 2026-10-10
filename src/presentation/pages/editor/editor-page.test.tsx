@@ -38,11 +38,13 @@ describe('EditorPage (T-022)', () => {
     expect(screen.queryByTestId('side-panel-navigation')).toBeNull();
   });
 
-  it('без узлов показывает заглушку пустого состояния поверх канваса (T-024)', async () => {
+  it('hasNodes подключён к реальному графу (S9): при демо-графе заглушка пустого состояния скрыта', async () => {
     await renderEditorPage();
 
-    expect(screen.getByTestId('empty-canvas-state')).not.toBeNull();
-    expect(screen.getByText('Здесь пока пусто')).not.toBeNull();
+    // TEMPORARY: начальное состояние — демо-граф (sample-graph.ts), поэтому
+    // заглушка T-024 скрыта, а узлы графа отрисованы на канвасе (T-031).
+    expect(screen.queryByTestId('empty-canvas-state')).toBeNull();
+    expect(screen.getByText('Подбор вклада')).not.toBeNull();
   });
 
   it('кнопка «Сохранить» показывает snackbar «Сохранено» (T-023)', async () => {

@@ -5,6 +5,7 @@ import { EditorThemeProvider } from '@presentation/theme/editor-theme-provider';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { EditorCanvas } from '@presentation/features/canvas/editor-canvas';
 import { EmptyCanvasState } from '@presentation/features/canvas/empty-canvas-state';
+import { useEditorGraph } from '@presentation/features/canvas/use-editor-graph';
 import {
   EditorNotificationsProvider,
   useEditorNotifications,
@@ -54,20 +55,17 @@ export function EditorPage() {
 function EditorPageLayout() {
   const classes = useStyles();
   const container = useContainer();
-  const commandBus = container.cradle.commandBus;
   const elementSchemas = container.cradle.elementSchemaProvider.listSchemas();
   const notifications = useEditorNotifications();
+  // TEMPORARY (до effector): граф в React state, мутации только через
+  // CommandBus — см. use-editor-graph.ts.
+  const editorGraph = useEditorGraph();
 
   // Панели-заглушки кнопок 3–4 тулбара (Q-1: назначение не подтверждено).
   const [sidePanel, setSidePanel] = useState<EditorSidePanel | null>(null);
-  // Выделение элемента появится с узлами/элементами (T-031) и schema-driven
-  // панелью атрибутов (T-041); пока селектора нет — панель всегда скрыта.
+  // Выделение элемента появится со schema-driven панелью атрибутов (T-041);
+  // пока селектора нет — панель всегда скрыта.
   const [selectedElementId] = useState<string | null>(null);
-  // Хранилища графа в presentation ещё нет (появится в T-030/T-035) — источник
-  // «есть ли узлы» пока локальное состояние-константа; подписка на ServiceGraph
-  // заменит его в T-030+. Узлов нет всегда, поэтому заглушка пустого состояния
-  // (T-024) видна поверх канваса.
-  const [hasNodes] = useState(false);
 
   return (
     <Box display="flex" flexDirection="column" height="100vh" bgcolor="background.default">
@@ -87,12 +85,24 @@ function EditorPageLayout() {
           </>
         ) : null}
         <Box flexGrow={1} minWidth={0} position="relative">
-          {/* Undo/redo берут доступность из стеков CommandBus; обработчики
-              появятся вместе с хранилищем графа в presentation (T-035+). */}
-          <EditorCanvas canUndo={commandBus.canUndo()} canRedo={commandBus.canRedo()} />
+          {/* Узлы/рёбра — из графа (graphToFlow + computeLayout); связи и
+              порядок в слое уходят обратно командами (T-032/T-036). */}
+          <EditorCanvas
+            nodes={editorGraph.nodes}
+            edges={editorGraph.edges}
+            canUndo={editorGraph.canUndo}
+            canRedo={editorGraph.canRedo}
+            onUndo={editorGraph.undo}
+            onRedo={editorGraph.redo}
+            onConnectLink={editorGraph.connect}
+            onReconnectLink={editorGraph.reconnect}
+            onDeleteLinks={editorGraph.disconnect}
+            onReorderNode={editorGraph.reorderInLayer}
+          />
           {/* Пустое состояние (T-024): поверх канваса, не перехватывает
-              события мыши — pan/zoom и тулбар работают сквозь него. */}
-          <EmptyCanvasState hasNodes={hasNodes} />
+              события мыши — pan/zoom и тулбар работают сквозь него. hasNodes
+              подключён к реальному графу (S9). */}
+          <EmptyCanvasState hasNodes={editorGraph.hasNodes} />
           <Box
             position="absolute"
             left={0}

@@ -1,18 +1,20 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { PageLinkTargetId } from '@domain/model/page-link';
 import type { ElementId, PageLinkId } from '@domain/model/ids';
+import { computeGraphDepths } from '@domain/graph-depths';
 import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
 import { InvariantViolationError } from './errors';
 import { findElementLocation, isLinkTargetPresent } from './graph-lookup';
+import { placeLinkTargetIntoNextLayer } from './layer-placement';
 
 // Команда переназначения связи на другой источник и/или цель (Epic 002,
 // T-035; reconnect разрешён в любой момент — D7/D13). Связь — стабильная
 // сущность: переназначение — обновление полей той же записи, id не меняется.
 //
-// Правило запрета перескока слоёв (перенос цели в ближайший следующий слой
-// за источником, D7) — часть T-036 (S9): ему нужны глубины из
-// layout-движка. Здесь — только структурное переназначение концов связи.
+// Правило запрета перескока слоёв (D7, T-036) действует и при переназначении:
+// если связь сменила колонку цели, цель переносится в конец слоя «глубина
+// нового источника + 1» (placeLinkTargetIntoNextLayer).
 export class ReconnectElements implements Command {
   readonly name = 'ReconnectElements';
 
@@ -31,6 +33,9 @@ export class ReconnectElements implements Command {
       throw new Error(`Связь не найдена: ${this.linkId}`);
     }
 
+    // Глубины до мутации — правило слоёв срабатывает только при смене колонки.
+    const depthsBefore = computeGraphDepths(draft);
+
     if (this.patch.sourceElementId !== undefined) {
       if (!findElementLocation(draft, this.patch.sourceElementId)) {
         throw new Error(`Элемент-источник связи не найден: ${this.patch.sourceElementId}`);
@@ -43,6 +48,8 @@ export class ReconnectElements implements Command {
       }
       link.targetId = this.patch.targetId;
     }
+
+    placeLinkTargetIntoNextLayer(draft, link.sourceElementId, link.targetId, depthsBefore);
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {
