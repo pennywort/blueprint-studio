@@ -107,13 +107,16 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - [T-020/T-021/T-022 эпик 002] Каркас страницы редактора: EditorTopBar (поиск, «Сохранить»/«Предпросмотр»/«На согласование»), EditorToolbar (4 кнопки, меню добавления узлов/элементов, панели-заглушки), компоновка EditorPage [коммит d8c312e]
 - [T-023 эпик 002] Уведомления: EditorNotificationsProvider + фасад useEditorNotifications (showSaveSuccess/showSaveError/showCommandFailure), единый Snackbar на страницу; «Сохранить» → snackbar «Сохранено» (заглушка успеха до T-053) [коммит 41de58e]
 - [T-024 эпик 002] Пустое состояние канваса: EmptyCanvasState (иллюстрация-пазлы из макета, «Здесь пока пусто», hasNodes — локальный проп до подписки на граф в T-030+) [коммит 41de58e]
-- 87 unit-тестов в репо (17 файлов), прогон зелёный [npm run test 2026-10-09]
+- [T-030 эпик 002] Адаптер graph ↔ flow: graphToFlow/flowConnectionToLink/flowNodesToLayerOrder, чистые функции в presentation/features/canvas/graph-flow-adapter.ts, точка интеграции positions для T-036 [коммит 54579b7]
+- [T-035 эпик 002] 13 команд canvas поверх CommandBus (Add/RemoveScenario, Add/RemoveForm, Add/RemoveFormStep, Add/RemoveElement, UpdateElementProps, Connect/Disconnect/ReconnectElements, ReorderInLayer) + graph-lookup.ts; каскады связей при удалении; Connect/Reconnect — структурная часть, перенос слоя при перескоке отмечен метками T-036 [коммит 54579b7]
+- Домен: ApplicationForm получила обязательный orderIndex (D12/D13, форма в слоях на общих основаниях), добавлен тип PageEntityId [коммит 54579b7]
+- 162 unit-теста в репо (31 файл), последний полный прогон зелёный [npm run test 2026-10-10]; далее действует политика без тестов [owner 2026-10-10]
 
 ### 4.2 NOT DONE (пробелы)
 
 - Module Federation не настроена (пакет не установлен, конфигурация отсутствует) — ждёт решения контракта микрофронтенда, §6
 - effector/patronum не установлены, presentation-слой без стейт-менеджера
-- Хранилище ServiceGraph в presentation отсутствует (T-030/T-035), узлы/связи не отрисовываются (T-031+); /editor — рабочий каркас без графа
+- Хранилище ServiceGraph в presentation отсутствует (effector planned; временная useState-проводка запланирована в S9), узлы/связи не отрисовываются (T-031+); /editor — рабочий каркас без графа. Адаптер graph ↔ flow и команды canvas уже готовы (T-030/T-035, §4.1)
 - Страница /preview — заглушка без реализации (T-051, ждёт пакет preview lib-app-core)
 
 ---
@@ -157,7 +160,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 
 1. [ ] NEW: определить контракт микрофронтенда (exposes, shared, роутинг) — блокирует адаптацию bootstrap под remote
 2. [ ] NEW: установить и настроить Module Federation plugin для Rsbuild, проверить интеграцию с host
-3. [ ] Epic 002 Canvas: выполнены сессии S4–S7 (T-004, T-010/T-011, T-020/021/022, T-023/024); следующая — S8 (T-030/T-035 адаптер graph ↔ flow и команды canvas, промпт docs/промпт-сессии-S8.md), далее по docs/сессии-реализации.md
+3. [ ] Epic 002 Canvas: выполнены сессии S4–S8 (T-004, T-010/T-011, T-020/021/022, T-023/024, T-030, T-035); следующая — S9 укрупнённая (T-031 + T-036 + T-032: узлы, layout-движок, связи; промпт docs/промпт-сессии-S9.md), далее по docs/сессии-реализации.md
 
 ---
 
@@ -165,13 +168,13 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 
 <!-- status: done | in-progress | not-started. % — грубая оценка, обновляется при закрытии задач. -->
 
-| Epic | Название                      | Статус           | Содержимое                                                                                                                                                                                               |
-| ---- | ----------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 001  | Foundation                    | in-progress ~95% | Слои, домен, инварианты, порты, CommandBus, DI-контейнер. Верификация на локальной машине пройдена. Осталось: MF-контракт и настройка Module Federation                                                  |
-| 002  | Canvas                        | in-progress ~30% | @xyflow/react 12.12.0. Закрыты: T-004 (домен страниц/связей), T-010/T-011 (тема), T-020/021/022 (каркас), T-023/T-024 (snackbar, пустое состояние). Дальше по сессиям S8–S15 (docs/сессии-реализации.md) |
-| 003  | Editor Features               | not-started      | Undo/redo UI, tree view, clipboard, ролевые ограничения                                                                                                                                                  |
-| 004  | Workflow & Persistence        | not-started      | XState FSM, роли, IndexedDB, экспорт, versioning                                                                                                                                                         |
-| 005  | MicroApp Descriptor Generator | not-started      | IMicroAppDescriptorGenerator, BlueprintIR, экспорт в формат lib-app-core                                                                                                                                 |
+| Epic | Название                      | Статус           | Содержимое                                                                                                                                                                                                                                         |
+| ---- | ----------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 001  | Foundation                    | in-progress ~95% | Слои, домен, инварианты, порты, CommandBus, DI-контейнер. Верификация на локальной машине пройдена. Осталось: MF-контракт и настройка Module Federation                                                                                            |
+| 002  | Canvas                        | in-progress ~45% | @xyflow/react 12.12.0. Закрыты: T-004 (домен страниц/связей), T-010/T-011 (тема), T-020/021/022 (каркас), T-023/T-024 (snackbar, пустое состояние), T-030 (адаптер graph ↔ flow), T-035 (13 команд canvas). Дальше S9+ (docs/сессии-реализации.md) |
+| 003  | Editor Features               | not-started      | Undo/redo UI, tree view, clipboard, ролевые ограничения                                                                                                                                                                                            |
+| 004  | Workflow & Persistence        | not-started      | XState FSM, роли, IndexedDB, экспорт, versioning                                                                                                                                                                                                   |
+| 005  | MicroApp Descriptor Generator | not-started      | IMicroAppDescriptorGenerator, BlueprintIR, экспорт в формат lib-app-core                                                                                                                                                                           |
 
 ---
 
@@ -184,3 +187,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-10-09 | agent:kimi | Миграция проекта на локальную машину (Kimi Work). Сверка с коммитом af8ba3e: T-008 CommandBus, T-009 DI-контейнер, T-010 FormStep, инварианты #3–5 — закоммичены и перенесены из §4.2 в §4.1 (ранее PROJECT_STATE отставал от репо). awilix 13.0.5 → installed. Вопрос про спеку Epic 002 закрыт (декомпозиция утверждена). Прогон test/lint/build не выполнялся — назначен шагом 1 в §7. Добавлен KIMI.md (точка входа для агента), docs пополнены декомпозицией, дизайн-доками, сессиями и макетами.
 - 2026-10-09 | agent:kimi | update-state после приёмки S7 (владелец подтвердил в диалоге): зафиксированы S4–S7 эпика 002 — T-004 (a3deb1a), T-010/T-011 (cd920b6), T-020/021/022 (d8c312e), T-023/T-024 (41de58e). @xyflow/react 12.12.0 → installed; TEMPORARY-подмена Flamingo→MUI v4 отражена в §2; верификация на локальной машине подтверждена (87 тестов, прогон зелёный); CURRENT_EPIC → 002; /editor больше не заглушка, /preview — остаётся.
 - 2026-10-10 | owner | Решение: unit-тесты больше не пишутся и не запускаются (новый код — без тестов; верификация = lint+build; точечный прогон только при изменении ранее написанного кода с тестами; существующие тесты не удаляются). Отражено в конституции §8 П4/§9, KIMI.md §7, docs/промпт-старта-реализации.md, docs/сессии-реализации.md. Добавлен отложенный вопрос §6 про applicationFormId при RemoveForm (из S8).
+- 2026-10-10 | agent:kimi | update-state после приёмки S8 (владелец подтвердил в диалоге): зафиксированы T-030 (адаптер graph ↔ flow) и T-035 (13 команд canvas), коммит 54579b7; ApplicationForm.orderIndex и PageEntityId — в §4.1; 162 теста (31 файл), последний полный прогон зелёный; Epic 002 → ~45%; следующая сессия — укрупнённая S9 (T-031+T-036+T-032, промпт docs/промпт-сессии-S9.md).
