@@ -1,9 +1,22 @@
-import { Handle, Position, useConnection, type NodeProps } from '@xyflow/react';
-import { Box, Card, Chip, IconButton, Typography, makeStyles } from '@sber-friend/flamingo-core';
-import { Add, Delete } from '@sber-friend/flamingo-icons';
+import { useCallback, useState } from 'react';
+import { Handle, Position, useConnection, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
+import {
+  Box,
+  Button,
+  Card,
+  Chip,
+  IconButton,
+  Menu,
+  MenuItem,
+  Typography,
+  makeStyles,
+} from '@sber-friend/flamingo-core';
+import { Add, Delete, ExpandLess, ExpandMore } from '@sber-friend/flamingo-icons';
+import type { FormComponentKind } from '@domain/model/form-components';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { CANVAS_LAYOUT } from '../canvas-layout';
-import type { CanvasNode } from '../graph-flow-adapter';
+import { collapseElements, isCollapsible } from '../collapse-elements';
+import type { CanvasFormStepData, CanvasNode } from '../graph-flow-adapter';
 import { ElementCard } from './element-card';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
@@ -73,15 +86,44 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     flexDirection: 'column',
     gap: theme.spacing(1.5),
   },
+  expandButton: {
+    alignSelf: 'center',
+    textTransform: 'none',
+  },
 }));
 
 // Узел «Форма заявки» (T-031, D1): заголовок «Форма заявки» + название,
 // чип «Одностраничная»/«Степперная», корзина; шаги — горизонтальные колонки,
-// у каждого шага заголовок, корзина и «+». Корзины и «+» в этой сессии только
-// рисуются — обработчики добавления/удаления подключаются в T-034 (S10).
+// у каждого шага заголовок, корзина и «+». Обработчики добавления/удаления
+// (T-034) внедряются хранилищем состояния через data: onDeleteNode,
+// onDeleteStep, onAddElementToStep + elementKindOptions для меню «+».
+// Элементы каждого шага сжимаются независимо при >6 (T-033).
 export function FormNode({ id, data }: NodeProps<CanvasNode>) {
   const classes = useStyles();
   const isDropTarget = useConnection((connection) => connection.inProgress && connection.toNode?.id === id);
+
+  // Меню «+» шага: якорь + шаг, в который добавляем. Варианты kind приходят
+  // извне (data.elementKindOptions) — узел не знает о провайдере схем.
+  const [stepMenu, setStepMenu] = useState<{ anchor: HTMLElement; stepId: string } | null>(null);
+
+  // Сжатие элементов каждого шага независимо (T-033); при смене — пересчёт
+  // handles, чтобы рёбра позиционировались в обоих состояниях.
+  const [expandedSteps, setExpandedSteps] = useState<Readonly<Record<string, boolean>>>({});
+  const updateNodeInternals = useUpdateNodeInternals();
+  const toggleStep = useCallback(
+    (stepId: string) => {
+      setExpandedSteps((current) => ({ ...current, [stepId]: !current[stepId] }));
+      updateNodeInternals(id);
+    },
+    [id, updateNodeInternals],
+  );
+
+  const pickKind = (kind: FormComponentKind) => {
+    if (stepMenu) {
+      data.onAddElementToStep?.(stepMenu.stepId, kind);
+    }
+    setStepMenu(null);
+  };
 
   return (
     <Card
@@ -107,38 +149,103 @@ export function FormNode({ id, data }: NodeProps<CanvasNode>) {
             {data.subtitle}
           </Typography>
         </Box>
-        <IconButton className={`${classes.iconButton} nodrag`} size="small" aria-label="Удалить форму">
+        <IconButton
+          className={`${classes.iconButton} nodrag`}
+          size="small"
+          aria-label="Удалить форму"
+          onClick={data.onDeleteNode}
+        >
           <Delete fontSize="small" />
         </IconButton>
       </Box>
       <Box className={classes.stepsRow}>
         {data.steps.map((step, index) => (
-          <Box className={classes.stepColumn} key={step.id} data-testid={`form-step-${step.id}`}>
-            <Box className={classes.stepHeader}>
-              <Typography variant="subtitle2">{step.title || `Шаг ${index + 1}`}</Typography>
-              <Box className={classes.stepActions}>
-                <IconButton className={`${classes.iconButton} nodrag`} size="small" aria-label="Удалить шаг">
-                  <Delete fontSize="small" />
-                </IconButton>
-                <IconButton
-                  className={`${classes.iconButton} nodrag`}
-                  size="small"
-                  aria-label="Добавить элемент в шаг"
-                >
-                  <Add fontSize="small" />
-                </IconButton>
-              </Box>
-            </Box>
-            {step.elements.length > 0 ? (
-              <Box className={classes.stepElements}>
-                {step.elements.map((element) => (
-                  <ElementCard key={element.id} element={element} />
-                ))}
-              </Box>
-            ) : null}
-          </Box>
+          <FormStepColumn
+            key={step.id}
+            step={step}
+            index={index}
+            expanded={expandedSteps[step.id] === true}
+            onToggleExpanded={() => toggleStep(step.id)}
+            onOpenAddMenu={(anchor) => setStepMenu({ anchor, stepId: step.id })}
+            onDeleteStep={() => data.onDeleteStep?.(step.id)}
+          />
         ))}
       </Box>
+
+      {/* Меню выбора типа элемента для «+» шага (T-034). */}
+      <Menu anchorEl={stepMenu?.anchor ?? null} open={stepMenu !== null} onClose={() => setStepMenu(null)}>
+        {(data.elementKindOptions ?? []).map((option) => (
+          <MenuItem key={option.kind} onClick={() => pickKind(option.kind)}>
+            {option.label}
+          </MenuItem>
+        ))}
+      </Menu>
     </Card>
+  );
+}
+
+type FormStepColumnProps = {
+  step: CanvasFormStepData;
+  index: number;
+  expanded: boolean;
+  onToggleExpanded: () => void;
+  onOpenAddMenu: (anchor: HTMLElement) => void;
+  onDeleteStep: () => void;
+};
+
+// Колонка одного шага формы: заголовок, корзина (RemoveFormStep), «+»
+// (меню типов элементов → AddFormComponent) и сжимаемый список элементов.
+function FormStepColumn({
+  step,
+  index,
+  expanded,
+  onToggleExpanded,
+  onOpenAddMenu,
+  onDeleteStep,
+}: FormStepColumnProps) {
+  const classes = useStyles();
+  const visibleElements = collapseElements(step.elements, expanded);
+
+  return (
+    <Box className={classes.stepColumn} data-testid={`form-step-${step.id}`}>
+      <Box className={classes.stepHeader}>
+        <Typography variant="subtitle2">{step.title || `Шаг ${index + 1}`}</Typography>
+        <Box className={classes.stepActions}>
+          <IconButton
+            className={`${classes.iconButton} nodrag`}
+            size="small"
+            aria-label="Удалить шаг"
+            onClick={onDeleteStep}
+          >
+            <Delete fontSize="small" />
+          </IconButton>
+          <IconButton
+            className={`${classes.iconButton} nodrag`}
+            size="small"
+            aria-label="Добавить элемент в шаг"
+            onClick={(event) => onOpenAddMenu(event.currentTarget)}
+          >
+            <Add fontSize="small" />
+          </IconButton>
+        </Box>
+      </Box>
+      {visibleElements.length > 0 ? (
+        <Box className={classes.stepElements}>
+          {visibleElements.map((element) => (
+            <ElementCard key={element.id} element={element} />
+          ))}
+        </Box>
+      ) : null}
+      {isCollapsible(step.elements) ? (
+        <Button
+          className={`${classes.expandButton} nodrag`}
+          size="small"
+          onClick={onToggleExpanded}
+          endIcon={expanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+        >
+          {expanded ? 'Свернуть' : `Показать все (${step.elements.length})`}
+        </Button>
+      ) : null}
+    </Box>
   );
 }

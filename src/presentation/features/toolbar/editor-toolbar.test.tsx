@@ -11,7 +11,14 @@ const schemas: readonly ElementSchema[] = [
 function renderToolbar(props: Partial<EditorToolbarProps> = {}) {
   return render(
     <EditorThemeProvider>
-      <EditorToolbar elementSchemas={schemas} activePanel={null} onPanelChange={() => {}} {...props} />
+      <EditorToolbar
+        elementSchemas={schemas}
+        activePanel={null}
+        onPanelChange={() => {}}
+        selectedNodeType={null}
+        hasHome={false}
+        {...props}
+      />
     </EditorThemeProvider>,
   );
 }
@@ -45,16 +52,16 @@ describe('EditorToolbar (T-021)', () => {
     expect(screen.getByLabelText('Добавить узел').getAttribute('aria-pressed')).toBe('false');
   });
 
-  it('кнопка 2 открывает меню элементов из listSchemas() провайдера', () => {
+  it('кнопка 2 открывает меню элементов выделенной формы (подписи из маппинга адаптера)', () => {
     const onAddElement = vi.fn();
-    renderToolbar({ onAddElement });
+    renderToolbar({ onAddElement, selectedNodeType: 'form' });
 
     fireEvent.click(screen.getByLabelText('Добавить элемент'));
 
-    expect(screen.getByText('textField')).not.toBeNull();
-    expect(screen.getByText('checkbox')).not.toBeNull();
+    expect(screen.getByText('Text field')).not.toBeNull();
+    expect(screen.getByText('Checkbox')).not.toBeNull();
 
-    fireEvent.click(screen.getByText('textField'));
+    fireEvent.click(screen.getByText('Text field'));
 
     expect(onAddElement).toHaveBeenCalledWith('textField');
     expect(screen.getByLabelText('Добавить элемент').getAttribute('aria-pressed')).toBe('false');
@@ -64,7 +71,13 @@ describe('EditorToolbar (T-021)', () => {
     const onPanelChange = vi.fn();
     const { rerender } = render(
       <EditorThemeProvider>
-        <EditorToolbar elementSchemas={schemas} activePanel="json" onPanelChange={onPanelChange} />
+        <EditorToolbar
+          elementSchemas={schemas}
+          activePanel="json"
+          onPanelChange={onPanelChange}
+          selectedNodeType={null}
+          hasHome={false}
+        />
       </EditorThemeProvider>,
     );
 
@@ -82,7 +95,13 @@ describe('EditorToolbar (T-021)', () => {
 
     rerender(
       <EditorThemeProvider>
-        <EditorToolbar elementSchemas={schemas} activePanel="navigation" onPanelChange={onPanelChange} />
+        <EditorToolbar
+          elementSchemas={schemas}
+          activePanel="navigation"
+          onPanelChange={onPanelChange}
+          selectedNodeType={null}
+          hasHome={false}
+        />
       </EditorThemeProvider>,
     );
     expect(screen.getByLabelText('Навигация').getAttribute('aria-pressed')).toBe('true');

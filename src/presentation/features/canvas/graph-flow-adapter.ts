@@ -25,6 +25,12 @@ export type CanvasElementData = {
   secondaryText?: string;
   /** Подпись чипа типа («List item», «Text field»…). */
   kindLabel: string;
+  /**
+   * Из элемента исходит связь. В сжатом состоянии (T-033) такие карточки
+   * остаются видимыми: скрытая карточка унесла бы свой source-handle,
+   * и react-flow уронил бы ребро.
+   */
+  hasOutgoingLink: boolean;
 };
 
 // Колонка шага внутри узла формы (D1: шаги — горизонтальные колонки).
@@ -51,6 +57,16 @@ export type CanvasNodeData = {
   steps: CanvasFormStepData[];
   /** Чип типа формы («Одностраничная»/«Степперная»); у не-форм — null. */
   formKindLabel: string | null;
+  // --- Интерактивные поля (T-034): НЕ строятся адаптером (он чистый),
+  // внедряются хранилищем состояния (useEditorGraph) после graphToFlow. ---
+  /** Корзина в заголовке узла → RemoveHomePage/RemoveScenario/RemoveForm. */
+  onDeleteNode?: () => void;
+  /** Варианты меню «+» шага формы (kind + человекочитаемая подпись). */
+  elementKindOptions?: ReadonlyArray<{ kind: FormComponentKind; label: string }>;
+  /** «+» конкретного шага формы → AddFormComponent. */
+  onAddElementToStep?: (stepId: string, kind: FormComponentKind) => void;
+  /** Корзина шага формы → RemoveFormStep. */
+  onDeleteStep?: (stepId: string) => void;
 };
 
 export type CanvasNode = Node<CanvasNodeData, CanvasNodeType>;
@@ -70,7 +86,8 @@ const FORM_NODE_SUBTITLE = 'Поля для заполнения пользов�
 // Подписи чипов типов элементов (макеты: «List item», «Text field», «FAQ»…).
 // Манифест схем хранит только machine-kind; человекочитаемые названия
 // появятся, когда их начнёт отдавать провайдер схем (T-034+).
-const FORM_COMPONENT_KIND_LABELS: Record<FormComponentKind, string> = {
+// Экспортируется: те же подписи нужны меню добавления элементов (T-034).
+export const FORM_COMPONENT_KIND_LABELS: Record<FormComponentKind, string> = {
   textField: 'Text field',
   infoBlock: 'Info block',
   datePeriod: 'Date period',
@@ -94,19 +111,32 @@ function navigationLevelLabel(level: number): string {
   return ordinal ? `${ordinal} уровень навигации` : `Уровень навигации ${level}`;
 }
 
-function listItemToElementData(item: ListItem | WidgetCard, kindLabel: string): CanvasElementData {
-  const element: CanvasElementData = { id: item.id, title: item.title, kindLabel };
+function listItemToElementData(
+  item: ListItem | WidgetCard,
+  kindLabel: string,
+  linkSources: ReadonlySet<string>,
+): CanvasElementData {
+  const element: CanvasElementData = {
+    id: item.id,
+    title: item.title,
+    kindLabel,
+    hasOutgoingLink: linkSources.has(item.id),
+  };
   if (item.secondaryText) {
     element.secondaryText = item.secondaryText;
   }
   return element;
 }
 
-function formComponentToElementData(component: FormComponent): CanvasElementData {
+function formComponentToElementData(
+  component: FormComponent,
+  linkSources: ReadonlySet<string>,
+): CanvasElementData {
   const element: CanvasElementData = {
     id: component.id,
     title: 'label' in component ? component.label : component.kind,
     kindLabel: FORM_COMPONENT_KIND_LABELS[component.kind],
+    hasOutgoingLink: linkSources.has(component.id),
   };
   if ('placeholder' in component && component.placeholder) {
     element.secondaryText = component.placeholder;
@@ -132,6 +162,9 @@ export function graphToFlow(
 ): FlowGraph {
   const positionOf = (id: string): XYPosition => positions?.[id] ?? { x: 0, y: 0 };
   const depths = computeGraphDepths(graph);
+  // Источники связей — для флага hasOutgoingLink (сжатие T-033 не прячет
+  // карточки, от которых исходит ребро).
+  const linkSources = new Set<string>(graph.links.map((link) => link.sourceElementId));
 
   const nodes: CanvasNode[] = [];
   // Владелец элемента → id узла: нужен, чтобы ребро вышло из узла страницы,
@@ -150,8 +183,8 @@ export function graphToFlow(
         depth: depths.get(homePage.id) ?? 0,
         subtitle: HOME_NODE_SUBTITLE,
         elements: [
-          ...homePage.listItems.map((item) => listItemToElementData(item, 'List item')),
-          ...homePage.widgetCards.map((card) => listItemToElementData(card, 'Widget card')),
+          ...homePage.listItems.map((item) => listItemToElementData(item, 'List item', linkSources)),
+          ...homePage.widgetCards.map((card) => listItemToElementData(card, 'Widget card', linkSources)),
         ],
         steps: [],
         formKindLabel: null,
@@ -169,7 +202,15 @@ export function graphToFlow(
   // первый её подсценарий — «Первый уровень»; без Главной (D8) первый
   // уровень — корневые страницы (глубина 0).
   const levelOffset = graph.homePage ? 0 : 1;
-  collectSubScenarioNodes(graph.subScenarios, nodes, elementOwnerNodeId, positionOf, depths, levelOffset);
+  collectSubScenarioNodes(
+    graph.subScenarios,
+    nodes,
+    elementOwnerNodeId,
+    positionOf,
+    depths,
+    levelOffset,
+    linkSources,
+  );
 
   for (const form of graph.applicationForms) {
     nodes.push({
@@ -185,7 +226,7 @@ export function graphToFlow(
         steps: form.steps.map((step) => ({
           id: step.id,
           title: step.title ?? '',
-          elements: step.components.map(formComponentToElementData),
+          elements: step.components.map((component) => formComponentToElementData(component, linkSources)),
         })),
         formKindLabel: form.steps.length > 1 ? 'Степперная' : 'Одностраничная',
       },
@@ -225,6 +266,7 @@ function collectSubScenarioNodes(
   positionOf: (id: string) => XYPosition,
   depths: ReadonlyMap<string, number>,
   levelOffset: number,
+  linkSources: ReadonlySet<string>,
 ): void {
   for (const scenario of subScenarios) {
     const depth = depths.get(scenario.id) ?? 0;
@@ -237,7 +279,7 @@ function collectSubScenarioNodes(
         orderIndex: scenario.orderIndex,
         depth,
         subtitle: navigationLevelLabel(depth + levelOffset || 1),
-        elements: scenario.listItems.map((item) => listItemToElementData(item, 'List item')),
+        elements: scenario.listItems.map((item) => listItemToElementData(item, 'List item', linkSources)),
         steps: [],
         formKindLabel: null,
       },
@@ -246,7 +288,15 @@ function collectSubScenarioNodes(
       elementOwnerNodeId.set(item.id, scenario.id);
     }
     if (scenario.children) {
-      collectSubScenarioNodes(scenario.children, nodes, elementOwnerNodeId, positionOf, depths, levelOffset);
+      collectSubScenarioNodes(
+        scenario.children,
+        nodes,
+        elementOwnerNodeId,
+        positionOf,
+        depths,
+        levelOffset,
+        linkSources,
+      );
     }
   }
 }

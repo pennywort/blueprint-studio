@@ -91,7 +91,8 @@ describe('graphToFlow (T-030): страницы → узлы', () => {
       subtitle: 'Первый уровень навигации',
     });
     expect(scenario?.data.elements).toEqual([
-      { id: 'el-sc-1', title: 'Пункт подсценария', kindLabel: 'List item' },
+      // hasOutgoingLink — из links графа: у el-sc-1 есть исходящая связь (link-2).
+      { id: 'el-sc-1', title: 'Пункт подсценария', kindLabel: 'List item', hasOutgoingLink: true },
     ]);
     const form = nodes.find((node) => node.id === 'form-1');
     expect(form?.data).toMatchObject({

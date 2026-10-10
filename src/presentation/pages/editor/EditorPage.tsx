@@ -98,6 +98,7 @@ function EditorPageLayout() {
             onReconnectLink={editorGraph.reconnect}
             onDeleteLinks={editorGraph.disconnect}
             onReorderNode={editorGraph.reorderInLayer}
+            onSelectedNodeChange={editorGraph.onSelectedNodeChange}
           />
           {/* Пустое состояние (T-024): поверх канваса, не перехватывает
               события мыши — pan/zoom и тулбар работают сквозь него. hasNodes
@@ -116,6 +117,10 @@ function EditorPageLayout() {
               elementSchemas={elementSchemas}
               activePanel={sidePanel}
               onPanelChange={setSidePanel}
+              selectedNodeType={editorGraph.selectedNodeType}
+              hasHome={editorGraph.hasHome}
+              onAddNode={editorGraph.addNode}
+              onAddElement={editorGraph.addElement}
             />
           </Box>
         </Box>

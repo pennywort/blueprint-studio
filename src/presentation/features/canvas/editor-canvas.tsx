@@ -36,6 +36,8 @@ export type EditorCanvasProps = {
   onDeleteLinks?: (edges: CanvasEdge[]) => void;
   /** Вертикальный drag узла → переупорядочивание внутри слоя (T-036). */
   onReorderNode?: (draggedNode: CanvasNode, layerNodes: CanvasNode[]) => void;
+  /** Выделение узла на канвасе (клик) — цель меню добавления элементов (T-034). */
+  onSelectedNodeChange?: (nodeId: string | null) => void;
 };
 
 // Стабильные пустые значения по умолчанию: литерал в дефолте параметра
@@ -59,6 +61,7 @@ function CanvasInner({
   onReconnectLink,
   onDeleteLinks,
   onReorderNode,
+  onSelectedNodeChange,
 }: EditorCanvasProps) {
   const theme = useEditorTheme();
   const styles = useReactFlowThemeStyles();
@@ -149,6 +152,7 @@ function CanvasInner({
         onReconnect={(oldEdge, connection) => onReconnectLink?.(oldEdge, connection)}
         onEdgesDelete={(deleted) => onDeleteLinks?.(deleted)}
         onNodeDragStop={handleNodeDragStop}
+        onSelectionChange={({ nodes: selected }) => onSelectedNodeChange?.(selected[0]?.id ?? null)}
         isValidConnection={isValidConnection}
         deleteKeyCode={['Backspace', 'Delete']}
         colorMode="light"

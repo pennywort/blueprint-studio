@@ -1,8 +1,10 @@
-import { Handle, Position, useConnection, type NodeProps } from '@xyflow/react';
-import { Box, Card, IconButton, Typography, makeStyles } from '@sber-friend/flamingo-core';
-import { Delete } from '@sber-friend/flamingo-icons';
+import { useCallback, useState } from 'react';
+import { Handle, Position, useConnection, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
+import { Box, Button, Card, IconButton, Typography, makeStyles } from '@sber-friend/flamingo-core';
+import { Delete, ExpandLess, ExpandMore } from '@sber-friend/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { CANVAS_LAYOUT } from '../canvas-layout';
+import { collapseElements, isCollapsible } from '../collapse-elements';
 import type { CanvasNode } from '../graph-flow-adapter';
 import { ElementCard } from './element-card';
 
@@ -42,16 +44,32 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     flexDirection: 'column',
     gap: theme.spacing(1.5),
   },
+  expandButton: {
+    alignSelf: 'center',
+    textTransform: 'none',
+  },
 }));
 
 // Узел страницы-сценария (T-031): «Главная» и «Подсценарий» — один компонент,
 // различаются данными (заголовок, подпись уровня навигации) из адаптера.
-// Корзина в этой сессии только рисуется — удаление узлов подключается
-// в T-034 (сессия S10).
+// Корзина удаляет узел командой (T-034) — обработчик внедряется хранилищем
+// состояния через data.onDeleteNode. При избытке элементов (>6, Q-14) список
+// автосжимается с кнопкой раскрытия (T-033).
 export function ScenarioNode({ id, data }: NodeProps<CanvasNode>) {
   const classes = useStyles();
   // Подсветка цели связи: узел под курсором во время drag рёбер (D9/T-032).
   const isDropTarget = useConnection((connection) => connection.inProgress && connection.toNode?.id === id);
+
+  // Сжатие (T-033): состояние локальное в узле; при смене — пересчёт handles,
+  // чтобы рёбра корректно позиционировались в обоих состояниях.
+  const [expanded, setExpanded] = useState(false);
+  const updateNodeInternals = useUpdateNodeInternals();
+  const toggleExpanded = useCallback(() => {
+    setExpanded((current) => !current);
+    updateNodeInternals(id);
+  }, [id, updateNodeInternals]);
+
+  const visibleElements = collapseElements(data.elements, expanded);
 
   return (
     <Card
@@ -67,17 +85,31 @@ export function ScenarioNode({ id, data }: NodeProps<CanvasNode>) {
             {data.subtitle}
           </Typography>
         </Box>
-        {/* Обработчик удаления узла — T-034, здесь кнопка только рисуется. */}
-        <IconButton className={`${classes.deleteButton} nodrag`} size="small" aria-label="Удалить узел">
+        <IconButton
+          className={`${classes.deleteButton} nodrag`}
+          size="small"
+          aria-label="Удалить узел"
+          onClick={data.onDeleteNode}
+        >
           <Delete fontSize="small" />
         </IconButton>
       </Box>
-      {data.elements.length > 0 ? (
+      {visibleElements.length > 0 ? (
         <Box className={classes.elements}>
-          {data.elements.map((element) => (
+          {visibleElements.map((element) => (
             <ElementCard key={element.id} element={element} />
           ))}
         </Box>
+      ) : null}
+      {isCollapsible(data.elements) ? (
+        <Button
+          className={`${classes.expandButton} nodrag`}
+          size="small"
+          onClick={toggleExpanded}
+          endIcon={expanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
+        >
+          {expanded ? 'Свернуть' : `Показать все (${data.elements.length})`}
+        </Button>
       ) : null}
     </Card>
   );

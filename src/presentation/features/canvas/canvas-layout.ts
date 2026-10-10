@@ -34,6 +34,14 @@ export const CANVAS_LAYOUT = {
   formStepHeaderHeight: 56,
 } as const;
 
+// Автосжатие узла при избытке элементов (T-033; Q-14, решение владельца):
+// скролла внутри узла нет — при превышении порога список обрезается и
+// появляется кнопка раскрытия. Константы в одном месте; handles/рёбра
+// пересчитываются через updateNodeInternals при смене состояния.
+export const ELEMENTS_COLLAPSE_THRESHOLD = 6;
+/** Сколько первых элементов остаётся видимыми в сжатом состоянии. */
+export const COLLAPSED_VISIBLE_ELEMENTS = 3;
+
 // Оценка ширины/высоты узла по содержимому графа — нужна для стека колонки.
 function estimateScenarioNodeHeight(elementCount: number): number {
   const L = CANVAS_LAYOUT;

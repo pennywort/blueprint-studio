@@ -4,6 +4,10 @@ import { AccountTree, Code, NoteAdd, ViewColumn } from '@sber-friend/flamingo-ic
 import type { ElementSchema } from '@application/ports/element-schema-provider';
 import type { FormComponentKind } from '@domain/model/form-components';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
+import {
+  FORM_COMPONENT_KIND_LABELS,
+  type CanvasNodeType,
+} from '@presentation/features/canvas/graph-flow-adapter';
 
 // Панели-заглушки кнопок 3–4: назначение не подтверждено владельцем (Q-1),
 // поэтому панели только переключаются, содержимое не выдумываем.
@@ -12,15 +16,24 @@ export type EditorSidePanel = 'json' | 'navigation';
 // Узлы из меню кнопки 1 (макет «меню-добавления-и-заглушка-пустого-проекта»).
 export type AddableNodeKind = 'home' | 'subScenario' | 'applicationForm';
 
+// Элемент из меню кнопки 2 (T-034): состав меню зависит от типа выделенного
+// узла — Главная принимает List item/Widget card, Подсценарий — List item,
+// Форма — компоненты формы из listSchemas() провайдера.
+export type AddableElementKind = 'listItem' | 'widgetCard' | FormComponentKind;
+
 export type EditorToolbarProps = {
   /** Список схем элементов — из listSchemas() порта IElementSchemaProvider (передаёт EditorPage из DI). */
   elementSchemas: readonly ElementSchema[];
   activePanel: EditorSidePanel | null;
   onPanelChange: (panel: EditorSidePanel | null) => void;
-  /** Реальное добавление узла — T-034 (команды canvas через CommandBus); сейчас заглушка. */
+  /** Тип выделенного на канвасе узла — определяет состав меню элементов; null — меню недоступно. */
+  selectedNodeType: CanvasNodeType | null;
+  /** «Главная» в меню узлов доступна, только если её ещё нет в карте (T-034). */
+  hasHome: boolean;
+  /** Добавление узла — команда AddHomePage/AddScenario/AddForm через CommandBus. */
   onAddNode?: (kind: AddableNodeKind) => void;
-  /** Реальное добавление элемента в выбранный узел — T-034; сейчас заглушка. */
-  onAddElement?: (kind: FormComponentKind) => void;
+  /** Добавление элемента в выделенный узел — команда AddElement/AddFormComponent. */
+  onAddElement?: (kind: AddableElementKind) => void;
 };
 
 const useStyles = makeStyles<EditorTheme>((theme) => {
@@ -53,6 +66,31 @@ const NODE_MENU_ITEMS: ReadonlyArray<{ kind: AddableNodeKind; label: string }> =
   { kind: 'applicationForm', label: 'Форма заявки' },
 ];
 
+// Состав меню элементов по типу выделенного узла (T-034). Человекочитаемые
+// подписи форм-компонентов — из маппинга адаптера: манифест схем хранит
+// только machine-kind, названия появятся, когда их начнёт отдавать провайдер.
+function elementMenuItems(
+  selectedNodeType: CanvasNodeType | null,
+  elementSchemas: readonly ElementSchema[],
+): ReadonlyArray<{ kind: AddableElementKind; label: string }> {
+  if (selectedNodeType === 'home') {
+    return [
+      { kind: 'listItem', label: 'List item' },
+      { kind: 'widgetCard', label: 'Widget card' },
+    ];
+  }
+  if (selectedNodeType === 'subScenario') {
+    return [{ kind: 'listItem', label: 'List item' }];
+  }
+  if (selectedNodeType === 'form') {
+    return elementSchemas.map((schema) => ({
+      kind: schema.kind,
+      label: FORM_COMPONENT_KIND_LABELS[schema.kind],
+    }));
+  }
+  return [];
+}
+
 // Левый вертикальный тулбар (T-021): ровно 4 IconButton с active-состоянием
 // (пятая иконка AI-ассистента удалена решением владельца). Кнопки 1–2 открывают
 // меню добавления (узлы / элементы выбранного узла), кнопки 3–4 переключают
@@ -61,6 +99,8 @@ export function EditorToolbar({
   elementSchemas,
   activePanel,
   onPanelChange,
+  selectedNodeType,
+  hasHome,
   onAddNode,
   onAddElement,
 }: EditorToolbarProps) {
@@ -70,6 +110,9 @@ export function EditorToolbar({
 
   const buttonClass = (active: boolean) =>
     active ? `${classes.button} ${classes.buttonActive}` : classes.button;
+
+  // Без выделенного узла элементу некуда попасть — кнопка меню отключена.
+  const elementItems = elementMenuItems(selectedNodeType, elementSchemas);
 
   return (
     <Box className={classes.toolbar} data-testid="editor-toolbar">
@@ -87,6 +130,7 @@ export function EditorToolbar({
         size="small"
         aria-label="Добавить элемент"
         aria-pressed={elementMenuAnchor !== null}
+        disabled={selectedNodeType === null}
         onClick={(event) => setElementMenuAnchor(event.currentTarget)}
       >
         <NoteAdd fontSize="small" />
@@ -120,6 +164,7 @@ export function EditorToolbar({
         {NODE_MENU_ITEMS.map((item) => (
           <MenuItem
             key={item.kind}
+            disabled={item.kind === 'home' && hasHome}
             onClick={() => {
               setNodeMenuAnchor(null);
               onAddNode?.(item.kind);
@@ -137,17 +182,15 @@ export function EditorToolbar({
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
-        {elementSchemas.map((schema) => (
+        {elementItems.map((item) => (
           <MenuItem
-            key={schema.kind}
+            key={item.kind}
             onClick={() => {
               setElementMenuAnchor(null);
-              onAddElement?.(schema.kind);
+              onAddElement?.(item.kind);
             }}
           >
-            {/* Манифест схем хранит только machine-kind; человекочитаемые
-                названия появятся, когда их начнёт отдавать провайдер схем. */}
-            {schema.kind}
+            {item.label}
           </MenuItem>
         ))}
       </Menu>
