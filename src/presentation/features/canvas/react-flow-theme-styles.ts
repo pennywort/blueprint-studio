@@ -42,11 +42,8 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
         outline: `2px solid ${canvas.edge}`,
         outlineOffset: 2,
       },
-      // Рёбра «Сложной логики» (T-037, §6 дизайн-дока): пунктир, чтобы
-      // визуально не путать правила видимости с навигационными связями.
-      '& .react-flow__edge.editor-logic-edge .react-flow__edge-path': {
-        strokeDasharray: '6 4',
-      },
+      // Рёбра «Сложной логики» рисуются в общем стиле навигации (решение
+      // владельца по N1: отличие предложит дизайнер).
       '& .react-flow__handle': {
         width: 8,
         height: 8,

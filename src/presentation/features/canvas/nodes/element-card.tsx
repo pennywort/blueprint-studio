@@ -3,6 +3,7 @@ import { Box, Card, CardContent, Chip, Typography, makeStyles } from '@sber-frie
 import { ShowChart, Visibility } from '@sber-friend/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
+import { writeElementDrag } from '../element-dnd';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
@@ -83,26 +84,36 @@ export type ElementCardProps = {
 // иконка, основной/дополнительный текст, чипы типа и «Сложной логики».
 // Source-handle навигационной связи — на правом краю карточки (D9): ребро
 // начинается от элемента, не от узла. Target-handle правил видимости — на
-// левом краю (T-037): ребро «option → элемент» крепится к карточке-цели.
+// левом краю (T-037), только у компонентов форм (logicTarget, N5). Карточка
+// draggable — dnd элементов (N2): перенос между узлами/шагами и порядок.
 export function ElementCard({ element }: ElementCardProps) {
   const classes = useStyles();
 
   return (
     // Клик выделяет элемент (единое правило F5/F7: выделение + Delete).
     // stopPropagation: иначе клик дошёл бы до узла, и react-flow выделил бы
-    // его вместо элемента.
+    // его вместо элемента. data-element-card — якорь для drop-зон dnd (N2).
     <Card
       className={element.selected ? `${classes.card} ${classes.cardSelected}` : classes.card}
       variant="outlined"
       data-testid={`element-card-${element.id}`}
+      data-element-card={element.id}
+      draggable
+      onDragStart={(event) => {
+        event.stopPropagation();
+        writeElementDrag(event.dataTransfer, { elementId: element.id, kind: element.dndKind });
+      }}
       onClick={(event) => {
         event.stopPropagation();
         element.onSelect?.();
       }}
     >
       {/* Цель правил «Сложной логики» (T-037): рёбра видимости приходят
-          на левый край карточки элемента, не шага и не формы. */}
-      <Handle type="target" position={Position.Left} id={logicTargetHandleId(element.id)} />
+          на левый край карточки элемента, не шага и не формы. Только у
+          компонентов форм — у остальных элементов handle скрыт (N5). */}
+      {element.logicTarget ? (
+        <Handle type="target" position={Position.Left} id={logicTargetHandleId(element.id)} />
+      ) : null}
       <CardContent className={classes.content}>
         <Box className={classes.iconWrap}>
           {/* Иконки элементов платформы придут с пакетом element-schemas;

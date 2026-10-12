@@ -102,6 +102,7 @@ function EditorPageLayout() {
             onMoveNodeToDepth={editorGraph.moveNodeToDepth}
             onDeleteSelectedElement={editorGraph.deleteSelectedElement}
             onSelectedNodeChange={editorGraph.onSelectedNodeChange}
+            onClearSelection={editorGraph.clearSelection}
           />
           {/* Пустое состояние (T-024): поверх канваса, не перехватывает
               события мыши — pan/zoom и тулбар работают сквозь него. hasNodes

@@ -154,7 +154,7 @@ export function createSampleGraph(): ServiceGraph {
     logicRules: [
       {
         // «Срок вклада = 12 месяцев» → показать чекбокс согласия (T-037).
-        // Ребро — пунктирное, между элементами одной формы.
+        // Ребро между элементами одной формы (стиль — общий, N1).
         id: toLogicRuleId('demo-logic-period-agree'),
         sourceElementId: toElementId('demo-field-period'),
         condition: { kind: 'optionSelected', optionId: toOptionId('12m') },

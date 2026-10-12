@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type DragEvent } from 'react';
 import { Handle, Position, useConnection, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import { Box, Button, Card, IconButton, Typography, makeStyles } from '@sber-friend/flamingo-core';
 import { Delete, ExpandLess, ExpandMore } from '@sber-friend/flamingo-icons';
@@ -6,6 +6,7 @@ import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { CANVAS_LAYOUT } from '../canvas-layout';
 import { collapseElements, isCollapsible } from '../collapse-elements';
 import type { CanvasNode } from '../graph-flow-adapter';
+import { anchorFromPoint, readElementDndKind, readElementDrag } from '../element-dnd';
 import { ElementCard } from './element-card';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
@@ -23,6 +24,17 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   dropTarget: {
     backgroundColor: theme.editor.canvas.nodeHoverBackground,
     outline: `2px solid ${theme.editor.canvas.nodeHoverBorder}`,
+  },
+  // Зона приёма dnd карточек (N2): совместимый drag над узлом.
+  dndActive: {
+    outline: `2px dashed ${theme.editor.canvas.nodeHoverBorder}`,
+    outlineOffset: 2,
+  },
+  dropIndicator: {
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: theme.editor.canvas.edge,
+    margin: '-1px 0',
   },
   header: {
     display: 'flex',
@@ -55,7 +67,11 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
 // Корзина удаляет узел командой (T-034) — обработчик внедряется хранилищем
 // состояния через data.onDeleteNode. При избытке элементов (>6, Q-14) список
 // автосжимается с кнопкой раскрытия (T-033).
-export function ScenarioNode({ id, data }: NodeProps<CanvasNode>) {
+//
+// Dnd (N2): весь узел — зона приёма карточек своего вида (List item на
+// Главной и в подсценариях, Widget card только на Главной); позиция — по
+// якорю-карточке под курсором, без якоря — в конец списка.
+export function ScenarioNode({ id, data, type }: NodeProps<CanvasNode>) {
   const classes = useStyles();
   // Подсветка цели связи: узел под курсором во время drag рёбер (D9/T-032).
   const isDropTarget = useConnection((connection) => connection.inProgress && connection.toNode?.id === id);
@@ -69,15 +85,66 @@ export function ScenarioNode({ id, data }: NodeProps<CanvasNode>) {
     updateNodeInternals(id);
   }, [id, updateNodeInternals]);
 
+  // Состояние drop-зоны: подсветка во время совместимого drag + линия-индикатор
+  // якоря. Вид приёмника узла зависит от его типа (доменные ограничения).
+  const [dndActive, setDndActive] = useState(false);
+  const [anchor, setAnchor] = useState<{ elementId: string; placement: 'before' | 'after' } | null>(null);
+
+  const acceptsKind = useCallback(
+    (kind: string | null): boolean =>
+      type === 'home' ? kind === 'listItem' || kind === 'widgetCard' : kind === 'listItem',
+    [type],
+  );
+
+  const handleDragOver = useCallback(
+    (event: DragEvent<HTMLElement>) => {
+      const kind = readElementDndKind(event.dataTransfer.types);
+      if (!acceptsKind(kind)) {
+        setDndActive(false);
+        return; // не preventDefault — курсор «нельзя», drop не случится
+      }
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      setDndActive(true);
+      setAnchor(anchorFromPoint(event.currentTarget, event.clientY));
+    },
+    [acceptsKind],
+  );
+
+  const handleDragLeave = useCallback(() => {
+    setDndActive(false);
+    setAnchor(null);
+  }, []);
+
+  const handleDrop = useCallback(
+    (event: DragEvent<HTMLElement>) => {
+      event.preventDefault();
+      setDndActive(false);
+      setAnchor(null);
+      const dragged = readElementDrag(event.dataTransfer);
+      if (!dragged || !acceptsKind(dragged.kind) || !data.onDropElement) {
+        return;
+      }
+      data.onDropElement(null, dragged, anchorFromPoint(event.currentTarget, event.clientY));
+    },
+    [acceptsKind, data],
+  );
+
   const visibleElements = collapseElements(data.elements, expanded);
 
   return (
     <Card
-      className={isDropTarget ? `${classes.card} ${classes.dropTarget}` : classes.card}
+      className={`${classes.card}${isDropTarget ? ` ${classes.dropTarget}` : ''}${
+        dndActive ? ` ${classes.dndActive}` : ''
+      }`}
       data-testid={`canvas-node-${id}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
-      {/* Точка входа рёбер — одна на левом краю блока-узла (D9). */}
-      <Handle type="target" position={Position.Left} />
+      {/* Точка входа рёбер — одна на левом краю блока-узла (D9). Только у
+          подсценариев: Главная целью связи быть не может (домен, N5). */}
+      {type === 'home' ? null : <Handle type="target" position={Position.Left} />}
       <Box className={classes.header}>
         <Box className={classes.titles}>
           <Typography variant="subtitle1">{data.title}</Typography>
@@ -97,7 +164,15 @@ export function ScenarioNode({ id, data }: NodeProps<CanvasNode>) {
       {visibleElements.length > 0 ? (
         <Box className={classes.elements}>
           {visibleElements.map((element) => (
-            <ElementCard key={element.id} element={element} />
+            <Box key={element.id}>
+              {anchor?.elementId === element.id && anchor.placement === 'before' ? (
+                <Box className={classes.dropIndicator} data-testid="drop-indicator" />
+              ) : null}
+              <ElementCard element={element} />
+              {anchor?.elementId === element.id && anchor.placement === 'after' ? (
+                <Box className={classes.dropIndicator} data-testid="drop-indicator" />
+              ) : null}
+            </Box>
           ))}
         </Box>
       ) : null}

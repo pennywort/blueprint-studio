@@ -56,6 +56,8 @@ export type EditorCanvasProps = {
   onDeleteSelectedElement?: () => boolean;
   /** Выделение узла на канвасе (клик) — цель меню добавления элементов (T-034). */
   onSelectedNodeChange?: (nodeId: string | null) => void;
+  /** Клик по пустому полю канваса — снять выделение со всех сущностей. */
+  onClearSelection?: () => void;
 };
 
 // Стабильные пустые значения по умолчанию: литерал в дефолте параметра
@@ -83,6 +85,7 @@ function CanvasInner({
   onDeleteNodes,
   onDeleteSelectedElement,
   onSelectedNodeChange,
+  onClearSelection,
 }: EditorCanvasProps) {
   const theme = useEditorTheme();
   const styles = useReactFlowThemeStyles();
@@ -271,6 +274,7 @@ function CanvasInner({
         onNodeDrag={handleNodeDrag}
         onNodeDragStop={handleNodeDragStop}
         onSelectionChange={({ nodes: selected }) => onSelectedNodeChange?.(selected[0]?.id ?? null)}
+        onPaneClick={() => onClearSelection?.()}
         isValidConnection={isValidConnection}
         deleteKeyCode={['Backspace', 'Delete']}
         colorMode="light"

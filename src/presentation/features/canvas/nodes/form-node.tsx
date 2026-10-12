@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type DragEvent } from 'react';
 import { Handle, Position, useConnection, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import {
   Box,
@@ -17,6 +17,13 @@ import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { CANVAS_LAYOUT } from '../canvas-layout';
 import { collapseElements, isCollapsible } from '../collapse-elements';
 import type { CanvasFormStepData, CanvasNode } from '../graph-flow-adapter';
+import {
+  anchorFromPoint,
+  readElementDndKind,
+  readElementDrag,
+  type DropAnchorPosition,
+  type ElementDragPayload,
+} from '../element-dnd';
 import { ElementCard } from './element-card';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
@@ -70,6 +77,34 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     flexDirection: 'column',
     gap: theme.spacing(1.5),
   },
+  // Зона приёма dnd (N2): совместимый drag над колонкой шага.
+  stepDndActive: {
+    outline: `2px dashed ${theme.editor.canvas.nodeHoverBorder}`,
+  },
+  dropIndicator: {
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: theme.editor.canvas.edge,
+    margin: '-1px 0',
+  },
+  // «+ Добавить шаг» (N3): новая пустая колонка в конец формы.
+  addStepColumn: {
+    width: CANVAS_LAYOUT.formStepWidth,
+    flexShrink: 0,
+    minHeight: 96,
+    borderRadius: 12,
+    border: `2px dashed ${theme.editor.canvas.elementBorder}`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing(0.5),
+    color: theme.palette.text.secondary,
+    cursor: 'pointer',
+    '&:hover': {
+      backgroundColor: theme.editor.canvas.nodeHoverBackground,
+      borderColor: theme.editor.canvas.nodeHoverBorder,
+    },
+  },
   stepHeader: {
     display: 'flex',
     alignItems: 'center',
@@ -95,8 +130,8 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
 // Узел «Форма заявки» (T-031, D1): заголовок «Форма заявки» + название,
 // чип «Одностраничная»/«Степперная», корзина; шаги — горизонтальные колонки,
 // у каждого шага заголовок, корзина и «+». Обработчики добавления/удаления
-// (T-034) внедряются хранилищем состояния через data: onDeleteNode,
-// onDeleteStep, onAddElementToStep + elementKindOptions для меню «+».
+// (T-034) и dnd (N2) внедряются хранилищем состояния через data:
+// onDeleteNode, onDeleteStep, onAddElementToStep, onAddStep, onDropElement.
 // Элементы каждого шага сжимаются независимо при >6 (T-033).
 export function FormNode({ id, data }: NodeProps<CanvasNode>) {
   const classes = useStyles();
@@ -168,8 +203,20 @@ export function FormNode({ id, data }: NodeProps<CanvasNode>) {
             onToggleExpanded={() => toggleStep(step.id)}
             onOpenAddMenu={(anchor) => setStepMenu({ anchor, stepId: step.id })}
             onDeleteStep={() => data.onDeleteStep?.(step.id)}
+            onDropElement={(dragged, anchor) => data.onDropElement?.(step.id, dragged, anchor)}
           />
         ))}
+        {/* «+ Добавить шаг» (N3): пустая колонка-ячейка в конец формы. */}
+        {data.onAddStep ? (
+          <Box
+            className={`${classes.addStepColumn} nodrag`}
+            data-testid="add-form-step"
+            onClick={data.onAddStep}
+          >
+            <Add fontSize="small" />
+            <Typography variant="body2">Добавить шаг</Typography>
+          </Box>
+        ) : null}
       </Box>
 
       {/* Меню выбора типа элемента для «+» шага (T-034). */}
@@ -191,10 +238,13 @@ type FormStepColumnProps = {
   onToggleExpanded: () => void;
   onOpenAddMenu: (anchor: HTMLElement) => void;
   onDeleteStep: () => void;
+  onDropElement: (dragged: ElementDragPayload, anchor: DropAnchorPosition | null) => void;
 };
 
 // Колонка одного шага формы: заголовок, корзина (RemoveFormStep), «+»
 // (меню типов элементов → AddFormComponent) и сжимаемый список элементов.
+// Зона приёма dnd (N2): компоненты форм — в этот шаг (якорь-карточка даёт
+// позицию, без неё — в конец); чужие виды не принимаются.
 function FormStepColumn({
   step,
   index,
@@ -202,12 +252,51 @@ function FormStepColumn({
   onToggleExpanded,
   onOpenAddMenu,
   onDeleteStep,
+  onDropElement,
 }: FormStepColumnProps) {
   const classes = useStyles();
   const visibleElements = collapseElements(step.elements, expanded);
+  const [dndActive, setDndActive] = useState(false);
+  const [anchor, setAnchor] = useState<{ elementId: string; placement: 'before' | 'after' } | null>(null);
+
+  const handleDragOver = useCallback((event: DragEvent<HTMLElement>) => {
+    if (readElementDndKind(event.dataTransfer.types) !== 'formComponent') {
+      setDndActive(false);
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    setDndActive(true);
+    setAnchor(anchorFromPoint(event.currentTarget, event.clientY));
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDndActive(false);
+    setAnchor(null);
+  }, []);
+
+  const handleDrop = useCallback(
+    (event: DragEvent<HTMLElement>) => {
+      event.preventDefault();
+      setDndActive(false);
+      setAnchor(null);
+      const dragged = readElementDrag(event.dataTransfer);
+      if (!dragged || dragged.kind !== 'formComponent') {
+        return;
+      }
+      onDropElement(dragged, anchorFromPoint(event.currentTarget, event.clientY));
+    },
+    [onDropElement],
+  );
 
   return (
-    <Box className={classes.stepColumn} data-testid={`form-step-${step.id}`}>
+    <Box
+      className={`${classes.stepColumn}${dndActive ? ` ${classes.stepDndActive}` : ''}`}
+      data-testid={`form-step-${step.id}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <Box className={classes.stepHeader}>
         <Typography variant="subtitle2">{step.title || `Шаг ${index + 1}`}</Typography>
         <Box className={classes.stepActions}>
@@ -232,7 +321,15 @@ function FormStepColumn({
       {visibleElements.length > 0 ? (
         <Box className={classes.stepElements}>
           {visibleElements.map((element) => (
-            <ElementCard key={element.id} element={element} />
+            <Box key={element.id}>
+              {anchor?.elementId === element.id && anchor.placement === 'before' ? (
+                <Box className={classes.dropIndicator} data-testid="drop-indicator" />
+              ) : null}
+              <ElementCard element={element} />
+              {anchor?.elementId === element.id && anchor.placement === 'after' ? (
+                <Box className={classes.dropIndicator} data-testid="drop-indicator" />
+              ) : null}
+            </Box>
           ))}
         </Box>
       ) : null}

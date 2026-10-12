@@ -6,6 +6,7 @@ import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/pag
 import { toElementId, type ElementId, type PageEntityId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { evaluateVisibility } from '@domain/logic-visibility';
+import type { DropAnchorPosition, ElementDragPayload } from './element-dnd';
 
 // Адаптер graph ↔ flow (Epic 002, T-030) — граница domain ↔ react-flow
 // (архитектурный принцип 4 декомпозиции): домен не знает о react-flow,
@@ -22,8 +23,6 @@ export type CanvasNodeType = 'home' | 'subScenario' | 'form';
 // без поиска по DOM. ElementId двоеточий не содержит — разделитель безопасен.
 export const LOGIC_SOURCE_HANDLE_PREFIX = 'logic-src:';
 export const LOGIC_TARGET_HANDLE_PREFIX = 'logic-tgt:';
-/** Класс рёбер правил видимости — пунктир из темы (D6), отличим от навигации. */
-export const LOGIC_EDGE_CLASS = 'editor-logic-edge';
 
 export const logicSourceHandleId = (elementId: string, optionId: string): string =>
   `${LOGIC_SOURCE_HANDLE_PREFIX}${elementId}:${optionId}`;
@@ -83,6 +82,15 @@ export type CanvasElementData = {
   hiddenByLogic?: boolean;
   /** Карточка выделена (клик) — чёрная рамка, Delete удаляет элемент (T-034). */
   selected?: boolean;
+  /**
+   * Карточка может быть целью правил «Сложной логики» — target-handle на
+   * левом краю. Только компоненты форм (источник — Select той же формы,
+   * L-I5); у List item/Widget card handle не рисуется — соединить его
+   * доменно невозможно, лишняя точка-коннектор путает (N5).
+   */
+  logicTarget: boolean;
+  /** Класс элемента для dnd: допустимые зоны приёма зависят от вида (N2). */
+  dndKind: 'listItem' | 'widgetCard' | 'formComponent';
   /** Клик по карточке — выделение элемента (внедряется хранилищем). */
   onSelect?: () => void;
   /** Чип «Сложная логика» — переключатель режима (внедряется хранилищем, T-066). */
@@ -123,6 +131,21 @@ export type CanvasNodeData = {
   onAddElementToStep?: (stepId: string, kind: FormComponentKind) => void;
   /** Корзина шага формы → RemoveFormStep. */
   onDeleteStep?: (stepId: string) => void;
+  /**
+   * «+» шага формы на узле (N3) → AddFormStep: новая пустая колонка шага
+   * в конец формы. Только у узлов-форм.
+   */
+  onAddStep?: () => void;
+  /**
+   * Dnd карточек элементов (N2): drop в списке узла или колонке шага.
+   * targetStepId — шаг-цель у форм; null — общий список узла страницы.
+   * Якорь (карточка + сторона) даёт позицию вставки; null — в конец.
+   */
+  onDropElement?: (
+    targetStepId: string | null,
+    dragged: ElementDragPayload,
+    anchor: DropAnchorPosition | null,
+  ) => void;
 };
 
 export type CanvasNode = Node<CanvasNodeData, CanvasNodeType>;
@@ -171,12 +194,15 @@ function listItemToElementData(
   item: ListItem | WidgetCard,
   kindLabel: string,
   linkSources: ReadonlySet<string>,
+  dndKind: 'listItem' | 'widgetCard',
 ): CanvasElementData {
   const element: CanvasElementData = {
     id: item.id,
     title: item.title,
     kindLabel,
     hasOutgoingLink: linkSources.has(item.id),
+    logicTarget: false,
+    dndKind,
   };
   if (item.secondaryText) {
     element.secondaryText = item.secondaryText;
@@ -197,6 +223,8 @@ function formComponentToElementData(
     hasOutgoingLink: linkSources.has(component.id),
     hasIncomingLogic: logicTargets.has(component.id),
     hiddenByLogic: logicHidden.has(component.id),
+    logicTarget: true,
+    dndKind: 'formComponent',
   };
   if (component.kind === 'selectList') {
     // Select — потенциальный источник «Сложной логики» (L5); option-handle'ы
@@ -265,8 +293,12 @@ export function graphToFlow(
         depth: depths.get(homePage.id) ?? 0,
         subtitle: HOME_NODE_SUBTITLE,
         elements: [
-          ...homePage.listItems.map((item) => listItemToElementData(item, 'List item', linkSources)),
-          ...homePage.widgetCards.map((card) => listItemToElementData(card, 'Widget card', linkSources)),
+          ...homePage.listItems.map((item) =>
+            listItemToElementData(item, 'List item', linkSources, 'listItem'),
+          ),
+          ...homePage.widgetCards.map((card) =>
+            listItemToElementData(card, 'Widget card', linkSources, 'widgetCard'),
+          ),
         ],
         steps: [],
         formKindLabel: null,
@@ -347,7 +379,8 @@ export function graphToFlow(
   // правило. Источник — option-handle Select'а-источника, цель — target-handle
   // карточки элемента; оба конца живут внутри одного узла формы (L-I5), поэтому
   // это штатное ребро react-flow внутри FormNode (решение владельца по Q-9).
-  // Отличимый стиль — пунктир из темы (D6); reconnect правил не поддерживаем.
+  // Стиль — как у навигационных рёбер (решение владельца по N1: отличие
+  // предложит дизайнер); reconnect правил не поддерживаем.
   for (const rule of graph.logicRules) {
     if (rule.condition.kind !== 'optionSelected') {
       continue;
@@ -366,7 +399,6 @@ export function graphToFlow(
       target: ruleTargetNodeId,
       targetHandle: logicTargetHandleId(rule.targetElementId),
       type: 'smoothstep',
-      className: LOGIC_EDGE_CLASS,
       reconnectable: false,
       data: { kind: 'logic' },
     });
@@ -395,7 +427,9 @@ function collectSubScenarioNodes(
         orderIndex: scenario.orderIndex,
         depth,
         subtitle: navigationLevelLabel(depth + levelOffset || 1),
-        elements: scenario.listItems.map((item) => listItemToElementData(item, 'List item', linkSources)),
+        elements: scenario.listItems.map((item) =>
+          listItemToElementData(item, 'List item', linkSources, 'listItem'),
+        ),
         steps: [],
         formKindLabel: null,
       },

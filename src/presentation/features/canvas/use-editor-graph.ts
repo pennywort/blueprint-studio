@@ -38,6 +38,8 @@ import { RemoveFormStep } from '@application/commands/remove-form-step';
 import { AddElement } from '@application/commands/add-element';
 import { AddFormComponent } from '@application/commands/add-form-component';
 import { RemoveElement } from '@application/commands/remove-element';
+import { MoveElement, type MoveElementTarget } from '@application/commands/move-element';
+import { AddFormStep } from '@application/commands/add-form-step';
 import { SetPageLayerDepth } from '@application/commands/set-page-layer-depth';
 import { EnableComplexLogic } from '@application/commands/enable-complex-logic';
 import { DisableComplexLogic } from '@application/commands/disable-complex-logic';
@@ -47,6 +49,7 @@ import { findElementLocation, findFormById, walkPages } from '@application/comma
 import { useContainer } from '@presentation/app/App';
 import { useEditorNotifications } from '@presentation/features/notifications/editor-notifications';
 import type { AddableElementKind, AddableNodeKind } from '@presentation/features/toolbar/editor-toolbar';
+import type { DropAnchorPosition, ElementDragPayload } from './element-dnd';
 import { computeLayout } from './canvas-layout';
 import {
   FORM_COMPONENT_KIND_LABELS,
@@ -103,19 +106,39 @@ export function useEditorGraph() {
   // удаляет именно его (единое правило проекта: выделение + Delete).
   // Выделение узла и элемента взаимоисключающи — последний клик побеждает.
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  // Признак «выделен элемент»: пока он true, пустой onSelectionChange от
+  // react-flow игнорируется. Иначе петля обратной связи: принудительный
+  // selected:false на узлах (взаимоисключение с элементом) заставляет
+  // react-flow сообщить «выделение пусто» → выделение элемента стиралось
+  // сразу после клика (N2).
+  const elementSelectedRef = useRef(false);
   const selectedNodeType: CanvasNodeType | null = useMemo(
     () => flow.nodes.find((node) => node.id === selectedNodeId)?.type ?? null,
     [flow.nodes, selectedNodeId],
   );
   const handleNodeSelection = useCallback((nodeId: string | null) => {
+    if (nodeId === null && elementSelectedRef.current) {
+      return; // побочное событие от принудительного selected:false узлов
+    }
     setSelectedNodeId(nodeId);
-    setSelectedElementId(null);
+    if (nodeId !== null) {
+      elementSelectedRef.current = false;
+      setSelectedElementId(null);
+    }
   }, []);
   const selectElement = useCallback((elementId: string | null) => {
+    elementSelectedRef.current = elementId !== null;
     setSelectedElementId(elementId);
     if (elementId !== null) {
       setSelectedNodeId(null);
     }
+  }, []);
+  // Клик по пустому полю канваса: снимает выделение со всего (единое
+  // правило: выделение держится на сущности, пока не выбрана другая).
+  const clearSelection = useCallback(() => {
+    elementSelectedRef.current = false;
+    setSelectedNodeId(null);
+    setSelectedElementId(null);
   }, []);
 
   const runCommand = useCallback(
@@ -314,6 +337,7 @@ export function useEditorGraph() {
       return false;
     }
     const elementId = selectedElementId;
+    elementSelectedRef.current = false;
     setSelectedElementId(null);
     runCommand(new RemoveElement(elementId as ElementId));
     return true;
@@ -404,6 +428,52 @@ export function useEditorGraph() {
     [runCommand],
   );
 
+  // «+ Добавить шаг» на узле формы (N3): пустая колонка в конец формы.
+  const addFormStep = useCallback(
+    (formId: ApplicationFormId) => {
+      runCommand(new AddFormStep(formId, { id: toFormStepId(idGenerator.next()), components: [] }));
+    },
+    [idGenerator, runCommand],
+  );
+
+  // Drop карточки элемента (N2): цель зависит от вида узла-приёмника
+  // (доменные ограничения видов списков — полная проверка в команде
+  // MoveElement, здесь только выбор приёмника). Якорь — позиция вставки.
+  const moveElement = useCallback(
+    (
+      nodeId: string,
+      nodeType: CanvasNodeType,
+      targetStepId: string | null,
+      dragged: ElementDragPayload,
+      anchor: DropAnchorPosition | null,
+    ) => {
+      let target: MoveElementTarget;
+      if (nodeType === 'home') {
+        target = dragged.kind === 'widgetCard' ? { kind: 'homeWidgetCards' } : { kind: 'homeListItems' };
+      } else if (nodeType === 'subScenario') {
+        target = { kind: 'subScenarioListItems', scenarioId: nodeId as ScenarioId };
+      } else {
+        if (!targetStepId) {
+          notifications.showCommandFailure('Переносите компонент в конкретный шаг формы');
+          return;
+        }
+        target = {
+          kind: 'formStep',
+          formId: nodeId as ApplicationFormId,
+          stepId: targetStepId as FormStepId,
+        };
+      }
+      runCommand(
+        new MoveElement(
+          dragged.elementId as ElementId,
+          target,
+          anchor ? { elementId: anchor.elementId as ElementId, placement: anchor.placement } : undefined,
+        ),
+      );
+    },
+    [notifications, runCommand],
+  );
+
   // Чип «Сложная логика» на карточке Select'а (T-037/T-066, L4): включение
   // открывает option-handle'ы, выключение при наличии правил — с
   // подтверждением и каскадным удалением рёбер (каскад — внутри команды,
@@ -469,8 +539,14 @@ export function useEditorGraph() {
                     addElementToStep(node.id as ApplicationFormId, stepId as FormStepId, kind),
                   onDeleteStep: (stepId: string) =>
                     removeStep(node.id as ApplicationFormId, stepId as FormStepId),
+                  onAddStep: () => addFormStep(node.id as ApplicationFormId),
                 }
               : null),
+            onDropElement: (
+              targetStepId: string | null,
+              dragged: ElementDragPayload,
+              anchor: DropAnchorPosition | null,
+            ) => moveElement(node.id, node.type, targetStepId, dragged, anchor),
           },
         };
       }),
@@ -479,6 +555,8 @@ export function useEditorGraph() {
       removeNode,
       addElementToStep,
       removeStep,
+      addFormStep,
+      moveElement,
       toggleComplexLogic,
       selectedElementId,
       selectElement,
@@ -519,6 +597,7 @@ export function useEditorGraph() {
     hasHome: graph.homePage !== undefined,
     selectedNodeType,
     onSelectedNodeChange: handleNodeSelection,
+    clearSelection,
     connect,
     reconnect,
     disconnect,
