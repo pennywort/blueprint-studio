@@ -12,6 +12,10 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     // Handle позиционируется относительно карточки элемента (D9).
     position: 'relative',
   },
+  // Выделение элемента (F7): чёрная рамка цвета стрелок — как у узлов и связей.
+  cardSelected: {
+    border: `2px solid ${theme.editor.canvas.edge}`,
+  },
   content: {
     display: 'flex',
     alignItems: 'flex-start',
@@ -84,7 +88,18 @@ export function ElementCard({ element }: ElementCardProps) {
   const classes = useStyles();
 
   return (
-    <Card className={classes.card} variant="outlined" data-testid={`element-card-${element.id}`}>
+    // Клик выделяет элемент (единое правило F5/F7: выделение + Delete).
+    // stopPropagation: иначе клик дошёл бы до узла, и react-flow выделил бы
+    // его вместо элемента.
+    <Card
+      className={element.selected ? `${classes.card} ${classes.cardSelected}` : classes.card}
+      variant="outlined"
+      data-testid={`element-card-${element.id}`}
+      onClick={(event) => {
+        event.stopPropagation();
+        element.onSelect?.();
+      }}
+    >
       {/* Цель правил «Сложной логики» (T-037): рёбра видимости приходят
           на левый край карточки элемента, не шага и не формы. */}
       <Handle type="target" position={Position.Left} id={logicTargetHandleId(element.id)} />
@@ -109,8 +124,16 @@ export function ElementCard({ element }: ElementCardProps) {
                 size="small"
                 color={element.complexLogic.enabled ? 'primary' : 'default'}
                 label="Сложная логика"
-                onClick={element.onToggleComplexLogic}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  element.onToggleComplexLogic?.();
+                }}
               />
+            ) : null}
+            {/* Демонстрация семантики видимости (T-062): цель правил скрыта
+                по умолчанию (L3) — до появления /preview это видно бейджем. */}
+            {element.hiddenByLogic ? (
+              <Chip size="small" color="default" label="Скрыт в предпросмотре" />
             ) : null}
             {/* Индикатор «элемент кому-то подчинён» (L-Q1): виден даже при
                 выключенной логике у источника. */}

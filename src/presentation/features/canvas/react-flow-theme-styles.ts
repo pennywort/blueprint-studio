@@ -28,6 +28,20 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
         stroke: canvas.edge,
         strokeWidth: 2,
       },
+      // Рёбра и линия соединения — поверх узлов (F4): иначе отрезок у
+      // handle уходит под карточку узла.
+      '& .react-flow__edges': {
+        zIndex: 10,
+      },
+      '& .react-flow__connectionline': {
+        zIndex: 10,
+      },
+      // Выделение узла (F7): чёрная рамка цвета стрелок — общее правило
+      // выделения всех сущностей проекта.
+      '& .react-flow__node.selected [data-testid^="canvas-node-"]': {
+        outline: `2px solid ${canvas.edge}`,
+        outlineOffset: 2,
+      },
       // Рёбра «Сложной логики» (T-037, §6 дизайн-дока): пунктир, чтобы
       // визуально не путать правила видимости с навигационными связями.
       '& .react-flow__edge.editor-logic-edge .react-flow__edge-path': {

@@ -27,6 +27,14 @@ export class ConnectElements implements Command {
     if (!isLinkTargetPresent(draft, this.link.targetId)) {
       throw new Error(`Страница-цель связи не найдена: ${this.link.targetId}`);
     }
+    // Дубликат связи между той же парой «элемент → страница» не создаётся:
+    // второе ребро между теми же точками не несёт нового смысла.
+    const duplicate = draft.links.some(
+      (link) => link.sourceElementId === this.link.sourceElementId && link.targetId === this.link.targetId,
+    );
+    if (duplicate) {
+      throw new Error('Связь между этими элементами уже существует');
+    }
 
     // Глубины до мутации — чтобы отличить перенос колонки от связи в тот же слой.
     const depthsBefore = computeGraphDepths(draft);

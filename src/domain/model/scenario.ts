@@ -78,6 +78,10 @@ export type AdditionalInfo = z.infer<typeof AdditionalInfoSchema>;
 // канваса пользователь меняет drag'ом, координаты не хранятся (D2).
 const pageContentFields = {
   orderIndex: z.number().int().nonnegative(),
+  // Явное переопределение колонки канваса (уровня навигации): выставляется
+  // при добавлении узла (следующий уровень), переносе dnd между уровнями и
+  // протягивании связи; без него глубина — производная связей (D7).
+  layerDepth: z.number().int().nonnegative().optional(),
   listItems: z.array(ListItemSchema),
   faq: FaqSchema.optional(),
   additionalInfo: AdditionalInfoSchema.optional(),
@@ -117,6 +121,8 @@ export const ScenarioSchema: z.ZodType<Scenario> = ScenarioBaseSchema.extend({
 // Вложенность через children не ограничена (БТ, раздел 7).
 export type SubScenario = z.infer<typeof ScenarioBaseSchema> & {
   orderIndex: number;
+  // Явная колонка канваса (уровень навигации) — см. pageContentFields.
+  layerDepth?: number;
   listItems: ListItem[];
   faq?: Faq;
   additionalInfo?: AdditionalInfo;
@@ -145,6 +151,8 @@ export const ApplicationFormSchema = z.object({
   orderIndex: z.number().int().nonnegative(),
   // Шаги упорядочены, количество не ограничено (БТ, раздел 6.5).
   steps: z.array(FormStepSchema),
+  // Явное переопределение колонки канваса — как у подсценариев (D12).
+  layerDepth: z.number().int().nonnegative().optional(),
 });
 export type ApplicationForm = z.infer<typeof ApplicationFormSchema>;
 

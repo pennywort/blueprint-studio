@@ -2,7 +2,9 @@ import { z } from 'zod';
 import { FormComponentIdSchema, FormStepIdSchema, ScenarioIdSchema } from './ids';
 
 // 12 форм-компонентов по спецификации 001-foundation, раздел 5.4.
-// Discriminated union по `kind`. Общие поля: id, kind, comment?, complexLogic?.
+// Discriminated union по `kind`. Общие поля: id, kind, comment?, routing?,
+// hasDynamicContent?. Legacy-поле complexLogic удалено (решение владельца):
+// режим «Сложной логики» — только hasComplexLogic у selectList (T-037).
 
 // Доменные константы лимитов платформы (спека 5.4, attachment).
 export const ATTACHMENT_MAX_FILE_BYTES = 3 * 1024 * 1024; // 3 МБ на файл
@@ -21,7 +23,6 @@ export type RoutingRule = z.infer<typeof RoutingRuleSchema>;
 const baseFields = {
   id: FormComponentIdSchema,
   comment: z.string().optional(), // комментарий для разработчика (US-05)
-  complexLogic: z.string().optional(), // флаг «сложная логика» (US-04)
   routing: RoutingRuleSchema.optional(), // компонент завязан на маршрутизацию
   hasDynamicContent: z.boolean().optional(), // компонент с динамическим контентом
 };

@@ -5,6 +5,7 @@ import type { FormComponent, FormComponentKind } from '@domain/model/form-compon
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
 import { toElementId, type ElementId, type PageEntityId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
+import { evaluateVisibility } from '@domain/logic-visibility';
 
 // Адаптер graph ↔ flow (Epic 002, T-030) — граница domain ↔ react-flow
 // (архитектурный принцип 4 декомпозиции): домен не знает о react-flow,
@@ -74,6 +75,16 @@ export type CanvasElementData = {
   };
   /** На элемент есть входящие правила видимости — индикатор зависимости (L-Q1). */
   hasIncomingLogic?: boolean;
+  /**
+   * Элемент скрыт в предпросмотре по правилам видимости при пустом состоянии
+   * формы (evaluateVisibility, T-062): цель с правилами скрыта по умолчанию
+   * (L3). Бейдж на карточке — демонстрация семантики до появления /preview.
+   */
+  hiddenByLogic?: boolean;
+  /** Карточка выделена (клик) — чёрная рамка, Delete удаляет элемент (T-034). */
+  selected?: boolean;
+  /** Клик по карточке — выделение элемента (внедряется хранилищем). */
+  onSelect?: () => void;
   /** Чип «Сложная логика» — переключатель режима (внедряется хранилищем, T-066). */
   onToggleComplexLogic?: () => void;
 };
@@ -177,6 +188,7 @@ function formComponentToElementData(
   component: FormComponent,
   linkSources: ReadonlySet<string>,
   logicTargets: ReadonlySet<string>,
+  logicHidden: ReadonlySet<string>,
 ): CanvasElementData {
   const element: CanvasElementData = {
     id: component.id,
@@ -184,6 +196,7 @@ function formComponentToElementData(
     kindLabel: FORM_COMPONENT_KIND_LABELS[component.kind],
     hasOutgoingLink: linkSources.has(component.id),
     hasIncomingLogic: logicTargets.has(component.id),
+    hiddenByLogic: logicHidden.has(component.id),
   };
   if (component.kind === 'selectList') {
     // Select — потенциальный источник «Сложной логики» (L5); option-handle'ы
@@ -228,6 +241,12 @@ export function graphToFlow(
   const linkSources = new Set<string>(graph.links.map((link) => link.sourceElementId));
   // Цели правил видимости — индикатор зависимости на карточке (T-037, L-Q1).
   const logicTargets = new Set<string>(graph.logicRules.map((rule) => rule.targetElementId));
+  // Скрытые по умолчанию цели (L3): оценка при пустом состоянии формы —
+  // демонстрация семантики видимости до появления /preview (T-062).
+  const visibleTargets = evaluateVisibility(graph.logicRules, new Map());
+  const logicHidden = new Set<string>(
+    [...logicTargets].filter((elementId) => !visibleTargets.has(elementId as ElementId)),
+  );
 
   const nodes: CanvasNode[] = [];
   // Владелец элемента → id узла: нужен, чтобы ребро вышло из узла страницы,
@@ -290,7 +309,7 @@ export function graphToFlow(
           id: step.id,
           title: step.title ?? '',
           elements: step.components.map((component) =>
-            formComponentToElementData(component, linkSources, logicTargets),
+            formComponentToElementData(component, linkSources, logicTargets, logicHidden),
           ),
         })),
         formKindLabel: form.steps.length > 1 ? 'Степперная' : 'Одностраничная',
@@ -318,6 +337,9 @@ export function graphToFlow(
       source: sourceNodeId,
       sourceHandle: link.sourceElementId,
       target: link.targetId,
+      // Ортогональные рёбра с закруглёнными углами (замечание владельца) —
+      // штатный тип react-flow smoothstep.
+      type: 'smoothstep',
     });
   }
 
@@ -343,6 +365,7 @@ export function graphToFlow(
       sourceHandle: logicSourceHandleId(rule.sourceElementId, rule.condition.optionId),
       target: ruleTargetNodeId,
       targetHandle: logicTargetHandleId(rule.targetElementId),
+      type: 'smoothstep',
       className: LOGIC_EDGE_CLASS,
       reconnectable: false,
       data: { kind: 'logic' },

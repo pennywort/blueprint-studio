@@ -22,6 +22,20 @@ function collectSubScenarioIds(subScenarios: SubScenario[], into: string[]): voi
   }
 }
 
+// Явные переопределения колонки (layerDepth): узел может быть перенесён
+// dnd на другой уровень навигации — тогда глубина фиксирована и не
+// выводится из связей.
+function collectLayerDepths(subScenarios: SubScenario[], into: Map<string, number>): void {
+  for (const scenario of subScenarios) {
+    if (scenario.layerDepth !== undefined) {
+      into.set(scenario.id, scenario.layerDepth);
+    }
+    if (scenario.children) {
+      collectLayerDepths(scenario.children, into);
+    }
+  }
+}
+
 function collectSubScenarioElementIds(subScenarios: SubScenario[], into: Map<string, string>): void {
   for (const scenario of subScenarios) {
     for (const item of scenario.listItems) {
@@ -81,10 +95,24 @@ export function computeGraphDepths(graph: ServiceGraph): ReadonlyMap<string, num
   }
 
   // BFS с релаксацией: глубина — кратчайший путь от любого корня.
+  // Узлы с явным layerDepth — фиксированные источники: их глубина не
+  // пересчитывается, но от них распространяется глубина дальше по связям.
+  const explicitDepths = new Map<string, number>();
+  collectLayerDepths(graph.subScenarios, explicitDepths);
+  for (const form of graph.applicationForms) {
+    if (form.layerDepth !== undefined) {
+      explicitDepths.set(form.id, form.layerDepth);
+    }
+  }
+
   const depths = new Map<string, number>();
   const queue: string[] = [];
   for (const id of pageIds) {
-    if (!hasIncoming.has(id)) {
+    const explicit = explicitDepths.get(id);
+    if (explicit !== undefined) {
+      depths.set(id, explicit);
+      queue.push(id);
+    } else if (!hasIncoming.has(id)) {
       depths.set(id, 0);
       queue.push(id);
     }
@@ -93,6 +121,9 @@ export function computeGraphDepths(graph: ServiceGraph): ReadonlyMap<string, num
     const id = queue.shift()!;
     const depth = depths.get(id)!;
     for (const next of outgoing.get(id) ?? []) {
+      if (explicitDepths.has(next)) {
+        continue; // явная колонка не переопределяется связями
+      }
       const known = depths.get(next);
       if (known === undefined || depth + 1 < known) {
         depths.set(next, depth + 1);

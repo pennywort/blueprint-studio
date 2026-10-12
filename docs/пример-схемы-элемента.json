@@ -1,0 +1,368 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://framework.internal/schemas/text-field.schema.json",
+  "title": "Text",
+  "description": "JSON-схема для UI-элемента \"text-field\"",
+  "type": "object",
+  "elementType": "text-field",
+  "x-category": "form",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Уникальный идентификатор элемента"
+    },
+    "visible": {
+      "type": "boolean",
+      "description": "Видимость элемента",
+      "default": true
+    },
+    "cursor": {
+      "type": "string",
+      "enum": ["default", "pointer"],
+      "description": "Тип курсора",
+      "default": "default"
+    },
+    "gravity": {
+      "type": "string",
+      "enum": ["left", "right", "center"],
+      "description": "Выравнивание внутри родителя",
+      "default": "left"
+    },
+    "margin": {
+      "description": "Внешние отступы",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        {
+          "enum": ["none", "normal"]
+        }
+      ],
+      "default": 0
+    },
+    "width": {
+      "description": "Ширина элемента",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "enum": ["match_parent", "wrap_content"]
+        }
+      ],
+      "default": "match_parent"
+    },
+    "flex": {
+      "type": "string",
+      "description": "Flex-свойство"
+    },
+    "alignSelf": {
+      "type": "string",
+      "description": "Выравнивание по собственной оси"
+    },
+    "overflow": {
+      "type": "string",
+      "description": "Поведение при переполнении"
+    },
+    "minHeight": {
+      "description": "Минимальная высота",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "maxHeight": {
+      "description": "Максимальная высота",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "label": {
+      "type": "string",
+      "default": ""
+    },
+    "mask": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["none"]
+        },
+        {
+          "type": "string",
+          "enum": ["mobile"]
+        },
+        {
+          "type": "string",
+          "enum": ["inner_phone"]
+        },
+        {
+          "type": "string",
+          "enum": ["ip_address"]
+        },
+        {
+          "type": "string",
+          "enum": ["card_num"]
+        },
+        {
+          "type": "array",
+          "items": {}
+        }
+      ],
+      "default": "none"
+    },
+    "value": {
+      "type": "string",
+      "default": ""
+    },
+    "placeholder": {
+      "type": "string",
+      "default": ""
+    },
+    "required": {
+      "type": "boolean",
+      "default": false
+    },
+    "disabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "multiline": {
+      "type": "boolean",
+      "default": false
+    },
+    "multilineVertical": {
+      "type": "boolean"
+    },
+    "error": {
+      "type": "string",
+      "default": ""
+    },
+    "icon": {
+      "$ref": "../shared/icon.schema.json#",
+      "default": null
+    },
+    "tooltipTextIcon": {
+      "type": "string",
+      "default": ""
+    },
+    "rows": {
+      "type": "number",
+      "default": 4
+    },
+    "rowsMax": {
+      "type": "number",
+      "default": 4
+    },
+    "helperText": {
+      "type": "string",
+      "default": ""
+    },
+    "counter": {
+      "type": "number",
+      "default": null
+    },
+    "k2": {
+      "type": "boolean"
+    },
+    "loading": {
+      "type": "boolean"
+    },
+    "rightAction": {
+      "type": "object",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string"
+            },
+            "icon": {
+              "$ref": "../shared/icon.schema.json#"
+            },
+            "disabled": {
+              "type": "boolean"
+            },
+            "tooltip": {
+              "type": ["object", "null"],
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "placement": {
+                  "type": "string",
+                  "enum": [
+                    "bottom-end",
+                    "bottom-start",
+                    "bottom",
+                    "left-end",
+                    "left-start",
+                    "left",
+                    "right-end",
+                    "right-start",
+                    "right",
+                    "top-end",
+                    "top-start",
+                    "top"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "variant": {
+              "type": "string",
+              "enum": ["text", "contained"]
+            },
+            "color": {
+              "type": "string",
+              "enum": ["primary", "default"]
+            },
+            "tooltip": {
+              "type": ["object", "null"],
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "placement": {
+                  "type": "string",
+                  "enum": [
+                    "bottom-end",
+                    "bottom-start",
+                    "bottom",
+                    "left-end",
+                    "left-start",
+                    "left",
+                    "right-end",
+                    "right-start",
+                    "right",
+                    "top-end",
+                    "top-start",
+                    "top"
+                  ]
+                }
+              }
+            },
+            "disabled": {
+              "type": "boolean"
+            },
+            "noWrap": {
+              "type": "boolean"
+            },
+            "loading": {
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "hasClearIconButton": {
+      "type": "boolean"
+    },
+    "tooltipClearIconButton": {
+      "type": ["object", "null"],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "placement": {
+          "type": "string",
+          "enum": [
+            "bottom-end",
+            "bottom-start",
+            "bottom",
+            "left-end",
+            "left-start",
+            "left",
+            "right-end",
+            "right-start",
+            "right",
+            "top-end",
+            "top-start",
+            "top"
+          ]
+        }
+      }
+    },
+    "readOnly": {
+      "type": "boolean"
+    },
+    "disableEnterRightAction": {
+      "type": "boolean"
+    }
+  },
+  "x-events": {
+    "onChangeValue": {
+      "description": "Событие изменения значения элемента",
+      "parameters": {
+        "value": {
+          "description": "Новое значение",
+          "type": "any"
+        },
+        "options": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Необязательный идентификатор"
+            }
+          }
+        }
+      }
+    },
+    "onClick": {
+      "description": "Событие клика по элементу",
+      "parameters": {
+        "event": {
+          "description": "Объект события",
+          "type": "object"
+        }
+      }
+    }
+  },
+  "x-methods": [],
+  "x-defaults": {
+    "label": "",
+    "mask": "none",
+    "value": "",
+    "placeholder": "",
+    "required": false,
+    "disabled": false,
+    "multiline": false,
+    "error": "",
+    "icon": null,
+    "tooltipTextIcon": "",
+    "rows": 4,
+    "rowsMax": 4,
+    "helperText": "",
+    "counter": null
+  },
+  "required": [],
+  "deprecatedAliases": []
+}

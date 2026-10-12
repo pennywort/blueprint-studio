@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -7,6 +7,7 @@ import {
   ReactFlowProvider,
   applyEdgeChanges,
   applyNodeChanges,
+  useViewport,
   type Connection,
   type EdgeChange,
   type IsValidConnection,
@@ -16,6 +17,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useEditorTheme } from '@presentation/theme/editor-theme';
 import { useReactFlowThemeStyles } from './react-flow-theme-styles';
+import { CANVAS_LAYOUT } from './canvas-layout';
 import { EditorCanvasControls } from './editor-canvas-controls';
 import { canvasNodeTypes } from './nodes/node-types';
 import {
@@ -42,6 +44,16 @@ export type EditorCanvasProps = {
   onDeleteLinks?: (edges: CanvasEdge[]) => void;
   /** Вертикальный drag узла → переупорядочивание внутри слоя (T-036). */
   onReorderNode?: (draggedNode: CanvasNode, layerNodes: CanvasNode[]) => void;
+  /** Узел брошен в другую колонку → перенос на другой уровень навигации (F6). */
+  onMoveNodeToDepth?: (nodeId: string, depth: number) => void;
+  /** Удаление выделенных узлов (Delete/Backspace) — каскад команд (F5, T-034). */
+  onDeleteNodes?: (nodes: CanvasNode[]) => void;
+  /**
+   * Delete/Backspace с выделенным элементом внутри узла: удалить элемент.
+   * Возвращает true, если нажатие обработано, — канвас гасит событие, чтобы
+   * react-flow не удалил ещё и узел (единое удаление проекта, F5).
+   */
+  onDeleteSelectedElement?: () => boolean;
   /** Выделение узла на канвасе (клик) — цель меню добавления элементов (T-034). */
   onSelectedNodeChange?: (nodeId: string | null) => void;
 };
@@ -67,6 +79,9 @@ function CanvasInner({
   onReconnectLink,
   onDeleteLinks,
   onReorderNode,
+  onMoveNodeToDepth,
+  onDeleteNodes,
+  onDeleteSelectedElement,
   onSelectedNodeChange,
 }: EditorCanvasProps) {
   const theme = useEditorTheme();
@@ -85,29 +100,22 @@ function CanvasInner({
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
 
-  // Свободного перетаскивания по канвасу нет (D7): колонка узла определяется
-  // связями, drag — только вертикальный (переупорядочивание внутри слоя,
-  // T-036), поэтому X всегда возвращается к позиции из раскладки.
-  const lockedX = useCallback(
-    (nodeId: string): number => propsNodes.find((node) => node.id === nodeId)?.position.x ?? 0,
-    [propsNodes],
-  );
-
-  const onNodesChange = useCallback(
-    (changes: NodeChange<CanvasNode>[]) => {
-      const allowed = changes
-        // Удаление узлов — команда RemoveScenario/RemoveForm (T-034), через
-        // клавиатуру не удаляем: remove-изменения не применяем.
-        .filter((change) => change.type !== 'remove')
-        .map((change) =>
-          change.type === 'position' && change.position
-            ? { ...change, position: { x: lockedX(change.id), y: change.position.y } }
-            : change,
-        );
-      setNodes((current) => applyNodeChanges(allowed, current));
-    },
-    [lockedX],
-  );
+  // Свободного размещения нет: колонка узла — уровень навигации (F2/F6),
+  // но во время drag узел свободно следует за курсором. В drop решаем по
+  // ближайшей колонке: та же колонка — переупорядочивание по Y (T-036),
+  // другая — перенос на другой уровень (SetPageLayerDepth). Несостоявшийся
+  // drag откатывается возвратом к propsNodes — узел не остаётся в брошенной
+  // позиции.
+  const onNodesChange = useCallback((changes: NodeChange<CanvasNode>[]) => {
+    // Удаление узлов — команды RemoveScenario/RemoveForm (T-034), remove-
+    // изменения здесь не применяем: удаление идёт через onNodesDelete.
+    setNodes((current) =>
+      applyNodeChanges(
+        changes.filter((change) => change.type !== 'remove'),
+        current,
+      ),
+    );
+  }, []);
 
   const onEdgesChange = useCallback((changes: EdgeChange<CanvasEdge>[]) => {
     // Удаление связей идёт через onEdgesDelete → DisconnectElements.
@@ -119,18 +127,101 @@ function CanvasInner({
     );
   }, []);
 
+  // Колонки уровней из текущей раскладки: X — минимальная координата колонки,
+  // ширина — по самому широкому узлу. Справа от последней всегда есть пустой
+  // слот «следующий уровень» — на пустой уровень узел переносится первым (F6).
+  const findColumnCandidate = useCallback(
+    (x: number): { depth: number; x: number; width: number } | null => {
+      const byDepth = new Map<number, { x: number; width: number }>();
+      for (const node of propsNodes) {
+        const width = node.measured?.width ?? CANVAS_LAYOUT.nodeWidth;
+        const column = byDepth.get(node.data.depth);
+        if (column) {
+          column.x = Math.min(column.x, node.position.x);
+          column.width = Math.max(column.width, width);
+        } else {
+          byDepth.set(node.data.depth, { x: node.position.x, width });
+        }
+      }
+      const columns = [...byDepth.entries()]
+        .sort(([left], [right]) => left - right)
+        .map(([depth, column]) => ({ depth, ...column }));
+      const last = columns[columns.length - 1];
+      if (last) {
+        columns.push({
+          depth: last.depth + 1,
+          x: last.x + last.width + CANVAS_LAYOUT.columnGap,
+          width: CANVAS_LAYOUT.nodeWidth,
+        });
+      }
+      let best: (typeof columns)[number] | null = null;
+      for (const column of columns) {
+        const center = column.x + column.width / 2;
+        if (best === null || Math.abs(x - center) < Math.abs(x - (best.x + best.width / 2))) {
+          best = column;
+        }
+      }
+      return best;
+    },
+    [propsNodes],
+  );
+
+  // Подсветка целевой колонки во время drag (F6) и запомненная глубина
+  // кандидата — в drop решение принимается по последнему кандидату.
+  const [dropZone, setDropZone] = useState<{ x: number; width: number } | null>(null);
+  const candidateDepthRef = useRef<number | null>(null);
+
+  const handleNodeDrag: OnNodeDrag<CanvasNode> = useCallback(
+    (_event, draggedNode) => {
+      const width = draggedNode.measured?.width ?? CANVAS_LAYOUT.nodeWidth;
+      const candidate = findColumnCandidate(draggedNode.position.x + width / 2);
+      candidateDepthRef.current = candidate?.depth ?? null;
+      // Своя колонка не подсвечивается — переноса нет, будет reorder по Y.
+      setDropZone(
+        candidate && candidate.depth !== draggedNode.data.depth
+          ? { x: candidate.x, width: candidate.width }
+          : null,
+      );
+    },
+    [findColumnCandidate],
+  );
+
   const handleNodeDragStop: OnNodeDrag<CanvasNode> = useCallback(
     (_event, draggedNode) => {
+      setDropZone(null);
+      const candidateDepth = candidateDepthRef.current;
+      candidateDepthRef.current = null;
+      // Возврат к раскладке: результат drag'а фиксирует команда, пересчитанные
+      // узлы придут сверху; отклонённый drag не оставляет узел в брошенной позиции.
+      setNodes(propsNodes);
+      if (candidateDepth !== null && candidateDepth !== draggedNode.data.depth) {
+        onMoveNodeToDepth?.(draggedNode.id, candidateDepth);
+        return;
+      }
       // Порядок после drag определяется по Y среди узлов той же колонки
       // (глубина в data.depth — из адаптера), дальше — ReorderInLayer.
       const layerNodes = nodesRef.current.filter((node) => node.data.depth === draggedNode.data.depth);
-      // Возврат к раскладке: если команда не выполнится (порядок не изменился),
-      // узел не останется в брошенной позиции; если выполнится — сверху придут
-      // пересчитанные узлы.
-      setNodes(propsNodes);
       onReorderNode?.(draggedNode, layerNodes);
     },
-    [onReorderNode, propsNodes],
+    [onMoveNodeToDepth, onReorderNode, propsNodes],
+  );
+
+  // Единое удаление проекта (F5): выделение + Delete/Backspace. Сначала шанс
+  // выделенному элементу внутри узла; если его нет — событие доходит до
+  // react-flow, который удаляет выделенные узлы (onNodesDelete) и связи
+  // (onEdgesDelete). Capture-фаза + stopPropagation: иначе react-flow удалил
+  // бы ещё и узел, в котором лежал элемент.
+  const handleKeyDownCapture = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== 'Delete' && event.key !== 'Backspace') {
+        return;
+      }
+      if (onDeleteSelectedElement?.()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    },
+    [onDeleteSelectedElement],
   );
 
   // Два вида соединений (T-032/T-037):
@@ -166,7 +257,7 @@ function CanvasInner({
   );
 
   return (
-    <div className={styles.root} data-testid="editor-canvas">
+    <div className={styles.root} data-testid="editor-canvas" onKeyDownCapture={handleKeyDownCapture}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -176,6 +267,8 @@ function CanvasInner({
         onConnect={(connection) => onConnectLink?.(connection)}
         onReconnect={(oldEdge, connection) => onReconnectLink?.(oldEdge, connection)}
         onEdgesDelete={(deleted) => onDeleteLinks?.(deleted)}
+        onNodesDelete={(deleted) => onDeleteNodes?.(deleted)}
+        onNodeDrag={handleNodeDrag}
         onNodeDragStop={handleNodeDragStop}
         onSelectionChange={({ nodes: selected }) => onSelectedNodeChange?.(selected[0]?.id ?? null)}
         isValidConnection={isValidConnection}
@@ -183,6 +276,7 @@ function CanvasInner({
         colorMode="light"
         fitView
       >
+        {dropZone ? <DropZoneHighlight zone={dropZone} /> : null}
         <Background
           variant={BackgroundVariant.Dots}
           gap={24}
@@ -209,6 +303,31 @@ function CanvasInner({
         />
       </ReactFlow>
     </div>
+  );
+}
+
+// Полоса-подсветка целевой колонки dnd (F6): во время перетаскивания узла
+// подсвечивает уровень, куда узел упадёт. Координаты flow переводятся в
+// экранные через useViewport (pan/zoom); события мыши полоса не перехватывает.
+function DropZoneHighlight({ zone }: { zone: { x: number; width: number } }) {
+  const theme = useEditorTheme();
+  const { x: viewportX, zoom } = useViewport();
+  return (
+    <div
+      data-testid="drop-zone-highlight"
+      style={{
+        position: 'absolute',
+        left: zone.x * zoom + viewportX,
+        top: 0,
+        bottom: 0,
+        width: zone.width * zoom,
+        backgroundColor: theme.editor.canvas.nodeHoverBackground,
+        borderLeft: `2px dashed ${theme.editor.canvas.nodeHoverBorder}`,
+        borderRight: `2px dashed ${theme.editor.canvas.nodeHoverBorder}`,
+        pointerEvents: 'none',
+        zIndex: 1,
+      }}
+    />
   );
 }
 

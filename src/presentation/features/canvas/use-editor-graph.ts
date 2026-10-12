@@ -22,6 +22,7 @@ import {
   type ScenarioId,
 } from '@domain/model/ids';
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
+import { computeGraphDepths } from '@domain/graph-depths';
 import type { Command } from '@application/commands/command';
 import { ConnectElements } from '@application/commands/connect-elements';
 import { ReconnectElements } from '@application/commands/reconnect-elements';
@@ -36,6 +37,8 @@ import { RemoveForm } from '@application/commands/remove-form';
 import { RemoveFormStep } from '@application/commands/remove-form-step';
 import { AddElement } from '@application/commands/add-element';
 import { AddFormComponent } from '@application/commands/add-form-component';
+import { RemoveElement } from '@application/commands/remove-element';
+import { SetPageLayerDepth } from '@application/commands/set-page-layer-depth';
 import { EnableComplexLogic } from '@application/commands/enable-complex-logic';
 import { DisableComplexLogic } from '@application/commands/disable-complex-logic';
 import { AddLogicRule } from '@application/commands/add-logic-rule';
@@ -96,10 +99,24 @@ export function useEditorGraph() {
   // Выделенный на канвасе узел (клик): цель для меню добавления элементов
   // тулбара (T-034). Schema-driven панель атрибутов появится в T-041+.
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  // Выделенный элемент внутри узла (клик по карточке): Delete/Backspace
+  // удаляет именно его (единое правило проекта: выделение + Delete).
+  // Выделение узла и элемента взаимоисключающи — последний клик побеждает.
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const selectedNodeType: CanvasNodeType | null = useMemo(
     () => flow.nodes.find((node) => node.id === selectedNodeId)?.type ?? null,
     [flow.nodes, selectedNodeId],
   );
+  const handleNodeSelection = useCallback((nodeId: string | null) => {
+    setSelectedNodeId(nodeId);
+    setSelectedElementId(null);
+  }, []);
+  const selectElement = useCallback((elementId: string | null) => {
+    setSelectedElementId(elementId);
+    if (elementId !== null) {
+      setSelectedNodeId(null);
+    }
+  }, []);
 
   const runCommand = useCallback(
     (command: Command) => {
@@ -245,6 +262,11 @@ export function useEditorGraph() {
   // D13) — его выдаёт команда; связь к узлу привязывается позже drag'ом.
   const addNode = useCallback(
     (kind: AddableNodeKind) => {
+      // Колонка нового узла — следующий уровень навигации за самой глубокой
+      // страницей (замечание владельца: несвязанный узел не должен падать
+      // в нулевую колонку); дальше узел переносится dnd между уровнями.
+      const depths = computeGraphDepths(graphRef.current);
+      const nextDepth = depths.size === 0 ? 0 : Math.max(...depths.values()) + 1;
       if (kind === 'home') {
         runCommand(new AddHomePage({ id: toPageId(idGenerator.next()), listItems: [], widgetCards: [] }));
         return;
@@ -256,6 +278,7 @@ export function useEditorGraph() {
             type: 'navigation',
             title: NEW_SCENARIO_TITLE,
             listItems: [],
+            layerDepth: nextDepth,
           }),
         );
         return;
@@ -267,11 +290,34 @@ export function useEditorGraph() {
           id: toApplicationFormId(idGenerator.next()),
           title: NEW_FORM_TITLE,
           steps: [{ id: toFormStepId(idGenerator.next()), components: [] }],
+          layerDepth: nextDepth,
         }),
       );
     },
     [idGenerator, runCommand],
   );
+
+  // Перенос узла в другую колонку (уровень навигации) dnd'ом: явный
+  // layerDepth; вертикальный порядок внутри новой колонки — по orderIndex.
+  const moveNodeToDepth = useCallback(
+    (nodeId: string, depth: number) => {
+      runCommand(new SetPageLayerDepth(nodeId as PageEntityId, depth));
+    },
+    [runCommand],
+  );
+
+  // Удаление выделенного элемента по Delete/Backspace (единое правило
+  // проекта: выделение + Delete). Возвращает true, если нажатие обработано,
+  // — канвас тогда гасит событие, чтобы react-flow не удалил узел.
+  const deleteSelectedElement = useCallback((): boolean => {
+    if (!selectedElementId) {
+      return false;
+    }
+    const elementId = selectedElementId;
+    setSelectedElementId(null);
+    runCommand(new RemoveElement(elementId as ElementId));
+    return true;
+  }, [runCommand, selectedElementId]);
 
   // Элемент из меню тулбара — в выделенный узел канваса. Допустимые виды
   // элементов зависят от типа узла (меню их и показывает): Главная —
@@ -392,39 +438,62 @@ export function useEditorGraph() {
 
   // Интерактивные поля узлов (onDeleteNode, меню «+» шага и т.п.) адаптер
   // не строит — он чистый; внедряем здесь, поверх graphToFlow. Карточкам
-  // элементов внедряется переключатель «Сложной логики» (T-037).
+  // элементов внедряются выделение (selected/onSelect — Delete удаляет
+  // выделенный элемент) и переключатель «Сложной логики» (T-037).
   const nodes = useMemo<CanvasNode[]>(
     () =>
-      flow.nodes.map((node) => ({
-        ...node,
-        data: {
-          ...node.data,
-          onDeleteNode: () => removeNode(node),
-          elements: node.data.elements.map((element) =>
-            element.complexLogic
-              ? { ...element, onToggleComplexLogic: () => toggleComplexLogic(element.id) }
-              : element,
-          ),
-          steps: node.data.steps.map((step) => ({
-            ...step,
-            elements: step.elements.map((element) =>
-              element.complexLogic
-                ? { ...element, onToggleComplexLogic: () => toggleComplexLogic(element.id) }
-                : element,
-            ),
-          })),
-          ...(node.type === 'form'
-            ? {
-                elementKindOptions: ELEMENT_KIND_OPTIONS,
-                onAddElementToStep: (stepId: string, kind: FormComponentKind) =>
-                  addElementToStep(node.id as ApplicationFormId, stepId as FormStepId, kind),
-                onDeleteStep: (stepId: string) =>
-                  removeStep(node.id as ApplicationFormId, stepId as FormStepId),
-              }
-            : null),
-        },
-      })),
-    [flow.nodes, removeNode, addElementToStep, removeStep, toggleComplexLogic],
+      flow.nodes.map((node) => {
+        const injectElement = (element: CanvasNode['data']['elements'][number]) => ({
+          ...element,
+          selected: element.id === selectedElementId,
+          onSelect: () => selectElement(element.id),
+          ...(element.complexLogic ? { onToggleComplexLogic: () => toggleComplexLogic(element.id) } : null),
+        });
+        return {
+          ...node,
+          // Выделение взаимоисключающее (F5): пока выделен элемент, узел
+          // принудительно снимается с выделения react-flow.
+          ...(selectedElementId !== null ? { selected: false } : null),
+          data: {
+            ...node.data,
+            onDeleteNode: () => removeNode(node),
+            elements: node.data.elements.map(injectElement),
+            steps: node.data.steps.map((step) => ({
+              ...step,
+              elements: step.elements.map(injectElement),
+            })),
+            ...(node.type === 'form'
+              ? {
+                  elementKindOptions: ELEMENT_KIND_OPTIONS,
+                  onAddElementToStep: (stepId: string, kind: FormComponentKind) =>
+                    addElementToStep(node.id as ApplicationFormId, stepId as FormStepId, kind),
+                  onDeleteStep: (stepId: string) =>
+                    removeStep(node.id as ApplicationFormId, stepId as FormStepId),
+                }
+              : null),
+          },
+        };
+      }),
+    [
+      flow.nodes,
+      removeNode,
+      addElementToStep,
+      removeStep,
+      toggleComplexLogic,
+      selectedElementId,
+      selectElement,
+    ],
+  );
+
+  // Удаление выделенных узлов по Delete/Backspace: react-flow присылает их
+  // в onNodesDelete, каждый уходит своей командой с каскадом связей (T-034).
+  const removeNodes = useCallback(
+    (deleted: CanvasNode[]) => {
+      for (const node of deleted) {
+        removeNode(node);
+      }
+    },
+    [removeNode],
   );
 
   const undo = useCallback(() => {
@@ -449,11 +518,14 @@ export function useEditorGraph() {
     hasNodes: nodes.length > 0,
     hasHome: graph.homePage !== undefined,
     selectedNodeType,
-    onSelectedNodeChange: setSelectedNodeId,
+    onSelectedNodeChange: handleNodeSelection,
     connect,
     reconnect,
     disconnect,
     reorderInLayer,
+    moveNodeToDepth,
+    removeNodes,
+    deleteSelectedElement,
     addNode,
     addElement,
     undo,

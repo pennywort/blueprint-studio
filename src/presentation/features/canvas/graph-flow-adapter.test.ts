@@ -142,8 +142,9 @@ describe('graphToFlow (T-030): связи → рёбра', () => {
     const { edges } = graphToFlow(makeGraph());
 
     expect(edges).toEqual([
-      { id: 'link-1', source: 'home-1', sourceHandle: 'el-home-1', target: 'sc-1' },
-      { id: 'link-2', source: 'sc-1', sourceHandle: 'el-sc-1', target: 'form-1' },
+      // Ортогональные рёбра с закруглёнными углами — тип smoothstep (F8).
+      { id: 'link-1', source: 'home-1', sourceHandle: 'el-home-1', target: 'sc-1', type: 'smoothstep' },
+      { id: 'link-2', source: 'sc-1', sourceHandle: 'el-sc-1', target: 'form-1', type: 'smoothstep' },
     ]);
   });
 

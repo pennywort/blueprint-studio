@@ -97,7 +97,10 @@ function EditorPageLayout() {
             onConnectLink={editorGraph.connect}
             onReconnectLink={editorGraph.reconnect}
             onDeleteLinks={editorGraph.disconnect}
+            onDeleteNodes={editorGraph.removeNodes}
             onReorderNode={editorGraph.reorderInLayer}
+            onMoveNodeToDepth={editorGraph.moveNodeToDepth}
+            onDeleteSelectedElement={editorGraph.deleteSelectedElement}
             onSelectedNodeChange={editorGraph.onSelectedNodeChange}
           />
           {/* Пустое состояние (T-024): поверх канваса, не перехватывает

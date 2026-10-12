@@ -39,13 +39,15 @@ export function placeLinkTargetIntoNextLayer(
     return;
   }
 
-  // Перенос в конец целевой колонки: страница вынимается из общей
-  // последовательности orderIndex и вставляется после последней страницы
-  // новой колонки, индексы перенумеровываются без дыр (как в ReorderInLayer).
+  // Связь перенесла цель в другую колонку — фиксируем её явно (layerDepth),
+  // чтобы колонка цели не «уплывала» при последующих изменениях графа.
   const pages = [...walkPages(draft)].sort((left, right) => left.orderIndex - right.orderIndex);
+  const target = pages.find((page) => page.id === targetId);
+  if (target && 'layerDepth' in target) {
+    (target as { layerDepth?: number }).layerDepth = targetDepth;
+  }
   const column = pages.filter((page) => page.id !== targetId && depthsAfter.get(page.id) === targetDepth);
   const lastInColumn = column[column.length - 1];
-  const target = pages.find((page) => page.id === targetId);
   if (!lastInColumn || !target || lastInColumn.orderIndex < target.orderIndex) {
     return; // цель единственная в колонке или уже стоит в её конце
   }
