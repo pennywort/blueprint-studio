@@ -95,6 +95,24 @@ export function findFormById(
   return graph.applicationForms.find((form) => form.id === formId) ?? null;
 }
 
+// Компонент формы по id вместе с формой-владельцем — командам «Сложной
+// логики» (T-037/T-064) нужны и сам компонент (флаг, option'ы), и форма
+// (правило «внутри одной формы», L-I5).
+export function findFormComponent(
+  graph: ServiceGraph,
+  componentId: string,
+): { form: ServiceGraph['applicationForms'][number]; component: FormComponent } | null {
+  for (const form of graph.applicationForms) {
+    for (const step of form.steps) {
+      const component = step.components.find((candidate) => candidate.id === componentId);
+      if (component) {
+        return { form, component };
+      }
+    }
+  }
+  return null;
+}
+
 // Цель связи — страница МИПа: подсценарий (D13) или форма заявки (D12).
 // Главная целью быть не может (PageLinkTargetId — только ScenarioId | ApplicationFormId).
 export function isLinkTargetPresent(graph: ServiceGraph, targetId: string): boolean {

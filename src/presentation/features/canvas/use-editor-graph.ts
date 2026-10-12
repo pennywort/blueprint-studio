@@ -7,12 +7,16 @@ import {
   toElementId,
   toFormComponentId,
   toFormStepId,
+  toLogicRuleId,
+  toOptionId,
   toPageId,
   toPageLinkId,
   toScenarioId,
   type ApplicationFormId,
   type ElementId,
+  type FormComponentId,
   type FormStepId,
+  type LogicRuleId,
   type PageEntityId,
   type PageLinkId,
   type ScenarioId,
@@ -32,16 +36,23 @@ import { RemoveForm } from '@application/commands/remove-form';
 import { RemoveFormStep } from '@application/commands/remove-form-step';
 import { AddElement } from '@application/commands/add-element';
 import { AddFormComponent } from '@application/commands/add-form-component';
-import { findFormById, walkPages } from '@application/commands/graph-lookup';
+import { EnableComplexLogic } from '@application/commands/enable-complex-logic';
+import { DisableComplexLogic } from '@application/commands/disable-complex-logic';
+import { AddLogicRule } from '@application/commands/add-logic-rule';
+import { RemoveLogicRule } from '@application/commands/remove-logic-rule';
+import { findElementLocation, findFormById, walkPages } from '@application/commands/graph-lookup';
 import { useContainer } from '@presentation/app/App';
 import { useEditorNotifications } from '@presentation/features/notifications/editor-notifications';
 import type { AddableElementKind, AddableNodeKind } from '@presentation/features/toolbar/editor-toolbar';
 import { computeLayout } from './canvas-layout';
 import {
   FORM_COMPONENT_KIND_LABELS,
+  LOGIC_SOURCE_HANDLE_PREFIX,
   flowConnectionToLink,
   flowNodesToLayerOrder,
   graphToFlow,
+  parseLogicSourceHandle,
+  parseLogicTargetHandle,
   type CanvasEdge,
   type CanvasNode,
   type CanvasNodeType,
@@ -107,8 +118,29 @@ export function useEditorGraph() {
 
   // Создание связи drag'ом (T-032): Connection → поля связи (адаптер),
   // id — от IIdGenerator; слои доводит сама команда (D7, T-036).
+  // Source-handle option'а (T-037) маршрутизируется в AddLogicRule —
+  // это правило видимости, а не навигационная связь.
   const connect = useCallback(
     (connection: Connection) => {
+      const sourceHandle = connection.sourceHandle ?? '';
+      if (sourceHandle.startsWith(LOGIC_SOURCE_HANDLE_PREFIX)) {
+        const source = parseLogicSourceHandle(sourceHandle);
+        const targetElementId = connection.targetHandle
+          ? parseLogicTargetHandle(connection.targetHandle)
+          : null;
+        if (!source || targetElementId === null) {
+          return;
+        }
+        runCommand(
+          new AddLogicRule({
+            id: toLogicRuleId(idGenerator.next()),
+            sourceElementId: toElementId(source.elementId),
+            condition: { kind: 'optionSelected', optionId: toOptionId(source.optionId) },
+            targetElementId: toElementId(targetElementId),
+          }),
+        );
+        return;
+      }
       const link = flowConnectionToLink(connection);
       if (!link) {
         return; // связь не от элемента (нет sourceHandle) — игнорируем
@@ -125,9 +157,14 @@ export function useEditorGraph() {
   );
 
   // Переназначение существующей связи на другой источник/цель (T-032, D7/D13):
-  // меняются только переданные концы, id связи стабилен.
+  // меняются только переданные концы, id связи стабилен. Рёбра правил
+  // «Сложной логики» не переназначаются (адаптер помечает их
+  // reconnectable: false, здесь — защита от обхода).
   const reconnect = useCallback(
     (oldEdge: CanvasEdge, connection: Connection) => {
+      if (oldEdge.data?.kind === 'logic') {
+        return;
+      }
       const patch: { sourceElementId?: ElementId; targetId?: PageLinkTargetId } = {};
       if (connection.sourceHandle && connection.sourceHandle !== oldEdge.sourceHandle) {
         patch.sourceElementId = toElementId(connection.sourceHandle);
@@ -143,11 +180,16 @@ export function useEditorGraph() {
     [runCommand],
   );
 
-  // Удаление связей (выделенное ребро + Delete/Backspace) — по команде на ребро.
+  // Удаление связей (выделенное ребро + Delete/Backspace) — по команде на
+  // ребро; ребро правила видимости = удаление правила (T-037, L7).
   const disconnect = useCallback(
     (edges: CanvasEdge[]) => {
       for (const edge of edges) {
-        runCommand(new DisconnectElements(toPageLinkId(edge.id as PageLinkId)));
+        if (edge.data?.kind === 'logic') {
+          runCommand(new RemoveLogicRule(edge.id as LogicRuleId));
+        } else {
+          runCommand(new DisconnectElements(toPageLinkId(edge.id as PageLinkId)));
+        }
       }
     },
     [runCommand],
@@ -316,8 +358,41 @@ export function useEditorGraph() {
     [runCommand],
   );
 
+  // Чип «Сложная логика» на карточке Select'а (T-037/T-066, L4): включение
+  // открывает option-handle'ы, выключение при наличии правил — с
+  // подтверждением и каскадным удалением рёбер (каскад — внутри команды,
+  // undo возвращает и флаг, и правила). TEMPORARY до инспектора (T-067):
+  // переключатель живёт на чипе, а не в панели атрибутов; подтверждение —
+  // нативный confirm до появления диалогов дизайн-системы.
+  const toggleComplexLogic = useCallback(
+    (elementId: string) => {
+      const location = findElementLocation(graphRef.current, elementId);
+      const component = location?.kind === 'formComponent' ? location.list[location.index] : null;
+      if (!component || component.kind !== 'selectList') {
+        return;
+      }
+      const componentId = component.id as FormComponentId;
+      if (component.hasComplexLogic) {
+        const rulesCount = graphRef.current.logicRules.filter(
+          (rule) => rule.sourceElementId === elementId,
+        ).length;
+        if (
+          rulesCount > 0 &&
+          !window.confirm(`Выключить сложную логику? Связанные правила будут удалены: ${rulesCount}.`)
+        ) {
+          return;
+        }
+        runCommand(new DisableComplexLogic(componentId));
+      } else {
+        runCommand(new EnableComplexLogic(componentId));
+      }
+    },
+    [runCommand],
+  );
+
   // Интерактивные поля узлов (onDeleteNode, меню «+» шага и т.п.) адаптер
-  // не строит — он чистый; внедряем здесь, поверх graphToFlow.
+  // не строит — он чистый; внедряем здесь, поверх graphToFlow. Карточкам
+  // элементов внедряется переключатель «Сложной логики» (T-037).
   const nodes = useMemo<CanvasNode[]>(
     () =>
       flow.nodes.map((node) => ({
@@ -325,6 +400,19 @@ export function useEditorGraph() {
         data: {
           ...node.data,
           onDeleteNode: () => removeNode(node),
+          elements: node.data.elements.map((element) =>
+            element.complexLogic
+              ? { ...element, onToggleComplexLogic: () => toggleComplexLogic(element.id) }
+              : element,
+          ),
+          steps: node.data.steps.map((step) => ({
+            ...step,
+            elements: step.elements.map((element) =>
+              element.complexLogic
+                ? { ...element, onToggleComplexLogic: () => toggleComplexLogic(element.id) }
+                : element,
+            ),
+          })),
           ...(node.type === 'form'
             ? {
                 elementKindOptions: ELEMENT_KIND_OPTIONS,
@@ -336,7 +424,7 @@ export function useEditorGraph() {
             : null),
         },
       })),
-    [flow.nodes, removeNode, addElementToStep, removeStep],
+    [flow.nodes, removeNode, addElementToStep, removeStep, toggleComplexLogic],
   );
 
   const undo = useCallback(() => {

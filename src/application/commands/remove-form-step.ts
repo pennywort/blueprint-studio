@@ -26,7 +26,13 @@ export class RemoveFormStep implements Command {
     if (index < 0) {
       throw new Error(`Шаг не найден: ${this.stepId} (форма ${this.formId})`);
     }
+    // Каскад сложной логики (T-037): компоненты шага уходят вместе с ним —
+    // правила, где они источник или цель, удаляются.
+    const componentIds = new Set<string>(form.steps[index]!.components.map((component) => component.id));
     form.steps.splice(index, 1);
+    draft.logicRules = draft.logicRules.filter(
+      (rule) => !componentIds.has(rule.sourceElementId) && !componentIds.has(rule.targetElementId),
+    );
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

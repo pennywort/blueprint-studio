@@ -22,6 +22,11 @@ export class RemoveElement implements Command {
 
     location.list.splice(location.index, 1);
     draft.links = draft.links.filter((link) => link.sourceElementId !== this.elementId);
+    // Каскад сложной логики (T-037, §6 дизайн-дока): вместе с элементом
+    // уходят правила, где он источник или цель.
+    draft.logicRules = draft.logicRules.filter(
+      (rule) => rule.sourceElementId !== this.elementId && rule.targetElementId !== this.elementId,
+    );
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

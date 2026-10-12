@@ -26,6 +26,7 @@ const minimalGraph = {
   subScenarios: [],
   applicationForms: [],
   links: [],
+  logicRules: [],
 };
 
 describe('PageLinkSchema (модель связи)', () => {
@@ -155,6 +156,7 @@ describe('ServiceGraphSchema: страницы верхнего уровня и 
           targetId: toScenarioId('sc-1'),
         },
       ],
+      logicRules: [],
     };
     // Branded-цели: ScenarioId и ApplicationFormId оба допустимы как targetId.
     const formTarget: ServiceGraph['links'][number]['targetId'] = toApplicationFormId('form-1');

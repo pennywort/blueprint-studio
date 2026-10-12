@@ -117,6 +117,10 @@ export const SelectListSchema = z.object({
   multiSelect: z.boolean(),
   options: z.array(SelectOptionSchema),
   search: z.boolean().optional(),
+  // Включён режим «Сложная логика» (T-037, L4/L5): у option'ов появляются
+  // source-handle'ы, из которых протягиваются правила видимости. Флаг —
+  // проектный meta-слой редактора (D4), а не часть element-schemas движка.
+  hasComplexLogic: z.boolean().optional(),
 });
 
 export const TypographySchema = z.object({

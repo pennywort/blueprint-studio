@@ -18,7 +18,13 @@ import { useEditorTheme } from '@presentation/theme/editor-theme';
 import { useReactFlowThemeStyles } from './react-flow-theme-styles';
 import { EditorCanvasControls } from './editor-canvas-controls';
 import { canvasNodeTypes } from './nodes/node-types';
-import type { CanvasEdge, CanvasNode } from './graph-flow-adapter';
+import {
+  LOGIC_SOURCE_HANDLE_PREFIX,
+  parseLogicSourceHandle,
+  parseLogicTargetHandle,
+  type CanvasEdge,
+  type CanvasNode,
+} from './graph-flow-adapter';
 
 export type EditorCanvasProps = {
   /** Узлы и рёбра — из graphToFlow (T-030/T-031); канвас управляемый. */
@@ -127,10 +133,29 @@ function CanvasInner({
     [onReorderNode, propsNodes],
   );
 
-  // Цель связи — страница, но не Главная (домен: PageLinkTargetId), и не сам
-  // узел-источник; источник — только карточка элемента (sourceHandle, D9).
+  // Два вида соединений (T-032/T-037):
+  // — навигация: источник — карточка элемента (sourceHandle, D9), цель —
+  //   страница, но не Главная (домен: PageLinkTargetId), и не сам узел;
+  // — «Сложная логика»: источник — option-handle Select'а, цель — target-handle
+  //   карточки другого элемента ТОЙ ЖЕ формы (L-I5; оба конца в одном узле —
+  //   штатное ребро react-flow внутри FormNode, решение владельца по Q-9).
   const isValidConnection: IsValidConnection<CanvasEdge> = useCallback(
     (connection) => {
+      const sourceHandle = connection.sourceHandle ?? '';
+      if (sourceHandle.startsWith(LOGIC_SOURCE_HANDLE_PREFIX)) {
+        const source = parseLogicSourceHandle(sourceHandle);
+        const targetElementId = connection.targetHandle
+          ? parseLogicTargetHandle(connection.targetHandle)
+          : null;
+        if (!source || targetElementId === null) {
+          return false;
+        }
+        return connection.source === connection.target && targetElementId !== source.elementId;
+      }
+      // Навигационное ребро не должно попадать в logic-target handle элемента.
+      if (connection.targetHandle && parseLogicTargetHandle(connection.targetHandle) !== null) {
+        return false;
+      }
       if (!connection.sourceHandle || connection.source === connection.target) {
         return false;
       }

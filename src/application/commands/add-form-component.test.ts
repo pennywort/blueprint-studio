@@ -49,6 +49,7 @@ const graphWithForm = (): ServiceGraph => ({
     },
   ],
   links: [],
+  logicRules: [],
 });
 
 const makeBus = () => new CommandBus({ clock: new FixedClock() });

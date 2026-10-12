@@ -58,6 +58,7 @@ const makeGraph = (): ServiceGraph => ({
       targetId: toApplicationFormId('form-1'),
     },
   ],
+  logicRules: [],
 });
 
 describe('graphToFlow (T-030): страницы → узлы', () => {

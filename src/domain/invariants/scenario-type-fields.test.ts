@@ -19,6 +19,7 @@ const graphWith = (subScenarios: SubScenario[]): ServiceGraph => ({
   subScenarios,
   applicationForms: [],
   links: [],
+  logicRules: [],
 });
 
 describe('checkScenarioTypeFields (инвариант формы сценария)', () => {

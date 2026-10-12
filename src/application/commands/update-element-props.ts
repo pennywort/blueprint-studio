@@ -50,6 +50,18 @@ export class UpdateElementProps implements Command {
     // zod отсекает неизвестные схеме поля — в граф попадает только контракт.
     location.list[location.index] = parsed.data;
 
+    // Каскад сложной логики при удалении option'ов Select'а-источника
+    // (T-037, §6 дизайн-дока): правила на удалённые значения списка уходят
+    // вместе со значением (UI недостижимость L-I2, инвариант — защита).
+    if ('kind' in parsed.data && parsed.data.kind === 'selectList') {
+      const optionValues = new Set(parsed.data.options.map((option) => option.value));
+      draft.logicRules = draft.logicRules.filter(
+        (rule) =>
+          rule.sourceElementId !== this.elementId ||
+          (rule.condition.kind === 'optionSelected' && optionValues.has(rule.condition.optionId)),
+      );
+    }
+
     const violations = validateGraph(draft);
     if (violations.length > 0) {
       throw new InvariantViolationError(violations);

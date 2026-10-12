@@ -37,6 +37,7 @@ const graphWith = (component: SelectList): ServiceGraph => ({
     },
   ],
   links: [],
+  logicRules: [],
 });
 
 describe('checkRadioMaxFiveOptions (инвариант #2)', () => {

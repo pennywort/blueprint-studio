@@ -28,6 +28,7 @@ const graph = (title: string): ServiceGraph => ({
   subScenarios: [],
   applicationForms: [],
   links: [],
+  logicRules: [],
 });
 
 const makeBus = () => new CommandBus({ clock: new FixedClock(new Date('2026-10-09T12:00:00Z')) });

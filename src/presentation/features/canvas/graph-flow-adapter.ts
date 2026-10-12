@@ -15,6 +15,38 @@ import { computeGraphDepths } from '@domain/graph-depths';
 // Типы узлов — ключи реестра nodeTypes кастомных узлов (T-031).
 export type CanvasNodeType = 'home' | 'subScenario' | 'form';
 
+// Handles «Сложной логики» (T-037/T-066): source-handle на строке option'а
+// Select'а-источника, target-handle на левом краю карточки элемента-цели.
+// Id кодируют элемент (и option), чтобы onConnect восстановил поля правила
+// без поиска по DOM. ElementId двоеточий не содержит — разделитель безопасен.
+export const LOGIC_SOURCE_HANDLE_PREFIX = 'logic-src:';
+export const LOGIC_TARGET_HANDLE_PREFIX = 'logic-tgt:';
+/** Класс рёбер правил видимости — пунктир из темы (D6), отличим от навигации. */
+export const LOGIC_EDGE_CLASS = 'editor-logic-edge';
+
+export const logicSourceHandleId = (elementId: string, optionId: string): string =>
+  `${LOGIC_SOURCE_HANDLE_PREFIX}${elementId}:${optionId}`;
+
+export const logicTargetHandleId = (elementId: string): string => `${LOGIC_TARGET_HANDLE_PREFIX}${elementId}`;
+
+export function parseLogicSourceHandle(handle: string): { elementId: string; optionId: string } | null {
+  if (!handle.startsWith(LOGIC_SOURCE_HANDLE_PREFIX)) {
+    return null;
+  }
+  const rest = handle.slice(LOGIC_SOURCE_HANDLE_PREFIX.length);
+  const separator = rest.indexOf(':');
+  if (separator < 0) {
+    return null;
+  }
+  return { elementId: rest.slice(0, separator), optionId: rest.slice(separator + 1) };
+}
+
+export function parseLogicTargetHandle(handle: string): string | null {
+  return handle.startsWith(LOGIC_TARGET_HANDLE_PREFIX)
+    ? handle.slice(LOGIC_TARGET_HANDLE_PREFIX.length)
+    : null;
+}
+
 // Строка-элемент внутри узла (ElementCard, T-031): id — одновременно
 // source-handle связи (D9).
 export type CanvasElementData = {
@@ -31,6 +63,19 @@ export type CanvasElementData = {
    * и react-flow уронил бы ребро.
    */
   hasOutgoingLink: boolean;
+  /**
+   * «Сложная логика» (T-037): поле присутствует у Select'а — потенциального
+   * источника правил (L5). enabled — режим включён, у option'ов есть
+   * source-handle'ы; options — строки option'ов для рендера с handle-id.
+   */
+  complexLogic?: {
+    enabled: boolean;
+    options: ReadonlyArray<{ handleId: string; label: string }>;
+  };
+  /** На элемент есть входящие правила видимости — индикатор зависимости (L-Q1). */
+  hasIncomingLogic?: boolean;
+  /** Чип «Сложная логика» — переключатель режима (внедряется хранилищем, T-066). */
+  onToggleComplexLogic?: () => void;
 };
 
 // Колонка шага внутри узла формы (D1: шаги — горизонтальные колонки).
@@ -131,13 +176,29 @@ function listItemToElementData(
 function formComponentToElementData(
   component: FormComponent,
   linkSources: ReadonlySet<string>,
+  logicTargets: ReadonlySet<string>,
 ): CanvasElementData {
   const element: CanvasElementData = {
     id: component.id,
     title: 'label' in component ? component.label : component.kind,
     kindLabel: FORM_COMPONENT_KIND_LABELS[component.kind],
     hasOutgoingLink: linkSources.has(component.id),
+    hasIncomingLogic: logicTargets.has(component.id),
   };
+  if (component.kind === 'selectList') {
+    // Select — потенциальный источник «Сложной логики» (L5); option-handle'ы
+    // рисуются только при включённом режиме (L4).
+    const enabled = component.hasComplexLogic === true;
+    element.complexLogic = {
+      enabled,
+      options: enabled
+        ? component.options.map((option) => ({
+            handleId: logicSourceHandleId(component.id, option.value),
+            label: option.label,
+          }))
+        : [],
+    };
+  }
   if ('placeholder' in component && component.placeholder) {
     element.secondaryText = component.placeholder;
   }
@@ -165,6 +226,8 @@ export function graphToFlow(
   // Источники связей — для флага hasOutgoingLink (сжатие T-033 не прячет
   // карточки, от которых исходит ребро).
   const linkSources = new Set<string>(graph.links.map((link) => link.sourceElementId));
+  // Цели правил видимости — индикатор зависимости на карточке (T-037, L-Q1).
+  const logicTargets = new Set<string>(graph.logicRules.map((rule) => rule.targetElementId));
 
   const nodes: CanvasNode[] = [];
   // Владелец элемента → id узла: нужен, чтобы ребро вышло из узла страницы,
@@ -226,7 +289,9 @@ export function graphToFlow(
         steps: form.steps.map((step) => ({
           id: step.id,
           title: step.title ?? '',
-          elements: step.components.map((component) => formComponentToElementData(component, linkSources)),
+          elements: step.components.map((component) =>
+            formComponentToElementData(component, linkSources, logicTargets),
+          ),
         })),
         formKindLabel: form.steps.length > 1 ? 'Степперная' : 'Одностраничная',
       },
@@ -253,6 +318,34 @@ export function graphToFlow(
       source: sourceNodeId,
       sourceHandle: link.sourceElementId,
       target: link.targetId,
+    });
+  }
+
+  // Проекция правил «Сложной логики» в рёбра (T-037/T-065, L7): ребро =
+  // правило. Источник — option-handle Select'а-источника, цель — target-handle
+  // карточки элемента; оба конца живут внутри одного узла формы (L-I5), поэтому
+  // это штатное ребро react-flow внутри FormNode (решение владельца по Q-9).
+  // Отличимый стиль — пунктир из темы (D6); reconnect правил не поддерживаем.
+  for (const rule of graph.logicRules) {
+    if (rule.condition.kind !== 'optionSelected') {
+      continue;
+    }
+    const ruleSourceNodeId = elementOwnerNodeId.get(rule.sourceElementId);
+    const ruleTargetNodeId = elementOwnerNodeId.get(rule.targetElementId);
+    // Битая ссылка (элемент удалён вне каскада) не роняет рендер — инварианты
+    // фиксируют нарушение, адаптер пропускает ребро.
+    if (!ruleSourceNodeId || !ruleTargetNodeId) {
+      continue;
+    }
+    edges.push({
+      id: rule.id,
+      source: ruleSourceNodeId,
+      sourceHandle: logicSourceHandleId(rule.sourceElementId, rule.condition.optionId),
+      target: ruleTargetNodeId,
+      targetHandle: logicTargetHandleId(rule.targetElementId),
+      className: LOGIC_EDGE_CLASS,
+      reconnectable: false,
+      data: { kind: 'logic' },
     });
   }
 

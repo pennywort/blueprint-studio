@@ -35,6 +35,7 @@ const graphWithForms = (
     })),
   })),
   links: [],
+  logicRules: [],
 });
 
 describe('checkSingleAttachmentPerForm (инвариант #1)', () => {

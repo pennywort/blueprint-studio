@@ -22,3 +22,5 @@ export { default as ViewColumn } from '@material-ui/icons/ViewColumn';
 export { default as NoteAdd } from '@material-ui/icons/NoteAdd';
 // T-031: иконка-плейсхолдер карточки элемента (серая «пульс»-иконка с макетов).
 export { default as ShowChart } from '@material-ui/icons/ShowChart';
+// T-037: индикатор зависимости видимости на карточке-цели «Сложной логики».
+export { default as Visibility } from '@material-ui/icons/Visibility';

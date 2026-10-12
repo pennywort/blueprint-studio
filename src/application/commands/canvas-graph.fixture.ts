@@ -91,6 +91,7 @@ export const makeCanvasGraph = (): ServiceGraph => ({
     },
     { id: toPageLinkId('link-3'), sourceElementId: toElementId('el-sc-3'), targetId: toScenarioId('sc-1') },
   ],
+  logicRules: [],
 });
 
 // Приёмочный контур каждой команды (T-035): execute → undo → redo возвращает

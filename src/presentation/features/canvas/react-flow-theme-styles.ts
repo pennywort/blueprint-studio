@@ -28,6 +28,11 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
         stroke: canvas.edge,
         strokeWidth: 2,
       },
+      // Рёбра «Сложной логики» (T-037, §6 дизайн-дока): пунктир, чтобы
+      // визуально не путать правила видимости с навигационными связями.
+      '& .react-flow__edge.editor-logic-edge .react-flow__edge-path': {
+        strokeDasharray: '6 4',
+      },
       '& .react-flow__handle': {
         width: 8,
         height: 8,

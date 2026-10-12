@@ -9,6 +9,7 @@ import {
   ListItemSchema,
 } from './scenario';
 import { PageLinkSchema } from './page-link';
+import { LogicRuleSchema } from './logic-rule';
 
 // Граф сервиса — корневая доменная модель содержимого карты (спека 5.1).
 //
@@ -36,5 +37,9 @@ export const ServiceGraphSchema = z.object({
   applicationForms: z.array(ApplicationFormSchema),
   // Рёбра канваса: элемент страницы → страница-цель (подсценарий/форма, D12).
   links: z.array(PageLinkSchema),
+  // Правила условной видимости «Сложной логики» (T-037, L7): отдельная
+  // коллекция, ребро правила на канвасе — её проекция. Default [] — графы,
+  // сериализованные до появления фичи, остаются валидными.
+  logicRules: z.array(LogicRuleSchema).default([]),
 });
 export type ServiceGraph = z.infer<typeof ServiceGraphSchema>;

@@ -56,6 +56,7 @@ const graphWith = (component: FormComponent): ServiceGraph => ({
     },
   ],
   links: [],
+  logicRules: [],
 });
 
 describe('checkRoutingExcludesDynamicContent (инварианты #3–5)', () => {

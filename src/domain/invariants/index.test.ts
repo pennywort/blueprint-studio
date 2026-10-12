@@ -17,6 +17,7 @@ const emptyGraph = (): ServiceGraph => ({
   subScenarios: [],
   applicationForms: [],
   links: [],
+  logicRules: [],
 });
 
 describe('validateGraph (оркестратор инвариантов)', () => {

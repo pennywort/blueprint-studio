@@ -1,8 +1,8 @@
 import { Handle, Position } from '@xyflow/react';
 import { Box, Card, CardContent, Chip, Typography, makeStyles } from '@sber-friend/flamingo-core';
-import { ShowChart } from '@sber-friend/flamingo-icons';
+import { ShowChart, Visibility } from '@sber-friend/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
-import type { CanvasElementData } from '../graph-flow-adapter';
+import { logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
@@ -39,9 +39,35 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     flexDirection: 'column',
     gap: theme.spacing(0.5),
   },
-  chip: {
-    alignSelf: 'flex-start',
+  chips: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: theme.spacing(0.5),
     marginTop: theme.spacing(1),
+  },
+  // Чип-переключатель «Сложная логика» (T-037, L4): кликабелен; активный —
+  // залитый, как на макете «сложная-логика-госб-…» (T-067 перенесёт
+  // переключатель в инспектор, чип останется индикатором).
+  logicChip: {
+    cursor: 'pointer',
+  },
+  dependencyIcon: {
+    color: theme.palette.text.secondary,
+  },
+  // Строки option'ов Select'а-источника при включённой «Сложной логике»:
+  // у каждой — source-handle на правом краю (как у связей элемент →
+  // подсценарий, T-032), из него протягивается правило видимости.
+  options: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.spacing(0.5),
+    marginTop: theme.spacing(1),
+  },
+  optionRow: {
+    position: 'relative',
+    borderRadius: 8,
+    backgroundColor: theme.editor.canvas.controlsBackground,
+    padding: theme.spacing(0.5, 1),
   },
 }));
 
@@ -50,13 +76,18 @@ export type ElementCardProps = {
 };
 
 // Строка-элемент внутри узла (T-031, макет «пример-подсценариев-с-элементами»):
-// иконка, основной/дополнительный текст, чип типа. Source-handle связи —
-// на правом краю карточки (D9): ребро начинается от элемента, не от узла.
+// иконка, основной/дополнительный текст, чипы типа и «Сложной логики».
+// Source-handle навигационной связи — на правом краю карточки (D9): ребро
+// начинается от элемента, не от узла. Target-handle правил видимости — на
+// левом краю (T-037): ребро «option → элемент» крепится к карточке-цели.
 export function ElementCard({ element }: ElementCardProps) {
   const classes = useStyles();
 
   return (
     <Card className={classes.card} variant="outlined" data-testid={`element-card-${element.id}`}>
+      {/* Цель правил «Сложной логики» (T-037): рёбра видимости приходят
+          на левый край карточки элемента, не шага и не формы. */}
+      <Handle type="target" position={Position.Left} id={logicTargetHandleId(element.id)} />
       <CardContent className={classes.content}>
         <Box className={classes.iconWrap}>
           {/* Иконки элементов платформы придут с пакетом element-schemas;
@@ -70,7 +101,33 @@ export function ElementCard({ element }: ElementCardProps) {
               {element.secondaryText}
             </Typography>
           ) : null}
-          <Chip className={classes.chip} size="small" color="secondary" label={element.kindLabel} />
+          <Box className={classes.chips}>
+            <Chip size="small" color="secondary" label={element.kindLabel} />
+            {element.complexLogic ? (
+              <Chip
+                className={classes.logicChip}
+                size="small"
+                color={element.complexLogic.enabled ? 'primary' : 'default'}
+                label="Сложная логика"
+                onClick={element.onToggleComplexLogic}
+              />
+            ) : null}
+            {/* Индикатор «элемент кому-то подчинён» (L-Q1): виден даже при
+                выключенной логике у источника. */}
+            {element.hasIncomingLogic ? (
+              <Visibility className={classes.dependencyIcon} fontSize="small" />
+            ) : null}
+          </Box>
+          {element.complexLogic?.enabled && element.complexLogic.options.length > 0 ? (
+            <Box className={classes.options}>
+              {element.complexLogic.options.map((option) => (
+                <Box className={classes.optionRow} key={option.handleId}>
+                  <Typography variant="caption">{option.label}</Typography>
+                  <Handle type="source" position={Position.Right} id={option.handleId} />
+                </Box>
+              ))}
+            </Box>
+          ) : null}
         </Box>
       </CardContent>
       <Handle type="source" position={Position.Right} id={element.id} />

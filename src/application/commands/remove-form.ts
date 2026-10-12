@@ -19,8 +19,20 @@ export class RemoveForm implements Command {
       throw new Error(`Форма не найдена: ${this.formId}`);
     }
 
+    // Каскад сложной логики (T-037): правила живут в пределах одной формы
+    // (L-I5) — удаляем всё, что ссылается на компоненты удаляемой формы.
+    const componentIds = new Set<string>();
+    for (const step of draft.applicationForms[index]!.steps) {
+      for (const component of step.components) {
+        componentIds.add(component.id);
+      }
+    }
+
     draft.applicationForms.splice(index, 1);
     draft.links = draft.links.filter((link) => link.targetId !== this.formId);
+    draft.logicRules = draft.logicRules.filter(
+      (rule) => !componentIds.has(rule.sourceElementId) && !componentIds.has(rule.targetElementId),
+    );
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

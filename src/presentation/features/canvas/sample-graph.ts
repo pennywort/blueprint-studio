@@ -5,6 +5,8 @@ import {
   toElementId,
   toFormComponentId,
   toFormStepId,
+  toLogicRuleId,
+  toOptionId,
   toPageId,
   toPageLinkId,
   toScenarioId,
@@ -99,6 +101,10 @@ export function createSampleGraph(): ServiceGraph {
                 required: true,
                 displayType: 'dropdown',
                 multiSelect: false,
+                // Режим «Сложной логики» включён (T-037): у option'ов —
+                // source-handle'ы; правило ниже показывает чекбокс второго
+                // шага при выборе «12 месяцев» (оба элемента — одна форма, L-I5).
+                hasComplexLogic: true,
                 options: [
                   { label: '6 месяцев', value: '6m' },
                   { label: '12 месяцев', value: '12m' },
@@ -143,6 +149,16 @@ export function createSampleGraph(): ServiceGraph {
         id: toPageLinkId('demo-link-documents-apply'),
         sourceElementId: toElementId('demo-scenario-documents-item-8'),
         targetId: toApplicationFormId('demo-form-deposit'),
+      },
+    ],
+    logicRules: [
+      {
+        // «Срок вклада = 12 месяцев» → показать чекбокс согласия (T-037).
+        // Ребро — пунктирное, между элементами одной формы.
+        id: toLogicRuleId('demo-logic-period-agree'),
+        sourceElementId: toElementId('demo-field-period'),
+        condition: { kind: 'optionSelected', optionId: toOptionId('12m') },
+        targetElementId: toElementId('demo-field-agree'),
       },
     ],
   });
