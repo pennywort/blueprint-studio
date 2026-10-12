@@ -101,6 +101,7 @@ export function createSampleGraph(): ServiceGraph {
                 required: true,
                 displayType: 'dropdown',
                 multiSelect: false,
+                search: false,
                 // Режим «Сложной логики» включён (T-037): у option'ов —
                 // source-handle'ы; правило ниже показывает чекбокс второго
                 // шага при выборе «12 месяцев» (оба элемента — одна форма, L-I5).

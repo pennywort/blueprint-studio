@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Connection } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
+import type { FormComponent } from '@domain/model/form-components';
 import type { FormComponentKind } from '@domain/model/form-components';
 import {
   toApplicationFormId,
@@ -41,11 +42,17 @@ import { RemoveElement } from '@application/commands/remove-element';
 import { MoveElement, type MoveElementTarget } from '@application/commands/move-element';
 import { AddFormStep } from '@application/commands/add-form-step';
 import { SetPageLayerDepth } from '@application/commands/set-page-layer-depth';
+import { UpdateElementProps, type ElementPropsPatch } from '@application/commands/update-element-props';
 import { EnableComplexLogic } from '@application/commands/enable-complex-logic';
 import { DisableComplexLogic } from '@application/commands/disable-complex-logic';
 import { AddLogicRule } from '@application/commands/add-logic-rule';
 import { RemoveLogicRule } from '@application/commands/remove-logic-rule';
-import { findElementLocation, findFormById, walkPages } from '@application/commands/graph-lookup';
+import {
+  findElementLocation,
+  findFormById,
+  findFormComponent,
+  walkPages,
+} from '@application/commands/graph-lookup';
 import { useContainer } from '@presentation/app/App';
 import { useEditorNotifications } from '@presentation/features/notifications/editor-notifications';
 import type { AddableElementKind, AddableNodeKind } from '@presentation/features/toolbar/editor-toolbar';
@@ -77,6 +84,13 @@ const ELEMENT_KIND_OPTIONS = Object.entries(FORM_COMPONENT_KIND_LABELS).map(([ki
   kind: kind as FormComponentKind,
   label,
 }));
+
+// Данные инспектора для выделенного элемента: сам компонент формы + его
+// правила видимости, где он — цель (T-067).
+export type SelectedElementInfo = {
+  component: FormComponent;
+  incomingRules: { ruleId: LogicRuleId; sourceLabel: string; optionLabel: string | null }[];
+};
 
 // TEMPORARY (до effector — запланирован, но не установлен): ServiceGraph живёт
 // в React state страницы редактора. Мутации — ТОЛЬКО через
@@ -140,6 +154,32 @@ export function useEditorGraph() {
     setSelectedNodeId(null);
     setSelectedElementId(null);
   }, []);
+
+  // Выделенный компонент формы + его правила видимости (цель) — данные
+  // инспектора (T-067). Только компоненты форм: схемы element-schemas
+  // покрывают form-kind'и (ADR-07), карточки страниц — в следующих сессиях.
+  const selectedElement = useMemo<SelectedElementInfo | null>(() => {
+    if (!selectedElementId) {
+      return null;
+    }
+    const found = findFormComponent(graph, selectedElementId);
+    if (!found) {
+      return null;
+    }
+    const incomingRules = graph.logicRules
+      .filter((rule) => rule.targetElementId === selectedElementId)
+      .map((rule) => {
+        const source = findFormComponent(graph, rule.sourceElementId)?.component;
+        const sourceLabel = source && 'label' in source ? source.label : (source?.kind ?? 'Элемент');
+        let optionLabel: string | null = null;
+        if (rule.condition.kind === 'optionSelected' && source?.kind === 'selectList') {
+          optionLabel =
+            source.options.find((option) => option.value === rule.condition.optionId)?.label ?? null;
+        }
+        return { ruleId: rule.id, sourceLabel, optionLabel };
+      });
+    return { component: found.component, incomingRules };
+  }, [graph, selectedElementId]);
 
   const runCommand = useCallback(
     (command: Command) => {
@@ -342,6 +382,23 @@ export function useEditorGraph() {
     runCommand(new RemoveElement(elementId as ElementId));
     return true;
   }, [runCommand, selectedElementId]);
+
+  // Панель атрибутов (T-041): любое изменение поля — команда UpdateElementProps
+  // (undo/redo из коробки, валидация — внутри команды).
+  const updateElementProps = useCallback(
+    (elementId: ElementId | FormComponentId, props: ElementPropsPatch) => {
+      runCommand(new UpdateElementProps(elementId, props));
+    },
+    [runCommand],
+  );
+
+  // Удаление правила видимости из секции «Видимость» инспектора (T-067).
+  const removeLogicRule = useCallback(
+    (ruleId: LogicRuleId) => {
+      runCommand(new RemoveLogicRule(ruleId));
+    },
+    [runCommand],
+  );
 
   // Элемент из меню тулбара — в выделенный узел канваса. Допустимые виды
   // элементов зависят от типа узла (меню их и показывает): Главная —
@@ -598,6 +655,10 @@ export function useEditorGraph() {
     selectedNodeType,
     onSelectedNodeChange: handleNodeSelection,
     clearSelection,
+    selectedElement,
+    updateElementProps,
+    removeLogicRule,
+    toggleComplexLogic,
     connect,
     reconnect,
     disconnect,

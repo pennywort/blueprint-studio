@@ -6,6 +6,7 @@ import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { EditorCanvas } from '@presentation/features/canvas/editor-canvas';
 import { EmptyCanvasState } from '@presentation/features/canvas/empty-canvas-state';
 import { useEditorGraph } from '@presentation/features/canvas/use-editor-graph';
+import { AttributesPanel } from '@presentation/features/attributes/attributes-panel';
 import {
   EditorNotificationsProvider,
   useEditorNotifications,
@@ -56,6 +57,7 @@ function EditorPageLayout() {
   const classes = useStyles();
   const container = useContainer();
   const elementSchemas = container.cradle.elementSchemaProvider.listSchemas();
+  const schemaByKind = new Map(elementSchemas.map((schema) => [schema.kind, schema]));
   const notifications = useEditorNotifications();
   // TEMPORARY (до effector): граф в React state, мутации только через
   // CommandBus — см. use-editor-graph.ts.
@@ -63,9 +65,8 @@ function EditorPageLayout() {
 
   // Панели-заглушки кнопок 3–4 тулбара (Q-1: назначение не подтверждено).
   const [sidePanel, setSidePanel] = useState<EditorSidePanel | null>(null);
-  // Выделение элемента появится со schema-driven панелью атрибутов (T-041);
-  // пока селектора нет — панель всегда скрыта.
-  const [selectedElementId] = useState<string | null>(null);
+  // Инспектор: выделенный компонент формы + его правила видимости (T-067).
+  const selectedElement = editorGraph.selectedElement;
 
   return (
     <Box display="flex" flexDirection="column" height="100vh" bgcolor="background.default">
@@ -128,14 +129,22 @@ function EditorPageLayout() {
             />
           </Box>
         </Box>
-        {selectedElementId !== null ? (
+        {selectedElement !== null ? (
           <>
             <Divider orientation="vertical" flexItem />
             <Box className={classes.attributesPanel} data-testid="attributes-panel">
-              <Typography variant="h6">Атрибуты элемента</Typography>
-              <Typography variant="body2" color="textSecondary">
-                Рендер полей по схеме элемента — T-041.
-              </Typography>
+              <AttributesPanel
+                component={selectedElement.component}
+                schema={schemaByKind.get(selectedElement.component.kind) ?? null}
+                onUpdateProps={(patch) => editorGraph.updateElementProps(selectedElement.component.id, patch)}
+                onToggleComplexLogic={
+                  selectedElement.component.kind === 'selectList'
+                    ? () => editorGraph.toggleComplexLogic(selectedElement.component.id)
+                    : undefined
+                }
+                incomingRules={selectedElement.incomingRules}
+                onRemoveRule={editorGraph.removeLogicRule}
+              />
             </Box>
           </>
         ) : null}
