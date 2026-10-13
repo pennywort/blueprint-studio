@@ -2,8 +2,9 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ElementId, FormComponentId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { validateGraph } from '@domain/invariants';
+import { computeFormElementDepths } from '@domain/step-element-depths';
 import type { Command } from './command';
-import { preservePageDepths } from './depth-preservation';
+import { preserveFormElementDepths, preservePageDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
 import { findElementLocation } from './graph-lookup';
 
@@ -17,6 +18,8 @@ export class RemoveElement implements Command {
   constructor(private readonly elementId: ElementId | FormComponentId) {}
 
   apply(draft: ServiceGraph): void {
+    // Колонки элементов шагов до мутации: цель, потерявшая правило, остаётся на месте (ADR-15).
+    const elementDepthsBefore = computeFormElementDepths(draft);
     // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
     const depthsBeforeRemoval = computeGraphDepths(draft);
     const location = findElementLocation(draft, this.elementId);
@@ -33,6 +36,8 @@ export class RemoveElement implements Command {
     );
 
     preservePageDepths(draft, depthsBeforeRemoval);
+
+    preserveFormElementDepths(draft, elementDepthsBefore);
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

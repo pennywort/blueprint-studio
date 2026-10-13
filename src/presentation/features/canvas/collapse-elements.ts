@@ -1,4 +1,8 @@
-import { COLLAPSED_VISIBLE_ELEMENTS, ELEMENTS_COLLAPSE_THRESHOLD } from './canvas-layout';
+import {
+  COLLAPSED_VISIBLE_ELEMENTS,
+  ELEMENTS_COLLAPSE_ENABLED,
+  ELEMENTS_COLLAPSE_THRESHOLD,
+} from './canvas-layout';
 import type { CanvasElementData } from './graph-flow-adapter';
 
 // Автосжатие списка элементов узла (T-033; Q-14, решение владельца):
@@ -11,7 +15,7 @@ export function collapseElements(
   elements: readonly CanvasElementData[],
   expanded: boolean,
 ): CanvasElementData[] {
-  if (expanded || elements.length <= ELEMENTS_COLLAPSE_THRESHOLD) {
+  if (expanded || !isCollapsible(elements)) {
     return [...elements];
   }
   const head = elements.slice(0, COLLAPSED_VISIBLE_ELEMENTS);
@@ -21,5 +25,6 @@ export function collapseElements(
 
 // Нужна ли кнопка раскрытия для данного списка.
 export function isCollapsible(elements: readonly CanvasElementData[]): boolean {
-  return elements.length > ELEMENTS_COLLAPSE_THRESHOLD;
+  // Выключатель ELEMENTS_COLLAPSE_ENABLED [owner 2026-10-13]: сжатие временно отключено.
+  return ELEMENTS_COLLAPSE_ENABLED && elements.length > ELEMENTS_COLLAPSE_THRESHOLD;
 }

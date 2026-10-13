@@ -1,7 +1,9 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { FormComponentId } from '@domain/model/ids';
 import { validateGraph } from '@domain/invariants';
+import { computeFormElementDepths } from '@domain/step-element-depths';
 import type { Command } from './command';
+import { preserveFormElementDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
 import { findFormComponent } from './graph-lookup';
 
@@ -15,6 +17,8 @@ export class DisableComplexLogic implements Command {
   constructor(private readonly componentId: FormComponentId) {}
 
   apply(draft: ServiceGraph): void {
+    // Колонки элементов шагов до мутации: цель, потерявшая правило, остаётся на месте (ADR-15).
+    const elementDepthsBefore = computeFormElementDepths(draft);
     const found = findFormComponent(draft, this.componentId);
     if (!found) {
       throw new Error(`Элемент не найден: ${this.componentId}`);
@@ -28,6 +32,8 @@ export class DisableComplexLogic implements Command {
     draft.logicRules = draft.logicRules.filter(
       (rule) => (rule.sourceElementId as string) !== this.componentId,
     );
+
+    preserveFormElementDepths(draft, elementDepthsBefore);
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

@@ -3,7 +3,9 @@ import { ListItemSchema, WidgetCardSchema, type ListItem, type WidgetCard } from
 import { FormComponentSchema, type FormComponent } from '@domain/model/form-components';
 import type { ElementId, FormComponentId } from '@domain/model/ids';
 import { validateGraph } from '@domain/invariants';
+import { computeFormElementDepths } from '@domain/step-element-depths';
 import type { Command } from './command';
+import { preserveFormElementDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
 import { findElementLocation } from './graph-lookup';
 
@@ -26,6 +28,8 @@ export class UpdateElementProps implements Command {
   ) {}
 
   apply(draft: ServiceGraph): void {
+    // Колонки элементов шагов до мутации: цель, потерявшая правило, остаётся на месте (ADR-15).
+    const elementDepthsBefore = computeFormElementDepths(draft);
     if ('id' in this.props || 'kind' in this.props) {
       throw new Error(`UpdateElementProps не меняет id/kind элемента (${this.elementId})`);
     }
@@ -61,6 +65,8 @@ export class UpdateElementProps implements Command {
           (rule.condition.kind === 'optionSelected' && optionValues.has(rule.condition.optionId)),
       );
     }
+
+    preserveFormElementDepths(draft, elementDepthsBefore);
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

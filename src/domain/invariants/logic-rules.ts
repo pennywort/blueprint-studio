@@ -33,6 +33,8 @@ export function checkLogicRules(graph: ServiceGraph): InvariantViolation[] {
   const violations: InvariantViolation[] = [];
   const components = collectComponents(graph);
   const seen = new Set<string>();
+  // Цели, у которых уже есть правило (L-I7).
+  const ruleTargets = new Set<string>();
 
   // Рёбра зависимости видимости (источник → цель) — для проверки циклов (L-I6).
   const visibilityEdges = new Map<string, string[]>();
@@ -86,6 +88,18 @@ export function checkLogicRules(graph: ServiceGraph): InvariantViolation[] {
         message: 'Сложная логика возможна только внутри одного шага формы',
       });
     }
+
+    // L-I7 (временно, [owner 2026-10-13]): у цели — не больше одного правила
+    // видимости. Раскладка шага — дерево «цель напротив варианта-источника»;
+    // несколько источников у цели отключены до уточнения с заказчиком.
+    if (ruleTargets.has(rule.targetElementId)) {
+      violations.push({
+        rule: RULE_ID,
+        path,
+        message: 'У элемента может быть только одно правило видимости',
+      });
+    }
+    ruleTargets.add(rule.targetElementId);
 
     const targets = visibilityEdges.get(rule.sourceElementId) ?? [];
     targets.push(rule.targetElementId);

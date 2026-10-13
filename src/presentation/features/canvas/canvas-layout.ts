@@ -1,6 +1,8 @@
 import type { XYPosition } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
+import type { FormStep } from '@domain/model/scenario';
 import { computeGraphDepths } from '@domain/graph-depths';
+import { computeStepElementDepths } from '@domain/step-element-depths';
 
 // Слоистый layout-движок (Epic 002, T-036; D2/D7/D12/D13): координаты не
 // персистентны, колонка узла = глубина от корня (computeGraphDepths),
@@ -34,11 +36,32 @@ export const CANVAS_LAYOUT = {
   formStepHeaderHeight: 56,
 } as const;
 
+// Раскладка элементов внутри шага формы [owner 2026-10-13; макеты
+// «layouting …»]: тот же слоёный принцип, что у страниц (колонка = уровень
+// по правилам «Сложной логики»), но карточки и зазоры заметно меньше.
+// Цель правила стоит напротив своего варианта-источника; шаг растёт по
+// содержимому, скролла нет.
+export const FORM_STEP_LAYOUT = {
+  /** Ширина колонки (карточки элемента/варианта) внутри шага. */
+  elementWidth: 240,
+  /** Горизонтальный зазор между колонками шага. */
+  columnGap: 40,
+  /** Вертикальный зазор между карточками в колонке. */
+  rowGap: 12,
+  /** Оценка высоты карточки элемента — только для первого рендера (N12). */
+  elementHeight: 104,
+  /** Оценка высоты карточки варианта Select'а. */
+  optionHeight: 64,
+} as const;
+
 // Автосжатие узла при избытке элементов (T-033; Q-14, решение владельца):
 // скролла внутри узла нет — при превышении порога список обрезается и
 // появляется кнопка раскрытия. Константы в одном месте; handles/рёбра
 // пересчитываются через updateNodeInternals при смене состояния.
 export const ELEMENTS_COLLAPSE_THRESHOLD = 6;
+// Сжатие временно выключено [owner 2026-10-13]: узлы и шаги показывают все
+// элементы, до уточнения с заказчиком. Механика T-033 остаётся — true вернёт её.
+export const ELEMENTS_COLLAPSE_ENABLED = false;
 /** Сколько первых элементов остаётся видимыми в сжатом состоянии. */
 export const COLLAPSED_VISIBLE_ELEMENTS = 3;
 
@@ -48,17 +71,38 @@ function estimateScenarioNodeHeight(elementCount: number): number {
   return L.nodeHeaderHeight + elementCount * L.elementRowHeight + L.nodePadding * 2;
 }
 
-function estimateFormSize(form: ServiceGraph['applicationForms'][number]): {
+function estimateFormSize(
+  form: ServiceGraph['applicationForms'][number],
+  logicRules: ServiceGraph['logicRules'],
+): {
   width: number;
   height: number;
 } {
   const L = CANVAS_LAYOUT;
-  const stepCount = Math.max(form.steps.length, 1);
-  const maxStepElements = Math.max(0, ...form.steps.map((step) => step.components.length));
+  const S = FORM_STEP_LAYOUT;
+  // Шаг — колонки по уровням элементов; высота — грубо: все карточки шага
+  // (элементы + варианты Select'ов) в один столбец. Только первый рендер:
+  // дальше раскладка берёт измеренные размеры (N12).
+  const steps = form.steps.length > 0 ? form.steps : [{ id: '', components: [] }];
+  let width = L.nodePadding * 2;
+  let height = 0;
+  for (const step of steps) {
+    const depths = computeStepElementDepths(step as FormStep, logicRules);
+    const columns = Math.max(1, ...[...depths.values()].map((depth) => depth + 1));
+    width += Math.max(L.formStepWidth, columns * (S.elementWidth + S.columnGap)) + L.nodePadding;
+    const options = step.components.reduce(
+      (sum, component) =>
+        sum + (component.kind === 'selectList' && component.hasComplexLogic ? component.options.length : 0),
+      0,
+    );
+    height = Math.max(
+      height,
+      step.components.length * (S.elementHeight + S.rowGap) + options * (S.optionHeight + S.rowGap),
+    );
+  }
   return {
-    width: stepCount * L.formStepWidth + (stepCount - 1) * L.nodePadding + L.nodePadding * 2,
-    height:
-      L.formHeaderHeight + L.formStepHeaderHeight + maxStepElements * L.elementRowHeight + L.nodePadding * 2,
+    width,
+    height: L.formHeaderHeight + L.formStepHeaderHeight + height + L.nodePadding * 2,
   };
 }
 
@@ -107,7 +151,7 @@ export function computeLayout(graph: ServiceGraph, measured?: MeasuredNodeSizes)
   };
   collectScenarios(graph.subScenarios);
   for (const form of graph.applicationForms) {
-    const size = estimateFormSize(form);
+    const size = estimateFormSize(form, graph.logicRules);
     nodes.push({ id: form.id, orderIndex: form.orderIndex, width: size.width, height: size.height });
   }
 

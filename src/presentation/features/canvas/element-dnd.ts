@@ -19,20 +19,36 @@ export type ElementDragPayload = {
   kind: ElementDndKind;
 };
 
+// Маркер id перетаскиваемого: зоне приёма в dragover нужен его текущий
+// уровень (своя колонка — порядок, чужая — перенос, layers/). MIME-типы
+// браузер приводит к нижнему регистру — id сверяется так же.
+const ELEMENT_DND_ID_PREFIX = `${ELEMENT_DND_MIME}-id-`;
+
 export function writeElementDrag(dataTransfer: DataTransfer, { elementId, kind }: ElementDragPayload): void {
   dataTransfer.setData(ELEMENT_DND_MIME, JSON.stringify({ elementId }));
   dataTransfer.setData(elementDndKindType(kind), '');
+  dataTransfer.setData(`${ELEMENT_DND_ID_PREFIX}${elementId.toLowerCase()}`, '');
   dataTransfer.effectAllowed = 'move';
 }
 
 // Вид элемента из types drag-события; null — это не drag карточки элемента.
 export function readElementDndKind(types: readonly string[] | DOMStringList): ElementDndKind | null {
+  // Браузер приводит MIME-типы к нижнему регистру (dataTransfer.types) —
+  // сверка без учёта регистра, иначе formComponent/listItem не распознавались.
+  const lowered = Array.from(types, (type) => type.toLowerCase());
   for (const kind of ['listItem', 'widgetCard', 'formComponent'] as const) {
-    if (Array.from(types).includes(elementDndKindType(kind))) {
+    if (lowered.includes(elementDndKindType(kind).toLowerCase())) {
       return kind;
     }
   }
   return null;
+}
+
+// Id перетаскиваемого из types drag-события (в нижнем регистре); null — не
+// drag карточки. Сверять с id элементов через toLowerCase().
+export function readElementDndId(types: readonly string[] | DOMStringList): string | null {
+  const marker = Array.from(types).find((type) => type.startsWith(ELEMENT_DND_ID_PREFIX));
+  return marker ? marker.slice(ELEMENT_DND_ID_PREFIX.length) : null;
 }
 
 export function readElementDrag(dataTransfer: DataTransfer): ElementDragPayload | null {
@@ -60,8 +76,13 @@ export type DropAnchorPosition = {
 
 // Карточка-якорь под курсором внутри зоны приёма: ближайший предок с
 // data-element-card; сторона — по вертикальной середине карточки.
-export function anchorFromPoint(zone: HTMLElement, clientY: number): DropAnchorPosition | null {
-  const cards = zone.querySelectorAll<HTMLElement>('[data-element-card]');
+// selector сужает кандидатов (шаг формы — карточки одной колонки).
+export function anchorFromPoint(
+  zone: HTMLElement,
+  clientY: number,
+  selector = '[data-element-card]',
+): DropAnchorPosition | null {
+  const cards = zone.querySelectorAll<HTMLElement>(selector);
   for (const card of cards) {
     const rect = card.getBoundingClientRect();
     if (clientY >= rect.top && clientY <= rect.bottom) {

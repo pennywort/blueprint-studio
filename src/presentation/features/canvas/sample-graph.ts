@@ -103,8 +103,8 @@ export function createSampleGraph(): ServiceGraph {
                 multiSelect: false,
                 search: false,
                 // Режим «Сложной логики» включён (T-037): у option'ов —
-                // source-handle'ы; правило ниже показывает чекбокс при выборе
-                // «12 месяцев» (оба элемента — один шаг формы, L-I5/ADR-14).
+                // source-handle'ы; правила ниже показывают чекбокс при выборе
+                // «6 месяцев» и выплату процентов при «12 месяцах» (L-I5/ADR-14).
                 hasComplexLogic: true,
                 options: [
                   { label: '6 месяцев', value: '6m' },
@@ -116,6 +116,27 @@ export function createSampleGraph(): ServiceGraph {
                 kind: 'checkbox',
                 label: 'Согласен с условиями',
                 required: true,
+              },
+              // Цепочка правил для раскладки шага колонками [owner 2026-10-13]:
+              // «12 месяцев» → выплата процентов → «Ежемесячно» → уведомления.
+              {
+                id: toFormComponentId('demo-field-payout'),
+                kind: 'selectList',
+                label: 'Выплата процентов',
+                required: true,
+                displayType: 'dropdown',
+                multiSelect: false,
+                hasComplexLogic: true,
+                options: [
+                  { label: 'Ежемесячно', value: 'monthly', isDefault: true },
+                  { label: 'В конце срока', value: 'end' },
+                ],
+              },
+              {
+                id: toFormComponentId('demo-field-notify'),
+                kind: 'checkbox',
+                label: 'Уведомлять о начислении',
+                required: false,
               },
             ],
           },
@@ -161,12 +182,24 @@ export function createSampleGraph(): ServiceGraph {
     ],
     logicRules: [
       {
-        // «Срок вклада = 12 месяцев» → показать чекбокс согласия (T-037).
+        // «Срок вклада = 6 месяцев» → показать чекбокс согласия (T-037).
         // Ребро между элементами одного шага формы (стиль — общий, N1).
         id: toLogicRuleId('demo-logic-period-agree'),
         sourceElementId: toElementId('demo-field-period'),
-        condition: { kind: 'optionSelected', optionId: toOptionId('12m') },
+        condition: { kind: 'optionSelected', optionId: toOptionId('6m') },
         targetElementId: toElementId('demo-field-agree'),
+      },
+      {
+        id: toLogicRuleId('demo-logic-period-payout'),
+        sourceElementId: toElementId('demo-field-period'),
+        condition: { kind: 'optionSelected', optionId: toOptionId('12m') },
+        targetElementId: toElementId('demo-field-payout'),
+      },
+      {
+        id: toLogicRuleId('demo-logic-payout-notify'),
+        sourceElementId: toElementId('demo-field-payout'),
+        condition: { kind: 'optionSelected', optionId: toOptionId('monthly') },
+        targetElementId: toElementId('demo-field-notify'),
       },
     ],
   });

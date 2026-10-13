@@ -1,5 +1,6 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import { computeGraphDepths } from '@domain/graph-depths';
+import { computeFormElementDepths } from '@domain/step-element-depths';
 import { walkPages } from './graph-lookup';
 
 // Блок без связей остаётся на своём уровне (ADR-15, [owner 2026-10-13]):
@@ -22,6 +23,33 @@ export function preservePageDepths(
     const before = depthsBefore.get(page.id);
     if (before !== undefined && depthsAfter.get(page.id) !== before) {
       (page as { layerDepth?: number }).layerDepth = before;
+    }
+  }
+}
+
+// То же правило ADR-15 для элементов внутри шага формы [owner 2026-10-13]:
+// колонка элемента выводится из правил «Сложной логики», и цель, потерявшая
+// правило, «падала» бы в нулевую колонку шага. Команды, рвущие правила,
+// снимают уровни ДО мутации (computeFormElementDepths) и вызывают это ПОСЛЕ:
+// элемент, чья колонка изменилась, закрепляется явным layerDepth.
+// exclude — элементы, чью колонку команда меняет намеренно (перенос dnd).
+export function preserveFormElementDepths(
+  draft: ServiceGraph,
+  depthsBefore: ReadonlyMap<string, number>,
+  exclude: ReadonlySet<string> = new Set(),
+): void {
+  const depthsAfter = computeFormElementDepths(draft);
+  for (const form of draft.applicationForms) {
+    for (const step of form.steps) {
+      for (const component of step.components) {
+        if (exclude.has(component.id)) {
+          continue;
+        }
+        const before = depthsBefore.get(component.id);
+        if (before !== undefined && depthsAfter.get(component.id) !== before) {
+          component.layerDepth = before;
+        }
+      }
     }
   }
 }

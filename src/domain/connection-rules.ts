@@ -10,8 +10,8 @@ import { computeGraphDepths } from './graph-depths';
 //   (глубина цели > глубины страницы-источника). Главная, своя страница и
 //   уже связанная с этим элементом страница — не цели.
 // — «Сложная логика»: источник — option Select'а с включённым режимом, цель —
-//   другой элемент ТОГО ЖЕ шага формы (ADR-14). Повтор правила и цикл
-//   видимости — не цели.
+//   другой элемент ТОГО ЖЕ шага формы (ADR-14). Повтор правила, цикл
+//   видимости и элемент, у которого уже есть правило (L-I7), — не цели.
 
 export type ConnectionSource =
   { kind: 'navigation'; elementId: string } | { kind: 'logic'; elementId: string; optionId: string };
@@ -105,8 +105,14 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
       if (source.kind !== 'selectList' || !source.hasComplexLogic) {
         return NONE;
       }
+      // У цели — не больше одного правила видимости (L-I7, временно [owner
+      // 2026-10-13]): элемент, уже зависящий от варианта, — не цель.
+      const ruleTargets = new Set<string>(graph.logicRules.map((rule) => rule.targetElementId));
       const elements = new Set<string>();
       for (const component of step.components) {
+        if (ruleTargets.has(component.id)) {
+          continue;
+        }
         const duplicate = graph.logicRules.some(
           (rule) =>
             rule.sourceElementId === elementId &&

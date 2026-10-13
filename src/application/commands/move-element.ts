@@ -7,9 +7,11 @@ import type {
   ScenarioId,
 } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
+import { computeFormElementDepths } from '@domain/step-element-depths';
+import type { FormComponent } from '@domain/model/form-components';
 import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
-import { preservePageDepths } from './depth-preservation';
+import { preserveFormElementDepths, preservePageDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
 import {
   findElementLocation,
@@ -72,11 +74,16 @@ export class MoveElement implements Command {
     private readonly elementId: ElementId | FormComponentId,
     private readonly target: MoveElementTarget,
     private readonly anchor?: DropAnchor,
+    // Колонка внутри шага-приёмника [owner 2026-10-13] (только для formStep):
+    // dnd бросил компонент в колонку шага; undefined — колонка не меняется
+    // (переупорядочивание внутри колонки или перенос без выбора колонки).
+    private readonly layerDepth?: number,
   ) {}
 
   apply(draft: ServiceGraph): void {
     // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
     const depthsBeforeRemoval = computeGraphDepths(draft);
+    const elementDepthsBefore = computeFormElementDepths(draft);
     const location = findElementLocation(draft, this.elementId);
     if (!location) {
       throw new Error(`Элемент не найден: ${this.elementId}`);
@@ -107,12 +114,23 @@ export class MoveElement implements Command {
 
     // Каскад сложной логики: компонент уходит в ДРУГОЙ шаг (той же или
     // другой формы) — правила, где он источник или цель, невалидны (L-I5:
-    // логика только внутри одного шага, ADR-14); порядок внутри шага правил
-    // не трогает.
-    if (location.kind === 'formComponent' && targetList !== location.list) {
+    // логика только внутри одного шага, ADR-14). Перенос в другую колонку
+    // своего шага рвёт их же [owner 2026-10-13]: переносится один элемент,
+    // без группы, — старые связи теряют смысл. Порядок внутри колонки
+    // правил не трогает.
+    const changesStep = targetList !== location.list;
+    const changesColumn =
+      this.layerDepth !== undefined && this.layerDepth !== elementDepthsBefore.get(this.elementId);
+    if (location.kind === 'formComponent' && (changesStep || changesColumn)) {
       draft.logicRules = draft.logicRules.filter(
         (rule) => rule.sourceElementId !== this.elementId && rule.targetElementId !== this.elementId,
       );
+      const component = moved as FormComponent;
+      if (this.layerDepth !== undefined) {
+        component.layerDepth = this.layerDepth;
+      } else {
+        delete component.layerDepth; // в чужом шаге прежняя колонка не имеет смысла
+      }
     }
 
     // Позиция: якорь ищется в приёмнике после изъятия — индексы уже чистые.
@@ -143,6 +161,7 @@ export class MoveElement implements Command {
     });
 
     preservePageDepths(draft, depthsBeforeRemoval);
+    preserveFormElementDepths(draft, elementDepthsBefore, new Set([this.elementId]));
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

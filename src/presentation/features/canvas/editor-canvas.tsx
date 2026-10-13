@@ -32,7 +32,14 @@ import {
 import '@xyflow/react/dist/style.css';
 import { useEditorTheme } from '@presentation/theme/editor-theme';
 import { useReactFlowThemeStyles } from './react-flow-theme-styles';
-import { CANVAS_LAYOUT } from './canvas-layout';
+import {
+  buildLayerColumns,
+  nearestLayerColumn,
+  resolveLayerDrop,
+  type LayerColumn,
+} from './layers/layer-columns';
+import { PAGE_LAYER_POLICY, canMoveToLayer } from './layers/layer-policy';
+import { LayerDropHighlight } from './layers/layer-drop-highlight';
 import { isActionTarget } from './canvas-events';
 import { EditorCanvasControls } from './editor-canvas-controls';
 import { canvasNodeTypes } from './nodes/node-types';
@@ -186,45 +193,23 @@ function CanvasInner({
     );
   }, []);
 
-  // Колонки уровней из текущей раскладки: X — минимальная координата колонки,
-  // ширина — по самому широкому узлу. Справа от последней всегда есть пустой
-  // слот «следующий уровень» — на пустой уровень узел переносится первым (F6).
+  // Колонки уровней из текущей раскладки — общее ядро слоёв (layers/):
+  // полосы узлов → колонки + пустой слот «следующий уровень» (F6).
+  // Ширина — фактическая (measured из локального состояния): у формы она
+  // больше nodeWidth, и по оценке центр её колонки «уезжал» — узел,
+  // брошенный на место, уходил на следующий уровень и терял связи.
   const findColumnCandidate = useCallback(
-    (x: number): { depth: number; x: number; width: number } | null => {
-      const byDepth = new Map<number, { x: number; width: number }>();
-      // Ширина — фактическая (measured из локального состояния): у формы она
-      // больше nodeWidth, и по оценке центр её колонки «уезжал» — узел,
-      // брошенный на место, уходил на следующий уровень и терял связи.
+    (x: number): LayerColumn | null => {
       const measuredWidth = new Map(nodesRef.current.map((node) => [node.id, node.measured?.width]));
-      for (const node of propsNodes) {
-        const width = measuredWidth.get(node.id) ?? CANVAS_LAYOUT.nodeWidth;
-        const column = byDepth.get(node.data.depth);
-        if (column) {
-          column.x = Math.min(column.x, node.position.x);
-          column.width = Math.max(column.width, width);
-        } else {
-          byDepth.set(node.data.depth, { x: node.position.x, width });
-        }
-      }
-      const columns = [...byDepth.entries()]
-        .sort(([left], [right]) => left - right)
-        .map(([depth, column]) => ({ depth, ...column }));
-      const last = columns[columns.length - 1];
-      if (last) {
-        columns.push({
-          depth: last.depth + 1,
-          x: last.x + last.width + CANVAS_LAYOUT.columnGap,
-          width: CANVAS_LAYOUT.nodeWidth,
-        });
-      }
-      let best: (typeof columns)[number] | null = null;
-      for (const column of columns) {
-        const center = column.x + column.width / 2;
-        if (best === null || Math.abs(x - center) < Math.abs(x - (best.x + best.width / 2))) {
-          best = column;
-        }
-      }
-      return best;
+      const columns = buildLayerColumns(
+        propsNodes.map((node) => ({
+          depth: node.data.depth,
+          x: node.position.x,
+          width: measuredWidth.get(node.id) ?? PAGE_LAYER_POLICY.columnWidth,
+        })),
+        PAGE_LAYER_POLICY,
+      );
+      return nearestLayerColumn(columns, x);
     },
     [propsNodes],
   );
@@ -236,14 +221,17 @@ function CanvasInner({
 
   const handleNodeDrag: OnNodeDrag<CanvasNode> = useCallback(
     (_event, draggedNode) => {
-      const width = draggedNode.measured?.width ?? CANVAS_LAYOUT.nodeWidth;
+      const width = draggedNode.measured?.width ?? PAGE_LAYER_POLICY.columnWidth;
       const candidate = findColumnCandidate(draggedNode.position.x + width / 2);
-      candidateDepthRef.current = candidate?.depth ?? null;
+      const decision = resolveLayerDrop(
+        draggedNode.data.depth,
+        candidate,
+        canMoveToLayer(PAGE_LAYER_POLICY, draggedNode.type ?? ''),
+      );
+      candidateDepthRef.current = decision.kind === 'moveToLayer' ? decision.depth : null;
       // Своя колонка не подсвечивается — переноса нет, будет reorder по Y.
       setDropZone(
-        candidate && candidate.depth !== draggedNode.data.depth
-          ? { x: candidate.x, width: candidate.width }
-          : null,
+        decision.kind === 'moveToLayer' && candidate ? { x: candidate.x, width: candidate.width } : null,
       );
     },
     [findColumnCandidate],
@@ -257,7 +245,7 @@ function CanvasInner({
       // Возврат к раскладке: результат drag'а фиксирует команда, пересчитанные
       // узлы придут сверху; отклонённый drag не оставляет узел в брошенной позиции.
       setNodes(propsNodes);
-      if (candidateDepth !== null && candidateDepth !== draggedNode.data.depth) {
+      if (candidateDepth !== null) {
         onMoveNodeToDepth?.(draggedNode.id, candidateDepth);
         return;
       }
@@ -477,29 +465,11 @@ function ClickConnectionLine({ from, to }: { from: XYPosition; to: XYPosition })
   );
 }
 
-// Полоса-подсветка целевой колонки dnd (F6): во время перетаскивания узла
-// подсвечивает уровень, куда узел упадёт. Координаты flow переводятся в
-// экранные через useViewport (pan/zoom); события мыши полоса не перехватывает.
+// Полоса-подсветка целевой колонки dnd (F6): координаты flow переводятся
+// в экранные через useViewport (pan/zoom); сама полоса — общая для слоёв.
 function DropZoneHighlight({ zone }: { zone: { x: number; width: number } }) {
-  const theme = useEditorTheme();
   const { x: viewportX, zoom } = useViewport();
-  return (
-    <div
-      data-testid="drop-zone-highlight"
-      style={{
-        position: 'absolute',
-        left: zone.x * zoom + viewportX,
-        top: 0,
-        bottom: 0,
-        width: zone.width * zoom,
-        backgroundColor: theme.editor.canvas.nodeHoverBackground,
-        borderLeft: `2px dashed ${theme.editor.canvas.nodeHoverBorder}`,
-        borderRight: `2px dashed ${theme.editor.canvas.nodeHoverBorder}`,
-        pointerEvents: 'none',
-        zIndex: 1,
-      }}
-    />
-  );
+  return <LayerDropHighlight left={zone.x * zoom + viewportX} width={zone.width * zoom} />;
 }
 
 export function EditorCanvas(props: EditorCanvasProps) {

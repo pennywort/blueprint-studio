@@ -75,21 +75,6 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   dependencyIcon: {
     color: theme.palette.text.secondary,
   },
-  // Строки option'ов Select'а-источника при включённой «Сложной логике»:
-  // у каждой — source-handle на правом краю (как у связей элемент →
-  // подсценарий, T-032), из него протягивается правило видимости.
-  options: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: theme.spacing(0.5),
-    marginTop: theme.spacing(1),
-  },
-  optionRow: {
-    position: 'relative',
-    borderRadius: 8,
-    backgroundColor: theme.editor.canvas.controlsBackground,
-    padding: theme.spacing(0.5, 1),
-  },
 }));
 
 export type ElementCardProps = {
@@ -192,16 +177,6 @@ export function ElementCard({ element }: ElementCardProps) {
               <Visibility className={classes.dependencyIcon} fontSize="small" />
             ) : null}
           </Box>
-          {element.complexLogic?.enabled && element.complexLogic.options.length > 0 ? (
-            <Box className={classes.options}>
-              {element.complexLogic.options.map((option) => (
-                <Box className={classes.optionRow} key={option.handleId}>
-                  <Typography variant="caption">{option.label}</Typography>
-                  <Handle type="source" position={Position.Right} id={option.handleId} />
-                </Box>
-              ))}
-            </Box>
-          ) : null}
         </Box>
       </CardContent>
       <Handle type="source" position={Position.Right} id={element.id} />

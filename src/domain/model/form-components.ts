@@ -25,6 +25,11 @@ const baseFields = {
   comment: z.string().optional(), // комментарий для разработчика (US-05)
   routing: RoutingRuleSchema.optional(), // компонент завязан на маршрутизацию
   hasDynamicContent: z.boolean().optional(), // компонент с динамическим контентом
+  // Явная колонка элемента внутри шага формы [owner 2026-10-13]: перенос dnd
+  // в другую колонку и закрепление элемента, потерявшего правило (ADR-15);
+  // без него колонка — производная правил «Сложной логики» (step-element-depths).
+  // Метаданные раскладки редактора, не часть element-schemas движка (D4).
+  layerDepth: z.number().int().nonnegative().optional(),
 };
 
 export const MarkdownLinkSchema = z.object({

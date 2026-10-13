@@ -5,6 +5,7 @@ import type { FormComponent, FormComponentKind } from '@domain/model/form-compon
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
 import { toElementId, type ElementId, type PageEntityId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
+import { computeStepElementDepths } from '@domain/step-element-depths';
 import { evaluateVisibility } from '@domain/logic-visibility';
 import type { DropAnchorPosition, ElementDragPayload } from './element-dnd';
 
@@ -70,8 +71,18 @@ export type CanvasElementData = {
    */
   complexLogic?: {
     enabled: boolean;
-    options: ReadonlyArray<{ handleId: string; label: string }>;
+    options: ReadonlyArray<{ handleId: string; label: string; value: string; isDefault: boolean }>;
   };
+  /**
+   * Колонка элемента внутри шага формы (step-element-depths, [owner
+   * 2026-10-13]); у элементов страниц не задаётся.
+   */
+  layerDepth?: number;
+  /**
+   * Option-handle варианта-источника правила, от которого зависит элемент:
+   * раскладка шага ставит элемент напротив этого варианта (L-I7 — источник один).
+   */
+  logicParentHandleId?: string;
   /** На элемент есть входящие правила видимости — индикатор зависимости (L-Q1). */
   hasIncomingLogic?: boolean;
   /**
@@ -156,11 +167,13 @@ export type CanvasNodeData = {
    * Dnd карточек элементов (N2): drop в списке узла или колонке шага.
    * targetStepId — шаг-цель у форм; null — общий список узла страницы.
    * Якорь (карточка + сторона) даёт позицию вставки; null — в конец.
+   * layerDepth — колонка внутри шага-приёмника (layers/); undefined — не меняется.
    */
   onDropElement?: (
     targetStepId: string | null,
     dragged: ElementDragPayload,
     anchor: DropAnchorPosition | null,
+    layerDepth?: number,
   ) => void;
 };
 
@@ -252,6 +265,8 @@ function formComponentToElementData(
         ? component.options.map((option) => ({
             handleId: logicSourceHandleId(component.id, option.value),
             label: option.label,
+            value: option.value,
+            isDefault: option.isDefault === true,
           }))
         : [],
     };
@@ -291,6 +306,18 @@ export function graphToFlow(
   const logicHidden = new Set<string>(
     [...logicTargets].filter((elementId) => !visibleTargets.has(elementId as ElementId)),
   );
+
+  // Цель правила → option-handle варианта-источника (L-I7: источник один;
+  // при битых данных берётся первое правило).
+  const logicParents = new Map<string, string>();
+  for (const rule of graph.logicRules) {
+    if (rule.condition.kind === 'optionSelected' && !logicParents.has(rule.targetElementId)) {
+      logicParents.set(
+        rule.targetElementId,
+        logicSourceHandleId(rule.sourceElementId, rule.condition.optionId),
+      );
+    }
+  }
 
   const nodes: CanvasNode[] = [];
   // Владелец элемента → id узла: нужен, чтобы ребро вышло из узла страницы,
@@ -353,13 +380,22 @@ export function graphToFlow(
         depth: depths.get(form.id) ?? 0,
         subtitle: FORM_NODE_SUBTITLE,
         elements: [],
-        steps: form.steps.map((step) => ({
-          id: step.id,
-          title: step.title ?? '',
-          elements: step.components.map((component) =>
-            formComponentToElementData(component, linkSources, logicTargets, logicHidden),
-          ),
-        })),
+        steps: form.steps.map((step) => {
+          // Колонки элементов шага и варианты-источники для раскладки
+          // «цель напротив варианта» [owner 2026-10-13].
+          const stepDepths = computeStepElementDepths(step, graph.logicRules);
+          return {
+            id: step.id,
+            title: step.title ?? '',
+            elements: step.components.map((component) => ({
+              ...formComponentToElementData(component, linkSources, logicTargets, logicHidden),
+              layerDepth: stepDepths.get(component.id) ?? 0,
+              ...(logicParents.has(component.id)
+                ? { logicParentHandleId: logicParents.get(component.id)! }
+                : null),
+            })),
+          };
+        }),
         formKindLabel: form.steps.length > 1 ? 'Степперная' : 'Одностраничная',
       },
     });

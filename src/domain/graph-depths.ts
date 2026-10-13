@@ -1,5 +1,6 @@
 import type { ServiceGraph } from './model/service-graph';
 import type { SubScenario } from './model/scenario';
+import { computeLayerDepths, type LayerEdge } from './layer-depths';
 
 // Глубины страниц графа (Epic 002, T-036, D7/D8/D12/D13): глубина страницы —
 // длина кратчайшего пути от корня (BFS по links). Ребро «элемент → страница»
@@ -80,23 +81,16 @@ export function computeGraphDepths(graph: ServiceGraph): ReadonlyMap<string, num
     }
   }
 
-  const outgoing = new Map<string, string[]>();
-  const hasIncoming = new Set<string>();
+  // Ребро уровней — «страница-владелец элемента → страница-цель»; обход —
+  // общее ядро computeLayerDepths (то же, что у элементов шага формы).
+  const edges: LayerEdge[] = [];
   for (const link of graph.links) {
     const source = elementOwner.get(link.sourceElementId);
-    // Битые ссылки (элемент/цель удалены) и петли не участвуют в глубинах.
-    if (!source || !pageSet.has(link.targetId) || source === link.targetId) {
-      continue;
+    if (source && pageSet.has(link.targetId)) {
+      edges.push({ from: source, to: link.targetId });
     }
-    const targets = outgoing.get(source) ?? [];
-    targets.push(link.targetId);
-    outgoing.set(source, targets);
-    hasIncoming.add(link.targetId);
   }
 
-  // BFS с релаксацией: глубина — кратчайший путь от любого корня.
-  // Узлы с явным layerDepth — фиксированные источники: их глубина не
-  // пересчитывается, но от них распространяется глубина дальше по связям.
   const explicitDepths = new Map<string, number>();
   collectLayerDepths(graph.subScenarios, explicitDepths);
   for (const form of graph.applicationForms) {
@@ -105,40 +99,5 @@ export function computeGraphDepths(graph: ServiceGraph): ReadonlyMap<string, num
     }
   }
 
-  const depths = new Map<string, number>();
-  const queue: string[] = [];
-  for (const id of pageIds) {
-    const explicit = explicitDepths.get(id);
-    if (explicit !== undefined) {
-      depths.set(id, explicit);
-      queue.push(id);
-    } else if (!hasIncoming.has(id)) {
-      depths.set(id, 0);
-      queue.push(id);
-    }
-  }
-  while (queue.length > 0) {
-    const id = queue.shift()!;
-    const depth = depths.get(id)!;
-    for (const next of outgoing.get(id) ?? []) {
-      if (explicitDepths.has(next)) {
-        continue; // явная колонка не переопределяется связями
-      }
-      const known = depths.get(next);
-      if (known === undefined || depth + 1 < known) {
-        depths.set(next, depth + 1);
-        queue.push(next);
-      }
-    }
-  }
-
-  // Замкнутый цикл без корня недостижим при связях через UI, но битые данные
-  // не должны ронять раскладку: оставшиеся страницы встают в нулевую колонку.
-  for (const id of pageIds) {
-    if (!depths.has(id)) {
-      depths.set(id, 0);
-    }
-  }
-
-  return depths;
+  return computeLayerDepths(pageIds, edges, explicitDepths);
 }

@@ -644,6 +644,7 @@ export function useEditorGraph() {
       targetStepId: string | null,
       dragged: ElementDragPayload,
       anchor: DropAnchorPosition | null,
+      layerDepth?: number,
     ) => {
       let target: MoveElementTarget;
       if (nodeType === 'home') {
@@ -666,6 +667,7 @@ export function useEditorGraph() {
           dragged.elementId as ElementId,
           target,
           anchor ? { elementId: anchor.elementId as ElementId, placement: anchor.placement } : undefined,
+          target.kind === 'formStep' ? layerDepth : undefined,
         ),
       );
     },
@@ -822,7 +824,8 @@ export function useEditorGraph() {
             targetStepId: string | null,
             dragged: ElementDragPayload,
             anchor: DropAnchorPosition | null,
-          ) => nodeHandlers.moveElement(node.id, node.type, targetStepId, dragged, anchor),
+            layerDepth?: number,
+          ) => nodeHandlers.moveElement(node.id, node.type, targetStepId, dragged, anchor, layerDepth),
         },
       };
       next.set(node.id, { base: node, key, result: built });

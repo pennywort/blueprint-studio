@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Handle, Position, useConnection, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import {
   Box,
@@ -18,14 +18,8 @@ import { ViolationBadge } from './violation-badge';
 import { CANVAS_LAYOUT } from '../canvas-layout';
 import { collapseElements, isCollapsible } from '../collapse-elements';
 import type { CanvasFormStepData, CanvasNode } from '../graph-flow-adapter';
-import {
-  anchorFromPoint,
-  readElementDndKind,
-  readElementDrag,
-  type DropAnchorPosition,
-  type ElementDragPayload,
-} from '../element-dnd';
-import { ElementCard } from './element-card';
+import type { DropAnchorPosition, ElementDragPayload } from '../element-dnd';
+import { FormStepLayers } from './form-step-layers';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
@@ -75,8 +69,10 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     alignItems: 'flex-start',
     gap: theme.spacing(2),
   },
+  // Шаг растёт вправо по колонкам своего слоя [owner 2026-10-13]; ширина
+  // пустого шага — formStepWidth.
   stepColumn: {
-    width: CANVAS_LAYOUT.formStepWidth,
+    minWidth: CANVAS_LAYOUT.formStepWidth,
     flexShrink: 0,
     borderRadius: 12,
     backgroundColor: theme.palette.background.default,
@@ -84,16 +80,6 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     display: 'flex',
     flexDirection: 'column',
     gap: theme.spacing(1.5),
-  },
-  // Зона приёма dnd (N2): совместимый drag над колонкой шага.
-  stepDndActive: {
-    outline: `2px dashed ${theme.editor.canvas.nodeHoverBorder}`,
-  },
-  dropIndicator: {
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: theme.editor.canvas.edge,
-    margin: '-1px 0',
   },
   // «+ Добавить шаг» (N3): новая пустая колонка в конец формы.
   addStepColumn: {
@@ -123,11 +109,6 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     display: 'flex',
     alignItems: 'center',
     gap: theme.spacing(0.5),
-  },
-  stepElements: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: theme.spacing(1.5),
   },
   expandButton: {
     alignSelf: 'center',
@@ -172,6 +153,12 @@ export function FormNode({ id, data }: NodeProps<CanvasNode>) {
     }
     // data.steps намеренно вне зависимостей: реагируем только на новый запрос поиска.
   }, [reveal, id, updateNodeInternals]);
+
+  // Раскладка шага меняется с данными (колонки, варианты-карточки) при
+  // неизменном размере узла — handles правил пересчитываются явно.
+  useEffect(() => {
+    updateNodeInternals(id);
+  }, [data.steps, id, updateNodeInternals]);
 
   const pickKind = (kind: FormComponentKind) => {
     if (stepMenu) {
@@ -233,7 +220,9 @@ export function FormNode({ id, data }: NodeProps<CanvasNode>) {
             onToggleExpanded={() => toggleStep(step.id)}
             onOpenAddMenu={(anchor) => setStepMenu({ anchor, stepId: step.id })}
             onDeleteStep={() => data.onDeleteStep?.(step.id)}
-            onDropElement={(dragged, anchor) => data.onDropElement?.(step.id, dragged, anchor)}
+            onDropElement={(dragged, anchor, layerDepth) =>
+              data.onDropElement?.(step.id, dragged, anchor, layerDepth)
+            }
           />
         ))}
         {/* «+ Добавить шаг» (N3): пустая колонка-ячейка в конец формы. */}
@@ -268,13 +257,16 @@ type FormStepColumnProps = {
   onToggleExpanded: () => void;
   onOpenAddMenu: (anchor: HTMLElement) => void;
   onDeleteStep: () => void;
-  onDropElement: (dragged: ElementDragPayload, anchor: DropAnchorPosition | null) => void;
+  onDropElement: (
+    dragged: ElementDragPayload,
+    anchor: DropAnchorPosition | null,
+    layerDepth?: number,
+  ) => void;
 };
 
 // Колонка одного шага формы: заголовок, корзина (RemoveFormStep), «+»
-// (меню типов элементов → AddFormComponent) и сжимаемый список элементов.
-// Зона приёма dnd (N2): компоненты форм — в этот шаг (якорь-карточка даёт
-// позицию, без неё — в конец); чужие виды не принимаются.
+// (меню типов элементов → AddFormComponent) и слой элементов с колонками
+// по правилам «Сложной логики» (FormStepLayers — там же зона приёма dnd).
 function FormStepColumn({
   step,
   index,
@@ -285,48 +277,11 @@ function FormStepColumn({
   onDropElement,
 }: FormStepColumnProps) {
   const classes = useStyles();
+  // Сжатие T-033 временно выключено (ELEMENTS_COLLAPSE_ENABLED) — список полный.
   const visibleElements = collapseElements(step.elements, expanded);
-  const [dndActive, setDndActive] = useState(false);
-  const [anchor, setAnchor] = useState<{ elementId: string; placement: 'before' | 'after' } | null>(null);
-
-  const handleDragOver = useCallback((event: DragEvent<HTMLElement>) => {
-    if (readElementDndKind(event.dataTransfer.types) !== 'formComponent') {
-      setDndActive(false);
-      return;
-    }
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-    setDndActive(true);
-    setAnchor(anchorFromPoint(event.currentTarget, event.clientY));
-  }, []);
-
-  const handleDragLeave = useCallback(() => {
-    setDndActive(false);
-    setAnchor(null);
-  }, []);
-
-  const handleDrop = useCallback(
-    (event: DragEvent<HTMLElement>) => {
-      event.preventDefault();
-      setDndActive(false);
-      setAnchor(null);
-      const dragged = readElementDrag(event.dataTransfer);
-      if (!dragged || dragged.kind !== 'formComponent') {
-        return;
-      }
-      onDropElement(dragged, anchorFromPoint(event.currentTarget, event.clientY));
-    },
-    [onDropElement],
-  );
 
   return (
-    <Box
-      className={`${classes.stepColumn}${dndActive ? ` ${classes.stepDndActive}` : ''}`}
-      data-testid={`form-step-${step.id}`}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
+    <Box className={classes.stepColumn} data-testid={`form-step-${step.id}`}>
       <Box className={classes.stepHeader}>
         <Typography variant="subtitle2">{step.title || `Шаг ${index + 1}`}</Typography>
         <Box className={classes.stepActions}>
@@ -348,21 +303,7 @@ function FormStepColumn({
           </IconButton>
         </Box>
       </Box>
-      {visibleElements.length > 0 ? (
-        <Box className={classes.stepElements}>
-          {visibleElements.map((element) => (
-            <Box key={element.id}>
-              {anchor?.elementId === element.id && anchor.placement === 'before' ? (
-                <Box className={classes.dropIndicator} data-testid="drop-indicator" />
-              ) : null}
-              <ElementCard element={element} />
-              {anchor?.elementId === element.id && anchor.placement === 'after' ? (
-                <Box className={classes.dropIndicator} data-testid="drop-indicator" />
-              ) : null}
-            </Box>
-          ))}
-        </Box>
-      ) : null}
+      <FormStepLayers elements={visibleElements} onDropElement={onDropElement} />
       {isCollapsible(step.elements) ? (
         <Button
           className={`${classes.expandButton} nodrag`}
