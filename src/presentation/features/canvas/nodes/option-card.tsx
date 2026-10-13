@@ -2,6 +2,7 @@ import { Handle, Position } from '@xyflow/react';
 import { Box, Card, Chip, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { isActionTarget } from '../canvas-events';
+import { FORM_STEP_LAYOUT } from '../canvas-layout';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
@@ -54,7 +55,13 @@ export function OptionCard({ option, onSelect }: OptionCardProps) {
         <Chip size="small" color="secondary" label={option.value} />
         {option.isDefault ? <Chip size="small" label="Предвыбор" /> : null}
       </Box>
-      <Handle type="source" position={Position.Right} id={option.handleId} />
+      {/* Выход ребра — на высоте якоря цели (logicHandleTop), не по центру карточки. */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id={option.handleId}
+        style={{ top: FORM_STEP_LAYOUT.logicHandleTop }}
+      />
     </Card>
   );
 }
