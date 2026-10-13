@@ -77,7 +77,7 @@ const META: Record<CanvasElementKind, ElementAttributeMeta> = {
     description: 'Информационный блок с текстом и ссылками',
     attributes: {
       text: { label: 'Текст', placeholder: 'Текст блока' },
-      links: { label: 'Ссылки', helperText: 'По одной ссылке на строку: Название | https://…' },
+      links: { label: 'Ссылки', helperText: 'Ссылки, которые показываются под текстом блока' },
     },
   },
   datePeriod: {
@@ -155,7 +155,10 @@ const META: Record<CanvasElementKind, ElementAttributeMeta> = {
       },
       required: { label: 'Обязательное поле', section: 'Настройки' },
       multiSelect: { label: 'Множественный выбор', section: 'Настройки' },
-      options: { label: 'Варианты выбора', helperText: 'По одному варианту на строку' },
+      options: {
+        label: 'Варианты выбора',
+        helperText: 'Название варианта; значение для правил и маршрутизации генерируется автоматически',
+      },
       search: {
         label: 'С поиском',
         section: 'Настройки',

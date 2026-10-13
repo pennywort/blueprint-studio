@@ -17,7 +17,7 @@
     "version": 1,
     "attributes": [
       { "key": "text", "type": "text", "required": true },
-      { "key": "links", "type": "stringList", "required": false }
+      { "key": "links", "type": "linkList", "required": false }
     ]
   },
   {
@@ -81,7 +81,7 @@
       { "key": "required", "type": "bool", "required": false },
       { "key": "displayType", "type": "radio", "required": true },
       { "key": "multiSelect", "type": "bool", "required": false },
-      { "key": "options", "type": "stringList", "required": true },
+      { "key": "options", "type": "optionList", "required": true },
       { "key": "search", "type": "bool", "required": false }
     ]
   },

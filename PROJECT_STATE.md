@@ -263,3 +263,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-10-13 | agent:claude | ADR-17: меню добавления (тулбар, «+» шага) — все виды элементов в любой блок (AddElement + createDefaultElement)
 - 2026-10-13 | agent:claude | Тесты отключены суффиксом .disabled; работа прямо в master (CLAUDE.md/KIMI.md) [owner]; карточка элемента — nodrag (drag карточки не тащит блок)
 - 2026-10-13 | agent:claude | Доводка dnd элементов (option-card nodrag, расширение шага на время drag, старт drag невыделенной карточки, каскад N4 после ADR-15); S10 тулбар — в выделенный шаг; S8 RemoveForm чистит applicationFormId; T-041 панель атрибутов List item/Widget card на stub-схемах; T-042 отложена [owner]; KIMI.md — без «48 unit-тестов»
+- 2026-10-13 | Claude | Панель атрибутов: редакторы optionList/linkList (варианты Select, ссылки infoBlock)

@@ -239,7 +239,18 @@ function isValueCompatible(type: ElementAttributeType, value: unknown): boolean 
       return typeof value === 'string';
     case 'stringList':
       return Array.isArray(value) && value.every((item) => typeof item === 'string');
+    case 'optionList':
+      return Array.isArray(value) && value.every(isRecordWith('label', 'value'));
+    case 'linkList':
+      return Array.isArray(value) && value.every(isRecordWith('label', 'url'));
   }
+}
+
+function isRecordWith(...keys: string[]) {
+  return (item: unknown): boolean =>
+    typeof item === 'object' &&
+    item !== null &&
+    keys.every((key) => typeof (item as Record<string, unknown>)[key] === 'string');
 }
 
 // Резервный вывод значения без зарегистрированного редактора (например,

@@ -23,7 +23,7 @@ const ManifestEntrySchema = z.object({
   attributes: z.array(
     z.object({
       key: z.string().min(1),
-      type: z.enum(['bool', 'text', 'number', 'radio', 'select', 'stringList']),
+      type: z.enum(['bool', 'text', 'number', 'radio', 'select', 'stringList', 'optionList', 'linkList']),
       required: z.boolean(),
     }),
   ),

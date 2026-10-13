@@ -4,7 +4,10 @@ import type { CanvasElementKind } from '@domain/model/canvas-element';
 // Внутренний нормализованный формат — ElementSchema; внешний формат пакета
 // element-schemas (lib-app-core) нормализуется адаптером в infrastructure.
 
-export type ElementAttributeType = 'bool' | 'text' | 'number' | 'radio' | 'select' | 'stringList';
+// optionList — массив SelectOption (варианты выбора), linkList — массив
+// MarkdownLink (ссылки): структурные списки с собственными редакторами.
+export type ElementAttributeType =
+  'bool' | 'text' | 'number' | 'radio' | 'select' | 'stringList' | 'optionList' | 'linkList';
 
 export type ElementAttribute = {
   key: string;

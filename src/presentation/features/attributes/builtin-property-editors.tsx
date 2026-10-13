@@ -1,6 +1,9 @@
 import {
+  Box,
+  Button,
   FormControl,
   FormControlLabel,
+  IconButton,
   InputLabel,
   MenuItem,
   Radio,
@@ -8,7 +11,10 @@ import {
   Select,
   Switch,
   TextField,
+  Tooltip,
+  Typography,
 } from '@blueprint-vendor/flamingo-core';
+import { Add, Delete } from '@blueprint-vendor/flamingo-icons';
 import { registerPropertyEditor, type PropertyEditorProps } from './property-editor-registry';
 
 // Встроенные редакторы свойств (T-040): text → TextField, stringList →
@@ -127,9 +133,123 @@ function SelectPropertyEditor({ value, onChange, meta, required }: PropertyEdito
   );
 }
 
+type OptionItem = { label: string; value: string; isDefault?: boolean };
+type LinkItem = { label: string; url: string };
+
+const asArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
+
+// Редактор вариантов выбора (optionList): строка на вариант — название,
+// «по умолчанию», удаление; «Добавить вариант» создаёт вариант со стабильным
+// value (на него ссылаются правила «Сложной логики», поэтому не редактируется).
+function OptionListPropertyEditor({ value, onChange, meta }: PropertyEditorProps) {
+  const items = asArray<OptionItem>(value);
+  const update = (index: number, patch: Partial<OptionItem>) =>
+    onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  return (
+    <Box display="flex" flexDirection="column" style={{ gap: 8 }} data-testid="option-list-editor">
+      {meta.label ? <Typography variant="subtitle2">{meta.label}</Typography> : null}
+      {items.map((item, index) => (
+        <Box key={item.value} display="flex" alignItems="center" style={{ gap: 4 }}>
+          <TextField
+            fullWidth
+            size="small"
+            variant="outlined"
+            placeholder={`Вариант ${index + 1}`}
+            value={item.label}
+            onChange={(event) => update(index, { label: event.target.value })}
+          />
+          <Tooltip title="По умолчанию">
+            <Switch
+              size="small"
+              checked={item.isDefault === true}
+              onChange={(event) => update(index, { isDefault: event.target.checked || undefined })}
+            />
+          </Tooltip>
+          <IconButton
+            size="small"
+            aria-label="Удалить вариант"
+            onClick={() => onChange(items.filter((_, i) => i !== index))}
+          >
+            <Delete fontSize="small" />
+          </IconButton>
+        </Box>
+      ))}
+      <Box>
+        <Button
+          size="small"
+          startIcon={<Add />}
+          onClick={() =>
+            onChange([
+              ...items,
+              { label: `Вариант ${items.length + 1}`, value: `option-${crypto.randomUUID().slice(0, 8)}` },
+            ])
+          }
+        >
+          Добавить вариант
+        </Button>
+      </Box>
+      {meta.helperText ? (
+        <Typography variant="caption" color="textSecondary">
+          {meta.helperText}
+        </Typography>
+      ) : null}
+    </Box>
+  );
+}
+
+// Редактор ссылок (linkList): название + URL на строку.
+function LinkListPropertyEditor({ value, onChange, meta }: PropertyEditorProps) {
+  const items = asArray<LinkItem>(value);
+  const update = (index: number, patch: Partial<LinkItem>) =>
+    onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  return (
+    <Box display="flex" flexDirection="column" style={{ gap: 8 }} data-testid="link-list-editor">
+      {meta.label ? <Typography variant="subtitle2">{meta.label}</Typography> : null}
+      {items.map((item, index) => (
+        <Box key={index} display="flex" alignItems="center" style={{ gap: 4 }}>
+          <TextField
+            size="small"
+            variant="outlined"
+            placeholder="Название"
+            value={item.label}
+            onChange={(event) => update(index, { label: event.target.value })}
+          />
+          <TextField
+            fullWidth
+            size="small"
+            variant="outlined"
+            placeholder="https://…"
+            value={item.url}
+            onChange={(event) => update(index, { url: event.target.value })}
+          />
+          <IconButton
+            size="small"
+            aria-label="Удалить ссылку"
+            onClick={() => onChange(items.filter((_, i) => i !== index))}
+          >
+            <Delete fontSize="small" />
+          </IconButton>
+        </Box>
+      ))}
+      <Box>
+        <Button size="small" startIcon={<Add />} onClick={() => onChange([...items, { label: '', url: '' }])}>
+          Добавить ссылку
+        </Button>
+      </Box>
+      {meta.helperText ? (
+        <Typography variant="caption" color="textSecondary">
+          {meta.helperText}
+        </Typography>
+      ) : null}
+    </Box>
+  );
+}
+
 registerPropertyEditor('text', TextPropertyEditor);
 registerPropertyEditor('stringList', MultilinePropertyEditor);
 registerPropertyEditor('bool', BoolPropertyEditor);
 registerPropertyEditor('number', NumberPropertyEditor);
 registerPropertyEditor('radio', RadioPropertyEditor);
 registerPropertyEditor('select', SelectPropertyEditor);
+registerPropertyEditor('optionList', OptionListPropertyEditor);
+registerPropertyEditor('linkList', LinkListPropertyEditor);
