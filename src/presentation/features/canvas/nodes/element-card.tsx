@@ -100,8 +100,11 @@ export function ElementCard({ element }: ElementCardProps) {
     // stopPropagation: иначе клик дошёл бы до узла, и react-flow выделил бы
     // его вместо элемента. data-element-card — якорь для drop-зон dnd (N2).
     <Card
+      // nodrag: нажатие на карточке не начинает drag узла react-flow —
+      // иначе тащился весь блок, а нативный dnd карточки не стартовал.
       className={[
         classes.card,
+        'nodrag',
         element.violations ? classes.cardInvalid : '',
         element.selected ? classes.cardSelected : '',
       ].join(' ')}

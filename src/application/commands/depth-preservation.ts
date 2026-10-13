@@ -41,7 +41,7 @@ export function preserveFormElementDepths(
   const depthsAfter = computeFormElementDepths(draft);
   for (const form of draft.applicationForms) {
     for (const step of form.steps) {
-      for (const component of step.components) {
+      for (const component of step.elements) {
         if (exclude.has(component.id)) {
           continue;
         }

@@ -35,11 +35,14 @@ export const PAGE_LAYER_POLICY: LayerPolicy<CanvasNodeType> = {
 };
 
 // Шаг формы: колонки по правилам «Сложной логики», карточки меньше.
-// Состав — компоненты форм: домен пока хранит в шаге только их (MoveElement);
-// универсальные элементы [owner 2026-10-13] — расширением movableKinds.
+// Переносится любой элемент карты [owner 2026-10-13].
 export const FORM_STEP_LAYER_POLICY: LayerPolicy<ElementDndKind> = {
   columnWidth: FORM_STEP_LAYOUT.elementWidth,
   columnGap: FORM_STEP_LAYOUT.columnGap,
   allowNewLayer: true,
-  movableKinds: ['formComponent'],
+  movableKinds: ['element'],
 };
+
+// Список элементов страницы (Главная, подсценарий): что принимает drop.
+// Слой колонок у страниц пока не строится — элементы идут списком.
+export const PAGE_ELEMENTS_ACCEPTED_KINDS: readonly ElementDndKind[] = ['element'];

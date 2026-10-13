@@ -1,6 +1,7 @@
 import type { ServiceGraph } from './model/service-graph';
 import type { SubScenario } from './model/scenario';
 import { computeLayerDepths, type LayerEdge } from './layer-depths';
+import { walkElementContainers } from './element-containers';
 
 // Глубины страниц графа (Epic 002, T-036, D7/D8/D12/D13): глубина страницы —
 // длина кратчайшего пути от корня (BFS по links). Ребро «элемент → страница»
@@ -37,17 +38,6 @@ function collectLayerDepths(subScenarios: SubScenario[], into: Map<string, numbe
   }
 }
 
-function collectSubScenarioElementIds(subScenarios: SubScenario[], into: Map<string, string>): void {
-  for (const scenario of subScenarios) {
-    for (const item of scenario.listItems) {
-      into.set(item.id, scenario.id);
-    }
-    if (scenario.children) {
-      collectSubScenarioElementIds(scenario.children, into);
-    }
-  }
-}
-
 // Глубина каждой страницы карты. Ключи — id страниц (брендированные id
 // приводятся к string, чтобы функция не зависела от вида страницы).
 export function computeGraphDepths(graph: ServiceGraph): ReadonlyMap<string, number> {
@@ -64,20 +54,9 @@ export function computeGraphDepths(graph: ServiceGraph): ReadonlyMap<string, num
   // Владелец элемента → страница: источник связи — конкретный элемент (D9),
   // а ребро глубин идёт между страницами.
   const elementOwner = new Map<string, string>();
-  if (graph.homePage) {
-    for (const item of graph.homePage.listItems) {
-      elementOwner.set(item.id, graph.homePage.id);
-    }
-    for (const card of graph.homePage.widgetCards) {
-      elementOwner.set(card.id, graph.homePage.id);
-    }
-  }
-  collectSubScenarioElementIds(graph.subScenarios, elementOwner);
-  for (const form of graph.applicationForms) {
-    for (const step of form.steps) {
-      for (const component of step.components) {
-        elementOwner.set(component.id, form.id);
-      }
+  for (const container of walkElementContainers(graph)) {
+    for (const element of container.elements) {
+      elementOwner.set(element.id, container.ownerPageId);
     }
   }
 

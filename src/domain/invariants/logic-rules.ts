@@ -1,5 +1,6 @@
 import type { ServiceGraph } from '../model/service-graph';
 import type { SelectList } from '../model/form-components';
+import type { MapElement } from '../model/element';
 import type { InvariantViolation } from './index';
 
 // Инварианты «Сложной логики» (T-037/T-063, дизайн-док §5): защита данных —
@@ -14,14 +15,14 @@ const RULE_ID = 'complex-logic';
 type ComponentContext = {
   formId: string;
   stepId: string;
-  component: ServiceGraph['applicationForms'][number]['steps'][number]['components'][number];
+  component: MapElement;
 };
 
 function collectComponents(graph: ServiceGraph): Map<string, ComponentContext> {
   const components = new Map<string, ComponentContext>();
   for (const form of graph.applicationForms) {
     for (const step of form.steps) {
-      for (const component of step.components) {
+      for (const component of step.elements) {
         components.set(component.id, { formId: form.id, stepId: step.id, component });
       }
     }

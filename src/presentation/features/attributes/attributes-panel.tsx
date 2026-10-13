@@ -14,7 +14,7 @@ import type { ElementPropsPatch } from '@application/commands/update-element-pro
 import type { FormComponent } from '@domain/model/form-components';
 import type { LogicRuleId } from '@domain/model/ids';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
-import { FORM_COMPONENT_KIND_LABELS } from '@presentation/features/canvas/graph-flow-adapter';
+import { ELEMENT_KIND_LABELS } from '@presentation/features/canvas/graph-flow-adapter';
 import { getElementAttributeMeta, type AttributeMeta } from './element-attribute-meta';
 import { resolvePropertyEditor } from './property-editor-registry';
 import './builtin-property-editors';
@@ -80,7 +80,7 @@ export function AttributesPanel({
 }: AttributesPanelProps) {
   const classes = useStyles();
   const meta = getElementAttributeMeta(component.kind);
-  const title = FORM_COMPONENT_KIND_LABELS[component.kind];
+  const title = ELEMENT_KIND_LABELS[component.kind];
 
   // Поля по схеме: порядок — порядок атрибутов в манифесте; атрибут виден,
   // если ключ есть в доменном компоненте и выполнено условие видимости (D4).

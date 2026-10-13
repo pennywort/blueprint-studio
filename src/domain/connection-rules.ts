@@ -1,6 +1,7 @@
 import type { ServiceGraph } from './model/service-graph';
 import type { SubScenario } from './model/scenario';
 import { computeGraphDepths } from './graph-depths';
+import { findElementLocation } from './element-containers';
 
 // Правила «с чем можно соединиться» (повторная приёмка Epic 002, [owner
 // 2026-10-13]) — единый источник для подсветки допустимых целей во время
@@ -34,23 +35,10 @@ function* walkScenarios(subScenarios: SubScenario[]): Generator<SubScenario> {
   }
 }
 
-// Страница — владелец элемента (элементы страниц и компоненты форм).
+// Страница — владелец элемента: Главная, подсценарий или форма (элементы
+// любых видов, единый обход контейнеров).
 function findOwnerPageId(graph: ServiceGraph, elementId: string): string | null {
-  const home = graph.homePage;
-  if (home && [...home.listItems, ...home.widgetCards].some((item) => item.id === elementId)) {
-    return home.id;
-  }
-  for (const scenario of walkScenarios(graph.subScenarios)) {
-    if (scenario.listItems.some((item) => item.id === elementId)) {
-      return scenario.id;
-    }
-  }
-  for (const form of graph.applicationForms) {
-    if (form.steps.some((step) => step.components.some((component) => component.id === elementId))) {
-      return form.id;
-    }
-  }
-  return null;
+  return findElementLocation(graph, elementId)?.ownerPageId ?? null;
 }
 
 function navigationTargets(graph: ServiceGraph, elementId: string): ConnectableTargets {
@@ -98,7 +86,7 @@ function wouldCreateCycle(graph: ServiceGraph, sourceId: string, targetId: strin
 function logicTargets(graph: ServiceGraph, elementId: string, optionId: string): ConnectableTargets {
   for (const form of graph.applicationForms) {
     for (const step of form.steps) {
-      const source = step.components.find((component) => component.id === elementId);
+      const source = step.elements.find((component) => component.id === elementId);
       if (!source) {
         continue;
       }
@@ -109,7 +97,7 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
       // 2026-10-13]): элемент, уже зависящий от варианта, — не цель.
       const ruleTargets = new Set<string>(graph.logicRules.map((rule) => rule.targetElementId));
       const elements = new Set<string>();
-      for (const component of step.components) {
+      for (const component of step.elements) {
         if (ruleTargets.has(component.id)) {
           continue;
         }

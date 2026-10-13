@@ -1,5 +1,5 @@
-import type { FormComponent, FormComponentKind } from '@domain/model/form-components';
-import type { FormComponentId } from '@domain/model/ids';
+import type { MapElement, MapElementKind } from '@domain/model/element';
+import type { ElementId } from '@domain/model/ids';
 
 // Фабрики элементов по умолчанию для меню добавления (Epic 002, T-034):
 // новый элемент создаётся с минимально валидными значениями полей
@@ -10,10 +10,15 @@ export const NEW_LIST_ITEM_TITLE = 'Новый элемент';
 export const NEW_SCENARIO_TITLE = 'Новый подсценарий';
 export const NEW_FORM_TITLE = 'Новая форма заявки';
 
-// Минимально валидный форм-компонент каждого kind: обязательные поля
-// заполняются нейтральными значениями, опциональные не задаются.
-export function createDefaultFormComponent(kind: FormComponentKind, id: FormComponentId): FormComponent {
+// Минимально валидный элемент каждого kind (любой элемент — в любой
+// контейнер, [owner 2026-10-13]): обязательные поля заполняются
+// нейтральными значениями, опциональные не задаются.
+export function createDefaultElement(kind: MapElementKind, id: ElementId): MapElement {
   switch (kind) {
+    case 'listItem':
+      return { id, kind, title: NEW_LIST_ITEM_TITLE };
+    case 'widgetCard':
+      return { id, kind, title: NEW_LIST_ITEM_TITLE };
     case 'textField':
       return { id, kind, label: 'Текстовое поле', required: false, multiline: false };
     case 'infoBlock':

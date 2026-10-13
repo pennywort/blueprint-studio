@@ -1,13 +1,7 @@
 import { z } from 'zod';
 import { BlueprintIdSchema, PageIdSchema } from './ids';
-import {
-  ApplicationFormSchema,
-  SubScenarioSchema,
-  WidgetCardSchema,
-  AdditionalInfoSchema,
-  FaqSchema,
-  ListItemSchema,
-} from './scenario';
+import { ApplicationFormSchema, SubScenarioSchema, AdditionalInfoSchema, FaqSchema } from './scenario';
+import { MapElementSchema } from './element';
 import { PageLinkSchema } from './page-link';
 import { LogicRuleSchema } from './logic-rule';
 
@@ -22,8 +16,8 @@ import { LogicRuleSchema } from './logic-rule';
 export const HomePageSchema = z.object({
   id: PageIdSchema,
   orderIndex: z.number().int().nonnegative(),
-  listItems: z.array(ListItemSchema),
-  widgetCards: z.array(WidgetCardSchema),
+  // Элементы Главной — любые элементы карты [owner 2026-10-13].
+  elements: z.array(MapElementSchema),
   faq: FaqSchema.optional(),
   additionalInfo: AdditionalInfoSchema.optional(),
 });

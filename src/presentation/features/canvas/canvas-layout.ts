@@ -82,7 +82,7 @@ function estimateScenarioNodeHeight(elementCount: number): number {
 // варианта и стопки зависящих от него элементов (цель напротив варианта).
 function estimateStepHeight(step: FormStep, logicRules: ServiceGraph['logicRules']): number {
   const S = FORM_STEP_LAYOUT;
-  const ids = new Set<string>(step.components.map((component) => component.id));
+  const ids = new Set<string>(step.elements.map((component) => component.id));
   const dependents = new Map<string, string[]>();
   const hasParent = new Set<string>();
   for (const rule of logicRules) {
@@ -96,7 +96,7 @@ function estimateStepHeight(step: FormStep, logicRules: ServiceGraph['logicRules
     dependents.set(key, [...(dependents.get(key) ?? []), rule.targetElementId]);
     hasParent.add(rule.targetElementId);
   }
-  const byId = new Map(step.components.map((component) => [component.id as string, component]));
+  const byId = new Map(step.elements.map((component) => [component.id as string, component]));
   const stack = (list: readonly string[], seen: ReadonlySet<string>): number =>
     list.reduce((sum, id, index) => sum + (index > 0 ? S.rowGap : 0) + tree(id, seen), 0);
   const tree = (id: string, seen: ReadonlySet<string>): number => {
@@ -115,7 +115,7 @@ function estimateStepHeight(step: FormStep, logicRules: ServiceGraph['logicRules
     return height;
   };
   return stack(
-    step.components.map((component) => component.id as string).filter((id) => !hasParent.has(id)),
+    step.elements.map((component) => component.id as string).filter((id) => !hasParent.has(id)),
     new Set(),
   );
 }
@@ -174,7 +174,7 @@ export function computeLayout(graph: ServiceGraph, measured?: MeasuredNodeSizes)
       id: home.id,
       orderIndex: home.orderIndex,
       width: CANVAS_LAYOUT.nodeWidth,
-      height: estimateScenarioNodeHeight(home.listItems.length + home.widgetCards.length),
+      height: estimateScenarioNodeHeight(home.elements.length),
     });
   }
   const collectScenarios = (subScenarios: ServiceGraph['subScenarios']): void => {
@@ -183,7 +183,7 @@ export function computeLayout(graph: ServiceGraph, measured?: MeasuredNodeSizes)
         id: scenario.id,
         orderIndex: scenario.orderIndex,
         width: CANVAS_LAYOUT.nodeWidth,
-        height: estimateScenarioNodeHeight(scenario.listItems.length),
+        height: estimateScenarioNodeHeight(scenario.elements.length),
       });
       if (scenario.children) {
         collectScenarios(scenario.children);

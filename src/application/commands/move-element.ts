@@ -1,24 +1,13 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
-import type {
-  ElementId,
-  FormComponentId,
-  ApplicationFormId,
-  FormStepId,
-  ScenarioId,
-} from '@domain/model/ids';
+import type { ElementId, FormComponentId } from '@domain/model/ids';
+import { findElementContainer, type ElementContainerRef } from '@domain/element-containers';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { computeFormElementDepths } from '@domain/step-element-depths';
-import type { FormComponent } from '@domain/model/form-components';
 import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
 import { preserveFormElementDepths, preservePageDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
-import {
-  findElementLocation,
-  findElementOwnerPageId,
-  findFormById,
-  findSubScenarioById,
-} from './graph-lookup';
+import { findElementLocation, findElementOwnerPageId } from './graph-lookup';
 
 // Команда переноса элемента канваса (замечание приёмки N2): dnd карточек —
 // переупорядочивание внутри списка узла/шага и перенос между узлами
@@ -31,41 +20,15 @@ import {
 // команда сама находит якорь в приёмнике ПОСЛЕ изъятия элемента из
 // источника — сдвиг индексов приёмника не снаружи.
 
-export type MoveElementTarget =
-  | { kind: 'homeListItems' }
-  | { kind: 'homeWidgetCards' }
-  | { kind: 'subScenarioListItems'; scenarioId: ScenarioId }
-  | { kind: 'formStep'; formId: ApplicationFormId; stepId: FormStepId };
+// Приёмник — любой контейнер элементов (Главная, подсценарий, шаг формы):
+// элементы равноправны [owner 2026-10-13], любой вид — в любой контейнер.
+export type MoveElementTarget = ElementContainerRef;
 
 export type DropAnchor = {
   /** Карточка-якорь в приёмнике: элемент встаёт до/после неё. */
   elementId: ElementId | FormComponentId;
   placement: 'before' | 'after';
 };
-
-// Любой элемент списка-приёмника: карточки страниц и компоненты форм.
-type AnyElement =
-  | NonNullable<ServiceGraph['homePage']>['listItems'][number]
-  | NonNullable<ServiceGraph['homePage']>['widgetCards'][number]
-  | ServiceGraph['applicationForms'][number]['steps'][number]['components'][number];
-
-// Список-приёмник по цели; null — цель не существует (команда отклонится).
-function resolveTargetList(draft: ServiceGraph, target: MoveElementTarget): AnyElement[] | null {
-  switch (target.kind) {
-    case 'homeListItems':
-      return draft.homePage?.listItems ?? null;
-    case 'homeWidgetCards':
-      return draft.homePage?.widgetCards ?? null;
-    case 'subScenarioListItems': {
-      const scenario = findSubScenarioById(draft, target.scenarioId);
-      return scenario?.listItems ?? null;
-    }
-    case 'formStep': {
-      const form = findFormById(draft, target.formId);
-      return form?.steps.find((step) => step.id === target.stepId)?.components ?? null;
-    }
-  }
-}
 
 export class MoveElement implements Command {
   readonly name = 'MoveElement';
@@ -88,44 +51,29 @@ export class MoveElement implements Command {
     if (!location) {
       throw new Error(`Элемент не найден: ${this.elementId}`);
     }
-    const targetList = resolveTargetList(draft, this.target);
-    if (!targetList) {
+    const targetContainer = findElementContainer(draft, this.target);
+    if (!targetContainer) {
       throw new Error('Приёмник для переноса не найден');
     }
+    const targetList = targetContainer.elements;
 
-    // Совместимость вида элемента и приёмника (домен: вид списка
-    // определяет вид элементов — Widget card живёт только на Главной,
-    // компоненты форм — только в шагах форм).
-    if (this.target.kind === 'formStep') {
-      if (location.kind !== 'formComponent') {
-        throw new Error('В шаг формы можно переносить только компоненты форм');
-      }
-    } else if (location.kind === 'formComponent') {
-      throw new Error('Компонент формы может находиться только внутри шага формы');
-    } else if (this.target.kind === 'homeWidgetCards') {
-      if (location.kind !== 'homeWidgetCard') {
-        throw new Error('В виджеты Главной можно переносить только Widget card');
-      }
-    } else if (location.kind === 'homeWidgetCard') {
-      throw new Error('Widget card можно переносить только в виджеты Главной');
-    }
+    const [moved] = location.elements.splice(location.index, 1);
 
-    const [moved] = location.list.splice(location.index, 1);
-
-    // Каскад сложной логики: компонент уходит в ДРУГОЙ шаг (той же или
+    // Каскад сложной логики: элемент уходит в ДРУГОЙ контейнер (той же или
     // другой формы) — правила, где он источник или цель, невалидны (L-I5:
     // логика только внутри одного шага, ADR-14). Перенос в другую колонку
     // своего шага рвёт их же [owner 2026-10-13]: переносится один элемент,
     // без группы, — старые связи теряют смысл. Порядок внутри колонки
     // правил не трогает.
-    const changesStep = targetList !== location.list;
+    const changesStep = targetList !== location.elements;
     const changesColumn =
       this.layerDepth !== undefined && this.layerDepth !== elementDepthsBefore.get(this.elementId);
-    if (location.kind === 'formComponent' && (changesStep || changesColumn)) {
+    const touchesStep = location.ref.kind === 'formStep' || this.target.kind === 'formStep';
+    if (touchesStep && (changesStep || changesColumn)) {
       draft.logicRules = draft.logicRules.filter(
         (rule) => rule.sourceElementId !== this.elementId && rule.targetElementId !== this.elementId,
       );
-      const component = moved as FormComponent;
+      const component = moved!;
       if (this.layerDepth !== undefined) {
         component.layerDepth = this.layerDepth;
       } else {

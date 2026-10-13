@@ -12,7 +12,7 @@ import {
   makeStyles,
 } from '@blueprint-vendor/flamingo-core';
 import { Add, Delete, ExpandLess, ExpandMore } from '@blueprint-vendor/flamingo-icons';
-import type { FormComponentKind } from '@domain/model/form-components';
+import type { MapElementKind } from '@domain/model/element';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
 import { CANVAS_LAYOUT } from '../canvas-layout';
@@ -160,7 +160,7 @@ export function FormNode({ id, data }: NodeProps<CanvasNode>) {
     updateNodeInternals(id);
   }, [data.steps, id, updateNodeInternals]);
 
-  const pickKind = (kind: FormComponentKind) => {
+  const pickKind = (kind: MapElementKind) => {
     if (stepMenu) {
       data.onAddElementToStep?.(stepMenu.stepId, kind);
     }

@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { FormComponentIdSchema, FormStepIdSchema, ScenarioIdSchema } from './ids';
+import { FormStepIdSchema, ScenarioIdSchema } from './ids';
+import { elementCommonFields } from './element-common';
 
 // 12 форм-компонентов по спецификации 001-foundation, раздел 5.4.
 // Discriminated union по `kind`. Общие поля: id, kind, comment?, routing?,
@@ -21,15 +22,10 @@ export const RoutingRuleSchema = z.object({
 export type RoutingRule = z.infer<typeof RoutingRuleSchema>;
 
 const baseFields = {
-  id: FormComponentIdSchema,
+  ...elementCommonFields,
   comment: z.string().optional(), // комментарий для разработчика (US-05)
   routing: RoutingRuleSchema.optional(), // компонент завязан на маршрутизацию
   hasDynamicContent: z.boolean().optional(), // компонент с динамическим контентом
-  // Явная колонка элемента внутри шага формы [owner 2026-10-13]: перенос dnd
-  // в другую колонку и закрепление элемента, потерявшего правило (ADR-15);
-  // без него колонка — производная правил «Сложной логики» (step-element-depths).
-  // Метаданные раскладки редактора, не часть element-schemas движка (D4).
-  layerDepth: z.number().int().nonnegative().optional(),
 };
 
 export const MarkdownLinkSchema = z.object({

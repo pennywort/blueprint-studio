@@ -47,9 +47,9 @@ export function mapViolationsToCanvas(
     const form = /^applicationForms\[([^\]]+)\]/.exec(path);
     if (form) {
       push(nodes, form[1]!, message);
-      const component = /components\[([^\]]+)\]/.exec(path);
-      if (component) {
-        push(elements, component[1]!, message);
+      const element = /elements\[([^\]]+)\]/.exec(path);
+      if (element) {
+        push(elements, element[1]!, message);
       }
       continue;
     }
@@ -57,6 +57,10 @@ export function mapViolationsToCanvas(
     const page = /^pages\[([^\]]+)\]/.exec(path);
     if (page) {
       push(nodes, page[1]!, message);
+      const element = /elements\[([^\]]+)\]/.exec(path);
+      if (element) {
+        push(elements, element[1]!, message);
+      }
       continue;
     }
 

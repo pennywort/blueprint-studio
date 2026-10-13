@@ -2,11 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Connection } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { FormComponent } from '@domain/model/form-components';
-import type { FormComponentKind } from '@domain/model/form-components';
 import {
   toApplicationFormId,
   toElementId,
-  toFormComponentId,
   toFormStepId,
   toLogicRuleId,
   toOptionId,
@@ -39,9 +37,10 @@ import { AddForm } from '@application/commands/add-form';
 import { RemoveForm } from '@application/commands/remove-form';
 import { RemoveFormStep } from '@application/commands/remove-form-step';
 import { AddElement } from '@application/commands/add-element';
-import { AddFormComponent } from '@application/commands/add-form-component';
 import { RemoveElement } from '@application/commands/remove-element';
 import { MoveElement, type MoveElementTarget } from '@application/commands/move-element';
+import type { ElementContainerRef } from '@domain/element-containers';
+import { isFormComponent, type MapElementKind } from '@domain/model/element';
 import { AddFormStep } from '@application/commands/add-form-step';
 import { SetPageLayerDepth } from '@application/commands/set-page-layer-depth';
 import { UpdateElementProps, type ElementPropsPatch } from '@application/commands/update-element-props';
@@ -62,7 +61,7 @@ import type { CanvasSearchResult } from '@presentation/features/top-bar/editor-t
 import type { DropAnchorPosition, ElementDragPayload } from './element-dnd';
 import { computeLayout, type MeasuredNodeSizes } from './canvas-layout';
 import {
-  FORM_COMPONENT_KIND_LABELS,
+  ELEMENT_KIND_LABELS,
   LOGIC_SOURCE_HANDLE_PREFIX,
   flowConnectionToLink,
   flowNodesToLayerOrder,
@@ -73,20 +72,15 @@ import {
   type CanvasNode,
   type CanvasNodeType,
 } from './graph-flow-adapter';
-import {
-  NEW_FORM_TITLE,
-  NEW_LIST_ITEM_TITLE,
-  NEW_SCENARIO_TITLE,
-  createDefaultFormComponent,
-} from './default-elements';
+import { NEW_FORM_TITLE, NEW_SCENARIO_TITLE, createDefaultElement } from './default-elements';
 import { createSampleGraph } from './sample-graph';
 import { mapViolationsToCanvas } from './violation-markers';
 import { connectableTargets, type ConnectableTargets, type ConnectionSource } from '@domain/connection-rules';
 
-// Варианты меню «+» шага формы: все kind из маппинга подписей адаптера
-// (12 форм-компонентов манифеста), порядок — как в маппинге.
-const ELEMENT_KIND_OPTIONS = Object.entries(FORM_COMPONENT_KIND_LABELS).map(([kind, label]) => ({
-  kind: kind as FormComponentKind,
+// Варианты меню «+» шага формы: все виды элементов карты [owner 2026-10-13]
+// из маппинга подписей адаптера, порядок — как в маппинге.
+const ELEMENT_KIND_OPTIONS = Object.entries(ELEMENT_KIND_LABELS).map(([kind, label]) => ({
+  kind: kind as MapElementKind,
   label,
 }));
 
@@ -296,10 +290,13 @@ export function useEditorGraph() {
     if (!selectedElementId) {
       return null;
     }
-    const found = findFormComponent(graph, selectedElementId);
-    if (!found) {
+    // Инспектор — по схемам element-schemas (ADR-07): пока они есть только у
+    // компонентов форм; элемент любого контейнера [owner 2026-10-13].
+    const found = findElementLocation(graph, selectedElementId);
+    if (!found || !isFormComponent(found.element)) {
       return null;
     }
+    const component = found.element;
     const incomingRules = graph.logicRules
       .filter((rule) => rule.targetElementId === selectedElementId)
       .map((rule) => {
@@ -312,7 +309,7 @@ export function useEditorGraph() {
         }
         return { ruleId: rule.id, sourceLabel, optionLabel };
       });
-    return { component: found.component, incomingRules };
+    return { component, incomingRules };
   }, [graph, selectedElementId]);
 
   const runCommand = useCallback(
@@ -473,7 +470,7 @@ export function useEditorGraph() {
       const depths = computeGraphDepths(graphRef.current);
       const nextDepth = depths.size === 0 ? 0 : Math.max(...depths.values()) + 1;
       if (kind === 'home') {
-        runCommand(new AddHomePage({ id: toPageId(idGenerator.next()), listItems: [], widgetCards: [] }));
+        runCommand(new AddHomePage({ id: toPageId(idGenerator.next()), elements: [] }));
         return;
       }
       if (kind === 'subScenario') {
@@ -482,7 +479,7 @@ export function useEditorGraph() {
             id: toScenarioId(idGenerator.next()),
             type: 'navigation',
             title: NEW_SCENARIO_TITLE,
-            listItems: [],
+            elements: [],
             layerDepth: nextDepth,
           }),
         );
@@ -494,7 +491,7 @@ export function useEditorGraph() {
         new AddForm({
           id: toApplicationFormId(idGenerator.next()),
           title: NEW_FORM_TITLE,
-          steps: [{ id: toFormStepId(idGenerator.next()), components: [] }],
+          steps: [{ id: toFormStepId(idGenerator.next()), elements: [] }],
           layerDepth: nextDepth,
         }),
       );
@@ -541,16 +538,16 @@ export function useEditorGraph() {
     [runCommand],
   );
 
-  // Элемент из меню тулбара — в выделенный узел канваса. Допустимые виды
-  // элементов зависят от типа узла (меню их и показывает): Главная —
-  // List item/Widget card, Подсценарий — List item, Форма — компоненты
-  // формы (в первый шаг; в конкретный шаг степперной формы — через «+» шага).
+  // Элемент из меню тулбара — в выделенный узел канваса. Любой вид — в любой
+  // узел [owner 2026-10-13]; у формы — в первый шаг (в конкретный шаг — через
+  // «+» шага).
   const addElement = useCallback(
     (kind: AddableElementKind) => {
       if (!selectedNodeId || !selectedNodeType) {
         notifications.showCommandFailure('Сначала выберите узел на канвасе');
         return;
       }
+      let target: ElementContainerRef;
       if (selectedNodeType === 'form') {
         const form = findFormById(graphRef.current, selectedNodeId);
         const firstStep = form?.steps[0];
@@ -558,44 +555,22 @@ export function useEditorGraph() {
           notifications.showCommandFailure('У формы нет шага для добавления элемента');
           return;
         }
-        runCommand(
-          new AddFormComponent(
-            form.id,
-            firstStep.id,
-            createDefaultFormComponent(kind as FormComponentKind, toFormComponentId(idGenerator.next())),
-          ),
-        );
-        return;
+        target = { kind: 'formStep', formId: form.id, stepId: firstStep.id };
+      } else {
+        target = { kind: 'page', pageId: selectedNodeId };
       }
-      const elementId = toElementId(idGenerator.next());
-      if (selectedNodeType === 'home' && kind === 'widgetCard') {
-        runCommand(
-          new AddElement({ kind: 'homeWidgetCards' }, { id: elementId, title: NEW_LIST_ITEM_TITLE }),
-        );
-        return;
-      }
-      if (selectedNodeType === 'home') {
-        runCommand(new AddElement({ kind: 'homeListItems' }, { id: elementId, title: NEW_LIST_ITEM_TITLE }));
-        return;
-      }
-      runCommand(
-        new AddElement(
-          { kind: 'subScenarioListItems', scenarioId: selectedNodeId as ScenarioId },
-          { id: elementId, title: NEW_LIST_ITEM_TITLE },
-        ),
-      );
+      runCommand(new AddElement(target, createDefaultElement(kind, toElementId(idGenerator.next()))));
     },
     [idGenerator, notifications, runCommand, selectedNodeId, selectedNodeType],
   );
 
-  // «+» конкретного шага формы → компонент выбранного kind на этот шаг.
+  // «+» конкретного шага формы → элемент выбранного kind на этот шаг.
   const addElementToStep = useCallback(
-    (formId: ApplicationFormId, stepId: FormStepId, kind: FormComponentKind) => {
+    (formId: ApplicationFormId, stepId: FormStepId, kind: MapElementKind) => {
       runCommand(
-        new AddFormComponent(
-          formId,
-          stepId,
-          createDefaultFormComponent(kind, toFormComponentId(idGenerator.next())),
+        new AddElement(
+          { kind: 'formStep', formId, stepId },
+          createDefaultElement(kind, toElementId(idGenerator.next())),
         ),
       );
     },
@@ -629,7 +604,7 @@ export function useEditorGraph() {
   // «+ Добавить шаг» на узле формы (N3): пустая колонка в конец формы.
   const addFormStep = useCallback(
     (formId: ApplicationFormId) => {
-      runCommand(new AddFormStep(formId, { id: toFormStepId(idGenerator.next()), components: [] }));
+      runCommand(new AddFormStep(formId, { id: toFormStepId(idGenerator.next()), elements: [] }));
     },
     [idGenerator, runCommand],
   );
@@ -646,21 +621,17 @@ export function useEditorGraph() {
       anchor: DropAnchorPosition | null,
       layerDepth?: number,
     ) => {
+      // Приёмник — контейнер узла: страница целиком или шаг формы. Любой
+      // элемент — в любой контейнер [owner 2026-10-13].
       let target: MoveElementTarget;
-      if (nodeType === 'home') {
-        target = dragged.kind === 'widgetCard' ? { kind: 'homeWidgetCards' } : { kind: 'homeListItems' };
-      } else if (nodeType === 'subScenario') {
-        target = { kind: 'subScenarioListItems', scenarioId: nodeId as ScenarioId };
-      } else {
+      if (nodeType === 'form') {
         if (!targetStepId) {
-          notifications.showCommandFailure('Переносите компонент в конкретный шаг формы');
+          notifications.showCommandFailure('Переносите элемент в конкретный шаг формы');
           return;
         }
-        target = {
-          kind: 'formStep',
-          formId: nodeId as ApplicationFormId,
-          stepId: targetStepId as FormStepId,
-        };
+        target = { kind: 'formStep', formId: nodeId, stepId: targetStepId };
+      } else {
+        target = { kind: 'page', pageId: nodeId };
       }
       runCommand(
         new MoveElement(
@@ -682,8 +653,7 @@ export function useEditorGraph() {
   // нативный confirm до появления диалогов дизайн-системы.
   const toggleComplexLogic = useCallback(
     (elementId: string) => {
-      const location = findElementLocation(graphRef.current, elementId);
-      const component = location?.kind === 'formComponent' ? location.list[location.index] : null;
+      const component = findFormComponent(graphRef.current, elementId)?.component;
       if (!component || component.kind !== 'selectList') {
         return;
       }
@@ -813,7 +783,7 @@ export function useEditorGraph() {
           ...(node.type === 'form'
             ? {
                 elementKindOptions: ELEMENT_KIND_OPTIONS,
-                onAddElementToStep: (stepId: string, kind: FormComponentKind) =>
+                onAddElementToStep: (stepId: string, kind: MapElementKind) =>
                   nodeHandlers.addElementToStep(node.id as ApplicationFormId, stepId as FormStepId, kind),
                 onDeleteStep: (stepId: string) =>
                   nodeHandlers.removeStep(node.id as ApplicationFormId, stepId as FormStepId),

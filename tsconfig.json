@@ -23,5 +23,6 @@
       "@presentation/*": ["src/presentation/*"]
     }
   },
-  "include": ["src", "rsbuild.config.ts", "vitest.config.ts", "vitest.setup.ts"]
+  "include": ["src", "rsbuild.config.ts", "vitest.config.ts", "vitest.setup.ts"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.fixture.ts"]
 }

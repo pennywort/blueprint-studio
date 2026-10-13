@@ -26,7 +26,19 @@ const DOMAIN_FORBIDDEN = [
 ];
 
 export default [
-  { ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'vendor/**'] },
+  // Тесты не пишем и не запускаем [owner 2026-10-13]; устаревшие файлы тестов не
+  // проверяются (исключены и из tsconfig) — их судьба: PROJECT_STATE §6.
+  {
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'coverage/**',
+      'vendor/**',
+      'src/**/*.test.ts',
+      'src/**/*.test.tsx',
+      'src/**/*.fixture.ts',
+    ],
+  },
   js.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],

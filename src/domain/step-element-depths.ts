@@ -14,13 +14,13 @@ export function computeStepElementDepths(
   step: FormStep,
   logicRules: readonly LogicRule[],
 ): Map<string, number> {
-  const ids = step.components.map((component) => component.id as string);
+  const ids = step.elements.map((component) => component.id as string);
   const edges: LayerEdge[] = logicRules.map((rule) => ({
     from: rule.sourceElementId,
     to: rule.targetElementId,
   }));
   const explicitDepths = new Map<string, number>();
-  for (const component of step.components) {
+  for (const component of step.elements) {
     if (component.layerDepth !== undefined) {
       explicitDepths.set(component.id, component.layerDepth);
     }

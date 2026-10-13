@@ -20,10 +20,7 @@ export class RemoveHomePage implements Command {
       throw new Error('Главная страница отсутствует в карте (D8)');
     }
 
-    const elementIds = new Set<string>([
-      ...home.listItems.map((item) => item.id),
-      ...home.widgetCards.map((card) => card.id),
-    ]);
+    const elementIds = new Set<string>(home.elements.map((element) => element.id));
     draft.homePage = undefined;
     draft.links = draft.links.filter((link) => !elementIds.has(link.sourceElementId));
 

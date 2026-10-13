@@ -11,8 +11,7 @@ export function checkSingleAttachmentPerForm(graph: ServiceGraph): InvariantViol
   // Считаем по всей форме: вложение допустимо один раз на форму, а не на шаг.
   graph.applicationForms.forEach((form) => {
     const totalAttachments = form.steps.reduce(
-      (count, step) =>
-        count + step.components.filter((component) => component.kind === 'attachment').length,
+      (count, step) => count + step.elements.filter((component) => component.kind === 'attachment').length,
       0,
     );
 

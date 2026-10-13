@@ -1,13 +1,12 @@
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
-import type { ListItem, WidgetCard } from '@domain/model/scenario';
-import type { FormComponent, FormComponentKind } from '@domain/model/form-components';
+import type { MapElement, MapElementKind } from '@domain/model/element';
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
 import { toElementId, type ElementId, type PageEntityId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { evaluateVisibility } from '@domain/logic-visibility';
-import type { DropAnchorPosition, ElementDragPayload } from './element-dnd';
+import type { DropAnchorPosition, ElementDndKind, ElementDragPayload } from './element-dnd';
 
 // Адаптер graph ↔ flow (Epic 002, T-030) — граница domain ↔ react-flow
 // (архитектурный принцип 4 декомпозиции): домен не знает о react-flow,
@@ -113,7 +112,7 @@ export type CanvasElementData = {
    */
   logicTarget: boolean;
   /** Класс элемента для dnd: допустимые зоны приёма зависят от вида (N2). */
-  dndKind: 'listItem' | 'widgetCard' | 'formComponent';
+  dndKind: ElementDndKind;
   /** Клик по карточке — выделение элемента (внедряется хранилищем). */
   onSelect?: () => void;
   /** Чип «Сложная логика» — переключатель режима (внедряется хранилищем, T-066). */
@@ -158,9 +157,9 @@ export type CanvasNodeData = {
   /** Нарушения инвариантов узла и его элементов (T-043) — рамка + тултип. */
   violations?: readonly string[];
   /** Варианты меню «+» шага формы (kind + человекочитаемая подпись). */
-  elementKindOptions?: ReadonlyArray<{ kind: FormComponentKind; label: string }>;
+  elementKindOptions?: ReadonlyArray<{ kind: MapElementKind; label: string }>;
   /** «+» конкретного шага формы → AddFormComponent. */
-  onAddElementToStep?: (stepId: string, kind: FormComponentKind) => void;
+  onAddElementToStep?: (stepId: string, kind: MapElementKind) => void;
   /** Корзина шага формы → RemoveFormStep. */
   onDeleteStep?: (stepId: string) => void;
   /**
@@ -200,7 +199,9 @@ const FORM_NODE_SUBTITLE = 'Поля для заполнения пользов�
 // Манифест схем хранит только machine-kind; человекочитаемые названия
 // появятся, когда их начнёт отдавать провайдер схем (T-034+).
 // Экспортируется: те же подписи нужны меню добавления элементов (T-034).
-export const FORM_COMPONENT_KIND_LABELS: Record<FormComponentKind, string> = {
+export const ELEMENT_KIND_LABELS: Record<MapElementKind, string> = {
+  listItem: 'List item',
+  widgetCard: 'Widget card',
   textField: 'Text field',
   infoBlock: 'Info block',
   datePeriod: 'Date period',
@@ -224,43 +225,28 @@ function navigationLevelLabel(level: number): string {
   return ordinal ? `${ordinal} уровень навигации` : `Уровень навигации ${level}`;
 }
 
-function listItemToElementData(
-  item: ListItem | WidgetCard,
-  kindLabel: string,
+// Элемент карты → данные карточки [owner 2026-10-13]: элементы равноправны,
+// маппинг один для всех видов. stepLogic — элемент лежит в шаге формы: только
+// там действует «Сложная логика» (L-I5/ADR-14) — target-handle и option'ы.
+function elementToData(
+  component: MapElement,
   linkSources: ReadonlySet<string>,
-  dndKind: 'listItem' | 'widgetCard',
+  stepLogic?: { targets: ReadonlySet<string>; hidden: ReadonlySet<string> },
 ): CanvasElementData {
-  const element: CanvasElementData = {
-    id: item.id,
-    title: item.title,
-    kindLabel,
-    hasOutgoingLink: linkSources.has(item.id),
-    logicTarget: false,
-    dndKind,
-  };
-  if (item.secondaryText) {
-    element.secondaryText = item.secondaryText;
-  }
-  return element;
-}
-
-function formComponentToElementData(
-  component: FormComponent,
-  linkSources: ReadonlySet<string>,
-  logicTargets: ReadonlySet<string>,
-  logicHidden: ReadonlySet<string>,
-): CanvasElementData {
+  const inStep = stepLogic !== undefined;
   const element: CanvasElementData = {
     id: component.id,
-    title: 'label' in component ? component.label : component.kind,
-    kindLabel: FORM_COMPONENT_KIND_LABELS[component.kind],
+    title: 'title' in component ? component.title : 'label' in component ? component.label : component.kind,
+    kindLabel: ELEMENT_KIND_LABELS[component.kind],
     hasOutgoingLink: linkSources.has(component.id),
-    hasIncomingLogic: logicTargets.has(component.id),
-    hiddenByLogic: logicHidden.has(component.id),
-    logicTarget: true,
-    dndKind: 'formComponent',
+    logicTarget: inStep,
+    dndKind: 'element',
   };
-  if (component.kind === 'selectList') {
+  if (stepLogic) {
+    element.hasIncomingLogic = stepLogic.targets.has(component.id);
+    element.hiddenByLogic = stepLogic.hidden.has(component.id);
+  }
+  if (inStep && component.kind === 'selectList') {
     // Select — потенциальный источник «Сложной логики» (L5); option-handle'ы
     // рисуются только при включённом режиме (L4).
     const enabled = component.hasComplexLogic === true;
@@ -276,7 +262,9 @@ function formComponentToElementData(
         : [],
     };
   }
-  if ('placeholder' in component && component.placeholder) {
+  if ('secondaryText' in component && component.secondaryText) {
+    element.secondaryText = component.secondaryText;
+  } else if ('placeholder' in component && component.placeholder) {
     element.secondaryText = component.placeholder;
   }
   return element;
@@ -340,23 +328,13 @@ export function graphToFlow(
         orderIndex: homePage.orderIndex,
         depth: depths.get(homePage.id) ?? 0,
         subtitle: HOME_NODE_SUBTITLE,
-        elements: [
-          ...homePage.listItems.map((item) =>
-            listItemToElementData(item, 'List item', linkSources, 'listItem'),
-          ),
-          ...homePage.widgetCards.map((card) =>
-            listItemToElementData(card, 'Widget card', linkSources, 'widgetCard'),
-          ),
-        ],
+        elements: homePage.elements.map((element) => elementToData(element, linkSources)),
         steps: [],
         formKindLabel: null,
       },
     });
-    for (const item of homePage.listItems) {
-      elementOwnerNodeId.set(item.id, homePage.id);
-    }
-    for (const card of homePage.widgetCards) {
-      elementOwnerNodeId.set(card.id, homePage.id);
+    for (const element of homePage.elements) {
+      elementOwnerNodeId.set(element.id, homePage.id);
     }
   }
 
@@ -392,8 +370,8 @@ export function graphToFlow(
           return {
             id: step.id,
             title: step.title ?? '',
-            elements: step.components.map((component) => ({
-              ...formComponentToElementData(component, linkSources, logicTargets, logicHidden),
+            elements: step.elements.map((component) => ({
+              ...elementToData(component, linkSources, { targets: logicTargets, hidden: logicHidden }),
               layerDepth: stepDepths.get(component.id) ?? 0,
               ...(logicParents.has(component.id)
                 ? { logicParentHandleId: logicParents.get(component.id)! }
@@ -405,7 +383,7 @@ export function graphToFlow(
       },
     });
     for (const step of form.steps) {
-      for (const component of step.components) {
+      for (const component of step.elements) {
         elementOwnerNodeId.set(component.id, form.id);
       }
     }
@@ -484,15 +462,13 @@ function collectSubScenarioNodes(
         orderIndex: scenario.orderIndex,
         depth,
         subtitle: navigationLevelLabel(depth + levelOffset || 1),
-        elements: scenario.listItems.map((item) =>
-          listItemToElementData(item, 'List item', linkSources, 'listItem'),
-        ),
+        elements: scenario.elements.map((element) => elementToData(element, linkSources)),
         steps: [],
         formKindLabel: null,
       },
     });
-    for (const item of scenario.listItems) {
-      elementOwnerNodeId.set(item.id, scenario.id);
+    for (const element of scenario.elements) {
+      elementOwnerNodeId.set(element.id, scenario.id);
     }
     if (scenario.children) {
       collectSubScenarioNodes(

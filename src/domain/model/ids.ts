@@ -14,9 +14,6 @@ export type ApplicationFormId = z.infer<typeof ApplicationFormIdSchema>;
 export const FormStepIdSchema = z.string().min(1).brand<'FormStepId'>();
 export type FormStepId = z.infer<typeof FormStepIdSchema>;
 
-export const FormComponentIdSchema = z.string().min(1).brand<'FormComponentId'>();
-export type FormComponentId = z.infer<typeof FormComponentIdSchema>;
-
 // Epic 002 (T-004, D13): страницы МИПа (Главная/Подсценарий) — верхнеуровневые
 // сущности карты; элементы страниц — источники связей; связи — самостоятельные
 // сущности со стабильным id (переназначение концов без пересоздания, D7/D13).
@@ -25,6 +22,11 @@ export type PageId = z.infer<typeof PageIdSchema>;
 
 export const ElementIdSchema = z.string().min(1).brand<'ElementId'>();
 export type ElementId = z.infer<typeof ElementIdSchema>;
+
+// Компонент формы — такой же элемент карты, как List item [owner 2026-10-13]:
+// отдельного вида id нет, имя оставлено синонимом для читаемости команд форм.
+export const FormComponentIdSchema = ElementIdSchema;
+export type FormComponentId = ElementId;
 
 export const PageLinkIdSchema = z.string().min(1).brand<'PageLinkId'>();
 export type PageLinkId = z.infer<typeof PageLinkIdSchema>;

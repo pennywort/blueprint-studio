@@ -27,7 +27,7 @@ export class RemoveElement implements Command {
       throw new Error(`Элемент не найден: ${this.elementId}`);
     }
 
-    location.list.splice(location.index, 1);
+    location.elements.splice(location.index, 1);
     draft.links = draft.links.filter((link) => link.sourceElementId !== this.elementId);
     // Каскад сложной логики (T-037, §6 дизайн-дока): вместе с элементом
     // уходят правила, где он источник или цель.

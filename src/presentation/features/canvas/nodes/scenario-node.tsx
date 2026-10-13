@@ -8,6 +8,7 @@ import { CANVAS_LAYOUT } from '../canvas-layout';
 import { collapseElements, isCollapsible } from '../collapse-elements';
 import type { CanvasNode } from '../graph-flow-adapter';
 import { anchorFromPoint, readElementDndKind, readElementDrag } from '../element-dnd';
+import { PAGE_ELEMENTS_ACCEPTED_KINDS } from '../layers/layer-policy';
 import { ElementCard } from './element-card';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
@@ -103,14 +104,15 @@ export function ScenarioNode({ id, data, type }: NodeProps<CanvasNode>) {
   }, [reveal, id, updateNodeInternals]);
 
   // Состояние drop-зоны: подсветка во время совместимого drag + линия-индикатор
-  // якоря. Вид приёмника узла зависит от его типа (доменные ограничения).
+  // якоря. Принимается любой элемент карты [owner 2026-10-13] — состав задаёт
+  // PAGE_ELEMENTS_ACCEPTED_KINDS (layer-policy), не тип узла.
   const [dndActive, setDndActive] = useState(false);
   const [anchor, setAnchor] = useState<{ elementId: string; placement: 'before' | 'after' } | null>(null);
 
   const acceptsKind = useCallback(
     (kind: string | null): boolean =>
-      type === 'home' ? kind === 'listItem' || kind === 'widgetCard' : kind === 'listItem',
-    [type],
+      kind !== null && (PAGE_ELEMENTS_ACCEPTED_KINDS as readonly string[]).includes(kind),
+    [],
   );
 
   const handleDragOver = useCallback(

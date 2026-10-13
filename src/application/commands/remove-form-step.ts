@@ -32,7 +32,7 @@ export class RemoveFormStep implements Command {
     }
     // Каскад сложной логики (T-037): компоненты шага уходят вместе с ним —
     // правила, где они источник или цель, удаляются.
-    const componentIds = new Set<string>(form.steps[index]!.components.map((component) => component.id));
+    const componentIds = new Set<string>(form.steps[index]!.elements.map((component) => component.id));
     form.steps.splice(index, 1);
     draft.links = draft.links.filter((link) => !componentIds.has(link.sourceElementId));
     draft.logicRules = draft.logicRules.filter(

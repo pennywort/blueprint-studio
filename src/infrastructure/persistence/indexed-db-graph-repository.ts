@@ -1,6 +1,7 @@
 import type { IGraphRepository } from '@application/ports/graph-repository';
 import { ServiceGraphSchema, type ServiceGraph } from '@domain/model/service-graph';
 import type { BlueprintId } from '@domain/model/ids';
+import { migrateServiceGraph } from '@domain/model/graph-migration';
 
 // Адаптер IGraphRepository поверх IndexedDB (T-053): одна object store,
 // ключ — id карты. Данные валидируются Zod-схемой при чтении: повреждённая
@@ -45,7 +46,8 @@ export class IndexedDbGraphRepository implements IGraphRepository {
     if (raw === undefined) {
       return null;
     }
-    const parsed = ServiceGraphSchema.safeParse(raw);
+    // Карты, сохранённые до универсальных элементов, переводятся к текущей модели.
+    const parsed = ServiceGraphSchema.safeParse(migrateServiceGraph(raw));
     if (!parsed.success) {
       throw new Error('Сохранённая карта повреждена или устарела и не может быть загружена');
     }
