@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Box, Card, CardContent, Chip, Typography, makeStyles } from '@sber-friend/flamingo-core';
 import { ShowChart, Visibility } from '@sber-friend/flamingo-icons';
@@ -103,6 +104,10 @@ export type ElementCardProps = {
 // draggable — dnd элементов (N2): перенос между узлами/шагами и порядок.
 export function ElementCard({ element }: ElementCardProps) {
   const classes = useStyles();
+  // Нажатие пришлось на коннектор/кнопку: нативный dnd карточки (N2) не
+  // начинается — иначе браузер забирал жест протягивания связи у source-handle
+  // и линия «залипала» после отмены dnd (повторная приёмка, 5.2).
+  const pressOnActionRef = useRef(false);
 
   return (
     // Клик выделяет элемент (единое правило F5/F7: выделение + Delete).
@@ -120,12 +125,17 @@ export function ElementCard({ element }: ElementCardProps) {
       draggable
       onDragStart={(event) => {
         event.stopPropagation();
+        if (pressOnActionRef.current) {
+          event.preventDefault();
+          return;
+        }
         writeElementDrag(event.dataTransfer, { elementId: element.id, kind: element.dndKind });
       }}
       // Выделение — по нажатию (без «лага» click); коннектор и кнопки
       // выделение не меняют (баг 2). click гасится, чтобы не дойти до узла.
       onPointerDown={(event) => {
-        if (!isActionTarget(event.target)) {
+        pressOnActionRef.current = isActionTarget(event.target);
+        if (!pressOnActionRef.current) {
           element.onSelect?.();
         }
       }}
@@ -133,14 +143,14 @@ export function ElementCard({ element }: ElementCardProps) {
     >
       {/* Цель правил «Сложной логики» (T-037): рёбра видимости приходят
           на левый край карточки элемента, не шага и не формы. Только у
-          компонентов форм (N5); виден (полая окружность) только пока
+          компонентов форм (N5); невидим, накрывает карточку и принимает связь, только пока
           тянется правило и элемент — допустимая цель (повторная приёмка). */}
       {element.logicTarget ? (
         <Handle
           type="target"
           position={Position.Left}
           id={logicTargetHandleId(element.id)}
-          className={element.connectTarget ? 'editor-target-available' : 'editor-target-hidden'}
+          className={element.connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
         />
       ) : null}
       <CardContent className={classes.content}>

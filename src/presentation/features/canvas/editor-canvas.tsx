@@ -14,14 +14,15 @@ import {
   ReactFlowProvider,
   applyEdgeChanges,
   applyNodeChanges,
+  ConnectionLineType,
   Position,
-  getBezierPath,
+  ViewportPortal,
+  getSmoothStepPath,
   useReactFlow,
   useStoreApi,
   useViewport,
   type Connection,
   type EdgeChange,
-  type ConnectionLineComponentProps,
   type IsValidConnection,
   type OnConnectStart,
   type XYPosition,
@@ -132,7 +133,7 @@ function CanvasInner({
 
   // Центрирование на найденном узле (T-050). Задержка — узел мог только что
   // развернуться (reveal) и ещё не перемериться react-flow.
-  const { fitView } = useReactFlow();
+  const { fitView, screenToFlowPosition } = useReactFlow();
   useEffect(() => {
     if (!focus) {
       return;
@@ -294,9 +295,9 @@ function CanvasInner({
   );
 
   // Связь «кликом» (connectOnClick react-flow: клик по source-handle, затем
-  // по цели): react-flow в этом режиме линию не рисует — рисуем сами
-  // стрелку от handle к курсору (повторная приёмка, баг 1).
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  // клик по блоку/элементу-цели): react-flow в этом режиме линию не рисует —
+  // рисуем сами (ClickConnectionLine) в координатах полотна, чтобы линия не
+  // зависела от позиционирования обёртки и pan/zoom (повторная приёмка, 5.1).
   const store = useStoreApi();
   const [clickLine, setClickLine] = useState<{ from: XYPosition; to: XYPosition } | null>(null);
   const cancelClickConnection = useCallback(() => {
@@ -309,20 +310,29 @@ function CanvasInner({
   const handleClickConnectStart: OnConnectStart = useCallback(
     (event, params) => {
       onConnectionStart?.(params.handleId);
-      const container = containerRef.current?.getBoundingClientRect();
       const handle =
         event.target instanceof Element
           ? event.target.closest('.react-flow__handle')?.getBoundingClientRect()
           : null;
-      if (container && handle) {
-        const from = {
-          x: handle.left + handle.width / 2 - container.left,
-          y: handle.top + handle.height / 2 - container.top,
-        };
+      if (handle) {
+        // Линия выходит из правого края source-handle — как рёбра (Position.Right).
+        const from = screenToFlowPosition({ x: handle.right, y: handle.top + handle.height / 2 });
         setClickLine({ from, to: from });
       }
     },
-    [onConnectionStart],
+    [onConnectionStart, screenToFlowPosition],
+  );
+  // В клик-режиме нажатие мимо handle (принимающие handles допустимых целей
+  // накрывают блок/элемент целиком) отменяет связь и больше ничего не делает:
+  // ни выделения, ни pan полотна.
+  const handlePointerDownCapture = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (clickLine && !(event.target instanceof Element && event.target.closest('.react-flow__handle'))) {
+        event.stopPropagation();
+        cancelClickConnection();
+      }
+    },
+    [clickLine, cancelClickConnection],
   );
 
   // Выделение — по нажатию мыши, а не по click (повторная приёмка: «лаг» и
@@ -350,7 +360,6 @@ function CanvasInner({
 
   return (
     <div
-      ref={containerRef}
       className={connecting ? `${styles.root} editor-connecting` : styles.root}
       data-testid="editor-canvas"
       onKeyDownCapture={(event) => {
@@ -359,13 +368,13 @@ function CanvasInner({
         }
         handleKeyDownCapture(event);
       }}
+      onPointerDownCapture={handlePointerDownCapture}
       onPointerDown={handlePointerDown}
       onPointerMove={(event) => {
-        if (clickLine && containerRef.current) {
-          const container = containerRef.current.getBoundingClientRect();
+        if (clickLine) {
           setClickLine({
             from: clickLine.from,
-            to: { x: event.clientX - container.left, y: event.clientY - container.top },
+            to: screenToFlowPosition({ x: event.clientX, y: event.clientY }),
           });
         }
       }}
@@ -384,7 +393,9 @@ function CanvasInner({
           setClickLine(null);
           onConnectionEnd?.();
         }}
-        connectionLineComponent={ArrowConnectionLine}
+        // Линия протягивания — того же вида, что рёбра между блоками
+        // (smoothstep, стиль .react-flow__connection-path), повторная приёмка, 4.
+        connectionLineType={ConnectionLineType.SmoothStep}
         onReconnect={(oldEdge, connection) => onReconnectLink?.(oldEdge, connection)}
         onEdgesDelete={(deleted) => onDeleteLinks?.(deleted)}
         onNodesDelete={(deleted) => onDeleteNodes?.(deleted)}
@@ -405,10 +416,14 @@ function CanvasInner({
         // рёбер. Узлы на канвасе не перекрываются, подъём не нужен.
         elevateNodesOnSelect={false}
         deleteKeyCode={['Backspace', 'Delete']}
+        // Штатный порог drag react-flow: микросдвиг мыши при клике по блоку
+        // не начинает перетаскивание (повторная приёмка, 1).
+        nodeDragThreshold={5}
         colorMode="light"
         fitView
       >
         {dropZone ? <DropZoneHighlight zone={dropZone} /> : null}
+        {clickLine ? <ClickConnectionLine from={clickLine.from} to={clickLine.to} /> : null}
         <Background
           variant={BackgroundVariant.Dots}
           gap={24}
@@ -434,17 +449,15 @@ function CanvasInner({
           onToggleMiniMap={() => setMiniMapVisible((visible) => !visible)}
         />
       </ReactFlow>
-      {clickLine ? <ClickConnectionLine from={clickLine.from} to={clickLine.to} /> : null}
     </div>
   );
 }
 
-// Стрелка протягиваемой связи (повторная приёмка, баг 1): линия тянется за
-// курсором и заканчивается наконечником. Общая отрисовка для drag-режима
-// react-flow (connectionLineComponent) и клик-режима (ClickConnectionLine).
-function ArrowPath({ from, to }: { from: XYPosition; to: XYPosition }) {
-  const theme = useEditorTheme();
-  const [path] = getBezierPath({
+// Линия связи в клик-режиме: тот же путь smoothstep и тот же класс, что у
+// штатной линии протягивания react-flow, — визуально режимы не отличаются.
+// ViewportPortal — слой полотна: координаты flow, pan/zoom применяются сами.
+function ClickConnectionLine({ from, to }: { from: XYPosition; to: XYPosition }) {
+  const [path] = getSmoothStepPath({
     sourceX: from.x,
     sourceY: from.y,
     sourcePosition: Position.Right,
@@ -452,44 +465,15 @@ function ArrowPath({ from, to }: { from: XYPosition; to: XYPosition }) {
     targetY: to.y,
     targetPosition: Position.Left,
   });
-  const color = theme.editor.canvas.edgeActive;
   return (
-    <g>
-      <defs>
-        <marker
-          id="editor-connection-arrow"
-          markerWidth="10"
-          markerHeight="10"
-          refX="8"
-          refY="5"
-          orient="auto"
-        >
-          <path d="M0,0 L10,5 L0,10 z" fill={color} />
-        </marker>
-      </defs>
-      <path d={path} fill="none" stroke={color} strokeWidth={2} markerEnd="url(#editor-connection-arrow)" />
-    </g>
-  );
-}
-
-function ArrowConnectionLine({ fromX, fromY, toX, toY }: ConnectionLineComponentProps) {
-  return <ArrowPath from={{ x: fromX, y: fromY }} to={{ x: toX, y: toY }} />;
-}
-
-function ClickConnectionLine({ from, to }: { from: XYPosition; to: XYPosition }) {
-  return (
-    <svg
-      style={{
-        position: 'absolute',
-        inset: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-        zIndex: 20,
-      }}
-    >
-      <ArrowPath from={from} to={to} />
-    </svg>
+    <ViewportPortal>
+      <svg
+        className="react-flow__connectionline"
+        style={{ position: 'absolute', overflow: 'visible', width: 1, height: 1, pointerEvents: 'none' }}
+      >
+        <path className="react-flow__connection-path" d={path} fill="none" />
+      </svg>
+    </ViewportPortal>
   );
 }
 

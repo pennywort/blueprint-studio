@@ -710,7 +710,8 @@ export function useEditorGraph() {
   // выделенный элемент) и переключатель «Сложной логики» (T-037).
   // Признак «можно соединить» (повторная приёмка, ADR-14): пока тянется
   // связь, допустимые цели — по доменному правилу connectableTargets —
-  // получают connectTarget и рисуют полый target-handle; в покое
+  // получают connectTarget — их target-handle (невидимый, во всю сущность)
+  // принимает drop/клик курсора; в покое
   // принимающих handles нет. Тот же расчёт проверяет связь (isConnectionAllowed).
   const [connectionTargets, setConnectionTargets] = useState<ConnectableTargets | null>(null);
   const startConnection = useCallback((handleId: string | null | undefined) => {
