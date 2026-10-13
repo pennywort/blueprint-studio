@@ -20,10 +20,13 @@ import {
 } from '../layers/layer-columns';
 import { FORM_STEP_LAYER_POLICY, canMoveToLayer } from '../layers/layer-policy';
 import { LayerDropHighlight } from '../layers/layer-drop-highlight';
+import { packLayerBands } from '../layers/layer-bands';
 import { ElementCard } from './element-card';
 import { OptionCard } from './option-card';
 
 const L = FORM_STEP_LAYOUT;
+/** Шаг сетки колонок шага: колонка + зазор. */
+const COLUMN_PITCH = L.elementWidth + L.columnGap;
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   // Слой шага: деревья элементов друг под другом; шаг растёт по
@@ -36,8 +39,14 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     gap: L.rowGap,
     minHeight: 64,
   },
+  // Ряд полос: независимые деревья в свободных колонках — по горизонтали.
+  row: {
+    display: 'flex',
+    alignItems: 'flex-start',
+  },
   band: {
     display: 'flex',
+    flexShrink: 0,
   },
   tree: {
     display: 'flex',
@@ -101,7 +110,7 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
 
   // Лес правил: корни — элементы без варианта-источника в этом шаге,
   // дети — по option-handle варианта (порядок — порядок элементов шага).
-  const { roots, children, maxDepth } = useMemo(() => {
+  const { rows, children, maxDepth } = useMemo(() => {
     const optionHandles = new Set(
       elements.flatMap((element) => element.complexLogic?.options.map((option) => option.handleId) ?? []),
     );
@@ -115,8 +124,18 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
         rootList.push(element);
       }
     }
+    // Полоса дерева: от колонки корня до самой глубокой колонки потомков.
+    const deepest = (element: CanvasElementData): number =>
+      Math.max(
+        element.layerDepth ?? 0,
+        ...(element.complexLogic?.options ?? []).flatMap((option) =>
+          (byHandle.get(option.handleId) ?? []).map(deepest),
+        ),
+      );
     return {
-      roots: rootList,
+      rows: packLayerBands(
+        rootList.map((root) => ({ start: root.layerDepth ?? 0, end: deepest(root), item: root })),
+      ),
       children: byHandle,
       maxDepth: Math.max(-1, ...elements.map((element) => element.layerDepth ?? 0)),
     };
@@ -245,14 +264,24 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
           style={{ borderRadius: 12, zIndex: 0 }}
         />
       ) : null}
-      {roots.map((root) => (
-        // Дерево начинается в колонке своего корня (явная колонка или 0).
-        <Box
-          key={root.id}
-          className={classes.band}
-          style={{ marginLeft: (root.layerDepth ?? 0) * (L.elementWidth + L.columnGap) }}
-        >
-          {renderTree(root)}
+      {rows.map((row) => (
+        <Box key={row[0]!.item.id} className={classes.row}>
+          {row.map((band, index) => {
+            const previous = row[index - 1];
+            // Отступ до колонки start: от левого края ряда или от предыдущей полосы.
+            const marginLeft = previous
+              ? (band.start - previous.end - 1) * COLUMN_PITCH + L.columnGap
+              : band.start * COLUMN_PITCH;
+            return (
+              <Box
+                key={band.item.id}
+                className={classes.band}
+                style={{ marginLeft, width: (band.end - band.start) * COLUMN_PITCH + L.elementWidth }}
+              >
+                {renderTree(band.item)}
+              </Box>
+            );
+          })}
         </Box>
       ))}
     </div>
