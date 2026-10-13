@@ -229,28 +229,22 @@ export function useEditorGraph() {
   // удаляет именно его (единое правило проекта: выделение + Delete).
   // Выделение узла и элемента взаимоисключающи — последний клик побеждает.
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
-  // Признак «выделен элемент»: пока он true, пустой onSelectionChange от
-  // react-flow игнорируется. Иначе петля обратной связи: принудительный
-  // selected:false на узлах (взаимоисключение с элементом) заставляет
-  // react-flow сообщить «выделение пусто» → выделение элемента стиралось
-  // сразу после клика (N2).
-  const elementSelectedRef = useRef(false);
   const selectedNodeType: CanvasNodeType | null = useMemo(
     () => flow.nodes.find((node) => node.id === selectedNodeId)?.type ?? null,
     [flow.nodes, selectedNodeId],
   );
+  // Выделение узлов — только явным кликом по узлу (onNodeClick канваса);
+  // собственное выделение react-flow игнорируется. Раньше источником был
+  // onSelectionChange, и он ловил промежуточное состояние канваса до
+  // синхронизации с пропсами → выделение «качалось» между узлом и
+  // элементом до Maximum update depth (N6, повторная приёмка).
   const handleNodeSelection = useCallback((nodeId: string | null) => {
-    if (nodeId === null && elementSelectedRef.current) {
-      return; // побочное событие от принудительного selected:false узлов
-    }
     setSelectedNodeId(nodeId);
     if (nodeId !== null) {
-      elementSelectedRef.current = false;
       setSelectedElementId(null);
     }
   }, []);
   const selectElement = useCallback((elementId: string | null) => {
-    elementSelectedRef.current = elementId !== null;
     setSelectedElementId(elementId);
     if (elementId !== null) {
       setSelectedNodeId(null);
@@ -276,7 +270,6 @@ export function useEditorGraph() {
   // Клик по пустому полю канваса: снимает выделение со всего (единое
   // правило: выделение держится на сущности, пока не выбрана другая).
   const clearSelection = useCallback(() => {
-    elementSelectedRef.current = false;
     setSelectedNodeId(null);
     setSelectedElementId(null);
   }, []);
@@ -503,7 +496,6 @@ export function useEditorGraph() {
       return false;
     }
     const elementId = selectedElementId;
-    elementSelectedRef.current = false;
     setSelectedElementId(null);
     runCommand(new RemoveElement(elementId as ElementId));
     return true;

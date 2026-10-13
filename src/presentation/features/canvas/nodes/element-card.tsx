@@ -4,6 +4,7 @@ import { ShowChart, Visibility } from '@sber-friend/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { logicTargetHandleId, parseLogicSourceHandle, type CanvasElementData } from '../graph-flow-adapter';
 import { writeElementDrag } from '../element-dnd';
+import { isActionTarget } from '../canvas-events';
 import { ViolationBadge } from './violation-badge';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
@@ -154,7 +155,10 @@ export function ElementCard({ element }: ElementCardProps) {
       }}
       onClick={(event) => {
         event.stopPropagation();
-        element.onSelect?.();
+        // Клик по коннектору начинает связь, а не выделяет элемент (баг 2).
+        if (!isActionTarget(event.target)) {
+          element.onSelect?.();
+        }
       }}
     >
       {/* Цель правил «Сложной логики» (T-037): рёбра видимости приходят

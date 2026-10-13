@@ -19,6 +19,7 @@ import '@xyflow/react/dist/style.css';
 import { useEditorTheme } from '@presentation/theme/editor-theme';
 import { useReactFlowThemeStyles } from './react-flow-theme-styles';
 import { CANVAS_LAYOUT } from './canvas-layout';
+import { isActionTarget } from './canvas-events';
 import { EditorCanvasControls } from './editor-canvas-controls';
 import { canvasNodeTypes } from './nodes/node-types';
 import {
@@ -133,9 +134,12 @@ function CanvasInner({
     (changes: NodeChange<CanvasNode>[]) => {
       // Удаление узлов — команды RemoveScenario/RemoveForm (T-034), remove-
       // изменения здесь не применяем: удаление идёт через onNodesDelete.
+      // select-изменения тоже не применяем: выделение узла управляется
+      // хуком (selected в пропсах, onNodeClick), иначе локальное состояние
+      // расходится с пропсами и выделение «качается» (N6).
       setNodes((current) =>
         applyNodeChanges(
-          changes.filter((change) => change.type !== 'remove'),
+          changes.filter((change) => change.type !== 'remove' && change.type !== 'select'),
           current,
         ),
       );
@@ -168,8 +172,12 @@ function CanvasInner({
   const findColumnCandidate = useCallback(
     (x: number): { depth: number; x: number; width: number } | null => {
       const byDepth = new Map<number, { x: number; width: number }>();
+      // Ширина — фактическая (measured из локального состояния): у формы она
+      // больше nodeWidth, и по оценке центр её колонки «уезжал» — узел,
+      // брошенный на место, уходил на следующий уровень и терял связи.
+      const measuredWidth = new Map(nodesRef.current.map((node) => [node.id, node.measured?.width]));
       for (const node of propsNodes) {
-        const width = node.measured?.width ?? CANVAS_LAYOUT.nodeWidth;
+        const width = measuredWidth.get(node.id) ?? CANVAS_LAYOUT.nodeWidth;
         const column = byDepth.get(node.data.depth);
         if (column) {
           column.x = Math.min(column.x, node.position.x);
@@ -305,7 +313,16 @@ function CanvasInner({
         onNodesDelete={(deleted) => onDeleteNodes?.(deleted)}
         onNodeDrag={handleNodeDrag}
         onNodeDragStop={handleNodeDragStop}
-        onSelectionChange={({ nodes: selected }) => onSelectedNodeChange?.(selected[0]?.id ?? null)}
+        onNodeClick={(event, node) => {
+          // Кнопки узла (раскрытие, «+», корзина) и коннекторы — действия,
+          // а не выбор узла: выделение и будущая панель свойств узла не
+          // должны открываться от них (баг 2 приёмки).
+          if (!isActionTarget(event.target)) {
+            onSelectedNodeChange?.(node.id);
+          }
+        }}
+        // Клик по связи выделяет только её (выделение рёбер — у react-flow).
+        onEdgeClick={() => onClearSelection?.()}
         onPaneClick={() => onClearSelection?.()}
         isValidConnection={isValidConnection}
         // Рёбра всегда над блоками, в том числе выделенными (N8): react-flow
