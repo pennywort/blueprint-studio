@@ -56,8 +56,7 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
         backgroundImage: `radial-gradient(circle at 35% 35%, ${canvas.handleHighlight}, ${canvas.handle} 65%)`,
         boxShadow: `0 1px 3px ${canvas.handleShadow}`,
       },
-      // Принимающие handles (повторная приёмка): видимых target-коннекторов
-      // нет вовсе — handle накрывает блок/элемент целиком и прозрачен. В покое
+      // Принимающие handles (повторная приёмка): в покое не видны — handle накрывает блок/элемент целиком и прозрачен. В покое
       // он не ловит мышь (содержимое кликабельно), рёбра крепятся к его
       // левому краю по центру. Пока тянется связь, допустимая цель принимает
       // drop/клик курсора в любом месте сущности; под курсором — рамка.
@@ -80,6 +79,22 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
         pointerEvents: 'all',
         // Над карточками элементов внутри блока.
         zIndex: 3,
+      },
+      // Допустимая цель помечается полой окружностью на левом краю — точке
+      // входа рёбер ([owner 2026-10-13]: только во время протягивания и
+      // только у возможных целей); принимает связь при этом вся сущность.
+      '& .react-flow__handle.editor-target.editor-target-available::after': {
+        content: '""',
+        position: 'absolute',
+        left: 0,
+        top: '50%',
+        width: 14,
+        height: 14,
+        boxSizing: 'border-box',
+        borderRadius: '50%',
+        border: `2px solid ${canvas.edgeActive}`,
+        backgroundColor: theme.palette.background.paper,
+        transform: 'translate(-50%, -50%)',
       },
       '& .react-flow__handle.editor-target.editor-target-available:hover': {
         outline: `2px solid ${canvas.edgeActive}`,
