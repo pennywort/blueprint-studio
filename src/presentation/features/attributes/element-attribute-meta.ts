@@ -1,4 +1,4 @@
-import type { FormComponentKind } from '@domain/model/form-components';
+import type { CanvasElementKind } from '@domain/model/canvas-element';
 
 // Метаинформация проектных схем (D4): label, helperText, placeholder, секции,
 // опции enum и условная видимость атрибутов — слой проекта поверх схем
@@ -40,7 +40,25 @@ export type ElementAttributeMeta = {
   attributes: Record<string, AttributeMeta>;
 };
 
-const META: Record<FormComponentKind, ElementAttributeMeta> = {
+const META: Record<CanvasElementKind, ElementAttributeMeta> = {
+  // List item/Widget card (ADR-17, T-041): минимальная мета под stub-схемы;
+  // остальные атрибуты (иконка, ссылка, настройки) — со схемами позже [owner 2026-10-13].
+  listItem: {
+    category: 'Сценарий',
+    description: 'Строка списка',
+    attributes: {
+      title: { label: 'Название', placeholder: 'Например, Задать вопрос' },
+      secondaryText: { label: 'Дополнительный текст', placeholder: 'Например, По методологии' },
+    },
+  },
+  widgetCard: {
+    category: 'Сценарий',
+    description: 'Карточка-виджет',
+    attributes: {
+      title: { label: 'Название', placeholder: 'Например, Мои заявки' },
+      secondaryText: { label: 'Дополнительный текст', placeholder: 'Например, Статусы и сроки' },
+    },
+  },
   textField: {
     category: 'Форма',
     description: 'Текстовое поле для ввода значения',
@@ -200,6 +218,6 @@ const META: Record<FormComponentKind, ElementAttributeMeta> = {
   },
 };
 
-export function getElementAttributeMeta(kind: FormComponentKind): ElementAttributeMeta {
+export function getElementAttributeMeta(kind: CanvasElementKind): ElementAttributeMeta {
   return META[kind];
 }

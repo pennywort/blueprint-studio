@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Connection } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
-import type { FormComponent } from '@domain/model/form-components';
-import { isFormComponentKind, type CanvasElementKind } from '@domain/model/canvas-element';
+import type { CanvasElement, CanvasElementKind } from '@domain/model/canvas-element';
 import {
   toApplicationFormId,
   toElementId,
@@ -99,7 +98,7 @@ function parseConnectionSource(handleId: string | null | undefined): ConnectionS
 // Данные инспектора для выделенного элемента: сам компонент формы + его
 // правила видимости, где он — цель (T-067).
 export type SelectedElementInfo = {
-  component: FormComponent;
+  component: CanvasElement;
   /** Элемент лежит в шаге формы — только там возможна «Сложная логика» (L-I5). */
   inFormStep: boolean;
   incomingRules: { ruleId: LogicRuleId; sourceLabel: string; optionLabel: string | null }[];
@@ -288,9 +287,9 @@ export function useEditorGraph() {
     setSelectedElementId(null);
   }, []);
 
-  // Выделенный компонент формы + его правила видимости (цель) — данные
-  // инспектора (T-067). Только компоненты форм: схемы element-schemas
-  // покрывают form-kind'и (ADR-07), карточки страниц — в следующих сессиях.
+  // Выделенный элемент + его правила видимости (цель) — данные панели
+  // атрибутов (T-041/T-067). Любой вид элемента (ADR-17): у List item/Widget
+  // card — проектные stub-схемы (ADR-07).
   const selectedElement = useMemo<SelectedElementInfo | null>(() => {
     if (!selectedElementId) {
       return null;
@@ -298,7 +297,7 @@ export function useEditorGraph() {
     // Компонент формы в любом блоке [owner 2026-10-13]: схема — по kind.
     const location = findElementLocation(graph, selectedElementId);
     const component = location?.list[location.index];
-    if (!component || !isFormComponentKind(component.kind)) {
+    if (!component) {
       return null;
     }
     const incomingRules = graph.logicRules
@@ -314,7 +313,7 @@ export function useEditorGraph() {
         return { ruleId: rule.id, sourceLabel, optionLabel };
       });
     return {
-      component: component as FormComponent,
+      component,
       inFormStep: location!.container.kind === 'formStep',
       incomingRules,
     };

@@ -11,10 +11,10 @@ import {
 import { Delete } from '@blueprint-vendor/flamingo-icons';
 import type { ElementAttributeType, ElementSchema } from '@application/ports/element-schema-provider';
 import type { ElementPropsPatch } from '@application/commands/update-element-props';
-import type { FormComponent } from '@domain/model/form-components';
+import { hasElementField, type CanvasElement } from '@domain/model/canvas-element';
 import type { LogicRuleId } from '@domain/model/ids';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
-import { FORM_COMPONENT_KIND_LABELS } from '@presentation/features/canvas/graph-flow-adapter';
+import { ELEMENT_KIND_LABELS } from '@presentation/features/canvas/graph-flow-adapter';
 import { getElementAttributeMeta, type AttributeMeta } from './element-attribute-meta';
 import { resolvePropertyEditor } from './property-editor-registry';
 import './builtin-property-editors';
@@ -49,8 +49,8 @@ export type IncomingRuleView = {
 };
 
 export type AttributesPanelProps = {
-  /** Выделенный компонент формы — источник значений полей. */
-  component: FormComponent;
+  /** Выделенный элемент (любой вид, ADR-17) — источник значений полей. */
+  component: CanvasElement;
   /** Схема элемента из IElementSchemaProvider (ADR-07); null — схемы нет. */
   schema: ElementSchema | null;
   /** Изменение любого поля → UpdateElementProps (undo/redo из коробки). */
@@ -80,12 +80,13 @@ export function AttributesPanel({
 }: AttributesPanelProps) {
   const classes = useStyles();
   const meta = getElementAttributeMeta(component.kind);
-  const title = FORM_COMPONENT_KIND_LABELS[component.kind];
+  const title = ELEMENT_KIND_LABELS[component.kind];
 
   // Поля по схеме: порядок — порядок атрибутов в манифесте; атрибут виден,
-  // если ключ есть в доменном компоненте и выполнено условие видимости (D4).
+  // если ключ есть в доменной модели элемента (в том числе ещё не заданное
+  // необязательное поле) и выполнено условие видимости (D4).
   const attributes = (schema?.attributes ?? []).filter((attribute) => {
-    if (!Object.prototype.hasOwnProperty.call(component, attribute.key)) {
+    if (!hasElementField(component.kind, attribute.key)) {
       return false;
     }
     const rule = meta.attributes[attribute.key]?.visibleWhen;
@@ -144,7 +145,7 @@ export function AttributesPanel({
             // Значение должно соответствовать типу атрибута: иначе (stub-
             // манифест ADR-07 шире/уже доменной модели) — read-only сводка,
             // чтобы схема не «молчала» и не портила данные.
-            if (!isValueCompatible(attribute.type, value)) {
+            if (value !== undefined && !isValueCompatible(attribute.type, value)) {
               return (
                 <TextField
                   key={attribute.key}

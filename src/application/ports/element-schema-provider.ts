@@ -1,4 +1,4 @@
-import type { FormComponentKind } from '@domain/model/form-components';
+import type { CanvasElementKind } from '@domain/model/canvas-element';
 
 // Порт доступа к схемам элементов (конституция, железное правило 2).
 // Внутренний нормализованный формат — ElementSchema; внешний формат пакета
@@ -12,8 +12,10 @@ export type ElementAttribute = {
   required: boolean;
 };
 
+// Схема — у любого элемента канваса (ADR-17): компоненты форм и List item/
+// Widget card (T-041, stub-схемы проекта до пакета element-schemas, ADR-07).
 export type ElementSchema = {
-  kind: FormComponentKind;
+  kind: CanvasElementKind;
   version: number;
   attributes: readonly ElementAttribute[];
 };
@@ -27,6 +29,6 @@ export class SchemaNotFoundError extends Error {
 
 export interface IElementSchemaProvider {
   // Бросает SchemaNotFoundError для неизвестного kind.
-  getSchema(kind: FormComponentKind): ElementSchema;
+  getSchema(kind: CanvasElementKind): ElementSchema;
   listSchemas(): readonly ElementSchema[];
 }

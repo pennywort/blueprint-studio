@@ -14,8 +14,8 @@ export type EditorSidePanel = 'json' | 'navigation';
 export type AddableNodeKind = 'home' | 'subScenario' | 'applicationForm';
 
 // Элемент из меню кнопки 2 (T-034): любой элемент — в любой выделенный узел
-// [owner 2026-10-13, ADR-17]: List item, Widget card и компоненты формы из
-// listSchemas() провайдера.
+// [owner 2026-10-13, ADR-17]: List item, Widget card и компоненты формы —
+// все из listSchemas() провайдера (T-041: у List item/Widget card — stub-схемы).
 export type AddableElementKind = CanvasElementKind;
 
 export type EditorToolbarProps = {
@@ -73,11 +73,7 @@ function elementMenuItems(
   if (!selectedNodeType) {
     return [];
   }
-  return [
-    { kind: 'listItem', label: ELEMENT_KIND_LABELS.listItem },
-    { kind: 'widgetCard', label: ELEMENT_KIND_LABELS.widgetCard },
-    ...elementSchemas.map((schema) => ({ kind: schema.kind, label: ELEMENT_KIND_LABELS[schema.kind] })),
-  ];
+  return elementSchemas.map((schema) => ({ kind: schema.kind, label: ELEMENT_KIND_LABELS[schema.kind] }));
 }
 
 // Левый вертикальный тулбар (T-021): ровно 4 IconButton с active-состоянием

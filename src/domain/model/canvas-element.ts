@@ -61,6 +61,14 @@ export type CanvasElement = z.infer<typeof CanvasElementSchema>;
 export type CanvasElementKind = CanvasElement['kind'];
 export type CanvasElementId = CanvasElement['id'];
 
+// Поле есть в доменной схеме элемента данного вида (в том числе
+// необязательное и ещё не заданное) — панель атрибутов показывает его
+// пустым, а не скрывает (T-041).
+export function hasElementField(kind: CanvasElementKind, key: string): boolean {
+  const option = CanvasElementSchema.options.find((candidate) => candidate.shape.kind.value === kind);
+  return option !== undefined && Object.prototype.hasOwnProperty.call(option.shape, key);
+}
+
 export type PageElementKind = 'listItem' | 'widgetCard';
 
 export function isPageElementKind(kind: CanvasElementKind): kind is PageElementKind {

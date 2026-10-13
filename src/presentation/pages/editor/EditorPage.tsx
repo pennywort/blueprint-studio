@@ -113,6 +113,9 @@ function EditorPageLayout() {
               события мыши — pan/zoom и тулбар работают сквозь него. hasNodes
               подключён к реальному графу (S9). */}
           <EmptyCanvasState hasNodes={editorGraph.hasNodes} />
+          {/* Полоса на всю высоту только центрирует тулбар: события мыши
+              пропускает (pointer-events: none) — иначе перекрывала undo/redo
+              в левом нижнем углу и полотно под собой. */}
           <Box
             position="absolute"
             left={0}
@@ -121,16 +124,19 @@ function EditorPageLayout() {
             display="flex"
             alignItems="center"
             paddingLeft={2}
+            style={{ pointerEvents: 'none' }}
           >
-            <EditorToolbar
-              elementSchemas={elementSchemas}
-              activePanel={sidePanel}
-              onPanelChange={setSidePanel}
-              selectedNodeType={editorGraph.selectedNodeType}
-              hasHome={editorGraph.hasHome}
-              onAddNode={editorGraph.addNode}
-              onAddElement={editorGraph.addElement}
-            />
+            <Box style={{ pointerEvents: 'auto' }}>
+              <EditorToolbar
+                elementSchemas={elementSchemas}
+                activePanel={sidePanel}
+                onPanelChange={setSidePanel}
+                selectedNodeType={editorGraph.selectedNodeType}
+                hasHome={editorGraph.hasHome}
+                onAddNode={editorGraph.addNode}
+                onAddElement={editorGraph.addElement}
+              />
+            </Box>
           </Box>
         </Box>
         {selectedElement !== null ? (

@@ -6,6 +6,7 @@ import type { IGraphRepository } from '@application/ports/graph-repository';
 import { CommandBus } from '@application/commands/command-bus';
 import { ManifestSchemaProvider } from './element-schemas/manifest-schema-provider';
 import manifestJson from './element-schemas/element-manifest.json';
+import pageElementManifestJson from './element-schemas/page-element-manifest.json';
 import { UuidIdGenerator } from './misc/uuid-id-generator';
 import { SystemClock } from './misc/system-clock';
 import { IndexedDbGraphRepository } from './persistence/indexed-db-graph-repository';
@@ -30,9 +31,10 @@ export function buildContainer(): AwilixContainer<Cradle> {
     idGenerator: asClass(UuidIdGenerator).singleton(),
     clock: asClass(SystemClock).singleton(),
     // Манифест передаётся через inject: иначе PROXY-режим подставит cradle-proxy
-    // первым аргументом конструктора вместо данных.
+    // первым аргументом конструктора вместо данных. Stub-схемы List item/
+    // Widget card (T-041, ADR-07) — первыми: порядок меню добавления.
     elementSchemaProvider: asClass(ManifestSchemaProvider)
-      .inject(() => ({ rawManifest: manifestJson }))
+      .inject(() => ({ rawManifest: [...pageElementManifestJson, ...manifestJson] }))
       .singleton(),
     commandBus: asClass(CommandBus).singleton(),
     graphRepository: asClass(IndexedDbGraphRepository).singleton(),
