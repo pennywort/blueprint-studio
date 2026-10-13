@@ -63,7 +63,7 @@
 ## 4. Стек (менять состав запрещено без решения владельца)
 
 Rsbuild 2.2 (+SWC, **не Vite**), React 19.3, TypeScript 5.7 strict,
-UI-кит `@sber-friend/flamingo-components` 4.9.17 (весь UI только из него,
+UI-кит `@blueprint-vendor/flamingo-components` 4.9.17 (весь UI только из него,
 включая иконки; цвета только из темы, литеральные hex запрещены),
 zod 4.6, immer 11.1 (`produceWithPatches` — единственный механизм мутации),
 awilix 13.0 (DI, только `InjectionMode.PROXY` + деструктуризация в
@@ -78,25 +78,25 @@ xstate (Epic 004).
 
 ## 4.1. Реестр временных подмен (TEMPORARY, решение владельца 2026-10-09)
 
-Внутренний registry `@sber-friend/*` недоступен с этой машины, поэтому
+Внутренний registry `@blueprint-vendor/*` недоступен с этой машины, поэтому
 Flamingo (форк MUI v4, API совпадает) **эмулируется шимами поверх настоящего
 MUI v4**. Важно понимать механику: `src/` импортирует только имена
-`@sber-friend/*`, но под шимом в рантайме работает реальный
+`@blueprint-vendor/*`, но под шимом в рантайме работает реальный
 `@material-ui/core` 4.12.4 — он и есть временный движок UI. Когда registry
 станет доступен, всё из списка ниже удаляется целиком, исходники в `src/`
 при этом не правятся. Маркер для поиска — слово `TEMPORARY` (grep по репо).
 
 | #   | Что                                                                                         | Где                                                                                               | Условие удаления                                                                   |
 | --- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| 1   | Шимы Flamingo → реэкспорты MUI v4                                                           | `vendor/flamingo/*`                                                                               | Настоящий `@sber-friend/flamingo-*` из внутреннего registry                        |
+| 1   | Шимы Flamingo → реэкспорты MUI v4                                                           | `vendor/flamingo/*`                                                                               | Настоящий `@blueprint-vendor/flamingo-*` из внутреннего registry                   |
 | 2   | Прямые зависимости `@material-ui/core` 4.12.4, `@material-ui/icons` 4.11.3                  | `package.json`                                                                                    | Вместе с п.1 (их подтянет настоящий Flamingo)                                      |
-| 3   | Зависимости `@sber-friend/*` как `file:vendor/flamingo/*`                                   | `package.json`                                                                                    | Заменить на версии из registry (4.9.17)                                            |
+| 3   | Зависимости `@blueprint-vendor/*` как `file:vendor/flamingo/*`                              | `package.json`                                                                                    | Заменить на версии из registry (4.9.17)                                            |
 | 4   | Полифилл `findDOMNode` (react-dom 19 его удалил, MUI v4 вызывает)                           | `vendor/react-dom-find-dom-node/` + alias `react-dom$` в `rsbuild.config.ts` и `vitest.config.ts` | Вместе с п.1 (настоящий Flamingo 4.9.17 собран под react 19 или решение владельца) |
 | 5   | Патч живого модуля react-dom для тестов (vitest грузит CJS MUI нативным require мимо alias) | `vitest.setup.ts`                                                                                 | Вместе с п.4                                                                       |
 | 6   | `legacy-peer-deps=true` (peer MUI v4 заявляет react ^16‖^17)                                | `.npmrc`                                                                                          | Вместе с п.1–2                                                                     |
 
 Правила на время подмены: никаких прямых импортов `@material-ui/*` в `src`
-(только `@sber-friend/*`); недостающие экспорты добавляются реэкспортом
+(только `@blueprint-vendor/*`); недостающие экспорты добавляются реэкспортом
 соответствующего компонента MUI v4 в `vendor/flamingo/*/index.js` +
 `index.d.ts`; логики в шимах быть не должно (re-exports only).
 

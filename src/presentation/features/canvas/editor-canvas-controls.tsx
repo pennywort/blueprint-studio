@@ -1,6 +1,6 @@
 import { Panel, useReactFlow, useViewport } from '@xyflow/react';
-import { Box, IconButton, Typography, makeStyles } from '@sber-friend/flamingo-core';
-import { Map as MapIcon, Redo, Undo, ZoomIn, ZoomOut, ZoomOutMap } from '@sber-friend/flamingo-icons';
+import { Box, IconButton, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Map as MapIcon, Redo, Undo, ZoomIn, ZoomOut, ZoomOutMap } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 const useStyles = makeStyles<EditorTheme>((theme) => {

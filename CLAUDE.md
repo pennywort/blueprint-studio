@@ -1,3 +1,11 @@
+# Стиль ответов
+
+- Отвечай по-русски, максимально кратко и по делу.
+- Без вступлений, пересказа задачи и итоговых резюме.
+- Не объясняй очевидное; детали — только если спросят.
+- После правок кода: 1–2 строки (что изменено, что проверено).
+- Вопросы — только если без ответа нельзя продолжить.
+
 # CLAUDE.md — контекст проекта для Claude Code
 
 > Базовый контекст проекта — **`KIMI.md`** (прочитай его первым): стек, слои,
@@ -23,7 +31,7 @@ L-I5) — спроси владельца, не выдумывай.
   Верификация = `npm run lint && npm run build` + ручная проверка в приложении.
 - Любое изменение графа — команда через `CommandBus` (immer `produceWithPatches`).
 - 4 слоя `domain → application → infrastructure → presentation` (eslint-plugin-boundaries).
-- UI только из `@sber-friend/*` (сейчас шимы поверх MUI v4 в `vendor/flamingo`),
+- UI только из `@blueprint-vendor/*` (сейчас шимы поверх MUI v4 в `vendor/flamingo`),
   прямые импорты `@material-ui/*` в `src` запрещены; цвета только из темы
   (`src/presentation/theme/editor-theme.ts`), литеральные hex в компонентах запрещены.
 - Комментарии в коде — на русском, со ссылкой на задачу/решение (T-xxx, D-x, ADR-xx, Nx).
@@ -31,7 +39,7 @@ L-I5) — спроси владельца, не выдумывай.
 
 ## Окружение Claude Code (облачная сессия)
 
-- После старта контейнера: `npm ci` (registry `@sber-friend/*` не нужен — шимы `file:vendor/...`).
+- После старта контейнера: `npm ci` (registry `@blueprint-vendor/*` не нужен — шимы `file:vendor/...`).
 - Dev-сервер: `npx rsbuild dev --port 3123`, редактор — `http://localhost:3123/#/editor`
   (демо-граф `sample-graph.ts`).
 - Ручная проверка — Playwright из `/opt/node-tools/node_modules/playwright`,

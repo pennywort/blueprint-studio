@@ -1,4 +1,4 @@
-import { Box, Card, CardContent, Typography, makeStyles } from '@sber-friend/flamingo-core';
+import { Box, Card, CardContent, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import { useNavigate } from 'react-router-dom';
 import { EditorThemeProvider } from '@presentation/theme/editor-theme-provider';
 import type { EditorTheme } from '@presentation/theme/editor-theme';

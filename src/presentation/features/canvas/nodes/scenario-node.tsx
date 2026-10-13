@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type DragEvent } from 'react';
 import { Handle, Position, useConnection, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
-import { Box, Button, Card, IconButton, Typography, makeStyles } from '@sber-friend/flamingo-core';
-import { Delete, ExpandLess, ExpandMore } from '@sber-friend/flamingo-icons';
+import { Box, Button, Card, IconButton, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Delete, ExpandLess, ExpandMore } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
 import { CANVAS_LAYOUT } from '../canvas-layout';

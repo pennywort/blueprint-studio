@@ -7,8 +7,8 @@ import {
   TextField,
   Typography,
   makeStyles,
-} from '@sber-friend/flamingo-core';
-import { Delete } from '@sber-friend/flamingo-icons';
+} from '@blueprint-vendor/flamingo-core';
+import { Delete } from '@blueprint-vendor/flamingo-icons';
 import type { ElementAttributeType, ElementSchema } from '@application/ports/element-schema-provider';
 import type { ElementPropsPatch } from '@application/commands/update-element-props';
 import type { FormComponent } from '@domain/model/form-components';

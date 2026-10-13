@@ -1,5 +1,5 @@
-import { Tooltip, makeStyles } from '@sber-friend/flamingo-core';
-import { ErrorOutline } from '@sber-friend/flamingo-icons';
+import { Tooltip, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { ErrorOutline } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({

@@ -1,4 +1,4 @@
-// TEMPORARY SHIM (owner decision 2026-10-09): internal @sber-friend registry is
+// TEMPORARY SHIM (owner decision 2026-10-09): internal @blueprint-vendor registry is
 // unavailable on this machine, so Flamingo (fork of MUI v4) is backed by
 // @material-ui/core 4.12.4. Re-exports only — no logic. Remove when the real
 // registry is reachable again.

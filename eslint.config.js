@@ -22,7 +22,7 @@ const DOMAIN_FORBIDDEN = [
   'awilix',
   'xstate',
   '@xyflow/*',
-  '@sber-friend/*',
+  '@blueprint-vendor/*',
 ];
 
 export default [
@@ -123,7 +123,7 @@ export default [
               message: 'application не импортирует infrastructure/presentation (конституция, раздел 3)',
             },
             {
-              group: ['react', 'react-dom', '@xyflow/*', '@sber-friend/*', 'xstate', 'awilix'],
+              group: ['react', 'react-dom', '@xyflow/*', '@blueprint-vendor/*', 'xstate', 'awilix'],
               message: 'application — чистый слой use-cases (конституция, раздел 3)',
             },
           ],

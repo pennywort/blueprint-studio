@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Box, Card, CardContent, Chip, Typography, makeStyles } from '@sber-friend/flamingo-core';
-import { ShowChart, Visibility } from '@sber-friend/flamingo-icons';
+import { Box, Card, CardContent, Chip, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { ShowChart, Visibility } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
 import { writeElementDrag } from '../element-dnd';

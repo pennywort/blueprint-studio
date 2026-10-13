@@ -1,4 +1,4 @@
-import { createMuiTheme, useTheme, type Theme } from '@sber-friend/flamingo-core';
+import { createMuiTheme, useTheme, type Theme } from '@blueprint-vendor/flamingo-core';
 
 // Цветовые токены canvas/react-flow. Все значения — из макетов
 // docs/design-mockups (сняты пипеткой); в компонентах литеральные hex

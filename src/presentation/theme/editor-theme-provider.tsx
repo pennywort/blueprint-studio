@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { ThemeProvider } from '@sber-friend/flamingo-core';
+import { ThemeProvider } from '@blueprint-vendor/flamingo-core';
 import { createEditorTheme, type EditorThemeName } from './editor-theme';
 
 // Провайдер темы редактора (D6): единственное место, где тема собирается.
