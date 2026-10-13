@@ -43,7 +43,40 @@ import { LayerDropHighlight } from './layers/layer-drop-highlight';
 import { isActionTarget } from './canvas-events';
 import { EditorCanvasControls } from './editor-canvas-controls';
 import { canvasNodeTypes } from './nodes/node-types';
-import type { CanvasEdge, CanvasNode } from './graph-flow-adapter';
+import { EDGE_ARROW_MARKER_ID, type CanvasEdge, type CanvasNode } from './graph-flow-adapter';
+
+/**
+ * Маркер-стрелка рёбер (дизайн): «галочка» из двух отрезков с круглыми
+ * концами. context-stroke — цвет берётся у ребра (в т.ч. hover/selected),
+ * литеральных цветов нет.
+ */
+function EdgeArrowMarkerDefs() {
+  return (
+    <svg width={0} height={0} style={{ position: 'absolute' }} aria-hidden>
+      <defs>
+        <marker
+          id={EDGE_ARROW_MARKER_ID}
+          viewBox="0 0 12 12"
+          refX={10}
+          refY={6}
+          markerWidth={12}
+          markerHeight={12}
+          markerUnits="userSpaceOnUse"
+          orient="auto"
+        >
+          <path
+            d="M4 2 L10 6 L4 10"
+            fill="none"
+            stroke="context-stroke"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </marker>
+      </defs>
+    </svg>
+  );
+}
 
 export type EditorCanvasProps = {
   /** Узлы и рёбра — из graphToFlow (T-030/T-031); канвас управляемый. */
@@ -415,6 +448,7 @@ function CanvasInner({
         colorMode="light"
         fitView
       >
+        <EdgeArrowMarkerDefs />
         {dropZone ? <DropZoneHighlight zone={dropZone} /> : null}
         {clickLine ? <ClickConnectionLine from={clickLine.from} to={clickLine.to} /> : null}
         <Background

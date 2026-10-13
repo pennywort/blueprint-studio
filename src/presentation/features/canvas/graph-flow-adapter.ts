@@ -188,6 +188,12 @@ export type CanvasNodeData = {
 export type CanvasNode = Node<CanvasNodeData, CanvasNodeType>;
 export type CanvasEdge = Edge;
 
+/**
+ * Стрелка на конце ребра (дизайн): два закруглённых отрезка под углом.
+ * SVG-маркер объявлен в EdgeArrowMarkerDefs (editor-canvas.tsx).
+ */
+export const EDGE_ARROW_MARKER_ID = 'editor-edge-arrow';
+
 export type FlowGraph = {
   nodes: CanvasNode[];
   edges: CanvasEdge[];
@@ -463,6 +469,7 @@ export function graphToFlow(
       // Ортогональные рёбра с закруглёнными углами (замечание владельца) —
       // штатный тип react-flow smoothstep.
       type: 'smoothstep',
+      markerEnd: EDGE_ARROW_MARKER_ID,
     });
   }
 
@@ -490,6 +497,7 @@ export function graphToFlow(
       target: ruleTargetNodeId,
       targetHandle: logicAnchorHandleId(rule.targetElementId),
       type: 'smoothstep',
+      markerEnd: EDGE_ARROW_MARKER_ID,
       reconnectable: false,
       data: { kind: 'logic' },
     });
