@@ -52,6 +52,12 @@ export const FORM_STEP_LAYOUT = {
   elementHeight: 104,
   /** Оценка высоты карточки варианта Select'а. */
   optionHeight: 64,
+  /**
+   * Высота точки входа/выхода ребра правила от верха карточки [owner 2026-10-13]:
+   * source-handle варианта и якорь цели на одной высоте — цель стоит верхом
+   * вровень с вариантом, ребро идёт прямой горизонталью без «ступеньки».
+   */
+  logicHandleTop: 36,
 } as const;
 
 // Автосжатие узла при избытке элементов (T-033; Q-14, решение владельца):
@@ -71,6 +77,49 @@ function estimateScenarioNodeHeight(elementCount: number): number {
   return L.nodeHeaderHeight + elementCount * L.elementRowHeight + L.nodePadding * 2;
 }
 
+// Высота шага по раскладке FormStepLayers [owner 2026-10-13]: деревья
+// корней друг под другом; строка варианта — по большему из карточки
+// варианта и стопки зависящих от него элементов (цель напротив варианта).
+function estimateStepHeight(step: FormStep, logicRules: ServiceGraph['logicRules']): number {
+  const S = FORM_STEP_LAYOUT;
+  const ids = new Set<string>(step.components.map((component) => component.id));
+  const dependents = new Map<string, string[]>();
+  const hasParent = new Set<string>();
+  for (const rule of logicRules) {
+    if (rule.condition.kind !== 'optionSelected' || hasParent.has(rule.targetElementId)) {
+      continue;
+    }
+    if (!ids.has(rule.sourceElementId) || !ids.has(rule.targetElementId)) {
+      continue;
+    }
+    const key = `${rule.sourceElementId}:${rule.condition.optionId}`;
+    dependents.set(key, [...(dependents.get(key) ?? []), rule.targetElementId]);
+    hasParent.add(rule.targetElementId);
+  }
+  const byId = new Map(step.components.map((component) => [component.id as string, component]));
+  const stack = (list: readonly string[], seen: ReadonlySet<string>): number =>
+    list.reduce((sum, id, index) => sum + (index > 0 ? S.rowGap : 0) + tree(id, seen), 0);
+  const tree = (id: string, seen: ReadonlySet<string>): number => {
+    const component = byId.get(id);
+    if (!component || seen.has(id)) {
+      return 0;
+    }
+    const inner = new Set(seen).add(id);
+    let height = S.elementHeight;
+    if (component.kind === 'selectList' && component.hasComplexLogic) {
+      for (const option of component.options) {
+        const children = dependents.get(`${id}:${option.value}`) ?? [];
+        height += S.rowGap + Math.max(S.optionHeight, stack(children, inner));
+      }
+    }
+    return height;
+  };
+  return stack(
+    step.components.map((component) => component.id as string).filter((id) => !hasParent.has(id)),
+    new Set(),
+  );
+}
+
 function estimateFormSize(
   form: ServiceGraph['applicationForms'][number],
   logicRules: ServiceGraph['logicRules'],
@@ -80,9 +129,9 @@ function estimateFormSize(
 } {
   const L = CANVAS_LAYOUT;
   const S = FORM_STEP_LAYOUT;
-  // Шаг — колонки по уровням элементов; высота — грубо: все карточки шага
-  // (элементы + варианты Select'ов) в один столбец. Только первый рендер:
-  // дальше раскладка берёт измеренные размеры (N12).
+  // Шаг — колонки по уровням элементов; высота — по дереву строк
+  // (estimateStepHeight). Только первый рендер: дальше раскладка берёт
+  // измеренные размеры (N12).
   const steps = form.steps.length > 0 ? form.steps : [{ id: '', components: [] }];
   let width = L.nodePadding * 2;
   let height = 0;
@@ -90,15 +139,7 @@ function estimateFormSize(
     const depths = computeStepElementDepths(step as FormStep, logicRules);
     const columns = Math.max(1, ...[...depths.values()].map((depth) => depth + 1));
     width += Math.max(L.formStepWidth, columns * (S.elementWidth + S.columnGap)) + L.nodePadding;
-    const options = step.components.reduce(
-      (sum, component) =>
-        sum + (component.kind === 'selectList' && component.hasComplexLogic ? component.options.length : 0),
-      0,
-    );
-    height = Math.max(
-      height,
-      step.components.length * (S.elementHeight + S.rowGap) + options * (S.optionHeight + S.rowGap),
-    );
+    height = Math.max(height, estimateStepHeight(step as FormStep, logicRules));
   }
   return {
     width,

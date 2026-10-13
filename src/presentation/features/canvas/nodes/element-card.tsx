@@ -3,7 +3,8 @@ import { Handle, Position } from '@xyflow/react';
 import { Box, Card, CardContent, Chip, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import { ShowChart, Visibility } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
-import { logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
+import { logicAnchorHandleId, logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
+import { FORM_STEP_LAYOUT } from '../canvas-layout';
 import { writeElementDrag } from '../element-dnd';
 import { isActionTarget } from '../canvas-events';
 import { ViolationBadge } from './violation-badge';
@@ -136,6 +137,18 @@ export function ElementCard({ element }: ElementCardProps) {
           position={Position.Left}
           id={logicTargetHandleId(element.id)}
           className={element.connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
+        />
+      ) : null}
+      {/* Якорь входа рёбер правил [owner 2026-10-13]: на высоте варианта-
+          источника (logicHandleTop) — ребро идёт прямой горизонталью. Только
+          отрисовка: невидим и связь не принимает. */}
+      {element.logicTarget && element.hasIncomingLogic ? (
+        <Handle
+          type="target"
+          position={Position.Left}
+          id={logicAnchorHandleId(element.id)}
+          isConnectable={false}
+          style={{ top: FORM_STEP_LAYOUT.logicHandleTop, opacity: 0, pointerEvents: 'none' }}
         />
       ) : null}
       <CardContent className={classes.content}>

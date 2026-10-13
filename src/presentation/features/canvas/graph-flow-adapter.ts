@@ -24,11 +24,16 @@ export type CanvasNodeType = 'home' | 'subScenario' | 'form';
 // без поиска по DOM. ElementId двоеточий не содержит — разделитель безопасен.
 export const LOGIC_SOURCE_HANDLE_PREFIX = 'logic-src:';
 export const LOGIC_TARGET_HANDLE_PREFIX = 'logic-tgt:';
+// Якорь входа ребра правила в цель: только для отрисовки (не принимает
+// связь) — на высоте logicHandleTop, напротив source-handle варианта.
+export const LOGIC_ANCHOR_HANDLE_PREFIX = 'logic-anchor:';
 
 export const logicSourceHandleId = (elementId: string, optionId: string): string =>
   `${LOGIC_SOURCE_HANDLE_PREFIX}${elementId}:${optionId}`;
 
 export const logicTargetHandleId = (elementId: string): string => `${LOGIC_TARGET_HANDLE_PREFIX}${elementId}`;
+
+export const logicAnchorHandleId = (elementId: string): string => `${LOGIC_ANCHOR_HANDLE_PREFIX}${elementId}`;
 
 export function parseLogicSourceHandle(handle: string): { elementId: string; optionId: string } | null {
   if (!handle.startsWith(LOGIC_SOURCE_HANDLE_PREFIX)) {
@@ -428,8 +433,8 @@ export function graphToFlow(
   }
 
   // Проекция правил «Сложной логики» в рёбра (T-037/T-065, L7): ребро =
-  // правило. Источник — option-handle Select'а-источника, цель — target-handle
-  // карточки элемента; оба конца живут внутри одного узла формы (L-I5), поэтому
+  // правило. Источник — option-handle Select'а-источника, цель — якорь
+  // карточки элемента на высоте варианта (прямая горизонталь); оба конца живут внутри одного узла формы (L-I5), поэтому
   // это штатное ребро react-flow внутри FormNode (решение владельца по Q-9).
   // Стиль — как у навигационных рёбер (решение владельца по N1: отличие
   // предложит дизайнер); reconnect правил не поддерживаем.
@@ -449,7 +454,7 @@ export function graphToFlow(
       source: ruleSourceNodeId,
       sourceHandle: logicSourceHandleId(rule.sourceElementId, rule.condition.optionId),
       target: ruleTargetNodeId,
-      targetHandle: logicTargetHandleId(rule.targetElementId),
+      targetHandle: logicAnchorHandleId(rule.targetElementId),
       type: 'smoothstep',
       reconnectable: false,
       data: { kind: 'logic' },
