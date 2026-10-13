@@ -14,6 +14,7 @@ import {
 import { Add, Delete, ExpandLess, ExpandMore } from '@sber-friend/flamingo-icons';
 import type { FormComponentKind } from '@domain/model/form-components';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
+import { ViolationBadge } from './violation-badge';
 import { CANVAS_LAYOUT } from '../canvas-layout';
 import { collapseElements, isCollapsible } from '../collapse-elements';
 import type { CanvasFormStepData, CanvasNode } from '../graph-flow-adapter';
@@ -36,6 +37,11 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     display: 'flex',
     flexDirection: 'column',
     gap: theme.spacing(1.5),
+  },
+  // Нарушение инвариантов узла или его элементов (T-043): кольцо цвета
+  // ошибки тенью — outline занят выделением и подсветкой цели связи.
+  invalid: {
+    boxShadow: `0 0 0 2px ${theme.palette.error.main}`,
   },
   dropTarget: {
     backgroundColor: theme.editor.canvas.nodeHoverBackground,
@@ -164,7 +170,11 @@ export function FormNode({ id, data }: NodeProps<CanvasNode>) {
 
   return (
     <Card
-      className={isDropTarget ? `${classes.card} ${classes.dropTarget}` : classes.card}
+      className={[
+        classes.card,
+        data.violations ? classes.invalid : '',
+        isDropTarget ? classes.dropTarget : '',
+      ].join(' ')}
       data-testid={`canvas-node-${id}`}
     >
       {/* Форма — цель связей на общих основаниях (D12): точка входа на краю блока (D9). */}
@@ -186,6 +196,7 @@ export function FormNode({ id, data }: NodeProps<CanvasNode>) {
             {data.subtitle}
           </Typography>
         </Box>
+        {data.violations ? <ViolationBadge messages={data.violations} inHeader /> : null}
         <IconButton
           className={`${classes.iconButton} nodrag`}
           size="small"

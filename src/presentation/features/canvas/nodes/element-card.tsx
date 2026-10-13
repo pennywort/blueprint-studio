@@ -4,6 +4,7 @@ import { ShowChart, Visibility } from '@sber-friend/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { logicTargetHandleId, parseLogicSourceHandle, type CanvasElementData } from '../graph-flow-adapter';
 import { writeElementDrag } from '../element-dnd';
+import { ViolationBadge } from './violation-badge';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
@@ -19,6 +20,10 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   // Выделение элемента (F7): чёрная рамка цвета стрелок — как у узлов и связей.
   // Вторая половина рамки — тенью, а не толщиной border: размер карточки
   // не меняется, и handles/рёбра узла не сдвигаются при выделении (N10).
+  // Нарушение инварианта (T-043): рамка цвета ошибки; выделение важнее.
+  cardInvalid: {
+    borderColor: theme.palette.error.main,
+  },
   cardSelected: {
     borderColor: theme.editor.canvas.edge,
     boxShadow: `0 0 0 1px ${theme.editor.canvas.edge}`,
@@ -134,7 +139,11 @@ export function ElementCard({ element }: ElementCardProps) {
     // stopPropagation: иначе клик дошёл бы до узла, и react-flow выделил бы
     // его вместо элемента. data-element-card — якорь для drop-зон dnd (N2).
     <Card
-      className={element.selected ? `${classes.card} ${classes.cardSelected}` : classes.card}
+      className={[
+        classes.card,
+        element.violations ? classes.cardInvalid : '',
+        element.selected ? classes.cardSelected : '',
+      ].join(' ')}
       variant="outlined"
       data-testid={`element-card-${element.id}`}
       data-element-card={element.id}
@@ -194,6 +203,7 @@ export function ElementCard({ element }: ElementCardProps) {
             ) : null}
             {/* Индикатор «элемент кому-то подчинён» (L-Q1): виден даже при
                 выключенной логике у источника. */}
+            {element.violations ? <ViolationBadge messages={element.violations} /> : null}
             {element.hasIncomingLogic ? (
               <Visibility className={classes.dependencyIcon} fontSize="small" />
             ) : null}

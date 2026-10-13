@@ -3,6 +3,7 @@ import { Handle, Position, useConnection, useUpdateNodeInternals, type NodeProps
 import { Box, Button, Card, IconButton, Typography, makeStyles } from '@sber-friend/flamingo-core';
 import { Delete, ExpandLess, ExpandMore } from '@sber-friend/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
+import { ViolationBadge } from './violation-badge';
 import { CANVAS_LAYOUT } from '../canvas-layout';
 import { collapseElements, isCollapsible } from '../collapse-elements';
 import type { CanvasNode } from '../graph-flow-adapter';
@@ -23,6 +24,11 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   },
   // Hover-подсветка целевого узла при перетаскивании связи (T-032, макет
   // «связь-…-переход-к-подсценарию»): серый фон + рамка, цвета из темы.
+  // Нарушение инвариантов узла или его элементов (T-043): кольцо цвета
+  // ошибки тенью — outline занят выделением и подсветкой цели связи.
+  invalid: {
+    boxShadow: `0 0 0 2px ${theme.palette.error.main}`,
+  },
   dropTarget: {
     backgroundColor: theme.editor.canvas.nodeHoverBackground,
     outline: `2px solid ${theme.editor.canvas.nodeHoverBorder}`,
@@ -136,7 +142,7 @@ export function ScenarioNode({ id, data, type }: NodeProps<CanvasNode>) {
 
   return (
     <Card
-      className={`${classes.card}${isDropTarget ? ` ${classes.dropTarget}` : ''}${
+      className={`${classes.card}${data.violations ? ` ${classes.invalid}` : ''}${isDropTarget ? ` ${classes.dropTarget}` : ''}${
         dndActive ? ` ${classes.dndActive}` : ''
       }`}
       data-testid={`canvas-node-${id}`}
@@ -154,6 +160,7 @@ export function ScenarioNode({ id, data, type }: NodeProps<CanvasNode>) {
             {data.subtitle}
           </Typography>
         </Box>
+        {data.violations ? <ViolationBadge messages={data.violations} inHeader /> : null}
         <IconButton
           className={`${classes.deleteButton} nodrag`}
           size="small"

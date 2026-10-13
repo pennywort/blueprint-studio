@@ -17,3 +17,4 @@ export { default as ViewColumn } from '@material-ui/icons/ViewColumn';
 export { default as NoteAdd } from '@material-ui/icons/NoteAdd';
 export { default as ShowChart } from '@material-ui/icons/ShowChart';
 export { default as Visibility } from '@material-ui/icons/Visibility';
+export { default as ErrorOutline } from '@material-ui/icons/ErrorOutline';

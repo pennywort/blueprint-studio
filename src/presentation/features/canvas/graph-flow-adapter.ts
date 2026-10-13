@@ -82,6 +82,8 @@ export type CanvasElementData = {
   hiddenByLogic?: boolean;
   /** Карточка выделена (клик) — чёрная рамка, Delete удаляет элемент (T-034). */
   selected?: boolean;
+  /** Нарушения инвариантов, указывающие на элемент (T-043; внедряется хранилищем). */
+  violations?: readonly string[];
   /**
    * Карточка может быть целью правил «Сложной логики» — target-handle на
    * левом краю. Только компоненты форм (источник — Select той же формы,
@@ -125,6 +127,8 @@ export type CanvasNodeData = {
   // внедряются хранилищем состояния (useEditorGraph) после graphToFlow. ---
   /** Корзина в заголовке узла → RemoveHomePage/RemoveScenario/RemoveForm. */
   onDeleteNode?: () => void;
+  /** Нарушения инвариантов узла и его элементов (T-043) — рамка + тултип. */
+  violations?: readonly string[];
   /** Варианты меню «+» шага формы (kind + человекочитаемая подпись). */
   elementKindOptions?: ReadonlyArray<{ kind: FormComponentKind; label: string }>;
   /** «+» конкретного шага формы → AddFormComponent. */

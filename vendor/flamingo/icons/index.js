@@ -24,3 +24,4 @@ export { default as NoteAdd } from '@material-ui/icons/NoteAdd';
 export { default as ShowChart } from '@material-ui/icons/ShowChart';
 // T-037: индикатор зависимости видимости на карточке-цели «Сложной логики».
 export { default as Visibility } from '@material-ui/icons/Visibility';
+export { default as ErrorOutline } from '@material-ui/icons/ErrorOutline';

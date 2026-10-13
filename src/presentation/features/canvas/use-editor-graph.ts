@@ -24,6 +24,7 @@ import {
 } from '@domain/model/ids';
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
 import { computeGraphDepths } from '@domain/graph-depths';
+import { validateGraph } from '@domain/invariants';
 import type { Command } from '@application/commands/command';
 import { ConnectElements } from '@application/commands/connect-elements';
 import { ReconnectElements } from '@application/commands/reconnect-elements';
@@ -77,6 +78,7 @@ import {
   createDefaultFormComponent,
 } from './default-elements';
 import { createSampleGraph } from './sample-graph';
+import { mapViolationsToCanvas } from './violation-markers';
 
 // Варианты меню «+» шага формы: все kind из маппинга подписей адаптера
 // (12 форм-компонентов манифеста), порядок — как в маппинге.
@@ -135,6 +137,10 @@ export function useEditorGraph() {
 
   const positions = useMemo(() => computeLayout(graph, measuredSizes), [graph, measuredSizes]);
   const flow = useMemo(() => graphToFlow(graph, positions), [graph, positions]);
+  // Нарушения инвариантов после каждой команды (T-043): подсветка узлов и
+  // карточек. Команды отклоняют невалидные изменения, поэтому в обычной
+  // работе список пуст; подсветка нужна для графов извне (загрузка, T-053).
+  const violationMarkers = useMemo(() => mapViolationsToCanvas(graph, validateGraph(graph)), [graph]);
 
   // Выделенный на канвасе узел (клик): цель для меню добавления элементов
   // тулбара (T-034). Schema-driven панель атрибутов появится в T-041+.
@@ -596,6 +602,7 @@ export function useEditorGraph() {
         const injectElement = (element: CanvasNode['data']['elements'][number]) => ({
           ...element,
           selected: element.id === selectedElementId,
+          violations: violationMarkers.elements.get(element.id),
           onSelect: () => selectElement(element.id),
           ...(element.complexLogic ? { onToggleComplexLogic: () => toggleComplexLogic(element.id) } : null),
         });
@@ -609,6 +616,7 @@ export function useEditorGraph() {
           data: {
             ...node.data,
             onDeleteNode: () => removeNode(node),
+            violations: violationMarkers.nodes.get(node.id),
             elements: node.data.elements.map(injectElement),
             steps: node.data.steps.map((step) => ({
               ...step,
@@ -643,6 +651,7 @@ export function useEditorGraph() {
       selectedElementId,
       selectedNodeId,
       selectElement,
+      violationMarkers,
     ],
   );
 
