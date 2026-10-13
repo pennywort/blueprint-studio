@@ -27,7 +27,7 @@ export class RemoveForm implements Command {
     // (L-I5) — удаляем всё, что ссылается на компоненты удаляемой формы.
     const componentIds = new Set<string>();
     for (const step of draft.applicationForms[index]!.steps) {
-      for (const component of step.components) {
+      for (const component of step.elements) {
         componentIds.add(component.id);
       }
     }

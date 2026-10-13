@@ -22,6 +22,7 @@ const validLink = {
 
 const minimalGraph = {
   id: 'bp-1',
+  kind: 'listItem',
   title: 'Карта',
   subScenarios: [],
   applicationForms: [],
@@ -66,14 +67,14 @@ describe('Страницы: orderIndex (D13)', () => {
     type: 'link' as const,
     title: 'Подсценарий',
     orderIndex: 0,
-    listItems: [],
+    elements: [],
     link: { url: 'https://example.com' },
   };
 
   const homePage = {
     id: 'home-1',
     orderIndex: 0,
-    listItems: [],
+    elements: [],
     widgetCards: [],
   };
 
@@ -96,9 +97,9 @@ describe('Страницы: orderIndex (D13)', () => {
 
   it('у элементов страницы (ListItem, WidgetCard) обязателен стабильный id — источник связи (D9)', () => {
     expect(ListItemSchema.safeParse({ title: 'Пункт' }).success).toBe(false);
-    expect(ListItemSchema.safeParse({ id: 'el-1', title: 'Пункт' }).success).toBe(true);
+    expect(ListItemSchema.safeParse({ id: 'el-1', kind: 'listItem', title: 'Пункт' }).success).toBe(true);
     expect(WidgetCardSchema.safeParse({ title: 'Виджет' }).success).toBe(false);
-    expect(WidgetCardSchema.safeParse({ id: 'el-2', title: 'Виджет' }).success).toBe(true);
+    expect(WidgetCardSchema.safeParse({ id: 'el-2', kind: 'listItem', title: 'Виджет' }).success).toBe(true);
   });
 });
 
@@ -111,7 +112,7 @@ describe('ServiceGraphSchema: страницы верхнего уровня и 
   it('одностраничный МИП (D8): единственный узел — форма заявки', () => {
     const graph = ServiceGraphSchema.parse({
       ...minimalGraph,
-      applicationForms: [{ id: 'form-1', title: 'Заявка', orderIndex: 0, steps: [] }],
+      applicationForms: [{ id: 'form-1', kind: 'listItem', title: 'Заявка', orderIndex: 0, steps: [] }],
     });
     expect(graph.applicationForms).toHaveLength(1);
     expect(graph.homePage).toBeUndefined();
@@ -120,14 +121,19 @@ describe('ServiceGraphSchema: страницы верхнего уровня и 
   it('полный граф: Главная + подсценарии + формы + связи парсятся вместе', () => {
     const graph = ServiceGraphSchema.parse({
       ...minimalGraph,
-      homePage: { id: 'home-1', orderIndex: 0, listItems: [{ id: 'el-1', title: 'Пункт' }], widgetCards: [] },
+      homePage: {
+        id: 'home-1',
+        orderIndex: 0,
+        elements: [{ id: 'el-1', kind: 'listItem', title: 'Пункт' }],
+        widgetCards: [],
+      },
       subScenarios: [
         {
           id: 'sc-1',
           type: 'link',
           title: 'Подсценарий',
           orderIndex: 1,
-          listItems: [],
+          elements: [],
           link: { url: 'https://example.com' },
         },
       ],
@@ -146,7 +152,7 @@ describe('ServiceGraphSchema: страницы верхнего уровня и 
     const graph: ServiceGraph = {
       id: toBlueprintId('bp-1'),
       title: 'Карта',
-      homePage: { id: toPageId('home-1'), orderIndex: 0, listItems: [], widgetCards: [] },
+      homePage: { id: toPageId('home-1'), orderIndex: 0, elements: [] },
       subScenarios: [],
       applicationForms: [],
       links: [

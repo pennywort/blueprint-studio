@@ -15,7 +15,7 @@ describe('AddScenario (T-035)', () => {
         id: toScenarioId('sc-new'),
         type: 'link',
         title: 'Новый',
-        listItems: [],
+        elements: [],
         link: { url: 'https://example.com' },
       }),
     );
@@ -43,7 +43,7 @@ describe('AddScenario (T-035)', () => {
         id: toScenarioId('sc-1'),
         type: 'link',
         title: 'Первый',
-        listItems: [],
+        elements: [],
         link: { url: 'https://example.com' },
       }),
     );
@@ -61,7 +61,7 @@ describe('AddScenario (T-035)', () => {
         id: toScenarioId('sc-new'),
         type: 'link',
         title: 'Новый',
-        listItems: [],
+        elements: [],
         link: { url: 'https://example.com' },
       }),
     );
@@ -79,7 +79,7 @@ describe('AddScenario (T-035)', () => {
           id: toScenarioId('sc-bad'),
           type: 'link',
           title: 'Битый',
-          listItems: [],
+          elements: [],
           link: { url: 'https://example.com' },
           infoBlock: { content: 'Инфо', position: 'right' },
         }),

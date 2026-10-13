@@ -26,14 +26,14 @@ const selectList = (id: string, displayType: SelectList['displayType'], count: n
 const graphWith = (component: SelectList): ServiceGraph => ({
   id: toBlueprintId('bp-1'),
   title: 'Тестовая карта',
-  homePage: { id: toPageId('home-1'), orderIndex: 0, listItems: [], widgetCards: [] },
+  homePage: { id: toPageId('home-1'), orderIndex: 0, elements: [] },
   subScenarios: [],
   applicationForms: [
     {
       id: toApplicationFormId('form-1'),
       title: 'Форма',
       orderIndex: 0,
-      steps: [{ id: toFormStepId('step-1'), components: [component] }],
+      steps: [{ id: toFormStepId('step-1'), elements: [component] }],
     },
   ],
   links: [],

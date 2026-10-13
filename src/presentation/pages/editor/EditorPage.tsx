@@ -142,7 +142,7 @@ function EditorPageLayout() {
                 schema={schemaByKind.get(selectedElement.component.kind) ?? null}
                 onUpdateProps={(patch) => editorGraph.updateElementProps(selectedElement.component.id, patch)}
                 onToggleComplexLogic={
-                  selectedElement.component.kind === 'selectList'
+                  selectedElement.component.kind === 'selectList' && selectedElement.inFormStep
                     ? () => editorGraph.toggleComplexLogic(selectedElement.component.id)
                     : undefined
                 }

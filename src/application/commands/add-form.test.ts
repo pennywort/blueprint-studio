@@ -13,7 +13,7 @@ describe('AddForm (T-035)', () => {
       new AddForm({
         id: toApplicationFormId('form-2'),
         title: 'Вторая форма',
-        steps: [{ id: toFormStepId('step-2-1'), components: [] }],
+        steps: [{ id: toFormStepId('step-2-1'), elements: [] }],
       }),
     );
 

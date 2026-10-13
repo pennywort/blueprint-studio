@@ -25,19 +25,20 @@ export function createSampleGraph(): ServiceGraph {
     homePage: {
       id: toPageId('demo-home'),
       orderIndex: 0,
-      listItems: [
+      elements: [
         {
           id: toElementId('demo-home-item-deposits'),
+          kind: 'listItem',
           title: 'Вклады',
           secondaryText: 'Подбор и открытие вклада',
         },
         {
           id: toElementId('demo-home-item-documents'),
+          kind: 'listItem',
           title: 'Документы',
           secondaryText: 'Справки и выписки',
         },
       ],
-      widgetCards: [],
     },
     subScenarios: [
       {
@@ -45,9 +46,10 @@ export function createSampleGraph(): ServiceGraph {
         type: 'navigation',
         title: 'Подбор вклада',
         orderIndex: 1,
-        listItems: [
+        elements: [
           {
             id: toElementId('demo-scenario-deposits-item-apply'),
+            kind: 'listItem',
             title: 'Оформить заявку',
             secondaryText: 'Переход к форме заявки',
           },
@@ -60,16 +62,29 @@ export function createSampleGraph(): ServiceGraph {
         orderIndex: 2,
         // Больше 6 элементов — узел демонстрирует автосжатие (T-033);
         // один из скрытых элементов имеет исходящую связь и остаётся видимым.
-        listItems: [
-          { id: toElementId('demo-scenario-documents-item-1'), title: 'Справка о доходах' },
-          { id: toElementId('demo-scenario-documents-item-2'), title: 'Выписка по счёту' },
-          { id: toElementId('demo-scenario-documents-item-3'), title: 'Справка с места работы' },
-          { id: toElementId('demo-scenario-documents-item-4'), title: 'Налоговая декларация' },
-          { id: toElementId('demo-scenario-documents-item-5'), title: 'Выписка из ЕГРН' },
-          { id: toElementId('demo-scenario-documents-item-6'), title: 'Справка об отсутствии задолженности' },
-          { id: toElementId('demo-scenario-documents-item-7'), title: 'Копия паспорта' },
+        elements: [
+          { id: toElementId('demo-scenario-documents-item-1'), kind: 'listItem', title: 'Справка о доходах' },
+          { id: toElementId('demo-scenario-documents-item-2'), kind: 'listItem', title: 'Выписка по счёту' },
+          {
+            id: toElementId('demo-scenario-documents-item-3'),
+            kind: 'listItem',
+            title: 'Справка с места работы',
+          },
+          {
+            id: toElementId('demo-scenario-documents-item-4'),
+            kind: 'listItem',
+            title: 'Налоговая декларация',
+          },
+          { id: toElementId('demo-scenario-documents-item-5'), kind: 'listItem', title: 'Выписка из ЕГРН' },
+          {
+            id: toElementId('demo-scenario-documents-item-6'),
+            kind: 'listItem',
+            title: 'Справка об отсутствии задолженности',
+          },
+          { id: toElementId('demo-scenario-documents-item-7'), kind: 'listItem', title: 'Копия паспорта' },
           {
             id: toElementId('demo-scenario-documents-item-8'),
+            kind: 'listItem',
             title: 'Заявление на выдачу',
             secondaryText: 'Переход к форме заявки',
           },
@@ -85,7 +100,7 @@ export function createSampleGraph(): ServiceGraph {
           {
             id: toFormStepId('demo-form-deposit-step-1'),
             title: 'Первый шаг',
-            components: [
+            elements: [
               {
                 id: toFormComponentId('demo-field-amount'),
                 kind: 'textField',
@@ -143,7 +158,7 @@ export function createSampleGraph(): ServiceGraph {
           {
             id: toFormStepId('demo-form-deposit-step-2'),
             title: 'Второй шаг',
-            components: [
+            elements: [
               {
                 id: toFormComponentId('demo-field-comment'),
                 kind: 'textField',

@@ -1,5 +1,5 @@
 import { CANVAS_LAYOUT, FORM_STEP_LAYOUT } from '../canvas-layout';
-import type { ElementDndKind } from '../element-dnd';
+import { ELEMENT_DND_KINDS, type ElementDndKind } from '../element-dnd';
 import type { CanvasNodeType } from '../graph-flow-adapter';
 
 // Политика слоя [owner 2026-10-13]: всё, чем слои редактора отличаются друг
@@ -35,11 +35,11 @@ export const PAGE_LAYER_POLICY: LayerPolicy<CanvasNodeType> = {
 };
 
 // Шаг формы: колонки по правилам «Сложной логики», карточки меньше.
-// Состав — компоненты форм: домен пока хранит в шаге только их (MoveElement);
-// универсальные элементы [owner 2026-10-13] — расширением movableKinds.
+// Состав — любые элементы канваса (универсальные элементы [owner 2026-10-13]:
+// List item/Widget card переносятся в шаг наравне с компонентами форм).
 export const FORM_STEP_LAYER_POLICY: LayerPolicy<ElementDndKind> = {
   columnWidth: FORM_STEP_LAYOUT.elementWidth,
   columnGap: FORM_STEP_LAYOUT.columnGap,
   allowNewLayer: true,
-  movableKinds: ['formComponent'],
+  movableKinds: ELEMENT_DND_KINDS,
 };

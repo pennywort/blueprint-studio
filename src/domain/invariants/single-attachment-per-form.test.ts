@@ -19,11 +19,11 @@ const attachment = (id: string): Attachment => ({
 });
 
 const graphWithForms = (
-  forms: { id: string; steps: { id: string; components: Attachment[] }[] }[],
+  forms: { id: string; steps: { id: string; elements: Attachment[] }[] }[],
 ): ServiceGraph => ({
   id: toBlueprintId('bp-1'),
   title: 'Тестовая карта',
-  homePage: { id: toPageId('home-1'), orderIndex: 0, listItems: [], widgetCards: [] },
+  homePage: { id: toPageId('home-1'), orderIndex: 0, elements: [] },
   subScenarios: [],
   applicationForms: forms.map((form) => ({
     id: toApplicationFormId(form.id),
@@ -31,7 +31,7 @@ const graphWithForms = (
     orderIndex: 0,
     steps: form.steps.map((step) => ({
       id: toFormStepId(step.id),
-      components: step.components,
+      elements: step.elements,
     })),
   })),
   links: [],
@@ -40,20 +40,20 @@ const graphWithForms = (
 
 describe('checkSingleAttachmentPerForm (инвариант #1)', () => {
   it('форма без вложений — без нарушений', () => {
-    const graph = graphWithForms([{ id: 'form-1', steps: [{ id: 'step-1', components: [] }] }]);
+    const graph = graphWithForms([{ id: 'form-1', steps: [{ id: 'step-1', elements: [] }] }]);
     expect(checkSingleAttachmentPerForm(graph)).toEqual([]);
   });
 
   it('одно вложение на форму — без нарушений', () => {
     const graph = graphWithForms([
-      { id: 'form-1', steps: [{ id: 'step-1', components: [attachment('cmp-1')] }] },
+      { id: 'form-1', steps: [{ id: 'step-1', elements: [attachment('cmp-1')] }] },
     ]);
     expect(checkSingleAttachmentPerForm(graph)).toEqual([]);
   });
 
   it('два вложения в одном шаге — нарушение', () => {
     const graph = graphWithForms([
-      { id: 'form-1', steps: [{ id: 'step-1', components: [attachment('cmp-1'), attachment('cmp-2')] }] },
+      { id: 'form-1', steps: [{ id: 'step-1', elements: [attachment('cmp-1'), attachment('cmp-2')] }] },
     ]);
     const violations = checkSingleAttachmentPerForm(graph);
     expect(violations).toHaveLength(1);
@@ -65,8 +65,8 @@ describe('checkSingleAttachmentPerForm (инвариант #1)', () => {
       {
         id: 'form-1',
         steps: [
-          { id: 'step-1', components: [attachment('cmp-1')] },
-          { id: 'step-2', components: [attachment('cmp-2')] },
+          { id: 'step-1', elements: [attachment('cmp-1')] },
+          { id: 'step-2', elements: [attachment('cmp-2')] },
         ],
       },
     ]);
@@ -75,8 +75,8 @@ describe('checkSingleAttachmentPerForm (инвариант #1)', () => {
 
   it('две формы по одному вложению в каждой — без нарушений', () => {
     const graph = graphWithForms([
-      { id: 'form-1', steps: [{ id: 'step-1', components: [attachment('cmp-1')] }] },
-      { id: 'form-2', steps: [{ id: 'step-2', components: [attachment('cmp-2')] }] },
+      { id: 'form-1', steps: [{ id: 'step-1', elements: [attachment('cmp-1')] }] },
+      { id: 'form-2', steps: [{ id: 'step-2', elements: [attachment('cmp-2')] }] },
     ]);
     expect(checkSingleAttachmentPerForm(graph)).toEqual([]);
   });
@@ -85,9 +85,7 @@ describe('checkSingleAttachmentPerForm (инвариант #1)', () => {
     const graph = graphWithForms([
       {
         id: 'form-1',
-        steps: [
-          { id: 'step-1', components: [attachment('cmp-1'), attachment('cmp-2'), attachment('cmp-3')] },
-        ],
+        steps: [{ id: 'step-1', elements: [attachment('cmp-1'), attachment('cmp-2'), attachment('cmp-3')] }],
       },
     ]);
     const violations = checkSingleAttachmentPerForm(graph);

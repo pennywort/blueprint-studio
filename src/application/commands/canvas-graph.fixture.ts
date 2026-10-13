@@ -42,8 +42,10 @@ export const makeCanvasGraph = (): ServiceGraph => ({
   homePage: {
     id: toPageId('home-1'),
     orderIndex: 0,
-    listItems: [{ id: toElementId('el-home-1'), title: 'Пункт главной' }],
-    widgetCards: [{ id: toElementId('el-widget-1'), title: 'Виджет' }],
+    elements: [
+      { id: toElementId('el-home-1'), kind: 'listItem', title: 'Пункт главной' },
+      { id: toElementId('el-widget-1'), kind: 'widgetCard', title: 'Виджет' },
+    ],
   },
   subScenarios: [
     {
@@ -51,7 +53,7 @@ export const makeCanvasGraph = (): ServiceGraph => ({
       type: 'link',
       title: 'Подсценарий 1',
       orderIndex: 1,
-      listItems: [{ id: toElementId('el-sc-1'), title: 'Пункт подсценария' }],
+      elements: [{ id: toElementId('el-sc-1'), kind: 'listItem', title: 'Пункт подсценария' }],
       link: { url: 'https://example.com' },
     },
     {
@@ -59,14 +61,14 @@ export const makeCanvasGraph = (): ServiceGraph => ({
       type: 'navigation',
       title: 'Подсценарий 2',
       orderIndex: 2,
-      listItems: [],
+      elements: [],
       children: [
         {
           id: toScenarioId('sc-3'),
           type: 'navigation',
           title: 'Вложенный подсценарий',
           orderIndex: 3,
-          listItems: [{ id: toElementId('el-sc-3'), title: 'Пункт вложенного' }],
+          elements: [{ id: toElementId('el-sc-3'), kind: 'listItem', title: 'Пункт вложенного' }],
         },
       ],
     },
@@ -77,8 +79,8 @@ export const makeCanvasGraph = (): ServiceGraph => ({
       title: 'Форма заявки',
       orderIndex: 4,
       steps: [
-        { id: toFormStepId('step-1'), components: [textField('cmp-1')] },
-        { id: toFormStepId('step-2'), components: [] },
+        { id: toFormStepId('step-1'), elements: [textField('cmp-1')] },
+        { id: toFormStepId('step-2'), elements: [] },
       ],
     },
   ],

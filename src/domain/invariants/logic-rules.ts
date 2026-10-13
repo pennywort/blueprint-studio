@@ -1,5 +1,6 @@
 import type { ServiceGraph } from '../model/service-graph';
 import type { SelectList } from '../model/form-components';
+import type { CanvasElement } from '../model/canvas-element';
 import type { InvariantViolation } from './index';
 
 // Инварианты «Сложной логики» (T-037/T-063, дизайн-док §5): защита данных —
@@ -9,19 +10,22 @@ import type { InvariantViolation } from './index';
 
 const RULE_ID = 'complex-logic';
 
-// Компонент формы с контекстом: форма-владелец нужна правилу «внутри одной
-// формы» (L-I5), option'ы — правилу «существующее значение списка» (L-I2).
+// Элемент шага формы с контекстом: шаг-владелец нужен правилу «внутри
+// одного шага» (L-I5), option'ы — правилу «существующее значение списка»
+// (L-I2). Элементы страниц сюда не попадают: правило на них — ссылка на
+// элемент вне шага, отклоняется как L-I3 [owner 2026-10-13: элемент шага —
+// любой элемент канваса, логика — по-прежнему только в шагах].
 type ComponentContext = {
   formId: string;
   stepId: string;
-  component: ServiceGraph['applicationForms'][number]['steps'][number]['components'][number];
+  component: CanvasElement;
 };
 
 function collectComponents(graph: ServiceGraph): Map<string, ComponentContext> {
   const components = new Map<string, ComponentContext>();
   for (const form of graph.applicationForms) {
     for (const step of form.steps) {
-      for (const component of step.components) {
+      for (const component of step.elements) {
         components.set(component.id, { formId: form.id, stepId: step.id, component });
       }
     }

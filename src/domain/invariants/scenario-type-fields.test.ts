@@ -8,14 +8,14 @@ const scenario = (partial: Partial<SubScenario> & Pick<SubScenario, 'type'>): Su
   id: toScenarioId(`sc-${partial.type}`),
   title: 'Сценарий',
   orderIndex: 0,
-  listItems: [],
+  elements: [],
   ...partial,
 });
 
 const graphWith = (subScenarios: SubScenario[]): ServiceGraph => ({
   id: toBlueprintId('bp-1'),
   title: 'Тестовая карта',
-  homePage: { id: toPageId('home-1'), orderIndex: 0, listItems: [], widgetCards: [] },
+  homePage: { id: toPageId('home-1'), orderIndex: 0, elements: [] },
   subScenarios,
   applicationForms: [],
   links: [],

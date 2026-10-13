@@ -3,6 +3,7 @@ import type { Connection } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { FormComponent } from '@domain/model/form-components';
 import type { FormComponentKind } from '@domain/model/form-components';
+import { isFormComponentKind } from '@domain/model/canvas-element';
 import {
   toApplicationFormId,
   toElementId,
@@ -107,6 +108,8 @@ function parseConnectionSource(handleId: string | null | undefined): ConnectionS
 // правила видимости, где он — цель (T-067).
 export type SelectedElementInfo = {
   component: FormComponent;
+  /** Элемент лежит в шаге формы — только там возможна «Сложная логика» (L-I5). */
+  inFormStep: boolean;
   incomingRules: { ruleId: LogicRuleId; sourceLabel: string; optionLabel: string | null }[];
 };
 
@@ -296,8 +299,10 @@ export function useEditorGraph() {
     if (!selectedElementId) {
       return null;
     }
-    const found = findFormComponent(graph, selectedElementId);
-    if (!found) {
+    // Компонент формы в любом блоке [owner 2026-10-13]: схема — по kind.
+    const location = findElementLocation(graph, selectedElementId);
+    const component = location?.list[location.index];
+    if (!component || !isFormComponentKind(component.kind)) {
       return null;
     }
     const incomingRules = graph.logicRules
@@ -312,7 +317,11 @@ export function useEditorGraph() {
         }
         return { ruleId: rule.id, sourceLabel, optionLabel };
       });
-    return { component: found.component, incomingRules };
+    return {
+      component: component as FormComponent,
+      inFormStep: location!.container.kind === 'formStep',
+      incomingRules,
+    };
   }, [graph, selectedElementId]);
 
   const runCommand = useCallback(
@@ -473,7 +482,7 @@ export function useEditorGraph() {
       const depths = computeGraphDepths(graphRef.current);
       const nextDepth = depths.size === 0 ? 0 : Math.max(...depths.values()) + 1;
       if (kind === 'home') {
-        runCommand(new AddHomePage({ id: toPageId(idGenerator.next()), listItems: [], widgetCards: [] }));
+        runCommand(new AddHomePage({ id: toPageId(idGenerator.next()), elements: [] }));
         return;
       }
       if (kind === 'subScenario') {
@@ -482,7 +491,7 @@ export function useEditorGraph() {
             id: toScenarioId(idGenerator.next()),
             type: 'navigation',
             title: NEW_SCENARIO_TITLE,
-            listItems: [],
+            elements: [],
             layerDepth: nextDepth,
           }),
         );
@@ -494,7 +503,7 @@ export function useEditorGraph() {
         new AddForm({
           id: toApplicationFormId(idGenerator.next()),
           title: NEW_FORM_TITLE,
-          steps: [{ id: toFormStepId(idGenerator.next()), components: [] }],
+          steps: [{ id: toFormStepId(idGenerator.next()), elements: [] }],
           layerDepth: nextDepth,
         }),
       );
@@ -567,21 +576,17 @@ export function useEditorGraph() {
         );
         return;
       }
-      const elementId = toElementId(idGenerator.next());
-      if (selectedNodeType === 'home' && kind === 'widgetCard') {
-        runCommand(
-          new AddElement({ kind: 'homeWidgetCards' }, { id: elementId, title: NEW_LIST_ITEM_TITLE }),
-        );
-        return;
-      }
-      if (selectedNodeType === 'home') {
-        runCommand(new AddElement({ kind: 'homeListItems' }, { id: elementId, title: NEW_LIST_ITEM_TITLE }));
-        return;
-      }
+      const element = {
+        id: toElementId(idGenerator.next()),
+        kind: kind === 'widgetCard' ? ('widgetCard' as const) : ('listItem' as const),
+        title: NEW_LIST_ITEM_TITLE,
+      };
       runCommand(
         new AddElement(
-          { kind: 'subScenarioListItems', scenarioId: selectedNodeId as ScenarioId },
-          { id: elementId, title: NEW_LIST_ITEM_TITLE },
+          selectedNodeType === 'home'
+            ? { kind: 'home' }
+            : { kind: 'subScenario', scenarioId: selectedNodeId as ScenarioId },
+          element,
         ),
       );
     },
@@ -629,14 +634,13 @@ export function useEditorGraph() {
   // «+ Добавить шаг» на узле формы (N3): пустая колонка в конец формы.
   const addFormStep = useCallback(
     (formId: ApplicationFormId) => {
-      runCommand(new AddFormStep(formId, { id: toFormStepId(idGenerator.next()), components: [] }));
+      runCommand(new AddFormStep(formId, { id: toFormStepId(idGenerator.next()), elements: [] }));
     },
     [idGenerator, runCommand],
   );
 
-  // Drop карточки элемента (N2): цель зависит от вида узла-приёмника
-  // (доменные ограничения видов списков — полная проверка в команде
-  // MoveElement, здесь только выбор приёмника). Якорь — позиция вставки.
+  // Drop карточки элемента (N2): приёмник — блок узла (у формы — шаг);
+  // вид элемента блок не ограничивает [owner 2026-10-13]. Якорь — позиция вставки.
   const moveElement = useCallback(
     (
       nodeId: string,
@@ -648,12 +652,12 @@ export function useEditorGraph() {
     ) => {
       let target: MoveElementTarget;
       if (nodeType === 'home') {
-        target = dragged.kind === 'widgetCard' ? { kind: 'homeWidgetCards' } : { kind: 'homeListItems' };
+        target = { kind: 'home' };
       } else if (nodeType === 'subScenario') {
-        target = { kind: 'subScenarioListItems', scenarioId: nodeId as ScenarioId };
+        target = { kind: 'subScenario', scenarioId: nodeId as ScenarioId };
       } else {
         if (!targetStepId) {
-          notifications.showCommandFailure('Переносите компонент в конкретный шаг формы');
+          notifications.showCommandFailure('Переносите элемент в конкретный шаг формы');
           return;
         }
         target = {
@@ -682,8 +686,8 @@ export function useEditorGraph() {
   // нативный confirm до появления диалогов дизайн-системы.
   const toggleComplexLogic = useCallback(
     (elementId: string) => {
-      const location = findElementLocation(graphRef.current, elementId);
-      const component = location?.kind === 'formComponent' ? location.list[location.index] : null;
+      // Режим логики — только у Select'а в шаге формы (L-I5).
+      const component = findFormComponent(graphRef.current, elementId)?.component;
       if (!component || component.kind !== 'selectList') {
         return;
       }

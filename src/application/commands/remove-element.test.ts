@@ -10,10 +10,10 @@ describe('RemoveElement (T-035)', () => {
 
     const after = bus.execute(before, new RemoveElement(toElementId('el-home-1')));
 
-    expect(after.homePage?.listItems).toEqual([]);
+    expect(after.homePage?.elements.map((element) => element.id)).toEqual(['el-widget-1']);
     // link-1 исходила из el-home-1 — ушла каскадом.
     expect(after.links.map((link) => link.id)).toEqual(['link-2', 'link-3']);
-    expect(before.homePage?.listItems).toHaveLength(1);
+    expect(before.homePage?.elements).toHaveLength(2);
   });
 
   it('удаляет элемент вложенного подсценария (children) с каскадом связей', () => {
@@ -22,7 +22,7 @@ describe('RemoveElement (T-035)', () => {
 
     const after = bus.execute(before, new RemoveElement(toElementId('el-sc-3')));
 
-    expect(after.subScenarios[1]?.children?.[0]?.listItems).toEqual([]);
+    expect(after.subScenarios[1]?.children?.[0]?.elements).toEqual([]);
     expect(after.links.map((link) => link.id)).toEqual(['link-1', 'link-2']);
   });
 
@@ -32,7 +32,7 @@ describe('RemoveElement (T-035)', () => {
 
     const after = bus.execute(before, new RemoveElement(toFormComponentId('cmp-1')));
 
-    expect(after.applicationForms[0]?.steps[0]?.components).toEqual([]);
+    expect(after.applicationForms[0]?.steps[0]?.elements).toEqual([]);
   });
 
   it('несуществующий элемент — понятная ошибка, состояние не трогается', () => {

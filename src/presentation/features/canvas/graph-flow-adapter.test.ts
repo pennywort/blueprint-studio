@@ -20,8 +20,10 @@ const makeGraph = (): ServiceGraph => ({
   homePage: {
     id: toPageId('home-1'),
     orderIndex: 0,
-    listItems: [{ id: toElementId('el-home-1'), title: 'Пункт главной' }],
-    widgetCards: [{ id: toElementId('el-widget-1'), title: 'Виджет' }],
+    elements: [
+      { id: toElementId('el-home-1'), kind: 'listItem', title: 'Пункт главной' },
+      { id: toElementId('el-widget-1'), kind: 'widgetCard', title: 'Виджет' },
+    ],
   },
   subScenarios: [
     {
@@ -29,14 +31,14 @@ const makeGraph = (): ServiceGraph => ({
       type: 'navigation',
       title: 'Подсценарий 1',
       orderIndex: 1,
-      listItems: [{ id: toElementId('el-sc-1'), title: 'Пункт подсценария' }],
+      elements: [{ id: toElementId('el-sc-1'), kind: 'listItem', title: 'Пункт подсценария' }],
       children: [
         {
           id: toScenarioId('sc-2'),
           type: 'navigation',
           title: 'Вложенный',
           orderIndex: 2,
-          listItems: [],
+          elements: [],
         },
       ],
     },
@@ -46,7 +48,7 @@ const makeGraph = (): ServiceGraph => ({
       id: toApplicationFormId('form-1'),
       title: 'Форма А',
       orderIndex: 3,
-      steps: [{ id: toFormStepId('step-1'), components: [] }],
+      steps: [{ id: toFormStepId('step-1'), elements: [] }],
     },
     { id: toApplicationFormId('form-2'), title: 'Форма Б', orderIndex: 4, steps: [] },
   ],
@@ -93,7 +95,13 @@ describe('graphToFlow (T-030): страницы → узлы', () => {
     });
     expect(scenario?.data.elements).toEqual([
       // hasOutgoingLink — из links графа: у el-sc-1 есть исходящая связь (link-2).
-      { id: 'el-sc-1', title: 'Пункт подсценария', kindLabel: 'List item', hasOutgoingLink: true },
+      {
+        id: 'el-sc-1',
+        kind: 'listItem',
+        title: 'Пункт подсценария',
+        kindLabel: 'List item',
+        hasOutgoingLink: true,
+      },
     ]);
     const form = nodes.find((node) => node.id === 'form-1');
     expect(form?.data).toMatchObject({
@@ -102,7 +110,7 @@ describe('graphToFlow (T-030): страницы → узлы', () => {
       depth: 2,
       formKindLabel: 'Одностраничная',
     });
-    expect(form?.data.steps).toEqual([{ id: 'step-1', title: '', elements: [] }]);
+    expect(form?.data.steps).toEqual([{ id: 'step-1', kind: 'listItem', title: '', elements: [] }]);
     expect(nodes.find((node) => node.id === 'form-2')?.data.orderIndex).toBe(4);
   });
 

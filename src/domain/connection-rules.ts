@@ -1,6 +1,7 @@
 import type { ServiceGraph } from './model/service-graph';
 import type { SubScenario } from './model/scenario';
 import { computeGraphDepths } from './graph-depths';
+import { findElementInGraph } from './element-containers';
 
 // Правила «с чем можно соединиться» (повторная приёмка Epic 002, [owner
 // 2026-10-13]) — единый источник для подсветки допустимых целей во время
@@ -34,23 +35,9 @@ function* walkScenarios(subScenarios: SubScenario[]): Generator<SubScenario> {
   }
 }
 
-// Страница — владелец элемента (элементы страниц и компоненты форм).
+// Страница — владелец элемента (любой блок, [owner 2026-10-13]).
 function findOwnerPageId(graph: ServiceGraph, elementId: string): string | null {
-  const home = graph.homePage;
-  if (home && [...home.listItems, ...home.widgetCards].some((item) => item.id === elementId)) {
-    return home.id;
-  }
-  for (const scenario of walkScenarios(graph.subScenarios)) {
-    if (scenario.listItems.some((item) => item.id === elementId)) {
-      return scenario.id;
-    }
-  }
-  for (const form of graph.applicationForms) {
-    if (form.steps.some((step) => step.components.some((component) => component.id === elementId))) {
-      return form.id;
-    }
-  }
-  return null;
+  return findElementInGraph(graph, elementId)?.container.pageId ?? null;
 }
 
 function navigationTargets(graph: ServiceGraph, elementId: string): ConnectableTargets {
@@ -96,38 +83,36 @@ function wouldCreateCycle(graph: ServiceGraph, sourceId: string, targetId: strin
 }
 
 function logicTargets(graph: ServiceGraph, elementId: string, optionId: string): ConnectableTargets {
-  for (const form of graph.applicationForms) {
-    for (const step of form.steps) {
-      const source = step.components.find((component) => component.id === elementId);
-      if (!source) {
-        continue;
-      }
-      if (source.kind !== 'selectList' || !source.hasComplexLogic) {
-        return NONE;
-      }
-      // У цели — не больше одного правила видимости (L-I7, временно [owner
-      // 2026-10-13]): элемент, уже зависящий от варианта, — не цель.
-      const ruleTargets = new Set<string>(graph.logicRules.map((rule) => rule.targetElementId));
-      const elements = new Set<string>();
-      for (const component of step.components) {
-        if (ruleTargets.has(component.id)) {
-          continue;
-        }
-        const duplicate = graph.logicRules.some(
-          (rule) =>
-            rule.sourceElementId === elementId &&
-            (rule.targetElementId as string) === component.id &&
-            rule.condition.kind === 'optionSelected' &&
-            rule.condition.optionId === optionId,
-        );
-        if (component.id !== elementId && !duplicate && !wouldCreateCycle(graph, elementId, component.id)) {
-          elements.add(component.id);
-        }
-      }
-      return { pages: new Set(), elements };
+  // Логика — только внутри шага формы (L-I5/ADR-14): Select на странице
+  // источником правила не бывает; цель — любой элемент шага [owner 2026-10-13].
+  const found = findElementInGraph(graph, elementId);
+  if (!found || found.container.kind !== 'formStep') {
+    return NONE;
+  }
+  const source = found.element;
+  if (source.kind !== 'selectList' || !source.hasComplexLogic) {
+    return NONE;
+  }
+  // У цели — не больше одного правила видимости (L-I7, временно [owner
+  // 2026-10-13]): элемент, уже зависящий от варианта, — не цель.
+  const ruleTargets = new Set<string>(graph.logicRules.map((rule) => rule.targetElementId));
+  const elements = new Set<string>();
+  for (const element of found.container.elements) {
+    if (ruleTargets.has(element.id)) {
+      continue;
+    }
+    const duplicate = graph.logicRules.some(
+      (rule) =>
+        rule.sourceElementId === elementId &&
+        (rule.targetElementId as string) === element.id &&
+        rule.condition.kind === 'optionSelected' &&
+        rule.condition.optionId === optionId,
+    );
+    if (element.id !== elementId && !duplicate && !wouldCreateCycle(graph, elementId, element.id)) {
+      elements.add(element.id);
     }
   }
-  return NONE;
+  return { pages: new Set(), elements };
 }
 
 export function connectableTargets(graph: ServiceGraph, source: ConnectionSource): ConnectableTargets {

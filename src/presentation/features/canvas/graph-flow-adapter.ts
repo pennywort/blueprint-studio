@@ -2,6 +2,7 @@ import type { Connection, Edge, Node, XYPosition } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ListItem, WidgetCard } from '@domain/model/scenario';
 import type { FormComponent, FormComponentKind } from '@domain/model/form-components';
+import type { CanvasElement } from '@domain/model/canvas-element';
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
 import { toElementId, type ElementId, type PageEntityId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
@@ -107,9 +108,9 @@ export type CanvasElementData = {
   violations?: readonly string[];
   /**
    * Карточка может быть целью правил «Сложной логики» — target-handle на
-   * левом краю. Только компоненты форм (источник — Select той же формы,
-   * L-I5); у List item/Widget card handle не рисуется — соединить его
-   * доменно невозможно, лишняя точка-коннектор путает (N5).
+   * левом краю. Только элементы шагов форм (источник — Select того же шага,
+   * L-I5), любого вида [owner 2026-10-13]; у элементов страниц handle не
+   * рисуется — соединить его доменно невозможно, лишняя точка путает (N5).
    */
   logicTarget: boolean;
   /** Класс элемента для dnd: допустимые зоны приёма зависят от вида (N2). */
@@ -224,19 +225,50 @@ function navigationLevelLabel(level: number): string {
   return ordinal ? `${ordinal} уровень навигации` : `Уровень навигации ${level}`;
 }
 
+// Контекст маппинга элементов: связи и правила графа; inStep — элемент
+// лежит в шаге формы (логика возможна только там, L-I5/ADR-14).
+type ElementMapContext = {
+  linkSources: ReadonlySet<string>;
+  logicTargets: ReadonlySet<string>;
+  logicHidden: ReadonlySet<string>;
+};
+
+// Любой элемент — в любом блоке [owner 2026-10-13]: вид карточки задаёт
+// kind элемента, а возможности «Сложной логики» — блок (только шаг формы).
+function elementToElementData(
+  element: CanvasElement,
+  context: ElementMapContext,
+  inStep: boolean,
+): CanvasElementData {
+  const data =
+    element.kind === 'listItem' || element.kind === 'widgetCard'
+      ? listItemToElementData(element, context.linkSources)
+      : formComponentToElementData(element, context.linkSources, context.logicTargets, context.logicHidden);
+  if (inStep) {
+    data.logicTarget = true;
+    data.hasIncomingLogic = context.logicTargets.has(element.id);
+    data.hiddenByLogic = context.logicHidden.has(element.id);
+    return data;
+  }
+  // На странице правил нет: ни цели, ни переключателя режима у Select'а.
+  data.logicTarget = false;
+  delete data.complexLogic;
+  delete data.hasIncomingLogic;
+  delete data.hiddenByLogic;
+  return data;
+}
+
 function listItemToElementData(
   item: ListItem | WidgetCard,
-  kindLabel: string,
   linkSources: ReadonlySet<string>,
-  dndKind: 'listItem' | 'widgetCard',
 ): CanvasElementData {
   const element: CanvasElementData = {
     id: item.id,
     title: item.title,
-    kindLabel,
+    kindLabel: item.kind === 'widgetCard' ? 'Widget card' : 'List item',
     hasOutgoingLink: linkSources.has(item.id),
     logicTarget: false,
-    dndKind,
+    dndKind: item.kind,
   };
   if (item.secondaryText) {
     element.secondaryText = item.secondaryText;
@@ -324,6 +356,8 @@ export function graphToFlow(
     }
   }
 
+  const elementContext: ElementMapContext = { linkSources, logicTargets, logicHidden };
+
   const nodes: CanvasNode[] = [];
   // Владелец элемента → id узла: нужен, чтобы ребро вышло из узла страницы,
   // а его sourceHandle указывал на карточку элемента внутри (D9).
@@ -340,23 +374,13 @@ export function graphToFlow(
         orderIndex: homePage.orderIndex,
         depth: depths.get(homePage.id) ?? 0,
         subtitle: HOME_NODE_SUBTITLE,
-        elements: [
-          ...homePage.listItems.map((item) =>
-            listItemToElementData(item, 'List item', linkSources, 'listItem'),
-          ),
-          ...homePage.widgetCards.map((card) =>
-            listItemToElementData(card, 'Widget card', linkSources, 'widgetCard'),
-          ),
-        ],
+        elements: homePage.elements.map((element) => elementToElementData(element, elementContext, false)),
         steps: [],
         formKindLabel: null,
       },
     });
-    for (const item of homePage.listItems) {
-      elementOwnerNodeId.set(item.id, homePage.id);
-    }
-    for (const card of homePage.widgetCards) {
-      elementOwnerNodeId.set(card.id, homePage.id);
+    for (const element of homePage.elements) {
+      elementOwnerNodeId.set(element.id, homePage.id);
     }
   }
 
@@ -371,7 +395,7 @@ export function graphToFlow(
     positionOf,
     depths,
     levelOffset,
-    linkSources,
+    elementContext,
   );
 
   for (const form of graph.applicationForms) {
@@ -392,8 +416,8 @@ export function graphToFlow(
           return {
             id: step.id,
             title: step.title ?? '',
-            elements: step.components.map((component) => ({
-              ...formComponentToElementData(component, linkSources, logicTargets, logicHidden),
+            elements: step.elements.map((component) => ({
+              ...elementToElementData(component, elementContext, true),
               layerDepth: stepDepths.get(component.id) ?? 0,
               ...(logicParents.has(component.id)
                 ? { logicParentHandleId: logicParents.get(component.id)! }
@@ -405,7 +429,7 @@ export function graphToFlow(
       },
     });
     for (const step of form.steps) {
-      for (const component of step.components) {
+      for (const component of step.elements) {
         elementOwnerNodeId.set(component.id, form.id);
       }
     }
@@ -471,7 +495,7 @@ function collectSubScenarioNodes(
   positionOf: (id: string) => XYPosition,
   depths: ReadonlyMap<string, number>,
   levelOffset: number,
-  linkSources: ReadonlySet<string>,
+  elementContext: ElementMapContext,
 ): void {
   for (const scenario of subScenarios) {
     const depth = depths.get(scenario.id) ?? 0;
@@ -484,15 +508,13 @@ function collectSubScenarioNodes(
         orderIndex: scenario.orderIndex,
         depth,
         subtitle: navigationLevelLabel(depth + levelOffset || 1),
-        elements: scenario.listItems.map((item) =>
-          listItemToElementData(item, 'List item', linkSources, 'listItem'),
-        ),
+        elements: scenario.elements.map((element) => elementToElementData(element, elementContext, false)),
         steps: [],
         formKindLabel: null,
       },
     });
-    for (const item of scenario.listItems) {
-      elementOwnerNodeId.set(item.id, scenario.id);
+    for (const element of scenario.elements) {
+      elementOwnerNodeId.set(element.id, scenario.id);
     }
     if (scenario.children) {
       collectSubScenarioNodes(
@@ -502,7 +524,7 @@ function collectSubScenarioNodes(
         positionOf,
         depths,
         levelOffset,
-        linkSources,
+        elementContext,
       );
     }
   }

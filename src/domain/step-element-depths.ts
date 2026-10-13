@@ -7,22 +7,23 @@ import { computeLayerDepths, type LayerEdge } from './layer-depths';
 // такой же слоёный граф, как канвас страниц, но рёбра — правила «Сложной
 // логики» (L-I5/ADR-14: источник и цель — в одном шаге). Источник левее,
 // цель — на колонку правее; элемент без входящих правил — корень (колонка 0),
-// если пользователь не перенёс его в другую колонку (layerDepth компонента).
+// если пользователь не перенёс его в другую колонку (layerDepth элемента;
+// элемент шага — любой элемент канваса [owner 2026-10-13]).
 // Обход — общее ядро computeLayerDepths, что и у страниц.
 
 export function computeStepElementDepths(
   step: FormStep,
   logicRules: readonly LogicRule[],
 ): Map<string, number> {
-  const ids = step.components.map((component) => component.id as string);
+  const ids = step.elements.map((element) => element.id as string);
   const edges: LayerEdge[] = logicRules.map((rule) => ({
     from: rule.sourceElementId,
     to: rule.targetElementId,
   }));
   const explicitDepths = new Map<string, number>();
-  for (const component of step.components) {
-    if (component.layerDepth !== undefined) {
-      explicitDepths.set(component.id, component.layerDepth);
+  for (const element of step.elements) {
+    if (element.layerDepth !== undefined) {
+      explicitDepths.set(element.id, element.layerDepth);
     }
   }
   return computeLayerDepths(ids, edges, explicitDepths);

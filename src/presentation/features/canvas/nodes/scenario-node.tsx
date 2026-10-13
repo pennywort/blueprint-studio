@@ -102,16 +102,12 @@ export function ScenarioNode({ id, data, type }: NodeProps<CanvasNode>) {
     // data.elements намеренно вне зависимостей: реагируем только на новый запрос поиска.
   }, [reveal, id, updateNodeInternals]);
 
-  // Состояние drop-зоны: подсветка во время совместимого drag + линия-индикатор
-  // якоря. Вид приёмника узла зависит от его типа (доменные ограничения).
+  // Состояние drop-зоны: подсветка во время drag карточки + линия-индикатор
+  // якоря. Узел принимает элемент любого вида [owner 2026-10-13].
   const [dndActive, setDndActive] = useState(false);
   const [anchor, setAnchor] = useState<{ elementId: string; placement: 'before' | 'after' } | null>(null);
 
-  const acceptsKind = useCallback(
-    (kind: string | null): boolean =>
-      type === 'home' ? kind === 'listItem' || kind === 'widgetCard' : kind === 'listItem',
-    [type],
-  );
+  const acceptsKind = useCallback((kind: string | null): boolean => kind !== null, []);
 
   const handleDragOver = useCallback(
     (event: DragEvent<HTMLElement>) => {

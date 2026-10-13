@@ -39,11 +39,11 @@ describe('AddElement (T-035)', () => {
 
     const after = bus.execute(
       before,
-      new AddElement({ kind: 'homeListItems' }, { id: toElementId('el-new'), title: 'Новый пункт' }),
+      new AddElement({ kind: 'home' }, { id: toElementId('el-new'), kind: 'listItem', title: 'Новый пункт' }),
     );
 
-    expect(after.homePage?.listItems.map((item) => item.id)).toEqual(['el-home-1', 'el-new']);
-    expect(before.homePage?.listItems).toHaveLength(1);
+    expect(after.homePage?.elements.map((item) => item.id)).toEqual(['el-home-1', 'el-widget-1', 'el-new']);
+    expect(before.homePage?.elements).toHaveLength(2);
   });
 
   it('добавляет WidgetCard на Главную', () => {
@@ -52,10 +52,17 @@ describe('AddElement (T-035)', () => {
 
     const after = bus.execute(
       before,
-      new AddElement({ kind: 'homeWidgetCards' }, { id: toElementId('el-widget-2'), title: 'Виджет 2' }),
+      new AddElement(
+        { kind: 'home' },
+        { id: toElementId('el-widget-2'), kind: 'widgetCard', title: 'Виджет 2' },
+      ),
     );
 
-    expect(after.homePage?.widgetCards.map((card) => card.id)).toEqual(['el-widget-1', 'el-widget-2']);
+    expect(after.homePage?.elements.map((element) => element.id)).toEqual([
+      'el-home-1',
+      'el-widget-1',
+      'el-widget-2',
+    ]);
   });
 
   it('добавляет ListItem во вложенный подсценарий (children)', () => {
@@ -65,12 +72,12 @@ describe('AddElement (T-035)', () => {
     const after = bus.execute(
       before,
       new AddElement(
-        { kind: 'subScenarioListItems', scenarioId: toScenarioId('sc-3') },
-        { id: toElementId('el-new'), title: 'Новый пункт' },
+        { kind: 'subScenario', scenarioId: toScenarioId('sc-3') },
+        { id: toElementId('el-new'), kind: 'listItem', title: 'Новый пункт' },
       ),
     );
 
-    expect(after.subScenarios[1]?.children?.[0]?.listItems.map((item) => item.id)).toEqual([
+    expect(after.subScenarios[1]?.children?.[0]?.elements.map((item) => item.id)).toEqual([
       'el-sc-3',
       'el-new',
     ]);
@@ -83,12 +90,12 @@ describe('AddElement (T-035)', () => {
     const after = bus.execute(
       before,
       new AddElement(
-        { kind: 'formStepComponents', formId: toApplicationFormId('form-1'), stepId: toFormStepId('step-2') },
+        { kind: 'formStep', formId: toApplicationFormId('form-1'), stepId: toFormStepId('step-2') },
         radioList('cmp-new', 3),
       ),
     );
 
-    expect(after.applicationForms[0]?.steps[1]?.components.map((component) => component.id)).toEqual([
+    expect(after.applicationForms[0]?.steps[1]?.elements.map((component) => component.id)).toEqual([
       'cmp-new',
     ]);
   });
@@ -99,7 +106,7 @@ describe('AddElement (T-035)', () => {
     const withFirst = bus.execute(
       before,
       new AddElement(
-        { kind: 'formStepComponents', formId: toApplicationFormId('form-1'), stepId: toFormStepId('step-1') },
+        { kind: 'formStep', formId: toApplicationFormId('form-1'), stepId: toFormStepId('step-1') },
         attachment('cmp-att-1'),
       ),
     );
@@ -109,7 +116,7 @@ describe('AddElement (T-035)', () => {
         withFirst,
         new AddElement(
           {
-            kind: 'formStepComponents',
+            kind: 'formStep',
             formId: toApplicationFormId('form-1'),
             stepId: toFormStepId('step-2'),
           },
@@ -128,7 +135,7 @@ describe('AddElement (T-035)', () => {
     expect(() =>
       bus.execute(
         withoutHome,
-        new AddElement({ kind: 'homeListItems' }, { id: toElementId('el-new'), title: 'Пункт' }),
+        new AddElement({ kind: 'home' }, { id: toElementId('el-new'), kind: 'listItem', title: 'Пункт' }),
       ),
     ).toThrow(/Главная страница отсутствует/);
   });
@@ -141,8 +148,8 @@ describe('AddElement (T-035)', () => {
       bus.execute(
         before,
         new AddElement(
-          { kind: 'subScenarioListItems', scenarioId: toScenarioId('sc-404') },
-          { id: toElementId('el-1'), title: 'П' },
+          { kind: 'subScenario', scenarioId: toScenarioId('sc-404') },
+          { id: toElementId('el-1'), kind: 'listItem', title: 'П' },
         ),
       ),
     ).toThrow(/Подсценарий не найден/);
@@ -151,7 +158,7 @@ describe('AddElement (T-035)', () => {
         before,
         new AddElement(
           {
-            kind: 'formStepComponents',
+            kind: 'formStep',
             formId: toApplicationFormId('form-404'),
             stepId: toFormStepId('step-1'),
           },
@@ -164,7 +171,7 @@ describe('AddElement (T-035)', () => {
         before,
         new AddElement(
           {
-            kind: 'formStepComponents',
+            kind: 'formStep',
             formId: toApplicationFormId('form-1'),
             stepId: toFormStepId('step-404'),
           },
@@ -180,7 +187,7 @@ describe('AddElement (T-035)', () => {
     expectUndoRedoRoundtrip(
       bus,
       before,
-      new AddElement({ kind: 'homeListItems' }, { id: toElementId('el-new'), title: 'Новый пункт' }),
+      new AddElement({ kind: 'home' }, { id: toElementId('el-new'), kind: 'listItem', title: 'Новый пункт' }),
     );
   });
 });

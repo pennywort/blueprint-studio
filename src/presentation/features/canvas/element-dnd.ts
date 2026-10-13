@@ -8,6 +8,9 @@
 /** Вид перетаскиваемого элемента — совместимость с зонами приёма. */
 export type ElementDndKind = 'listItem' | 'widgetCard' | 'formComponent';
 
+/** Все виды: любой элемент переносится в любой блок [owner 2026-10-13]. */
+export const ELEMENT_DND_KINDS: readonly ElementDndKind[] = ['listItem', 'widgetCard', 'formComponent'];
+
 /** Основной MIME-тип: в данных — JSON payload (id элемента). */
 export const ELEMENT_DND_MIME = 'application/x-blueprint-element';
 
@@ -36,7 +39,7 @@ export function readElementDndKind(types: readonly string[] | DOMStringList): El
   // Браузер приводит MIME-типы к нижнему регистру (dataTransfer.types) —
   // сверка без учёта регистра, иначе formComponent/listItem не распознавались.
   const lowered = Array.from(types, (type) => type.toLowerCase());
-  for (const kind of ['listItem', 'widgetCard', 'formComponent'] as const) {
+  for (const kind of ELEMENT_DND_KINDS) {
     if (lowered.includes(elementDndKindType(kind).toLowerCase())) {
       return kind;
     }

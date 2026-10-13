@@ -38,14 +38,14 @@ const attachment = (id: string): Attachment => ({
 const graphWithForm = (): ServiceGraph => ({
   id: toBlueprintId('bp-1'),
   title: 'Карта',
-  homePage: { id: toPageId('home-1'), orderIndex: 0, listItems: [], widgetCards: [] },
+  homePage: { id: toPageId('home-1'), orderIndex: 0, elements: [] },
   subScenarios: [],
   applicationForms: [
     {
       id: toApplicationFormId('form-1'),
       title: 'Форма',
       orderIndex: 0,
-      steps: [{ id: toFormStepId('step-1'), components: [] }],
+      steps: [{ id: toFormStepId('step-1'), elements: [] }],
     },
   ],
   links: [],
@@ -64,10 +64,10 @@ describe('AddFormComponent', () => {
       new AddFormComponent(toApplicationFormId('form-1'), toFormStepId('step-1'), textField('cmp-1')),
     );
 
-    expect(after.applicationForms[0]?.steps[0]?.components).toHaveLength(1);
-    expect(after.applicationForms[0]?.steps[0]?.components[0]?.kind).toBe('textField');
+    expect(after.applicationForms[0]?.steps[0]?.elements).toHaveLength(1);
+    expect(after.applicationForms[0]?.steps[0]?.elements[0]?.kind).toBe('textField');
     // Исходное состояние не мутирует.
-    expect(before.applicationForms[0]?.steps[0]?.components).toHaveLength(0);
+    expect(before.applicationForms[0]?.steps[0]?.elements).toHaveLength(0);
   });
 
   it('execute → undo → redo с добавленным компонентом', () => {

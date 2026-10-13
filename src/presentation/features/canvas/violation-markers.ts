@@ -47,7 +47,7 @@ export function mapViolationsToCanvas(
     const form = /^applicationForms\[([^\]]+)\]/.exec(path);
     if (form) {
       push(nodes, form[1]!, message);
-      const component = /components\[([^\]]+)\]/.exec(path);
+      const component = /elements\[([^\]]+)\]/.exec(path);
       if (component) {
         push(elements, component[1]!, message);
       }
@@ -57,6 +57,11 @@ export function mapViolationsToCanvas(
     const page = /^pages\[([^\]]+)\]/.exec(path);
     if (page) {
       push(nodes, page[1]!, message);
+      // Элемент страницы (любой вид, [owner 2026-10-13]) — elementViolationPath.
+      const element = /elements\[([^\]]+)\]/.exec(path);
+      if (element) {
+        push(elements, element[1]!, message);
+      }
       continue;
     }
 

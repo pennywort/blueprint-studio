@@ -16,10 +16,10 @@ describe('UpdateElementProps (T-035)', () => {
       new UpdateElementProps(toFormComponentId('cmp-1'), { label: 'ФИО', required: true }),
     );
 
-    const component = after.applicationForms[0]?.steps[0]?.components[0];
+    const component = after.applicationForms[0]?.steps[0]?.elements[0];
     expect(component).toMatchObject({ label: 'ФИО', required: true, kind: 'textField' });
     // Исходный граф не мутирует.
-    expect(before.applicationForms[0]?.steps[0]?.components[0]).toMatchObject({
+    expect(before.applicationForms[0]?.steps[0]?.elements[0]).toMatchObject({
       label: 'Поле',
       required: false,
     });
@@ -34,7 +34,7 @@ describe('UpdateElementProps (T-035)', () => {
       new UpdateElementProps(toElementId('el-home-1'), { title: 'Новое название' }),
     );
 
-    expect(after.homePage?.listItems[0]?.title).toBe('Новое название');
+    expect(after.homePage?.elements[0]).toMatchObject({ title: 'Новое название' });
   });
 
   it('запрещает менять id и kind элемента', () => {
@@ -73,7 +73,7 @@ describe('UpdateElementProps (T-035)', () => {
     const withRadio = bus.execute(
       before,
       new AddElement(
-        { kind: 'formStepComponents', formId: toApplicationFormId('form-1'), stepId: toFormStepId('step-1') },
+        { kind: 'formStep', formId: toApplicationFormId('form-1'), stepId: toFormStepId('step-1') },
         radio,
       ),
     );

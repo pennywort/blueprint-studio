@@ -1,5 +1,6 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { InvariantViolation } from './index';
+import { elementViolationPath, walkElementContainers } from '../element-containers';
 
 // Инварианты #3–5 (конституция, раздел 4):
 //  3. Маршрутизация и динамический контент взаимоисключающи;
@@ -20,19 +21,19 @@ function ruleForKind(kind: string): string {
 export function checkRoutingExcludesDynamicContent(graph: ServiceGraph): InvariantViolation[] {
   const violations: InvariantViolation[] = [];
 
-  graph.applicationForms.forEach((form) => {
-    form.steps.forEach((step) => {
-      step.components.forEach((component) => {
-        if (component.routing !== undefined && component.hasDynamicContent === true) {
-          violations.push({
-            rule: ruleForKind(component.kind),
-            path: `applicationForms[${form.id}].steps[${step.id}].components[${component.id}]`,
-            message: `Компонент "${component.kind}" завязан на маршрутизацию — динамический контент для него запрещён`,
-          });
-        }
-      });
-    });
-  });
+  // Элемент может лежать в любом блоке [owner 2026-10-13] — обход всех;
+  // маршрутизация есть только у компонентов форм.
+  for (const container of walkElementContainers(graph)) {
+    for (const component of container.elements) {
+      if ('routing' in component && component.routing !== undefined && component.hasDynamicContent === true) {
+        violations.push({
+          rule: ruleForKind(component.kind),
+          path: elementViolationPath(container, component.id),
+          message: `Компонент "${component.kind}" завязан на маршрутизацию — динамический контент для него запрещён`,
+        });
+      }
+    }
+  }
 
   return violations;
 }

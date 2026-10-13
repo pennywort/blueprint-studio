@@ -1,47 +1,23 @@
 import { z } from 'zod';
-import {
-  ApplicationFormIdSchema,
-  ElementIdSchema,
-  FormComponentIdSchema,
-  FormStepIdSchema,
-  ScenarioIdSchema,
-} from './ids';
-import { FormComponentSchema } from './form-components';
+import { ApplicationFormIdSchema, FormComponentIdSchema, FormStepIdSchema, ScenarioIdSchema } from './ids';
+import { CanvasElementSchema, IconRefSchema, type CanvasElement } from './canvas-element';
 
 // Сценарии, контент страниц и формы заявок — спецификация 001-foundation, разделы 5.1–5.3.
 
 // --- Контент страниц (спека 5.2) ---
 
-// Ссылки на иконки/изображения — строковые ключи из перечня платформы (БТ 6.1).
-export const IconRefSchema = z.string();
-export type IconRef = z.infer<typeof IconRefSchema>;
-export const ImageRefSchema = z.string();
-export type ImageRef = z.infer<typeof ImageRefSchema>;
-
-const redirectFields = {
-  isRedirect: z.boolean().optional(),
-  redirectUrl: z.string().optional(),
-};
-
-export const ListItemSchema = z.object({
-  // Стабильный id: элемент — источник связи на канвасе (Epic 002, T-004/D9).
-  id: ElementIdSchema,
-  title: z.string(),
-  secondaryText: z.string().optional(),
-  icon: IconRefSchema.optional(),
-  ...redirectFields,
-});
-export type ListItem = z.infer<typeof ListItemSchema>;
-
-export const WidgetCardSchema = z.object({
-  id: ElementIdSchema,
-  title: z.string(),
-  secondaryText: z.string().optional(),
-  icon: IconRefSchema.optional(),
-  image: ImageRefSchema.optional(),
-  ...redirectFields,
-});
-export type WidgetCard = z.infer<typeof WidgetCardSchema>;
+// List item / Widget card — элементы канваса наравне с компонентами форм:
+// определены в canvas-element.ts (универсальные элементы [owner 2026-10-13]).
+export {
+  IconRefSchema,
+  ImageRefSchema,
+  ListItemSchema,
+  WidgetCardSchema,
+  type IconRef,
+  type ImageRef,
+  type ListItem,
+  type WidgetCard,
+} from './canvas-element';
 
 export const FaqQuestionSchema = z.object({
   question: z.string(),
@@ -82,7 +58,8 @@ const pageContentFields = {
   // при добавлении узла (следующий уровень), переносе dnd между уровнями и
   // протягивании связи; без него глубина — производная связей (D7).
   layerDepth: z.number().int().nonnegative().optional(),
-  listItems: z.array(ListItemSchema),
+  // Элементы страницы — любые элементы канваса [owner 2026-10-13].
+  elements: z.array(CanvasElementSchema),
   faq: FaqSchema.optional(),
   additionalInfo: AdditionalInfoSchema.optional(),
 };
@@ -123,7 +100,7 @@ export type SubScenario = z.infer<typeof ScenarioBaseSchema> & {
   orderIndex: number;
   // Явная колонка канваса (уровень навигации) — см. pageContentFields.
   layerDepth?: number;
-  listItems: ListItem[];
+  elements: CanvasElement[];
   faq?: Faq;
   additionalInfo?: AdditionalInfo;
   children?: SubScenario[];
@@ -139,7 +116,9 @@ export const SubScenarioSchema: z.ZodType<SubScenario> = ScenarioBaseSchema.exte
 export const FormStepSchema = z.object({
   id: FormStepIdSchema,
   title: z.string().optional(),
-  components: z.array(FormComponentSchema),
+  // Элементы шага — любые элементы канваса [owner 2026-10-13], не только
+  // компоненты форм.
+  elements: z.array(CanvasElementSchema),
 });
 export type FormStep = z.infer<typeof FormStepSchema>;
 

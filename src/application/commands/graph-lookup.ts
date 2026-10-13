@@ -1,7 +1,8 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
-import type { ListItem, SubScenario, WidgetCard } from '@domain/model/scenario';
-import type { FormComponent } from '@domain/model/form-components';
+import type { SubScenario } from '@domain/model/scenario';
+import type { CanvasElement } from '@domain/model/canvas-element';
 import type { PageEntityId } from '@domain/model/ids';
+import { findElementInGraph, type ElementContainer } from '@domain/element-containers';
 
 // Обходные помощники команд canvas (Epic 002, T-035): поиск страниц, элементов
 // и связей внутри черновика Immer. Чистые функции над ServiceGraph — работают
@@ -71,8 +72,8 @@ export function collectSubtreeScenarioIds(root: SubScenario): Set<string> {
 export function collectSubtreeElementIds(root: SubScenario): Set<string> {
   const ids = new Set<string>();
   for (const scenario of walkSubScenarios([root])) {
-    for (const item of scenario.listItems) {
-      ids.add(item.id);
+    for (const element of scenario.elements) {
+      ids.add(element.id);
     }
   }
   return ids;
@@ -95,16 +96,17 @@ export function findFormById(
   return graph.applicationForms.find((form) => form.id === formId) ?? null;
 }
 
-// Компонент формы по id вместе с формой-владельцем — командам «Сложной
-// логики» (T-037/T-064) нужны и сам компонент (флаг, option'ы), и форма
-// (правило «внутри одной формы», L-I5).
+// Элемент шага формы по id вместе с формой-владельцем — командам «Сложной
+// логики» (T-037/T-064) нужны и сам элемент (флаг, option'ы), и форма
+// (правило «внутри одного шага», L-I5). Элемент шага — любой элемент
+// канваса [owner 2026-10-13]; элементы страниц сюда не попадают.
 export function findFormComponent(
   graph: ServiceGraph,
   componentId: string,
-): { form: ServiceGraph['applicationForms'][number]; component: FormComponent } | null {
+): { form: ServiceGraph['applicationForms'][number]; component: CanvasElement } | null {
   for (const form of graph.applicationForms) {
     for (const step of form.steps) {
-      const component = step.components.find((candidate) => candidate.id === componentId);
+      const component = step.elements.find((candidate) => candidate.id === componentId);
       if (component) {
         return { form, component };
       }
@@ -122,69 +124,18 @@ export function isLinkTargetPresent(graph: ServiceGraph, targetId: string): bool
 // Id страницы, владеющей элементом (источником связи, D9) — нужно правилу
 // слоёв (T-036): глубина источника = глубина страницы-владельца.
 export function findElementOwnerPageId(graph: ServiceGraph, elementId: string): string | null {
-  if (graph.homePage) {
-    const home = graph.homePage;
-    if (
-      home.listItems.some((item) => item.id === elementId) ||
-      home.widgetCards.some((card) => card.id === elementId)
-    ) {
-      return home.id;
-    }
-  }
-
-  for (const scenario of walkSubScenarios(graph.subScenarios)) {
-    if (scenario.listItems.some((item) => item.id === elementId)) {
-      return scenario.id;
-    }
-  }
-
-  for (const form of graph.applicationForms) {
-    for (const step of form.steps) {
-      if (step.components.some((component) => component.id === elementId)) {
-        return form.id;
-      }
-    }
-  }
-
-  return null;
+  return findElementInGraph(graph, elementId)?.container.pageId ?? null;
 }
 
-export type ElementLocation =
-  | { kind: 'homeListItem'; list: ListItem[]; index: number }
-  | { kind: 'homeWidgetCard'; list: WidgetCard[]; index: number }
-  | { kind: 'subScenarioListItem'; list: ListItem[]; index: number }
-  | { kind: 'formComponent'; list: FormComponent[]; index: number };
+// Положение элемента: блок-владелец (любой вид, [owner 2026-10-13]),
+// его список и индекс — для изъятия/замены элемента командами.
+export type ElementLocation = {
+  container: ElementContainer;
+  list: CanvasElement[];
+  index: number;
+};
 
-// Элемент канваса — карточка страницы (ListItem/WidgetCard) или компонент
-// формы. Id сущностей уникальны (генератор IIdGenerator), поэтому первое
-// совпадение — единственное.
 export function findElementLocation(graph: ServiceGraph, elementId: string): ElementLocation | null {
-  if (graph.homePage) {
-    const listIndex = graph.homePage.listItems.findIndex((item) => item.id === elementId);
-    if (listIndex >= 0) {
-      return { kind: 'homeListItem', list: graph.homePage.listItems, index: listIndex };
-    }
-    const widgetIndex = graph.homePage.widgetCards.findIndex((card) => card.id === elementId);
-    if (widgetIndex >= 0) {
-      return { kind: 'homeWidgetCard', list: graph.homePage.widgetCards, index: widgetIndex };
-    }
-  }
-
-  for (const scenario of walkSubScenarios(graph.subScenarios)) {
-    const index = scenario.listItems.findIndex((item) => item.id === elementId);
-    if (index >= 0) {
-      return { kind: 'subScenarioListItem', list: scenario.listItems, index };
-    }
-  }
-
-  for (const form of graph.applicationForms) {
-    for (const step of form.steps) {
-      const index = step.components.findIndex((component) => component.id === elementId);
-      if (index >= 0) {
-        return { kind: 'formComponent', list: step.components, index };
-      }
-    }
-  }
-
-  return null;
+  const found = findElementInGraph(graph, elementId);
+  return found ? { container: found.container, list: found.container.elements, index: found.index } : null;
 }

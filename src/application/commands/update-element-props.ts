@@ -1,6 +1,5 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
-import { ListItemSchema, WidgetCardSchema, type ListItem, type WidgetCard } from '@domain/model/scenario';
-import { FormComponentSchema, type FormComponent } from '@domain/model/form-components';
+import { CanvasElementSchema, type CanvasElement } from '@domain/model/canvas-element';
 import type { ElementId, FormComponentId } from '@domain/model/ids';
 import { validateGraph } from '@domain/invariants';
 import { computeFormElementDepths } from '@domain/step-element-depths';
@@ -12,7 +11,7 @@ import { findElementLocation } from './graph-lookup';
 // Частичное обновление атрибутов элемента; id и kind исключены — идентичность
 // и дискриминатор union менять нельзя (для смены kind элемент пересоздаётся).
 type DistributivePartial<T> = T extends unknown ? Partial<Omit<T, 'id' | 'kind'>> : never;
-export type ElementPropsPatch = DistributivePartial<ListItem | WidgetCard | FormComponent>;
+export type ElementPropsPatch = DistributivePartial<CanvasElement>;
 
 // Команда обновления атрибутов элемента (Epic 002, T-035): ей пользуется
 // панель атрибутов (T-043) — любое изменение поля идёт через CommandBus и
@@ -39,15 +38,10 @@ export class UpdateElementProps implements Command {
       throw new Error(`Элемент не найден: ${this.elementId}`);
     }
 
+    // Схема выбирается дискриминатором kind самого элемента: блок больше не
+    // определяет вид элемента [owner 2026-10-13].
     const merged = { ...location.list[location.index], ...this.props };
-    const schema =
-      location.kind === 'homeWidgetCard'
-        ? WidgetCardSchema
-        : location.kind === 'formComponent'
-          ? FormComponentSchema
-          : ListItemSchema;
-
-    const parsed = schema.safeParse(merged);
+    const parsed = CanvasElementSchema.safeParse(merged);
     if (!parsed.success) {
       throw new Error(`Недопустимые атрибуты элемента ${this.elementId}: ${parsed.error.message}`);
     }
@@ -57,7 +51,7 @@ export class UpdateElementProps implements Command {
     // Каскад сложной логики при удалении option'ов Select'а-источника
     // (T-037, §6 дизайн-дока): правила на удалённые значения списка уходят
     // вместе со значением (UI недостижимость L-I2, инвариант — защита).
-    if ('kind' in parsed.data && parsed.data.kind === 'selectList') {
+    if (parsed.data.kind === 'selectList') {
       const optionValues = new Set(parsed.data.options.map((option) => option.value));
       draft.logicRules = draft.logicRules.filter(
         (rule) =>

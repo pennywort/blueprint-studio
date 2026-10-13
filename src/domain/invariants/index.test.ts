@@ -13,7 +13,7 @@ import { validateGraph } from './index';
 const emptyGraph = (): ServiceGraph => ({
   id: toBlueprintId('bp-1'),
   title: 'Тестовая карта',
-  homePage: { id: toPageId('home-1'), orderIndex: 0, listItems: [], widgetCards: [] },
+  homePage: { id: toPageId('home-1'), orderIndex: 0, elements: [] },
   subScenarios: [],
   applicationForms: [],
   links: [],
@@ -34,7 +34,7 @@ describe('validateGraph (оркестратор инвариантов)', () => 
       steps: [
         {
           id: toFormStepId('step-1'),
-          components: [
+          elements: [
             {
               id: toFormComponentId('cmp-1'),
               kind: 'attachment',
@@ -76,7 +76,7 @@ describe('validateGraph (оркестратор инвариантов)', () => 
       type: 'link',
       title: 'Ссылка',
       orderIndex: 0,
-      listItems: [],
+      elements: [],
       link: { url: 'https://example.com' },
       infoBlock: { content: 'Лишнее', position: 'right' },
     });
@@ -94,7 +94,7 @@ describe('validateGraph (оркестратор инвариантов)', () => 
       steps: [
         {
           id: toFormStepId('step-1'),
-          components: [
+          elements: [
             {
               id: toFormComponentId('cmp-1'),
               kind: 'attachment',

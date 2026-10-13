@@ -13,7 +13,7 @@ describe('AddFormStep (T-035)', () => {
       new AddFormStep(toApplicationFormId('form-1'), {
         id: toFormStepId('step-3'),
         title: 'Шаг 3',
-        components: [],
+        elements: [],
       }),
     );
 
@@ -27,7 +27,7 @@ describe('AddFormStep (T-035)', () => {
 
     const after = bus.execute(
       before,
-      new AddFormStep(toApplicationFormId('form-1'), { id: toFormStepId('step-0'), components: [] }, 0),
+      new AddFormStep(toApplicationFormId('form-1'), { id: toFormStepId('step-0'), elements: [] }, 0),
     );
 
     expect(after.applicationForms[0]?.steps.map((step) => step.id)).toEqual(['step-0', 'step-1', 'step-2']);
@@ -40,7 +40,7 @@ describe('AddFormStep (T-035)', () => {
     expect(() =>
       bus.execute(
         before,
-        new AddFormStep(toApplicationFormId('form-1'), { id: toFormStepId('step-x'), components: [] }, 10),
+        new AddFormStep(toApplicationFormId('form-1'), { id: toFormStepId('step-x'), elements: [] }, 10),
       ),
     ).toThrow(/вне диапазона/);
   });
@@ -52,7 +52,7 @@ describe('AddFormStep (T-035)', () => {
     expect(() =>
       bus.execute(
         before,
-        new AddFormStep(toApplicationFormId('form-404'), { id: toFormStepId('step-x'), components: [] }),
+        new AddFormStep(toApplicationFormId('form-404'), { id: toFormStepId('step-x'), elements: [] }),
       ),
     ).toThrow(/Форма не найдена/);
   });
@@ -63,7 +63,7 @@ describe('AddFormStep (T-035)', () => {
     expectUndoRedoRoundtrip(
       bus,
       before,
-      new AddFormStep(toApplicationFormId('form-1'), { id: toFormStepId('step-3'), components: [] }),
+      new AddFormStep(toApplicationFormId('form-1'), { id: toFormStepId('step-3'), elements: [] }),
     );
   });
 });

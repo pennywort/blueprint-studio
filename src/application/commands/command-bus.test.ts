@@ -24,7 +24,7 @@ class RenameBlueprint implements Command {
 const graph = (title: string): ServiceGraph => ({
   id: toBlueprintId('bp-1'),
   title,
-  homePage: { id: toPageId('home-1'), orderIndex: 0, listItems: [], widgetCards: [] },
+  homePage: { id: toPageId('home-1'), orderIndex: 0, elements: [] },
   subScenarios: [],
   applicationForms: [],
   links: [],
