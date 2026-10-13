@@ -109,6 +109,13 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
         outline: `2px solid ${canvas.edgeActive}`,
         outlineOffset: -1,
       },
+      // Курсор над целью во время протягивания: исходящие handles той же
+      // сущности (у блока — и его элементов) — в цвет рамки цели, подсветка
+      // единообразна [owner 2026-10-13].
+      '& .react-flow__handle.editor-target.editor-target-available:hover ~ .react-flow__handle.source, & .react-flow__handle.editor-target.editor-target-available:hover ~ * .react-flow__handle.source':
+        {
+          backgroundColor: canvas.edgeActive,
+        },
       // Идёт протягивание связи — курсор «прицел» на всём канвасе. !important:
       // курсоры react-flow (grab полотна, pointer узлов) той же специфичности
       // и иначе перебивают прицел, стоит курсору уйти с handle (5.1).
