@@ -25,9 +25,12 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   // Hover-подсветка целевого узла при перетаскивании связи (T-032, макет
   // «связь-…-переход-к-подсценарию»): серый фон + рамка, цвета из темы.
   // Нарушение инвариантов узла или его элементов (T-043): кольцо цвета
-  // ошибки тенью — outline занят выделением и подсветкой цели связи.
+  // ошибки (T-043).
   invalid: {
-    boxShadow: `0 0 0 2px ${theme.palette.error.main}`,
+    // Одна рамка: тот же outline, что у выделения, цветом ошибки (без второго
+    // кольца тенью); выделение важнее — его селектор специфичнее (T-043).
+    outline: `2px solid ${theme.palette.error.main}`,
+    outlineOffset: 2,
   },
   dropTarget: {
     backgroundColor: theme.editor.canvas.nodeHoverBackground,
