@@ -65,7 +65,7 @@ function EdgeArrowMarkerDefs() {
           orient="auto"
         >
           <path
-            d="M4 2 L10 6 L4 10"
+            d="M5 1 L10 6 L5 11"
             fill="none"
             stroke="context-stroke"
             strokeWidth={2}
@@ -445,6 +445,8 @@ function CanvasInner({
         // Штатный порог drag react-flow: микросдвиг мыши при клике по блоку
         // не начинает перетаскивание (повторная приёмка, 1).
         nodeDragThreshold={5}
+        // Мин. зум 10% вместо дефолтных 50% react-flow (замечание владельца 2026-10-13).
+        minZoom={0.1}
         colorMode="light"
         fitView
       >

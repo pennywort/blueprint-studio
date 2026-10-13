@@ -269,15 +269,26 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
       ref={layersRef}
       className={classes.layers}
       data-testid="form-step-layers"
-      // Пока над шагом идёт drag, слой расширен до пустой колонки справа
-      // (доводка dnd, ADR-16): подсветка новой колонки не вылезает за край
-      // шага/формы, колонка достижима курсором внутри шага. Курсор ушёл —
-      // шаг сужается; курсор при этом уже вне шага, «дрожания» нет.
-      style={drag ? { minWidth: (maxDepth + 1) * COLUMN_PITCH + L.elementWidth } : undefined}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Пока над шагом идёт drag, зона приёма продлена до пустой колонки
+          справа (ADR-16) абсолютным слоем — размер шага не меняется: иначе
+          узел формы рос, раскладка канваса (N12, measured) пересчитывалась
+          и весь лэйаут дёргался [owner 2026-10-13]. */}
+      {drag ? (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: 0,
+            width: (maxDepth + 1) * COLUMN_PITCH + L.elementWidth,
+          }}
+        />
+      ) : null}
       {drag?.decision.kind === 'moveToLayer' && drag.column ? (
         <LayerDropHighlight
           left={drag.column.x}

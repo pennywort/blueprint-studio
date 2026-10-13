@@ -44,17 +44,23 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
       },
       // Рёбра «Сложной логики» рисуются в общем стиле навигации (решение
       // владельца по N1: отличие предложит дизайнер).
-      // Handle — круглый и объёмный (N7): радиальный градиент + тень, без
-      // белой обводки (N11). Центр на границе карточки — ребро начинается
-      // точно от него.
+      // Handle (N7/N11, замечание владельца 2026-10-13): плоский круг 12px
+      // без градиента; прозрачный ::after расширяет зону захвата до 24px
+      // (размер самого handle не меняется — ребро крепится к его краю).
+      // Центр на границе карточки.
       '& .react-flow__handle': {
-        width: 10,
-        height: 10,
+        width: 12,
+        height: 12,
         borderRadius: '50%',
         border: 'none',
         backgroundColor: canvas.handle,
-        backgroundImage: `radial-gradient(circle at 35% 35%, ${canvas.handleHighlight}, ${canvas.handle} 65%)`,
         boxShadow: `0 1px 3px ${canvas.handleShadow}`,
+      },
+      '& .react-flow__handle:not(.editor-target)::after': {
+        content: '""',
+        position: 'absolute',
+        inset: -6,
+        borderRadius: '50%',
       },
       // Принимающие handles (повторная приёмка): в покое не видны — handle накрывает блок/элемент целиком и прозрачен. В покое
       // он не ловит мышь (содержимое кликабельно), рёбра крепятся к его
