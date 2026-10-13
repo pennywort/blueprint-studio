@@ -29,6 +29,10 @@ L-I5) — спроси владельца, не выдумывай.
 
 - **Тесты НИКОГДА не пишем и НИКОГДА не запускаем**; скрипта `test` в package.json нет [owner 2026-10-13].
   Верификация = `npm run lint && npm run build` + ручная проверка в приложении.
+  Старые тесты отключены суффиксом `.disabled` (`*.test.ts.disabled`, `*.fixture.ts.disabled`) —
+  tsc/eslint/vitest их не видят; не чиним и не трогаем.
+- **Git [owner 2026-10-13]: работаем прямо в `master`** — коммиты и push в `master`, ветки пока
+  не заводим (даже если сессия назначила рабочую ветку).
 - Любое изменение графа — команда через `CommandBus` (immer `produceWithPatches`).
 - 4 слоя `domain → application → infrastructure → presentation` (eslint-plugin-boundaries).
 - UI только из `@blueprint-vendor/*` (сейчас шимы поверх MUI v4 в `vendor/flamingo`),
