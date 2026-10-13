@@ -3,6 +3,9 @@
 //
 //   npm run state:check                     — сверка §2 STACK с package.json и
 //                                             хешей коммитов из PROJECT_STATE с git
+//   npm run state:summary                   — сжатая сводка: открытое, план, карта
+//                                             секций, нужно ли обновление
+//   npm run state:section -- <id>           — одна секция с номерами строк
 //   npm run state:log -- <кто> "<что>"      — бамп UPDATED + строка в CHANGELOG
 //
 // Классификацию фактов по секциям (DONE / ADR / §6 / §7) скрипт НЕ делает —
@@ -90,6 +93,94 @@ function check() {
   process.exitCode = issues.length ? 1 : 0;
 }
 
+// Сжатая сводка для агента вместо чтения файла целиком (~72 КБ): открытое,
+// план, карта секций и признак «надо ли обновлять».
+const cut = (line, max = 160) => (line.length > max ? `${line.slice(0, max)}…` : line);
+
+function sectionMap(text) {
+  const lines = text.split('\n');
+  const heads = [];
+  lines.forEach((line, index) => {
+    const match = line.match(/^(#{2,3}) (\d+(?:\.\d+)?)\.? (.*)/);
+    if (match) heads.push({ id: match[2], title: match[3], start: index + 1 });
+  });
+  return heads.map((head, i) => ({ ...head, end: (heads[i + 1]?.start ?? lines.length + 1) - 1 }));
+}
+
+function summary() {
+  const text = readState();
+  const field = (key) => text.match(new RegExp(`\\*\\*${key}:\\*\\* (.+)`))?.[1] ?? '?';
+  console.log(`${STATE_FILE}: UPDATED ${field('UPDATED')} | EPIC ${field('CURRENT_EPIC')}`);
+
+  // Коммиты после последней правки PROJECT_STATE — кандидаты на отражение в файле
+  const lastStateCommit = git('log', '-1', '--format=%H', '--', STATE_FILE);
+  const unrecorded = lastStateCommit ? git('log', '--oneline', `${lastStateCommit}..HEAD`) : '';
+  const dirty = git('status', '--short');
+
+  const notDone =
+    section(text, '4. CURRENT STATE')
+      .split('### 4.2')[1]
+      ?.split('\n')
+      .filter((line) => line.startsWith('- ')) ?? [];
+
+  // §6: открытые ❓ и 🐞, которые не находятся в блоке «✅ ИСПРАВЛЕНЫ»
+  const open = [];
+  let closedBlock = false;
+  for (const line of section(text, '6. BLOCKERS').split('\n')) {
+    if (line && !line.startsWith('- ') && !line.startsWith('#') && !line.startsWith('<!--')) {
+      closedBlock = line.includes('✅');
+    }
+    if (line.startsWith('- ❓') || (line.startsWith('- 🐞') && !closedBlock)) open.push(line);
+  }
+  const resolved = (section(text, '6. BLOCKERS').match(/^- ✅/gm) ?? []).length;
+
+  const next = section(text, '7. NEXT STEPS')
+    .split('\n')
+    .filter((line) => /^\d+\. \[ \]/.test(line));
+
+  console.log(`\n§4.2 NOT DONE (${notDone.length}):\n${notDone.map((l) => cut(l)).join('\n')}`);
+  console.log(
+    `\n§6 открыто (${open.length}, закрыто ✅ ${resolved}):\n${open.map((l) => cut(l)).join('\n')}`,
+  );
+  console.log(`\n§7 NEXT STEPS (${next.length}):\n${next.map((l) => cut(l)).join('\n')}`);
+  console.log(
+    '\nКарта секций (для точечного чтения — `npm run state:section -- <id>`):\n' +
+      sectionMap(text)
+        .map((s) => `  ${s.id} ${s.title} — строки ${s.start}–${s.end}`)
+        .join('\n'),
+  );
+
+  console.log(
+    `\nКоммиты после последней правки ${STATE_FILE}:\n${unrecorded || '(нет)'}` +
+      `\nНезакоммиченное: ${dirty ? dirty.split('\n').length + ' файл(ов)' : '(нет)'}`,
+  );
+  console.log(
+    unrecorded
+      ? '\n⚠️ ОБНОВЛЕНИЕ: вероятно нужно — есть коммиты, не отражённые в PROJECT_STATE (решает владелец, /update-state)'
+      : '\n✅ ОБНОВЛЕНИЕ: не требуется — новых коммитов после последней правки нет',
+  );
+}
+
+// Одна секция с номерами строк — для точечной правки без чтения всего файла
+function printSection(id) {
+  if (!id) {
+    console.error('Использование: npm run state:section -- <id>, например 6 или 4.2');
+    process.exit(2);
+  }
+  const text = readState();
+  const found = sectionMap(text).find((s) => s.id === id);
+  if (!found) {
+    console.error(
+      `Секция ${id} не найдена. Есть: ${sectionMap(text)
+        .map((s) => s.id)
+        .join(', ')}`,
+    );
+    process.exit(2);
+  }
+  const lines = text.split('\n');
+  for (let n = found.start; n <= found.end; n += 1) console.log(`${n}: ${lines[n - 1]}`);
+}
+
 function log(author, message) {
   if (!author || !message) {
     console.error('Использование: npm run state:log -- <owner|agent:имя> "<что изменилось>"');
@@ -104,8 +195,10 @@ function log(author, message) {
 
 const [command, ...args] = process.argv.slice(2);
 if (command === 'check') check();
+else if (command === 'summary') summary();
+else if (command === 'section') printSection(args[0]);
 else if (command === 'log') log(args[0], args.slice(1).join(' '));
 else {
-  console.error('Команды: check | log <кто> "<что>"');
+  console.error('Команды: check | summary | section <id> | log <кто> "<что>"');
   process.exit(2);
 }

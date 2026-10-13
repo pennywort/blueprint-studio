@@ -1,63 +1,42 @@
-# Стиль ответов
+# CLAUDE.md — дополнения для Claude Code
 
-- Отвечай по-русски, максимально кратко и по делу.
-- Без вступлений, пересказа задачи и итоговых резюме.
-- Не объясняй очевидное; детали — только если спросят.
-- После правок кода: 1–2 строки (что изменено, что проверено).
-- Вопросы — только если без ответа нельзя продолжить.
+@AGENTS.md
 
-# CLAUDE.md — контекст проекта для Claude Code
+> Всё общее для агентов (стиль ответов, источники правды, правила, команды,
+> чек-лист) — в `AGENTS.md` выше. Здесь — только специфичное для Claude Code.
+> **Правило синхронизации [owner 2026-10-13]:** общее правится в `AGENTS.md`;
+> `CLAUDE.md` / `QWEN.md` — только своё. После правки `.claude/agents/*` —
+> `npm run agents:sync` (порт в `.qwen/agents/`) в том же коммите.
 
-> Базовый контекст проекта — **`KIMI.md`** (прочитай его первым): стек, слои,
-> реестр TEMPORARY-подмен, рабочий процесс. Этот файл — дополнения для
-> Claude Code. **Правило синхронизации [owner 2026-10-13]:** если решение
-> владельца меняет общее для агентов (стек, правила, процесс, политика
-> тестов), обнови **оба** файла — `KIMI.md` и `CLAUDE.md` — в одном коммите.
+## Субагенты (`.claude/agents/`, дешёвые модели)
 
-## Источники правды (по порядку)
+Шумную работу отдавай им — в основной контекст вернётся только короткий итог.
 
-1. `PROJECT_STATE.md` — состояние: DONE/NOT DONE, ADR, баги приёмки (§6), план (§7).
-   Структура фиксирована — правила в его шапке (SCHEMA RULES).
-2. `specs/000-constitution.md` — конституция, побеждает любую спеку.
-3. `docs/декомпозиция-canvas-редактор.md` — задачи T-xxx, решения D1–D13 (не обсуждаются).
-4. `docs/дизайн-сложная-логика.md` — «Сложная логика» (L1–L8, инварианты L-I1…L-I6).
+| Агент            | Модель | Когда                                                |
+| ---------------- | ------ | ---------------------------------------------------- |
+| `verifier`       | haiku  | после правок: lint + build + rules, разбор ошибок    |
+| `code-finder`    | haiku  | «где реализовано X» по нескольким файлам             |
+| `spec-lookup`    | haiku  | вопрос по конституции / T-xxx / D-x / ADR / L-x      |
+| `state-auditor`  | haiku  | нужно ли обновлять PROJECT_STATE; что предложить     |
+| `ui-checker`     | sonnet | ручная проверка сценария в приложении (`npm run ui`) |
+| `rules-reviewer` | sonnet | ревью diff по правилам AGENTS.md §4 перед коммитом   |
 
-Нет ответа в источниках или код противоречит доменному правилу (например,
-L-I5) — спроси владельца, не выдумывай.
+Субагенты ничего не правят — правки делает основной агент.
 
-## Железные правила (кратко, подробно — KIMI.md §4–§7)
+## Хуки (`.claude/settings.json`) — работают сами
 
-- **Тесты НИКОГДА не пишем и НИКОГДА не запускаем**; скрипта `test` в package.json нет [owner 2026-10-13].
-  Верификация = `npm run lint && npm run build` + ручная проверка в приложении.
-  Старые тесты отключены суффиксом `.disabled` (`*.test.ts.disabled`, `*.fixture.ts.disabled`) —
-  tsc/eslint/vitest их не видят; не чиним и не трогаем.
-- **Git [owner 2026-10-13]: работаем прямо в `master`** — коммиты и push в `master`, ветки пока
-  не заводим (даже если сессия назначила рабочую ветку).
-- Любое изменение графа — команда через `CommandBus` (immer `produceWithPatches`).
-- 4 слоя `domain → application → infrastructure → presentation` (eslint-plugin-boundaries).
-- UI только из `@blueprint-vendor/*` (сейчас шимы поверх MUI v4 в `vendor/flamingo`),
-  прямые импорты `@material-ui/*` в `src` запрещены; цвета только из темы
-  (`src/presentation/theme/editor-theme.ts`), литеральные hex в компонентах запрещены.
-- Комментарии в коде — на русском, со ссылкой на задачу/решение (T-xxx, D-x, ADR-xx, Nx).
-- Коммиты — conventional commits на русском (commitlint, husky + lint-staged).
+- **SessionStart:** `npm ci`, если нет `node_modules` (вывод сжат).
+- **PostToolUse (Edit/Write):** eslint изменённого файла; ошибки придут сразу.
+- **Stop:** если есть незакоммиченные правки в `src/vendor/scripts` — `verify` + `rules`;
+  красное не даст завершить ответ.
+- `env`: вывод Bash обрезается до 15 000 символов, цвета (ANSI) выключены.
+- `deny`: чтение `node_modules`, `dist`, `package-lock.json`, `*.disabled`, `docs/archive`.
 
-## Окружение Claude Code (облачная сессия)
+## Облачная сессия
 
-- После старта контейнера: `npm ci` (registry `@blueprint-vendor/*` не нужен — шимы `file:vendor/...`).
-- Dev-сервер: `npx rsbuild dev --port 3123`, редактор — `http://localhost:3123/#/editor`
-  (демо-граф `sample-graph.ts`).
-- Ручная проверка — Playwright из `/opt/node-tools/node_modules/playwright`,
-  браузер `/opt/pw-browsers/chromium`; скрипты и скриншоты — в scratchpad, не в репо.
-
-## PROJECT_STATE: команды
-
-Механика вынесена в скрипт `scripts/project-state.mjs` — работает без LLM:
-
-| Команда                              | Что делает                                                                           |
-| ------------------------------------ | ------------------------------------------------------------------------------------ |
-| `npm run state:check`                | git log/status + сверка §2 STACK с package.json + существование хешей коммитов в git |
-| `npm run state:log -- <кто> "<что>"` | бамп `UPDATED` + append строки в §9 CHANGELOG (append-only)                          |
-
-Slash-команды `/check-state`, `/update-state` (`.claude/commands/`) вызывают
-скрипт и добавляют только смысловую часть (куда отнести факт). Аналоги для
-других агентов — `.kimi/commands/`, `.qwen/commands/`.
+- Dev-сервер вручную не нужен: `npm run ui` поднимает его сам (порт 3123,
+  `http://localhost:3123/#/editor`).
+- Playwright — `/opt/node-tools/node_modules/playwright`, браузер `/opt/pw-browsers/chromium`
+  (скрипт находит сам). Скриншоты — в `.agent-logs/` или scratchpad, не в репо.
+- Длинные сессии: `/compact` на границе задач, `/clear` между независимыми задачами.
+- Slash-команды `/check-state`, `/update-state` — `.claude/commands/`.

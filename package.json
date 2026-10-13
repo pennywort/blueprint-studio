@@ -9,9 +9,15 @@
     "build": "rsbuild build",
     "preview": "rsbuild preview",
     "lint": "eslint . && tsc --noEmit",
+    "verify": "node scripts/agent/run-quiet.mjs lint npm run lint && node scripts/agent/run-quiet.mjs build npm run build",
+    "rules": "node scripts/agent/rules-check.mjs",
+    "ui": "node scripts/agent/ui-check.mjs",
     "prepare": "husky",
     "state:check": "node scripts/project-state.mjs check",
-    "state:log": "node scripts/project-state.mjs log"
+    "state:summary": "node scripts/project-state.mjs summary",
+    "state:section": "node scripts/project-state.mjs section",
+    "state:log": "node scripts/project-state.mjs log",
+    "agents:sync": "node scripts/agent/sync-agents.mjs"
   },
   "dependencies": {
     "@material-ui/core": "4.12.4",

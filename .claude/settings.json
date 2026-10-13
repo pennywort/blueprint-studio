@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "BASH_MAX_OUTPUT_LENGTH": "15000",
+    "NO_COLOR": "1",
+    "FORCE_COLOR": "0"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run verify)",
+      "Bash(npm run -s verify)",
+      "Bash(npm run rules:*)",
+      "Bash(npm run -s rules:*)",
+      "Bash(npm run ui:*)",
+      "Bash(npm run -s ui:*)",
+      "Bash(npm run state:check)",
+      "Bash(npm run state:summary)",
+      "Bash(npm run state:section:*)",
+      "Bash(npm run agents:sync)",
+      "Bash(node scripts/agent/:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)"
+    ],
+    "deny": [
+      "Read(./node_modules/**)",
+      "Read(./dist/**)",
+      "Read(./package-lock.json)",
+      "Read(./docs/archive/**)",
+      "Read(./**/*.disabled)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && [ -d node_modules ] || node scripts/agent/run-quiet.mjs npm-ci npm ci --no-audit --no-fund",
+            "timeout": 600
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && node scripts/agent/lint-file.mjs",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && node scripts/agent/stop-check.mjs",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}
