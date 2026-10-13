@@ -7,6 +7,7 @@ import {
   ReactFlowProvider,
   applyEdgeChanges,
   applyNodeChanges,
+  useReactFlow,
   useViewport,
   type Connection,
   type EdgeChange,
@@ -58,6 +59,8 @@ export type EditorCanvasProps = {
   onSelectedNodeChange?: (nodeId: string | null) => void;
   /** Клик по пустому полю канваса — снять выделение со всех сущностей. */
   onClearSelection?: () => void;
+  /** Центрирование вьюпорта на узле — результат поиска (T-050). */
+  focus?: { nodeId: string; nonce: number } | null;
   /** Фактические размеры узлов после рендера — стек колонки по ним (N12). */
   onNodesMeasured?: (sizes: Record<string, { width: number; height: number }>) => void;
 };
@@ -89,6 +92,7 @@ function CanvasInner({
   onSelectedNodeChange,
   onClearSelection,
   onNodesMeasured,
+  focus,
 }: EditorCanvasProps) {
   const theme = useEditorTheme();
   const styles = useReactFlowThemeStyles();
@@ -105,6 +109,19 @@ function CanvasInner({
   useEffect(() => setEdges(propsEdges), [propsEdges]);
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
+
+  // Центрирование на найденном узле (T-050). Задержка — узел мог только что
+  // развернуться (reveal) и ещё не перемериться react-flow.
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    if (!focus) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      void fitView({ nodes: [{ id: focus.nodeId }], duration: 400, maxZoom: 1, padding: 0.2 });
+    }, 80);
+    return () => clearTimeout(timer);
+  }, [focus, fitView]);
 
   // Свободного размещения нет: колонка узла — уровень навигации (F2/F6),
   // но во время drag узел свободно следует за курсором. В drop решаем по

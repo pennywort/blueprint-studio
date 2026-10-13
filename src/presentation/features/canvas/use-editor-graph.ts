@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Connection } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { FormComponent } from '@domain/model/form-components';
@@ -57,6 +57,7 @@ import {
 import { useContainer } from '@presentation/app/App';
 import { useEditorNotifications } from '@presentation/features/notifications/editor-notifications';
 import type { AddableElementKind, AddableNodeKind } from '@presentation/features/toolbar/editor-toolbar';
+import type { CanvasSearchResult } from '@presentation/features/top-bar/editor-top-bar';
 import type { DropAnchorPosition, ElementDragPayload } from './element-dnd';
 import { computeLayout, type MeasuredNodeSizes } from './canvas-layout';
 import {
@@ -106,11 +107,51 @@ export function useEditorGraph() {
   const notifications = useEditorNotifications();
   const commandBus = container.cradle.commandBus;
   const idGenerator = container.cradle.idGenerator;
+  const graphRepository = container.cradle.graphRepository;
 
   const [graph, setGraph] = useState<ServiceGraph>(() => createSampleGraph());
   // Актуальный граф в ref: колбэки react-flow не должны зависеть от замыканий
   // на устаревший state, а мутации идут только через CommandBus.
   const graphRef = useRef(graph);
+
+  // Загрузка сохранённой карты при открытии редактора (T-053). Пока её нет
+  // в хранилище — демо-граф. Если пользователь успел выполнить команду до
+  // окончания загрузки, загруженное не затирает его правки.
+  useEffect(() => {
+    const initial = graphRef.current;
+    let cancelled = false;
+    graphRepository
+      .load(initial.id)
+      .then((loaded) => {
+        if (cancelled || !loaded || graphRef.current !== initial) {
+          return;
+        }
+        commandBus.reset();
+        graphRef.current = loaded;
+        setGraph(loaded);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          notifications.showSaveError(error instanceof Error ? error.message : String(error));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [graphRepository, commandBus, notifications]);
+
+  // «Сохранить» (T-053): текущий граф → IGraphRepository; результат — единый
+  // Snackbar страницы (T-023).
+  const save = useCallback(() => {
+    graphRepository
+      .save(graphRef.current)
+      .then(() => notifications.showSaveSuccess())
+      .catch((error: unknown) =>
+        notifications.showSaveError(
+          `Не удалось сохранить: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
+  }, [graphRepository, notifications]);
 
   // Фактические размеры узлов от react-flow (N12): стек колонки строится по
   // ним, чтобы зазор между узлами был ровно rowGap. Обновляется только при
@@ -137,6 +178,45 @@ export function useEditorGraph() {
 
   const positions = useMemo(() => computeLayout(graph, measuredSizes), [graph, measuredSizes]);
   const flow = useMemo(() => graphToFlow(graph, positions), [graph, positions]);
+  // Поиск по канвасу (T-050): узлы и элементы по вхождению подстроки без
+  // учёта регистра; выбор результата = выделение + центрирование вьюпорта
+  // (focus) + раскрытие сжатого узла (reveal в data узла).
+  const searchCanvas = useCallback(
+    (query: string): CanvasSearchResult[] => {
+      const needle = query.toLocaleLowerCase();
+      const matches = (text: string) => text.toLocaleLowerCase().includes(needle);
+      const results: CanvasSearchResult[] = [];
+      for (const node of flow.nodes) {
+        if (matches(node.data.title)) {
+          results.push({
+            key: node.id,
+            nodeId: node.id,
+            elementId: null,
+            title: node.data.title,
+            context: node.data.subtitle,
+          });
+        }
+        const elements = [...node.data.elements, ...node.data.steps.flatMap((step) => step.elements)];
+        for (const element of elements) {
+          if (matches(element.title)) {
+            results.push({
+              key: `${node.id}/${element.id}`,
+              nodeId: node.id,
+              elementId: element.id,
+              title: element.title,
+              context: `${element.kindLabel} · ${node.data.title}`,
+            });
+          }
+        }
+      }
+      return results.slice(0, 20);
+    },
+    [flow.nodes],
+  );
+  const [focus, setFocus] = useState<{ nodeId: string; elementId: string | null; nonce: number } | null>(
+    null,
+  );
+
   // Нарушения инвариантов после каждой команды (T-043): подсветка узлов и
   // карточек. Команды отклоняют невалидные изменения, поэтому в обычной
   // работе список пуст; подсветка нужна для графов извне (загрузка, T-053).
@@ -176,6 +256,23 @@ export function useEditorGraph() {
       setSelectedNodeId(null);
     }
   }, []);
+  // Выбор результата поиска (T-050): выделение по единому правилу (ADR-12)
+  // + запрос центрирования/раскрытия (nonce — повторный выбор того же).
+  const selectSearchResult = useCallback(
+    (result: CanvasSearchResult) => {
+      if (result.elementId !== null) {
+        selectElement(result.elementId);
+      } else {
+        handleNodeSelection(result.nodeId);
+      }
+      setFocus((current) => ({
+        nodeId: result.nodeId,
+        elementId: result.elementId,
+        nonce: (current?.nonce ?? 0) + 1,
+      }));
+    },
+    [selectElement, handleNodeSelection],
+  );
   // Клик по пустому полю канваса: снимает выделение со всего (единое
   // правило: выделение держится на сущности, пока не выбрана другая).
   const clearSelection = useCallback(() => {
@@ -617,6 +714,9 @@ export function useEditorGraph() {
             ...node.data,
             onDeleteNode: () => removeNode(node),
             violations: violationMarkers.nodes.get(node.id),
+            ...(focus?.nodeId === node.id && focus.elementId !== null
+              ? { reveal: { elementId: focus.elementId, nonce: focus.nonce } }
+              : null),
             elements: node.data.elements.map(injectElement),
             steps: node.data.steps.map((step) => ({
               ...step,
@@ -652,6 +752,7 @@ export function useEditorGraph() {
       selectedNodeId,
       selectElement,
       violationMarkers,
+      focus,
     ],
   );
 
@@ -706,6 +807,10 @@ export function useEditorGraph() {
     addElement,
     undo,
     redo,
+    save,
+    searchCanvas,
+    selectSearchResult,
+    focus,
     canUndo: commandBus.canUndo(),
     canRedo: commandBus.canRedo(),
   };

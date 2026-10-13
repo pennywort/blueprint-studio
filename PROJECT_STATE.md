@@ -123,6 +123,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - [S12 эпик 002] T-040/T-041/T-067: реестр редакторов (text/stringList/bool/number/radio/select → компонент, расширение регистрацией) + рендерер панели атрибутов по схеме IElementSchemaProvider и мете D4 (секции «Тип»/«Настройки», опции enum, условная видимость, универсальный «Комментарий для разработки», каждое изменение — UpdateElementProps); инспектор: свитч «Сложная логика» у Select и секция «Видимость» у цели со списком правил и удалением; недостающие реэкспорты Radio/RadioGroup/Select/FormControl* в шиме flamingo-core [коммит 2cdd042]
 - [эпик 002] Замечания приёмки N6–N12 исправлены (§6); измеренные размеры узлов → computeLayout(graph, measured); npm-скрипт `test` удалён [owner 2026-10-13]
 - [T-043 эпик 002] Подсветка нарушений инвариантов: validateGraph после каждой команды → mapViolationsToCanvas (path → узел/элемент), рамка цвета ошибки + значок с тултипом (violation-markers.ts, violation-badge.tsx)
+- [S14 эпик 002] T-050 поиск в TopBar (узлы/элементы, выделение + fitView, auto-expand сжатых узлов/шагов); T-052 «На согласование» disabled с тултипом до эпика 004; T-053 порт IGraphRepository + IndexedDbGraphRepository (Zod при чтении), загрузка при открытии редактора (CommandBus.reset), «Сохранить» → snackbar успеха/ошибки
 
 ### 4.2 NOT DONE (пробелы)
 
@@ -130,7 +131,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - effector/patronum не установлены, presentation-слой без стейт-менеджера (TEMPORARY: граф в useState useEditorGraph, мутации только через CommandBus)
 - Панель атрибутов для карточек страниц (List item/Widget card) не реализована — провайдер схем покрывает только form-kind'и (ADR-07), нужны проектные meta-схемы страниц; макеты: настройка-атрибутов-элемента-listitem.png
 - Страница /preview — заглушка без реализации; отложена владельцем 2026-10-13 («не нужен сейчас, отдельная большая задача»); предпосылки: пакет preview lib-app-core (T-051) и персистентность (T-053); семантика видимости пока демонстрируется бейджем «Скрыт в предпросмотре» на карточке
-- Хранилище ServiceGraph персистентное отсутствует (T-053, Epic 004); «Сохранить» — заглушка snackbar
+- Серверное хранилище ServiceGraph отсутствует (сейчас только IndexedDB браузера, T-053); один ключ = id карты, список проектов на `/` не связан с хранилищем
 
 ---
 
@@ -195,10 +196,9 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 <!-- Приоритизировано, максимум 7 пунктов. Выполненное удаляется (факт уходит в §4.1). -->
 
 1. [ ] Epic 002, S13: T-042 (сложные редакторы: IconPicker, AttachmentField, DeviceUrlMapEditor) — ждёт решения по панели атрибутов элементов страниц (§6)
-2. [ ] Epic 002, S14: T-050 (поиск по канвасу с auto-expand сжатых узлов), T-052 (заглушка «На согласование»), T-053 (сохранение: порт IGraphRepository + адаптер IndexedDB, загрузка при старте редактора)
-3. [ ] NEW: определить контракт микрофронтенда (exposes, shared, роутинг) — блокирует адаптацию bootstrap под remote
-4. [ ] NEW: установить и настроить Module Federation plugin для Rsbuild, проверить интеграцию с host
-5. [ ] /preview — отдельная большая задача [owner 2026-10-13]; после пакета preview lib-app-core (T-051) и персистентности (T-053)
+2. [ ] NEW: определить контракт микрофронтенда (exposes, shared, роутинг) — блокирует адаптацию bootstrap под remote
+3. [ ] NEW: установить и настроить Module Federation plugin для Rsbuild, проверить интеграцию с host
+4. [ ] /preview — отдельная большая задача [owner 2026-10-13]; после пакета preview lib-app-core (T-051) и персистентности (T-053)
 
 ---
 
@@ -234,3 +234,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-10-13 | agent:claude | N9 исправлен (принимающий handle логики скрыт, загорается при протягивании ребра из option'а у элементов той же формы кроме источника; решение owner). Добавлены CLAUDE.md (синхронизируется с KIMI.md), .claude/commands check-state/update-state, scripts/project-state.mjs (npm run state:check / state:log — механика без LLM). state:check нашёл неточности §2: @rsbuild/plugin-react 2.1.1, @testing-library/dom 10.4.2, jsdom 27.2.0, lint-staged 16.2.6 не отражены в таблице.
 - 2026-10-13 | agent:claude | N6–N12 исправлены (выделение узла, handles, z-index рёбер, зазор колонки по измеренным размерам); скрипт test удалён из package.json и упоминания тестов — из state-команд [owner].
 - 2026-10-13 | agent:claude | T-043 подсветка нарушений инвариантов на канвасе; вопросы по T-042 и политике валидации — §6.
+- 2026-10-13 | agent:claude | S14: T-050 поиск по канвасу, T-052 заглушка «На согласование», T-053 сохранение в IndexedDB через IGraphRepository.

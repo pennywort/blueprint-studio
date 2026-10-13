@@ -20,29 +20,30 @@ describe('EditorTopBar (T-020)', () => {
     expect(screen.getByRole('button', { name: 'На согласование' })).not.toBeNull();
   });
 
-  it('поле поиска управляемое и сообщает об изменениях', () => {
-    const onSearchChange = vi.fn();
-    renderTopBar({ onSearchChange });
+  it('поле поиска управляемое и ищет по канвасу (T-050)', () => {
+    const searchCanvas = vi.fn(() => []);
+    renderTopBar({ searchCanvas });
 
     const input = screen.getByPlaceholderText('Начните вводить') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'Главная' } });
 
     expect(input.value).toBe('Главная');
-    expect(onSearchChange).toHaveBeenCalledWith('Главная');
+    expect(searchCanvas).toHaveBeenCalledWith('Главная');
   });
 
   it('кнопки вызывают заглушки-обработчики', () => {
     const onSave = vi.fn();
     const onPreview = vi.fn();
-    const onSubmitForApproval = vi.fn();
-    renderTopBar({ onSave, onPreview, onSubmitForApproval });
+    renderTopBar({ onSave, onPreview });
 
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить' }));
     fireEvent.click(screen.getByRole('button', { name: 'Предпросмотр' }));
-    fireEvent.click(screen.getByRole('button', { name: 'На согласование' }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onPreview).toHaveBeenCalledTimes(1);
-    expect(onSubmitForApproval).toHaveBeenCalledTimes(1);
+    // «На согласование» неактивна до workflow FSM (T-052).
+    expect((screen.getByRole('button', { name: 'На согласование' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
   });
 });

@@ -127,6 +127,11 @@ export type CanvasNodeData = {
   // внедряются хранилищем состояния (useEditorGraph) после graphToFlow. ---
   /** Корзина в заголовке узла → RemoveHomePage/RemoveScenario/RemoveForm. */
   onDeleteNode?: () => void;
+  /**
+   * Поиск (T-050): элемент, который надо показать, — сжатый узел (T-033)
+   * разворачивается. nonce различает повторные запросы того же элемента.
+   */
+  reveal?: { elementId: string; nonce: number };
   /** Нарушения инвариантов узла и его элементов (T-043) — рамка + тултип. */
   violations?: readonly string[];
   /** Варианты меню «+» шага формы (kind + человекочитаемая подпись). */

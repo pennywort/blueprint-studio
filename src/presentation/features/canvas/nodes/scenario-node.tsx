@@ -1,4 +1,4 @@
-import { useCallback, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useState, type DragEvent } from 'react';
 import { Handle, Position, useConnection, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import { Box, Button, Card, IconButton, Typography, makeStyles } from '@sber-friend/flamingo-core';
 import { Delete, ExpandLess, ExpandMore } from '@sber-friend/flamingo-icons';
@@ -92,6 +92,15 @@ export function ScenarioNode({ id, data, type }: NodeProps<CanvasNode>) {
     setExpanded((current) => !current);
     updateNodeInternals(id);
   }, [id, updateNodeInternals]);
+  // Поиск нашёл элемент в сжатом узле (T-050) — развернуть, иначе его не показать.
+  const reveal = data.reveal;
+  useEffect(() => {
+    if (reveal && data.elements.some((element) => element.id === reveal.elementId)) {
+      setExpanded(true);
+      updateNodeInternals(id);
+    }
+    // data.elements намеренно вне зависимостей: реагируем только на новый запрос поиска.
+  }, [reveal, id, updateNodeInternals]);
 
   // Состояние drop-зоны: подсветка во время совместимого drag + линия-индикатор
   // якоря. Вид приёмника узла зависит от его типа (доменные ограничения).

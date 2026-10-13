@@ -7,10 +7,7 @@ import { EditorCanvas } from '@presentation/features/canvas/editor-canvas';
 import { EmptyCanvasState } from '@presentation/features/canvas/empty-canvas-state';
 import { useEditorGraph } from '@presentation/features/canvas/use-editor-graph';
 import { AttributesPanel } from '@presentation/features/attributes/attributes-panel';
-import {
-  EditorNotificationsProvider,
-  useEditorNotifications,
-} from '@presentation/features/notifications/editor-notifications';
+import { EditorNotificationsProvider } from '@presentation/features/notifications/editor-notifications';
 import { EditorTopBar } from '@presentation/features/top-bar/editor-top-bar';
 import { EditorToolbar, type EditorSidePanel } from '@presentation/features/toolbar/editor-toolbar';
 
@@ -58,7 +55,6 @@ function EditorPageLayout() {
   const container = useContainer();
   const elementSchemas = container.cradle.elementSchemaProvider.listSchemas();
   const schemaByKind = new Map(elementSchemas.map((schema) => [schema.kind, schema]));
-  const notifications = useEditorNotifications();
   // TEMPORARY (до effector): граф в React state, мутации только через
   // CommandBus — см. use-editor-graph.ts.
   const editorGraph = useEditorGraph();
@@ -70,9 +66,11 @@ function EditorPageLayout() {
 
   return (
     <Box display="flex" flexDirection="column" height="100vh" bgcolor="background.default">
-      {/* Реального сохранения нет (T-053): кнопка подключена к фасаду
-          уведомлений как заглушка успеха. */}
-      <EditorTopBar onSave={notifications.showSaveSuccess} />
+      <EditorTopBar
+        onSave={editorGraph.save}
+        searchCanvas={editorGraph.searchCanvas}
+        onSelectSearchResult={editorGraph.selectSearchResult}
+      />
       <Box display="flex" flexGrow={1} minHeight={0}>
         {sidePanel !== null ? (
           <>
@@ -105,6 +103,7 @@ function EditorPageLayout() {
             onSelectedNodeChange={editorGraph.onSelectedNodeChange}
             onClearSelection={editorGraph.clearSelection}
             onNodesMeasured={editorGraph.reportNodeSizes}
+            focus={editorGraph.focus}
           />
           {/* Пустое состояние (T-024): поверх канваса, не перехватывает
               события мыши — pan/zoom и тулбар работают сквозь него. hasNodes

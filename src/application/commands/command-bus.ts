@@ -53,6 +53,13 @@ export class CommandBus {
     return applyPatches(current, last.patches);
   }
 
+  // Сброс истории: граф заменён целиком (загрузка карты из хранилища, T-053) —
+  // патчи прежней истории к новому графу неприменимы.
+  reset(): void {
+    this.undoStack = [];
+    this.redoStack = [];
+  }
+
   canUndo(): boolean {
     return this.undoStack.length > 0;
   }

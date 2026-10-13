@@ -1,4 +1,4 @@
-import { useCallback, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useState, type DragEvent } from 'react';
 import { Handle, Position, useConnection, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import {
   Box,
@@ -160,6 +160,18 @@ export function FormNode({ id, data }: NodeProps<CanvasNode>) {
     },
     [id, updateNodeInternals],
   );
+  // Поиск нашёл элемент в сжатом шаге (T-050) — развернуть этот шаг.
+  const reveal = data.reveal;
+  useEffect(() => {
+    const step = reveal
+      ? data.steps.find((candidate) => candidate.elements.some((element) => element.id === reveal.elementId))
+      : undefined;
+    if (step) {
+      setExpandedSteps((current) => ({ ...current, [step.id]: true }));
+      updateNodeInternals(id);
+    }
+    // data.steps намеренно вне зависимостей: реагируем только на новый запрос поиска.
+  }, [reveal, id, updateNodeInternals]);
 
   const pickKind = (kind: FormComponentKind) => {
     if (stepMenu) {
