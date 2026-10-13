@@ -66,11 +66,13 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
       // он не ловит мышь (содержимое кликабельно), рёбра крепятся к его
       // левому краю по центру. Пока тянется связь, допустимая цель принимает
       // drop/клик курсора в любом месте сущности; под курсором — рамка.
+      // Накрывает карточку вместе с рамкой 1px (−1px): точка входа рёбер и
+      // полая окружность — ровно на линии рамки [owner 2026-10-13].
       '& .react-flow__handle.editor-target': {
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
+        top: -1,
+        left: -1,
+        width: 'calc(100% + 2px)',
+        height: 'calc(100% + 2px)',
         minWidth: 0,
         minHeight: 0,
         transform: 'none',
@@ -102,9 +104,10 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
         backgroundColor: theme.palette.background.paper,
         transform: 'translate(-50%, -50%)',
       },
+      // Рамка цели — поверх рамки карточки, окружность по её центру.
       '& .react-flow__handle.editor-target.editor-target-available:hover': {
         outline: `2px solid ${canvas.edgeActive}`,
-        outlineOffset: 2,
+        outlineOffset: -1,
       },
       // Идёт протягивание связи — курсор «прицел» на всём канвасе. !important:
       // курсоры react-flow (grab полотна, pointer узлов) той же специфичности

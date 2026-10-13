@@ -155,7 +155,17 @@ export function ElementCard({ element }: ElementCardProps) {
           position={Position.Left}
           id={logicAnchorHandleId(element.id)}
           isConnectable={false}
-          style={{ top: FORM_STEP_LAYOUT.logicHandleTop, opacity: 0, pointerEvents: 'none' }}
+          // Нулевой размер: ребро упирается ровно в край карточки, а не за
+          // полширины handle до неё [owner 2026-10-13].
+          style={{
+            top: FORM_STEP_LAYOUT.logicHandleTop,
+            width: 0,
+            height: 0,
+            minWidth: 0,
+            minHeight: 0,
+            opacity: 0,
+            pointerEvents: 'none',
+          }}
         />
       ) : null}
       <CardContent className={classes.content}>
