@@ -19,7 +19,7 @@
 - **Stack:**
   - Сборка: Rsbuild 2.2.0 (`@rsbuild/core`, `@rsbuild/plugin-react`)
   - Фреймворк: React 19.3.0 + TypeScript 5.7.3 (strict mode)
-  - UI-кит: `@sber-friend/flamingo-components/core/icons/pickers/animations` 4.9.17 (единая версия)
+  - UI-кит: `@blueprint-vendor/flamingo-components/core/icons/pickers/animations` 4.9.17 (единая версия)
   - Состояние: Effector (план), patronum (план)
   - DI: Awilix (установлен, **не используется** — см. §3)
   - Валидация: Zod 4.6.5
@@ -34,6 +34,7 @@
 - **Working tree:** Clean (все файлы закоммичены в один коммит `1760ea7`). 26 файлов в `src/`. 22 unit-теста проходят.
 
 - **Layout:**
+
 ```
 src/
 ├── index.tsx                           # Committed — только import('./bootstrap')
@@ -94,7 +95,7 @@ src/
 - **[2026-09] T-000:** Stop-gate проверка. Node v22, npm 10.9.8. Flamingo 4.9.17 недоступен в публичном registry, но владелец подтвердил доступ. React 19 одобрен.
 - **[2026-09] T-001:** Инициализация проекта. package.json с точными версиями (`--save-exact`), git init, зависимости.
 - **[2026-09] T-002:** Bootstrap приложения. Rsbuild + TypeScript strict, hash-роутер (`createHashRouter`), 3 страницы-заглушки (`/`, `/editor`, `/preview`).
-- **[2026-09] T-003:** Flamingo smoke test. Компонент `Typography` из `@sber-friend/flamingo-core` рендерится со стилями (шрифты SBSans).
+- **[2026-09] T-003:** Flamingo smoke test. Компонент `Typography` из `@blueprint-vendor/flamingo-core` рендерится со стилями (шрифты BPSans).
 - **[2026-09] T-004:** Линтеры и форматтеры. ESLint flat config с `eslint-plugin-boundaries` (4 слоя), boundaries-линтер блокирует импорты React в `domain`. Prettier, Husky, commitlint, lint-staged настроены.
 - **[2026-09] T-005:** Доменная модель. Zod-схемы для всех 12 form-компонентов (discriminated union по `kind`), `ServiceGraph`, `Scenario`/`SubScenario`, `FormStep`/`ApplicationForm`, branded ID-типы. Константы: `ATTACHMENT_MAX_FILE_BYTES = 3MB`, `ATTACHMENT_MAX_TOTAL_BYTES = 50MB`, `RADIO_MAX_OPTIONS = 5`.
 - **[2026-09] T-006:** Инварианты (частично). 3 из 4 реализованы:
@@ -129,15 +130,15 @@ src/
 
 ### Architecture decisions (что и почему выбрано)
 
-| Решение | Обоснование |
-|---|---|
-| Rsbuild вместо Vite | Требование владельца: скорость, SWC-компиляция |
-| Awilix PROXY + деструктуризация в конструкторах | Минификация production-сборки переименовывает параметры конструктора; CLASSIC-режим ломается только в проде |
-| Immer `produceWithPatches` как единственный способ мутации | Один механизм даёт: применение команды, undo/redo, будущие патч-цепочки версий |
-| Effector в presentation, команды — чистые классы в application | Команды тестируются без React и Effector |
-| JSON-манифест в репо за портом | Нет доступа к реальному `element-schemas` из lib-app-core; замена = новый адаптер |
-| Hash-роутинг (`createHashRouter`) | Любой роут открывается без серверных rewrite |
-| Без Vite/Next.js/CRA/Redux/Zustand/декораторов DI | Осознанный отказ от альтернатив |
+| Решение                                                        | Обоснование                                                                                                 |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Rsbuild вместо Vite                                            | Требование владельца: скорость, SWC-компиляция                                                              |
+| Awilix PROXY + деструктуризация в конструкторах                | Минификация production-сборки переименовывает параметры конструктора; CLASSIC-режим ломается только в проде |
+| Immer `produceWithPatches` как единственный способ мутации     | Один механизм даёт: применение команды, undo/redo, будущие патч-цепочки версий                              |
+| Effector в presentation, команды — чистые классы в application | Команды тестируются без React и Effector                                                                    |
+| JSON-манифест в репо за портом                                 | Нет доступа к реальному `element-schemas` из lib-app-core; замена = новый адаптер                           |
+| Hash-роутинг (`createHashRouter`)                              | Любой роут открывается без серверных rewrite                                                                |
+| Без Vite/Next.js/CRA/Redux/Zustand/декораторов DI              | Осознанный отказ от альтернатив                                                                             |
 
 ---
 
@@ -195,49 +196,57 @@ src/
 ### 6.1 Ключевые типы и интерфейсы
 
 **Доменная модель — ServiceGraph:**
+
 ```typescript
 export const ServiceGraphSchema = z.object({
   id: z.string().brand<'BlueprintId'>(),
   title: z.string(),
-  homePage: HomePageSchema,       // listItems, widgetCards, faq?, additionalInfo?
-  subScenarios: z.array(SubScenarioSchema),  // type: 'application'|'link'|'navigation'
-  applicationForms: z.array(ApplicationFormSchema),  // steps: FormStep[], components: FormComponent[]
+  homePage: HomePageSchema, // listItems, widgetCards, faq?, additionalInfo?
+  subScenarios: z.array(SubScenarioSchema), // type: 'application'|'link'|'navigation'
+  applicationForms: z.array(ApplicationFormSchema), // steps: FormStep[], components: FormComponent[]
 });
 ```
 
 **12 Form-компонентов (discriminated union по `kind`):**
-| # | kind | Ключевые атрибуты |
-|---|---|---|
-| 1.1 | `textField` | label, required, multiline, maxLength, placeholder |
-| 1.2 | `infoBlock` | text, links: MarkdownLink[] |
-| 1.3 | `datePeriod` | label, required, withTime, restrictions {noPast, noFuture} |
-| 1.4 | `attachment` | label, required, allowedTypes[] (ОДНО поле на форму) |
-| 1.5 | `checkbox` | label, required |
-| 1.6 | `configurationItemPicker` | label, required, multiSelect, ciTypes[], disabled |
-| 1.7 | `employeeSearch` | label, required, searchType: 'colleagues'|'all' |
-| 1.8 | `selectList` | label, required, displayType: 'radio'|'dropdown'|'list', options[], search? |
-| 1.9 | `typography` | label, displayType: 'heading' |
-| 2.0 | `button` | label, displayType: 'text'|'secondary', position: 'inline'|'standalone' |
-| 2.1 | `addressPicker` | label, required, displayParts: ('floor'|'room'|'zone'|'workplace')[] |
-| 2.2 | `employeeLoginField` | label, required, isHidden? |
+
+| #   | kind                      | Ключевые атрибуты                                          |
+| --- | ------------------------- | ---------------------------------------------------------- |
+| 1.1 | `textField`               | label, required, multiline, maxLength, placeholder         |
+| 1.2 | `infoBlock`               | text, links: MarkdownLink[]                                |
+| 1.3 | `datePeriod`              | label, required, withTime, restrictions {noPast, noFuture} |
+| 1.4 | `attachment`              | label, required, allowedTypes[] (ОДНО поле на форму)       |
+| 1.5 | `checkbox`                | label, required                                            |
+| 1.6 | `configurationItemPicker` | label, required, multiSelect, ciTypes[], disabled          |
+| 1.7 | `employeeSearch`          | label, required, searchType: 'colleagues'                  | 'all'                           |
+| 1.8 | `selectList`              | label, required, displayType: 'radio'                      | 'dropdown'                      | 'list', options[], search? |
+| 1.9 | `typography`              | label, displayType: 'heading'                              |
+| 2.0 | `button`                  | label, displayType: 'text'                                 | 'secondary', position: 'inline' | 'standalone'               |
+| 2.1 | `addressPicker`           | label, required, displayParts: ('floor'                    | 'room'                          | 'zone'                     | 'workplace')[] |
+| 2.2 | `employeeLoginField`      | label, required, isHidden?                                 |
 
 **Порты (application/ports):**
+
 ```typescript
 export interface IElementSchemaProvider {
-  getSchema(kind: FormComponentKind): ElementSchema;  // бросает SchemaNotFoundError
+  getSchema(kind: FormComponentKind): ElementSchema; // бросает SchemaNotFoundError
   listSchemas(): readonly ElementSchema[];
 }
 
-export interface IIdGenerator { next(): string; }
+export interface IIdGenerator {
+  next(): string;
+}
 
-export interface IClock { now(): Date; }
+export interface IClock {
+  now(): Date;
+}
 ```
 
 **Command Bus (требуется к реализации):**
+
 ```typescript
 export interface Command {
   readonly name: string;
-  apply(draft: ServiceGraph): void;  // чистая функция-мутация
+  apply(draft: ServiceGraph): void; // чистая функция-мутация
 }
 
 export class CommandBus {
@@ -250,6 +259,7 @@ export class CommandBus {
 ```
 
 **DI Container (требуется к реализации):**
+
 ```typescript
 export interface Cradle {
   idGenerator: IIdGenerator;
@@ -278,16 +288,16 @@ export function buildContainer(): AwilixContainer<Cradle> {
 
 Каждый инвариант — чистая функция `(graph: ServiceGraph) => InvariantViolation[]` где `InvariantViolation = { rule: string, path: string, message: string }`.
 
-| # | Правило | Статус |
-|---|---|---|
-| 1 | Attachment — ОДНО поле на форму | ✅ Реализован (6 тестов) |
-| 2 | Radio — max 5 options | ✅ Реализован (4 теста) |
-| 3 | Маршрутизация и динамический контент взаимоисключающи | ⚠️ Stub/no-op |
-| 4 | Select list с маршрутизацией → динамический контент запрещён | ⚠️ Stub/no-op |
-| 5 | ConfigItemPicker с маршрутизацией → динамический контент запрещён | ⚠️ Stub/no-op |
-| 6 | После передачи в разработку — только минорные правки | ⏭️ Workflow-FSM (эпик 004) |
-| 7 | Info block — без картинок, один цвет | ⏭️ UI-уровень (эпик 002) |
-| 8 | Маски ввода | ⏭️ Не реализуются |
+| #   | Правило                                                           | Статус                     |
+| --- | ----------------------------------------------------------------- | -------------------------- |
+| 1   | Attachment — ОДНО поле на форму                                   | ✅ Реализован (6 тестов)   |
+| 2   | Radio — max 5 options                                             | ✅ Реализован (4 теста)    |
+| 3   | Маршрутизация и динамический контент взаимоисключающи             | ⚠️ Stub/no-op              |
+| 4   | Select list с маршрутизацией → динамический контент запрещён      | ⚠️ Stub/no-op              |
+| 5   | ConfigItemPicker с маршрутизацией → динамический контент запрещён | ⚠️ Stub/no-op              |
+| 6   | После передачи в разработку — только минорные правки              | ⏭️ Workflow-FSM (эпик 004) |
+| 7   | Info block — без картинок, один цвет                              | ⏭️ UI-уровень (эпик 002)   |
+| 8   | Маски ввода                                                       | ⏭️ Не реализуются          |
 
 ### 6.4 Архитектурные правила слоёв
 
@@ -298,11 +308,12 @@ infrastructure → [domain, application, infrastructure]
 presentation → [domain, application, infrastructure/container]
 ```
 
-Проверяется через `eslint-plugin-boundaries` + `no-restricted-imports` в `src/domain/` (запрет импортов React, zod, effector, awilix, xstate, @xyflow/react, @sber-friend/*).
+Проверяется через `eslint-plugin-boundaries` + `no-restricted-imports` в `src/domain/` (запрет импортов React, zod, effector, awilix, xstate, @xyflow/react, @blueprint-vendor/*).
 
 ### 6.5 Готовые сниппеты для реализации
 
 **CommandBus (полная реализация по design.md):**
+
 ```typescript
 import { type Patch, produceWithPatches, applyPatches } from 'immer';
 import type { ServiceGraph } from '@domain/model/service-graph';
@@ -331,7 +342,7 @@ export class CommandBus {
       command.apply(draft);
     });
     this.undoStack.push({ command, patches, inversePatches, executedAt: this.deps.clock.now() });
-    this.redoStack = [];  // новая команда очищает redo
+    this.redoStack = []; // новая команда очищает redo
     return applyPatches(current, patches);
   }
 
@@ -349,8 +360,12 @@ export class CommandBus {
     return applyPatches(current, last.patches);
   }
 
-  canUndo(): boolean { return this.undoStack.length > 0; }
-  canRedo(): boolean { return this.redoStack.length > 0; }
+  canUndo(): boolean {
+    return this.undoStack.length > 0;
+  }
+  canRedo(): boolean {
+    return this.redoStack.length > 0;
+  }
 }
 ```
 
@@ -358,16 +373,16 @@ export class CommandBus {
 
 ## 7. Глоссарий проекта
 
-| Термин | Код | Значение |
-|---|---|---|
-| Микроприложение | `EngineMicroApp` | JS-приложение на движке lib-app-core |
-| JSON-дескриптор | `MicroAppDescriptor` | Целевой формат будущего генератора |
-| Архитектурная карта | `ServiceBlueprint` | Основной артефакт редактора |
-| Граф сервиса | `ServiceGraph` | Доменная модель содержимого карты |
-| Форм-компонент | `FormComponent` | 12 типов discriminated union по `kind` |
-| Роли | `Role` | 'author' \| 'approver' \| 'developer' |
-| Порт | `I*` | Интерфейс application-слоя |
-| Адаптер | `*Provider` / `*Repository` | Реализация порта в infrastructure |
+| Термин              | Код                         | Значение                               |
+| ------------------- | --------------------------- | -------------------------------------- |
+| Микроприложение     | `EngineMicroApp`            | JS-приложение на движке lib-app-core   |
+| JSON-дескриптор     | `MicroAppDescriptor`        | Целевой формат будущего генератора     |
+| Архитектурная карта | `ServiceBlueprint`          | Основной артефакт редактора            |
+| Граф сервиса        | `ServiceGraph`              | Доменная модель содержимого карты      |
+| Форм-компонент      | `FormComponent`             | 12 типов discriminated union по `kind` |
+| Роли                | `Role`                      | 'author' \| 'approver' \| 'developer'  |
+| Порт                | `I*`                        | Интерфейс application-слоя             |
+| Адаптер             | `*Provider` / `*Repository` | Реализация порта в infrastructure      |
 
 ---
 
@@ -375,10 +390,10 @@ export class CommandBus {
 
 Полный roadmap (по proposal.md + design.md):
 
-| Epic | Название | Статус | Содержимое |
-|---|---|---|---|
-| 001 | Foundation | 🟡 80% | Проект, слои, доменная модель, инварианты, порты, stub-адаптер, 3 страницы. **ПРОБЕЛЫ: CommandBus, DI Container** |
-| 002 | Canvas | ⏳ Не начат | reactflow canvas, узлы-заглушки, палитра компонентов, drag-and-drop, pan/zoom, drawer атрибутов |
-| 003 | Editor Features | ⏳ Не начат | Undo/redo UI, tree view свойств, clipboard (copy/paste), ролевые ограничения |
-| 004 | Workflow & Persistence | ⏳ Не начат | XState workflow-FSM, роли (author/approver/developer), IndexedDB персистентность, экспорт файла, versioning |
-| 005 | MicroApp Descriptor Generator | ⏳ Не начат | `IMicroAppDescriptorGenerator`, промежуточное представление `BlueprintIR`, экспорт в формат lib-app-core |
+| Epic | Название                      | Статус      | Содержимое                                                                                                        |
+| ---- | ----------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------- |
+| 001  | Foundation                    | 🟡 80%      | Проект, слои, доменная модель, инварианты, порты, stub-адаптер, 3 страницы. **ПРОБЕЛЫ: CommandBus, DI Container** |
+| 002  | Canvas                        | ⏳ Не начат | reactflow canvas, узлы-заглушки, палитра компонентов, drag-and-drop, pan/zoom, drawer атрибутов                   |
+| 003  | Editor Features               | ⏳ Не начат | Undo/redo UI, tree view свойств, clipboard (copy/paste), ролевые ограничения                                      |
+| 004  | Workflow & Persistence        | ⏳ Не начат | XState workflow-FSM, роли (author/approver/developer), IndexedDB персистентность, экспорт файла, versioning       |
+| 005  | MicroApp Descriptor Generator | ⏳ Не начат | `IMicroAppDescriptorGenerator`, промежуточное представление `BlueprintIR`, экспорт в формат lib-app-core          |

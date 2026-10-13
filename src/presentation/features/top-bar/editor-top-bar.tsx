@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Box, Button, InputAdornment, TextField, makeStyles } from '@sber-friend/flamingo-core';
-import { Search } from '@sber-friend/flamingo-icons';
+import { Box, Button, InputAdornment, TextField, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Search } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({

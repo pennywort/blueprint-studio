@@ -8,7 +8,7 @@ import {
   Select,
   Switch,
   TextField,
-} from '@sber-friend/flamingo-core';
+} from '@blueprint-vendor/flamingo-core';
 import { registerPropertyEditor, type PropertyEditorProps } from './property-editor-registry';
 
 // Встроенные редакторы свойств (T-040): text → TextField, stringList →

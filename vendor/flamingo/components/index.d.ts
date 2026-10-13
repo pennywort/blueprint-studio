@@ -1,2 +1,2 @@
 // TEMPORARY SHIM — see index.js.
-export * from '@sber-friend/flamingo-core';
+export * from '@blueprint-vendor/flamingo-core';

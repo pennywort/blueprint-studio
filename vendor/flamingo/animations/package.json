@@ -1,7 +1,7 @@
 {
-  "name": "@sber-friend/flamingo-animations",
+  "name": "@blueprint-vendor/flamingo-animations",
   "version": "4.9.17",
-  "description": "TEMPORARY SHIM: stub until internal @sber-friend registry is available (owner decision 2026-10-09). MUI v4 has no animations equivalent — extend when a task needs it.",
+  "description": "TEMPORARY SHIM: stub until internal @blueprint-vendor registry is available (owner decision 2026-10-09). MUI v4 has no animations equivalent — extend when a task needs it.",
   "type": "module",
   "main": "./index.js",
   "types": "./index.d.ts"

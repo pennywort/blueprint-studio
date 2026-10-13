@@ -10,8 +10,8 @@ import {
   MenuItem,
   Typography,
   makeStyles,
-} from '@sber-friend/flamingo-core';
-import { Add, Delete, ExpandLess, ExpandMore } from '@sber-friend/flamingo-icons';
+} from '@blueprint-vendor/flamingo-core';
+import { Add, Delete, ExpandLess, ExpandMore } from '@blueprint-vendor/flamingo-icons';
 import type { FormComponentKind } from '@domain/model/form-components';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { CANVAS_LAYOUT } from '../canvas-layout';

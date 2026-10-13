@@ -1,5 +1,5 @@
 // TEMPORARY (owner decision 2026-10-09): MUI v4 (временная подмена Flamingo,
-// пока недоступен внутренний @sber-friend registry) вызывает ReactDOM.findDOMNode,
+// пока недоступен внутренний @blueprint-vendor registry) вызывает ReactDOM.findDOMNode,
 // удалённый из react-dom 19. Бандлер алиасит точный импорт 'react-dom' на этот
 // файл (rsbuild.config.ts / vitest.config.ts); реальный пакет подтягивается
 // относительным путём, чтобы обойти и сам alias, и exports-мапу react-dom.

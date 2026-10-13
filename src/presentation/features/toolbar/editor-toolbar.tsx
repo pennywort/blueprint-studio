@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Box, IconButton, Menu, MenuItem, makeStyles } from '@sber-friend/flamingo-core';
-import { AccountTree, Code, NoteAdd, ViewColumn } from '@sber-friend/flamingo-icons';
+import { Box, IconButton, Menu, MenuItem, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { AccountTree, Code, NoteAdd, ViewColumn } from '@blueprint-vendor/flamingo-icons';
 import type { ElementSchema } from '@application/ports/element-schema-provider';
 import type { FormComponentKind } from '@domain/model/form-components';
 import type { EditorTheme } from '@presentation/theme/editor-theme';

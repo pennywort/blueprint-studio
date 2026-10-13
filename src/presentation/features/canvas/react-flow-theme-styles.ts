@@ -1,4 +1,4 @@
-import { makeStyles } from '@sber-friend/flamingo-core';
+import { makeStyles } from '@blueprint-vendor/flamingo-core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 // Стили внутренних частей react-flow, оформленные токенами темы (D6).

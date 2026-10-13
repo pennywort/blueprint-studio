@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Divider, Typography, makeStyles } from '@sber-friend/flamingo-core';
+import { Box, Divider, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import { useContainer } from '@presentation/app/App';
 import { EditorThemeProvider } from '@presentation/theme/editor-theme-provider';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
