@@ -9,7 +9,6 @@
     "build": "rsbuild build",
     "preview": "rsbuild preview",
     "lint": "eslint . && tsc --noEmit",
-    "test": "vitest run",
     "prepare": "husky",
     "state:check": "node scripts/project-state.mjs check",
     "state:log": "node scripts/project-state.mjs log"

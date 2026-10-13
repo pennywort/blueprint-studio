@@ -104,6 +104,7 @@ function EditorPageLayout() {
             onDeleteSelectedElement={editorGraph.deleteSelectedElement}
             onSelectedNodeChange={editorGraph.onSelectedNodeChange}
             onClearSelection={editorGraph.clearSelection}
+            onNodesMeasured={editorGraph.reportNodeSizes}
           />
           {/* Пустое состояние (T-024): поверх канваса, не перехватывает
               события мыши — pan/zoom и тулбар работают сквозь него. hasNodes

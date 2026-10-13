@@ -12,10 +12,16 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     boxShadow: 'none',
     // Handle позиционируется относительно карточки элемента (D9).
     position: 'relative',
+    // Card MUI обрезает содержимое (overflow: hidden) — handle на границе
+    // карточки был виден наполовину, ребро «не доходило» до него (N7/N11).
+    overflow: 'visible',
   },
   // Выделение элемента (F7): чёрная рамка цвета стрелок — как у узлов и связей.
+  // Вторая половина рамки — тенью, а не толщиной border: размер карточки
+  // не меняется, и handles/рёбра узла не сдвигаются при выделении (N10).
   cardSelected: {
-    border: `2px solid ${theme.editor.canvas.edge}`,
+    borderColor: theme.editor.canvas.edge,
+    boxShadow: `0 0 0 1px ${theme.editor.canvas.edge}`,
   },
   content: {
     display: 'flex',

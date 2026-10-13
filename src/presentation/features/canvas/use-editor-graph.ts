@@ -57,7 +57,7 @@ import { useContainer } from '@presentation/app/App';
 import { useEditorNotifications } from '@presentation/features/notifications/editor-notifications';
 import type { AddableElementKind, AddableNodeKind } from '@presentation/features/toolbar/editor-toolbar';
 import type { DropAnchorPosition, ElementDragPayload } from './element-dnd';
-import { computeLayout } from './canvas-layout';
+import { computeLayout, type MeasuredNodeSizes } from './canvas-layout';
 import {
   FORM_COMPONENT_KIND_LABELS,
   LOGIC_SOURCE_HANDLE_PREFIX,
@@ -110,7 +110,30 @@ export function useEditorGraph() {
   // на устаревший state, а мутации идут только через CommandBus.
   const graphRef = useRef(graph);
 
-  const positions = useMemo(() => computeLayout(graph), [graph]);
+  // Фактические размеры узлов от react-flow (N12): стек колонки строится по
+  // ним, чтобы зазор между узлами был ровно rowGap. Обновляется только при
+  // реальном изменении (> 1px) — иначе пересчёт раскладки зациклился бы.
+  const [measuredSizes, setMeasuredSizes] = useState<MeasuredNodeSizes>({});
+  const reportNodeSizes = useCallback((sizes: MeasuredNodeSizes) => {
+    setMeasuredSizes((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const [id, size] of Object.entries(sizes)) {
+        const previous = current[id];
+        if (
+          !previous ||
+          Math.abs(previous.width - size.width) > 1 ||
+          Math.abs(previous.height - size.height) > 1
+        ) {
+          next[id] = size;
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, []);
+
+  const positions = useMemo(() => computeLayout(graph, measuredSizes), [graph, measuredSizes]);
   const flow = useMemo(() => graphToFlow(graph, positions), [graph, positions]);
 
   // Выделенный на канвасе узел (клик): цель для меню добавления элементов
@@ -578,9 +601,11 @@ export function useEditorGraph() {
         });
         return {
           ...node,
-          // Выделение взаимоисключающее (F5): пока выделен элемент, узел
-          // принудительно снимается с выделения react-flow.
-          ...(selectedElementId !== null ? { selected: false } : null),
+          // Выделение узла управляется отсюда (N6): канвас заменяет локальные
+          // узлы пропсами при каждом пересчёте, и неуправляемое выделение
+          // react-flow терялось («мигание» рамки после выделения элемента).
+          // Взаимоисключение с элементом (F5): пока выделен элемент — узел нет.
+          selected: selectedElementId === null && node.id === selectedNodeId,
           data: {
             ...node.data,
             onDeleteNode: () => removeNode(node),
@@ -616,6 +641,7 @@ export function useEditorGraph() {
       moveElement,
       toggleComplexLogic,
       selectedElementId,
+      selectedNodeId,
       selectElement,
     ],
   );
@@ -654,6 +680,7 @@ export function useEditorGraph() {
     hasHome: graph.homePage !== undefined,
     selectedNodeType,
     onSelectedNodeChange: handleNodeSelection,
+    reportNodeSizes,
     clearSelection,
     selectedElement,
     updateElementProps,

@@ -19,7 +19,7 @@ L-I5) — спроси владельца, не выдумывай.
 
 ## Железные правила (кратко, подробно — KIMI.md §4–§7)
 
-- **Тесты НИКОГДА не пишем и НИКОГДА не запускаем** (ни все, ни точечно).
+- **Тесты НИКОГДА не пишем и НИКОГДА не запускаем**; скрипта `test` в package.json нет [owner 2026-10-13].
   Верификация = `npm run lint && npm run build` + ручная проверка в приложении.
 - Любое изменение графа — команда через `CommandBus` (immer `produceWithPatches`).
 - 4 слоя `domain → application → infrastructure → presentation` (eslint-plugin-boundaries).

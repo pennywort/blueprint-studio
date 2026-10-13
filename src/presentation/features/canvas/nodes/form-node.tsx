@@ -28,6 +28,8 @@ import { ElementCard } from './element-card';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
+    // Не обрезать target-handle узла на левой границе (N7/N11).
+    overflow: 'visible',
     borderRadius: 16,
     backgroundColor: theme.palette.background.paper,
     padding: theme.spacing(2),

@@ -14,8 +14,10 @@ export interface EditorCanvasPalette {
   edgeActive: string;
   /** Заливка точек подключения (handles). */
   handle: string;
-  /** Обводка точек подключения. */
-  handleBorder: string;
+  /** Блик точки подключения (верх-лево радиального градиента, «объём», N7). */
+  handleHighlight: string;
+  /** Тень точки подключения (rgba с прозрачностью, N7). */
+  handleShadow: string;
   /** Фон пилюль нижних контролов и левого тулбара. */
   controlsBackground: string;
   /** Фон hover/pressed у кнопок контролов. */
@@ -94,7 +96,8 @@ const lightTheme: EditorThemeDefinition = {
     edge: '#5d616f',
     edgeActive: '#596ce0',
     handle: '#5d616f',
-    handleBorder: '#ffffff',
+    handleHighlight: '#9a9eac',
+    handleShadow: 'rgba(39, 41, 47, 0.35)',
     controlsBackground: '#e7e9ed',
     controlsHoverBackground: '#d0d3dc',
     controlsForeground: '#27292f',

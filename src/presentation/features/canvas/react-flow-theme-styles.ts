@@ -44,11 +44,17 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
       },
       // Рёбра «Сложной логики» рисуются в общем стиле навигации (решение
       // владельца по N1: отличие предложит дизайнер).
+      // Handle — круглый и объёмный (N7): радиальный градиент + тень, без
+      // белой обводки (N11). Центр на границе карточки — ребро начинается
+      // точно от него.
       '& .react-flow__handle': {
-        width: 8,
-        height: 8,
+        width: 10,
+        height: 10,
+        borderRadius: '50%',
+        border: 'none',
         backgroundColor: canvas.handle,
-        border: `2px solid ${canvas.handleBorder}`,
+        backgroundImage: `radial-gradient(circle at 35% 35%, ${canvas.handleHighlight}, ${canvas.handle} 65%)`,
+        boxShadow: `0 1px 3px ${canvas.handleShadow}`,
       },
       '& .react-flow__minimap': {
         backgroundColor: canvas.minimapBackground,

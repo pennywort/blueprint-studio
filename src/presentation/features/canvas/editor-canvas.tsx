@@ -58,6 +58,8 @@ export type EditorCanvasProps = {
   onSelectedNodeChange?: (nodeId: string | null) => void;
   /** Клик по пустому полю канваса — снять выделение со всех сущностей. */
   onClearSelection?: () => void;
+  /** Фактические размеры узлов после рендера — стек колонки по ним (N12). */
+  onNodesMeasured?: (sizes: Record<string, { width: number; height: number }>) => void;
 };
 
 // Стабильные пустые значения по умолчанию: литерал в дефолте параметра
@@ -86,6 +88,7 @@ function CanvasInner({
   onDeleteSelectedElement,
   onSelectedNodeChange,
   onClearSelection,
+  onNodesMeasured,
 }: EditorCanvasProps) {
   const theme = useEditorTheme();
   const styles = useReactFlowThemeStyles();
@@ -109,16 +112,28 @@ function CanvasInner({
   // другая — перенос на другой уровень (SetPageLayerDepth). Несостоявшийся
   // drag откатывается возвратом к propsNodes — узел не остаётся в брошенной
   // позиции.
-  const onNodesChange = useCallback((changes: NodeChange<CanvasNode>[]) => {
-    // Удаление узлов — команды RemoveScenario/RemoveForm (T-034), remove-
-    // изменения здесь не применяем: удаление идёт через onNodesDelete.
-    setNodes((current) =>
-      applyNodeChanges(
-        changes.filter((change) => change.type !== 'remove'),
-        current,
-      ),
-    );
-  }, []);
+  const onNodesChange = useCallback(
+    (changes: NodeChange<CanvasNode>[]) => {
+      // Удаление узлов — команды RemoveScenario/RemoveForm (T-034), remove-
+      // изменения здесь не применяем: удаление идёт через onNodesDelete.
+      setNodes((current) =>
+        applyNodeChanges(
+          changes.filter((change) => change.type !== 'remove'),
+          current,
+        ),
+      );
+      const sizes: Record<string, { width: number; height: number }> = {};
+      for (const change of changes) {
+        if (change.type === 'dimensions' && change.dimensions) {
+          sizes[change.id] = change.dimensions;
+        }
+      }
+      if (Object.keys(sizes).length > 0) {
+        onNodesMeasured?.(sizes);
+      }
+    },
+    [onNodesMeasured],
+  );
 
   const onEdgesChange = useCallback((changes: EdgeChange<CanvasEdge>[]) => {
     // Удаление связей идёт через onEdgesDelete → DisconnectElements.
@@ -276,6 +291,10 @@ function CanvasInner({
         onSelectionChange={({ nodes: selected }) => onSelectedNodeChange?.(selected[0]?.id ?? null)}
         onPaneClick={() => onClearSelection?.()}
         isValidConnection={isValidConnection}
+        // Рёбра всегда над блоками, в том числе выделенными (N8): react-flow
+        // по умолчанию поднимает выделенный узел на z-index 1000 — выше слоя
+        // рёбер. Узлы на канвасе не перекрываются, подъём не нужен.
+        elevateNodesOnSelect={false}
         deleteKeyCode={['Backspace', 'Delete']}
         colorMode="light"
         fitView

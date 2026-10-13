@@ -69,11 +69,17 @@ type LayoutNode = {
   height: number;
 };
 
+/** Фактические размеры узлов, измеренные react-flow после рендера. */
+export type MeasuredNodeSizes = Readonly<Record<string, { width: number; height: number }>>;
+
 // Позиции узлов для graphToFlow (параметр positions): колонка = глубина,
 // Y внутри колонки — стек по orderIndex (D13). Каждый несвязанный подграф
 // раскладывается от своего корня (глубина 0, D8) — подграфы встают в одну
 // колонку друг под другом, отдельного «островного» раскладщика нет.
-export function computeLayout(graph: ServiceGraph): Record<string, XYPosition> {
+// measured — фактические размеры узлов (N12): оценка не учитывает сжатие
+// (T-033) и реальную высоту строк, из-за чего зазоры в колонке «плыли»;
+// оценка остаётся только для ещё не измеренных узлов (первый рендер).
+export function computeLayout(graph: ServiceGraph, measured?: MeasuredNodeSizes): Record<string, XYPosition> {
   const depths = computeGraphDepths(graph);
 
   const nodes: LayoutNode[] = [];
@@ -103,6 +109,14 @@ export function computeLayout(graph: ServiceGraph): Record<string, XYPosition> {
   for (const form of graph.applicationForms) {
     const size = estimateFormSize(form);
     nodes.push({ id: form.id, orderIndex: form.orderIndex, width: size.width, height: size.height });
+  }
+
+  for (const node of nodes) {
+    const size = measured?.[node.id];
+    if (size) {
+      node.width = size.width;
+      node.height = size.height;
+    }
   }
 
   // Группировка по колонкам (глубинам), порядок внутри — по orderIndex.
