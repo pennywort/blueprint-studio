@@ -1,8 +1,8 @@
-import { Handle, Position, useConnection, useNodeId } from '@xyflow/react';
+import { Handle, Position } from '@xyflow/react';
 import { Box, Card, CardContent, Chip, Typography, makeStyles } from '@sber-friend/flamingo-core';
 import { ShowChart, Visibility } from '@sber-friend/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
-import { logicTargetHandleId, parseLogicSourceHandle, type CanvasElementData } from '../graph-flow-adapter';
+import { logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
 import { writeElementDrag } from '../element-dnd';
 import { isActionTarget } from '../canvas-events';
 import { ViolationBadge } from './violation-badge';
@@ -17,6 +17,9 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     // Card MUI обрезает содержимое (overflow: hidden) — handle на границе
     // карточки был виден наполовину, ребро «не доходило» до него (N7/N11).
     overflow: 'visible',
+    // Без анимации тени Paper (300 мс): выделение должно меняться мгновенно,
+    // иначе перекликивание воспринимается как лаг (повторная приёмка).
+    transition: 'none',
   },
   // Выделение элемента (F7): чёрная рамка цвета стрелок — как у узлов и связей.
   // Вторая половина рамки — тенью, а не толщиной border: размер карточки
@@ -80,24 +83,6 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     gap: theme.spacing(0.5),
     marginTop: theme.spacing(1),
   },
-  // Target-handle правил видимости (N9): в покое скрыт — в DOM остаётся,
-  // чтобы react-flow измерил его и крепил к нему рёбра правил. Удвоенный
-  // селектор перебивает общие стили handles из react-flow-theme-styles.
-  logicTargetHidden: {
-    '&&.react-flow__handle': {
-      opacity: 0,
-      pointerEvents: 'none',
-    },
-  },
-  // Подсветка допустимой цели, пока тянется ребро из option'а источника.
-  logicTargetArmed: {
-    '&&.react-flow__handle': {
-      width: 12,
-      height: 12,
-      backgroundColor: theme.editor.canvas.edgeActive,
-      boxShadow: `0 0 0 4px ${theme.editor.canvas.nodeHoverBackground}`,
-    },
-  },
   optionRow: {
     position: 'relative',
     borderRadius: 8,
@@ -118,22 +103,6 @@ export type ElementCardProps = {
 // draggable — dnd элементов (N2): перенос между узлами/шагами и порядок.
 export function ElementCard({ element }: ElementCardProps) {
   const classes = useStyles();
-  const nodeId = useNodeId();
-  // N9 [owner 2026-10-13]: принимающий handle «загорается» только пока из
-  // option'а Select'а тянется ребро — у всех компонентов той же формы
-  // (L-I5: форма = узел), кроме самого источника.
-  const logicArmed = useConnection((connection) => {
-    if (!connection.inProgress || connection.fromNode.id !== nodeId) {
-      return false;
-    }
-    const source = parseLogicSourceHandle(connection.fromHandle.id ?? '');
-    return source !== null && source.elementId !== element.id;
-  });
-  const logicHandleClass = logicArmed
-    ? classes.logicTargetArmed
-    : element.hasIncomingLogic
-      ? undefined
-      : classes.logicTargetHidden;
 
   return (
     // Клик выделяет элемент (единое правило F5/F7: выделение + Delete).
@@ -153,24 +122,25 @@ export function ElementCard({ element }: ElementCardProps) {
         event.stopPropagation();
         writeElementDrag(event.dataTransfer, { elementId: element.id, kind: element.dndKind });
       }}
-      onClick={(event) => {
-        event.stopPropagation();
-        // Клик по коннектору начинает связь, а не выделяет элемент (баг 2).
+      // Выделение — по нажатию (без «лага» click); коннектор и кнопки
+      // выделение не меняют (баг 2). click гасится, чтобы не дойти до узла.
+      onPointerDown={(event) => {
         if (!isActionTarget(event.target)) {
           element.onSelect?.();
         }
       }}
+      onClick={(event) => event.stopPropagation()}
     >
       {/* Цель правил «Сложной логики» (T-037): рёбра видимости приходят
           на левый край карточки элемента, не шага и не формы. Только у
-          компонентов форм (N5); виден, пока тянется ребро правила или если
-          у элемента уже есть входящее правило (N9). */}
+          компонентов форм (N5); виден (полая окружность) только пока
+          тянется правило и элемент — допустимая цель (повторная приёмка). */}
       {element.logicTarget ? (
         <Handle
           type="target"
           position={Position.Left}
           id={logicTargetHandleId(element.id)}
-          className={logicHandleClass}
+          className={element.connectTarget ? 'editor-target-available' : 'editor-target-hidden'}
         />
       ) : null}
       <CardContent className={classes.content}>

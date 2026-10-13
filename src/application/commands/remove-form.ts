@@ -1,7 +1,9 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ApplicationFormId } from '@domain/model/ids';
+import { computeGraphDepths } from '@domain/graph-depths';
 import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
+import { preservePageDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
 
 // Команда удаления формы заявки (Epic 002, T-035) с каскадом связей:
@@ -14,6 +16,8 @@ export class RemoveForm implements Command {
   constructor(private readonly formId: ApplicationFormId) {}
 
   apply(draft: ServiceGraph): void {
+    // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
+    const depthsBeforeRemoval = computeGraphDepths(draft);
     const index = draft.applicationForms.findIndex((form) => form.id === this.formId);
     if (index < 0) {
       throw new Error(`Форма не найдена: ${this.formId}`);
@@ -33,6 +37,8 @@ export class RemoveForm implements Command {
     draft.logicRules = draft.logicRules.filter(
       (rule) => !componentIds.has(rule.sourceElementId) && !componentIds.has(rule.targetElementId),
     );
+
+    preservePageDepths(draft, depthsBeforeRemoval);
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

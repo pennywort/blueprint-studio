@@ -103,13 +103,19 @@ export function createSampleGraph(): ServiceGraph {
                 multiSelect: false,
                 search: false,
                 // Режим «Сложной логики» включён (T-037): у option'ов —
-                // source-handle'ы; правило ниже показывает чекбокс второго
-                // шага при выборе «12 месяцев» (оба элемента — одна форма, L-I5).
+                // source-handle'ы; правило ниже показывает чекбокс при выборе
+                // «12 месяцев» (оба элемента — один шаг формы, L-I5/ADR-14).
                 hasComplexLogic: true,
                 options: [
                   { label: '6 месяцев', value: '6m' },
                   { label: '12 месяцев', value: '12m' },
                 ],
+              },
+              {
+                id: toFormComponentId('demo-field-agree'),
+                kind: 'checkbox',
+                label: 'Согласен с условиями',
+                required: true,
               },
             ],
           },
@@ -118,10 +124,11 @@ export function createSampleGraph(): ServiceGraph {
             title: 'Второй шаг',
             components: [
               {
-                id: toFormComponentId('demo-field-agree'),
-                kind: 'checkbox',
-                label: 'Согласен с условиями',
-                required: true,
+                id: toFormComponentId('demo-field-comment'),
+                kind: 'textField',
+                label: 'Комментарий к заявке',
+                required: false,
+                multiline: true,
               },
             ],
           },
@@ -155,7 +162,7 @@ export function createSampleGraph(): ServiceGraph {
     logicRules: [
       {
         // «Срок вклада = 12 месяцев» → показать чекбокс согласия (T-037).
-        // Ребро между элементами одной формы (стиль — общий, N1).
+        // Ребро между элементами одного шага формы (стиль — общий, N1).
         id: toLogicRuleId('demo-logic-period-agree'),
         sourceElementId: toElementId('demo-field-period'),
         condition: { kind: 'optionSelected', optionId: toOptionId('12m') },

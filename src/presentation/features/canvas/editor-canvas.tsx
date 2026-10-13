@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -7,11 +14,17 @@ import {
   ReactFlowProvider,
   applyEdgeChanges,
   applyNodeChanges,
+  Position,
+  getBezierPath,
   useReactFlow,
+  useStoreApi,
   useViewport,
   type Connection,
   type EdgeChange,
+  type ConnectionLineComponentProps,
   type IsValidConnection,
+  type OnConnectStart,
+  type XYPosition,
   type NodeChange,
   type OnNodeDrag,
 } from '@xyflow/react';
@@ -22,13 +35,7 @@ import { CANVAS_LAYOUT } from './canvas-layout';
 import { isActionTarget } from './canvas-events';
 import { EditorCanvasControls } from './editor-canvas-controls';
 import { canvasNodeTypes } from './nodes/node-types';
-import {
-  LOGIC_SOURCE_HANDLE_PREFIX,
-  parseLogicSourceHandle,
-  parseLogicTargetHandle,
-  type CanvasEdge,
-  type CanvasNode,
-} from './graph-flow-adapter';
+import type { CanvasEdge, CanvasNode } from './graph-flow-adapter';
 
 export type EditorCanvasProps = {
   /** Узлы и рёбра — из graphToFlow (T-030/T-031); канвас управляемый. */
@@ -62,6 +69,14 @@ export type EditorCanvasProps = {
   onClearSelection?: () => void;
   /** Центрирование вьюпорта на узле — результат поиска (T-050). */
   focus?: { nodeId: string; nonce: number } | null;
+  /** Протягивание связи началось (drag или клик по source-handle) — id handle-источника. */
+  onConnectionStart?: (handleId: string | null | undefined) => void;
+  /** Протягивание связи закончилось или отменено. */
+  onConnectionEnd?: () => void;
+  /** Допустима ли связь — доменное правило connectableTargets (через хук). */
+  isConnectionAllowed?: (connection: Connection | CanvasEdge) => boolean;
+  /** Идёт протягивание связи — курсор «прицел» на всём канвасе. */
+  connecting?: boolean;
   /** Фактические размеры узлов после рендера — стек колонки по ним (N12). */
   onNodesMeasured?: (sizes: Record<string, { width: number; height: number }>) => void;
 };
@@ -94,6 +109,10 @@ function CanvasInner({
   onClearSelection,
   onNodesMeasured,
   focus,
+  onConnectionStart,
+  onConnectionEnd,
+  isConnectionAllowed,
+  connecting,
 }: EditorCanvasProps) {
   const theme = useEditorTheme();
   const styles = useReactFlowThemeStyles();
@@ -135,7 +154,7 @@ function CanvasInner({
       // Удаление узлов — команды RemoveScenario/RemoveForm (T-034), remove-
       // изменения здесь не применяем: удаление идёт через onNodesDelete.
       // select-изменения тоже не применяем: выделение узла управляется
-      // хуком (selected в пропсах, onNodeClick), иначе локальное состояние
+      // хуком (selected в пропсах, нажатие мыши), иначе локальное состояние
       // расходится с пропсами и выделение «качается» (N6).
       setNodes((current) =>
         applyNodeChanges(
@@ -267,40 +286,90 @@ function CanvasInner({
     [onDeleteSelectedElement],
   );
 
-  // Два вида соединений (T-032/T-037):
-  // — навигация: источник — карточка элемента (sourceHandle, D9), цель —
-  //   страница, но не Главная (домен: PageLinkTargetId), и не сам узел;
-  // — «Сложная логика»: источник — option-handle Select'а, цель — target-handle
-  //   карточки другого элемента ТОЙ ЖЕ формы (L-I5; оба конца в одном узле —
-  //   штатное ребро react-flow внутри FormNode, решение владельца по Q-9).
+  // Допустимость связи — доменное правило connectableTargets через хук
+  // (isConnectionAllowed): один источник правды с подсветкой целей.
   const isValidConnection: IsValidConnection<CanvasEdge> = useCallback(
-    (connection) => {
-      const sourceHandle = connection.sourceHandle ?? '';
-      if (sourceHandle.startsWith(LOGIC_SOURCE_HANDLE_PREFIX)) {
-        const source = parseLogicSourceHandle(sourceHandle);
-        const targetElementId = connection.targetHandle
-          ? parseLogicTargetHandle(connection.targetHandle)
+    (connection) => isConnectionAllowed?.(connection) ?? false,
+    [isConnectionAllowed],
+  );
+
+  // Связь «кликом» (connectOnClick react-flow: клик по source-handle, затем
+  // по цели): react-flow в этом режиме линию не рисует — рисуем сами
+  // стрелку от handle к курсору (повторная приёмка, баг 1).
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const store = useStoreApi();
+  const [clickLine, setClickLine] = useState<{ from: XYPosition; to: XYPosition } | null>(null);
+  const cancelClickConnection = useCallback(() => {
+    if (clickLine) {
+      store.setState({ connectionClickStartHandle: null });
+      setClickLine(null);
+      onConnectionEnd?.();
+    }
+  }, [clickLine, store, onConnectionEnd]);
+  const handleClickConnectStart: OnConnectStart = useCallback(
+    (event, params) => {
+      onConnectionStart?.(params.handleId);
+      const container = containerRef.current?.getBoundingClientRect();
+      const handle =
+        event.target instanceof Element
+          ? event.target.closest('.react-flow__handle')?.getBoundingClientRect()
           : null;
-        if (!source || targetElementId === null) {
-          return false;
-        }
-        return connection.source === connection.target && targetElementId !== source.elementId;
+      if (container && handle) {
+        const from = {
+          x: handle.left + handle.width / 2 - container.left,
+          y: handle.top + handle.height / 2 - container.top,
+        };
+        setClickLine({ from, to: from });
       }
-      // Навигационное ребро не должно попадать в logic-target handle элемента.
-      if (connection.targetHandle && parseLogicTargetHandle(connection.targetHandle) !== null) {
-        return false;
-      }
-      if (!connection.sourceHandle || connection.source === connection.target) {
-        return false;
-      }
-      const target = propsNodes.find((node) => node.id === connection.target);
-      return target !== undefined && target.type !== 'home';
     },
-    [propsNodes],
+    [onConnectionStart],
+  );
+
+  // Выделение — по нажатию мыши, а не по click (повторная приёмка: «лаг» и
+  // пропуски): click react-flow гасится при малейшем сдвиге мыши (порог
+  // drag), а нажатие срабатывает сразу. Карточка элемента выделяет себя
+  // сама; кнопки и коннекторы выделение не меняют (баг 2).
+  // Нажатие началось на узле: механизм drag react-flow отдаёт pointerup и
+  // click полотну (pane), и onPaneClick снимал только что сделанное
+  // выделение — «пропуски» при перекликивании (повторная приёмка).
+  const pointerDownOnNodeRef = useRef(false);
+  const handlePointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      const target = event.target instanceof Element ? event.target : null;
+      pointerDownOnNodeRef.current = target?.closest('.react-flow__node') != null;
+      if (!target || isActionTarget(target) || target.closest('[data-element-card]')) {
+        return;
+      }
+      const nodeId = target.closest('.react-flow__node')?.getAttribute('data-id');
+      if (nodeId) {
+        onSelectedNodeChange?.(nodeId);
+      }
+    },
+    [onSelectedNodeChange],
   );
 
   return (
-    <div className={styles.root} data-testid="editor-canvas" onKeyDownCapture={handleKeyDownCapture}>
+    <div
+      ref={containerRef}
+      className={connecting ? `${styles.root} editor-connecting` : styles.root}
+      data-testid="editor-canvas"
+      onKeyDownCapture={(event) => {
+        if (event.key === 'Escape') {
+          cancelClickConnection();
+        }
+        handleKeyDownCapture(event);
+      }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={(event) => {
+        if (clickLine && containerRef.current) {
+          const container = containerRef.current.getBoundingClientRect();
+          setClickLine({
+            from: clickLine.from,
+            to: { x: event.clientX - container.left, y: event.clientY - container.top },
+          });
+        }
+      }}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -308,22 +377,28 @@ function CanvasInner({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={(connection) => onConnectLink?.(connection)}
+        onConnectStart={(_event, params) => onConnectionStart?.(params.handleId)}
+        onConnectEnd={() => onConnectionEnd?.()}
+        onClickConnectStart={handleClickConnectStart}
+        onClickConnectEnd={() => {
+          setClickLine(null);
+          onConnectionEnd?.();
+        }}
+        connectionLineComponent={ArrowConnectionLine}
         onReconnect={(oldEdge, connection) => onReconnectLink?.(oldEdge, connection)}
         onEdgesDelete={(deleted) => onDeleteLinks?.(deleted)}
         onNodesDelete={(deleted) => onDeleteNodes?.(deleted)}
         onNodeDrag={handleNodeDrag}
         onNodeDragStop={handleNodeDragStop}
-        onNodeClick={(event, node) => {
-          // Кнопки узла (раскрытие, «+», корзина) и коннекторы — действия,
-          // а не выбор узла: выделение и будущая панель свойств узла не
-          // должны открываться от них (баг 2 приёмки).
-          if (!isActionTarget(event.target)) {
-            onSelectedNodeChange?.(node.id);
-          }
-        }}
         // Клик по связи выделяет только её (выделение рёбер — у react-flow).
         onEdgeClick={() => onClearSelection?.()}
-        onPaneClick={() => onClearSelection?.()}
+        onPaneClick={() => {
+          if (pointerDownOnNodeRef.current) {
+            return; // click «унаследован» от нажатия на узле — не клик по полотну
+          }
+          cancelClickConnection();
+          onClearSelection?.();
+        }}
         isValidConnection={isValidConnection}
         // Рёбра всегда над блоками, в том числе выделенными (N8): react-flow
         // по умолчанию поднимает выделенный узел на z-index 1000 — выше слоя
@@ -359,7 +434,62 @@ function CanvasInner({
           onToggleMiniMap={() => setMiniMapVisible((visible) => !visible)}
         />
       </ReactFlow>
+      {clickLine ? <ClickConnectionLine from={clickLine.from} to={clickLine.to} /> : null}
     </div>
+  );
+}
+
+// Стрелка протягиваемой связи (повторная приёмка, баг 1): линия тянется за
+// курсором и заканчивается наконечником. Общая отрисовка для drag-режима
+// react-flow (connectionLineComponent) и клик-режима (ClickConnectionLine).
+function ArrowPath({ from, to }: { from: XYPosition; to: XYPosition }) {
+  const theme = useEditorTheme();
+  const [path] = getBezierPath({
+    sourceX: from.x,
+    sourceY: from.y,
+    sourcePosition: Position.Right,
+    targetX: to.x,
+    targetY: to.y,
+    targetPosition: Position.Left,
+  });
+  const color = theme.editor.canvas.edgeActive;
+  return (
+    <g>
+      <defs>
+        <marker
+          id="editor-connection-arrow"
+          markerWidth="10"
+          markerHeight="10"
+          refX="8"
+          refY="5"
+          orient="auto"
+        >
+          <path d="M0,0 L10,5 L0,10 z" fill={color} />
+        </marker>
+      </defs>
+      <path d={path} fill="none" stroke={color} strokeWidth={2} markerEnd="url(#editor-connection-arrow)" />
+    </g>
+  );
+}
+
+function ArrowConnectionLine({ fromX, fromY, toX, toY }: ConnectionLineComponentProps) {
+  return <ArrowPath from={{ x: fromX, y: fromY }} to={{ x: toX, y: toY }} />;
+}
+
+function ClickConnectionLine({ from, to }: { from: XYPosition; to: XYPosition }) {
+  return (
+    <svg
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex: 20,
+      }}
+    >
+      <ArrowPath from={from} to={to} />
+    </svg>
   );
 }
 

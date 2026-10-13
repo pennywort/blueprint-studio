@@ -4,6 +4,7 @@ import type { ElementId, PageLinkId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
+import { preservePageDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
 import { findElementLocation, isLinkTargetPresent } from './graph-lookup';
 import { placeLinkTargetIntoNextLayer } from './layer-placement';
@@ -50,6 +51,8 @@ export class ReconnectElements implements Command {
     }
 
     placeLinkTargetIntoNextLayer(draft, link.sourceElementId, link.targetId, depthsBefore);
+
+    preservePageDepths(draft, depthsBefore, new Set([link.targetId]));
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

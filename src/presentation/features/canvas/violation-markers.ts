@@ -54,6 +54,12 @@ export function mapViolationsToCanvas(
       continue;
     }
 
+    const page = /^pages\[([^\]]+)\]/.exec(path);
+    if (page) {
+      push(nodes, page[1]!, message);
+      continue;
+    }
+
     const scenario = resolveScenarioPath(graph, path);
     if (scenario) {
       push(nodes, scenario.id, message);

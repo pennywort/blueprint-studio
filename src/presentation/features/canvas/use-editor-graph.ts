@@ -26,6 +26,7 @@ import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/pag
 import { computeGraphDepths } from '@domain/graph-depths';
 import { validateGraph } from '@domain/invariants';
 import type { Command } from '@application/commands/command';
+import { InvariantViolationError } from '@application/commands/errors';
 import { ConnectElements } from '@application/commands/connect-elements';
 import { ReconnectElements } from '@application/commands/reconnect-elements';
 import { DisconnectElements } from '@application/commands/disconnect-elements';
@@ -80,6 +81,7 @@ import {
 } from './default-elements';
 import { createSampleGraph } from './sample-graph';
 import { mapViolationsToCanvas } from './violation-markers';
+import { connectableTargets, type ConnectableTargets, type ConnectionSource } from '@domain/connection-rules';
 
 // Варианты меню «+» шага формы: все kind из маппинга подписей адаптера
 // (12 форм-компонентов манифеста), порядок — как в маппинге.
@@ -87,6 +89,19 @@ const ELEMENT_KIND_OPTIONS = Object.entries(FORM_COMPONENT_KIND_LABELS).map(([ki
   kind: kind as FormComponentKind,
   label,
 }));
+
+// Источник связи по id source-handle: option Select'а — правило логики,
+// иначе — навигационная связь от элемента (id handle = id элемента, D9).
+function parseConnectionSource(handleId: string | null | undefined): ConnectionSource | null {
+  if (!handleId) {
+    return null;
+  }
+  if (handleId.startsWith(LOGIC_SOURCE_HANDLE_PREFIX)) {
+    const logic = parseLogicSourceHandle(handleId);
+    return logic ? { kind: 'logic', elementId: logic.elementId, optionId: logic.optionId } : null;
+  }
+  return { kind: 'navigation', elementId: handleId };
+}
 
 // Данные инспектора для выделенного элемента: сам компонент формы + его
 // правила видимости, где он — цель (T-067).
@@ -309,7 +324,15 @@ export function useEditorGraph() {
       } catch (error) {
         // Отказы команд (несуществующая цель и т.п.) — единый Snackbar
         // страницы (T-023), своих снекбаров у канваса нет.
-        notifications.showCommandFailure(error instanceof Error ? error.message : String(error));
+        // Нарушение инвариантов — только человекочитаемые сообщения, без
+        // технических rule/path.
+        const message =
+          error instanceof InvariantViolationError
+            ? [...new Set(error.violations.map((violation) => violation.message))].join('; ')
+            : error instanceof Error
+              ? error.message
+              : String(error);
+        notifications.showCommandFailure(message);
       }
     },
     [commandBus, notifications],
@@ -685,68 +708,136 @@ export function useEditorGraph() {
   // не строит — он чистый; внедряем здесь, поверх graphToFlow. Карточкам
   // элементов внедряются выделение (selected/onSelect — Delete удаляет
   // выделенный элемент) и переключатель «Сложной логики» (T-037).
-  const nodes = useMemo<CanvasNode[]>(
-    () =>
-      flow.nodes.map((node) => {
-        const injectElement = (element: CanvasNode['data']['elements'][number]) => ({
-          ...element,
-          selected: element.id === selectedElementId,
-          violations: violationMarkers.elements.get(element.id),
-          onSelect: () => selectElement(element.id),
-          ...(element.complexLogic ? { onToggleComplexLogic: () => toggleComplexLogic(element.id) } : null),
-        });
-        return {
-          ...node,
-          // Выделение узла управляется отсюда (N6): канвас заменяет локальные
-          // узлы пропсами при каждом пересчёте, и неуправляемое выделение
-          // react-flow терялось («мигание» рамки после выделения элемента).
-          // Взаимоисключение с элементом (F5): пока выделен элемент — узел нет.
-          selected: selectedElementId === null && node.id === selectedNodeId,
-          data: {
-            ...node.data,
-            onDeleteNode: () => removeNode(node),
-            violations: violationMarkers.nodes.get(node.id),
-            ...(focus?.nodeId === node.id && focus.elementId !== null
-              ? { reveal: { elementId: focus.elementId, nonce: focus.nonce } }
-              : null),
-            elements: node.data.elements.map(injectElement),
-            steps: node.data.steps.map((step) => ({
-              ...step,
-              elements: step.elements.map(injectElement),
-            })),
-            ...(node.type === 'form'
-              ? {
-                  elementKindOptions: ELEMENT_KIND_OPTIONS,
-                  onAddElementToStep: (stepId: string, kind: FormComponentKind) =>
-                    addElementToStep(node.id as ApplicationFormId, stepId as FormStepId, kind),
-                  onDeleteStep: (stepId: string) =>
-                    removeStep(node.id as ApplicationFormId, stepId as FormStepId),
-                  onAddStep: () => addFormStep(node.id as ApplicationFormId),
-                }
-              : null),
-            onDropElement: (
-              targetStepId: string | null,
-              dragged: ElementDragPayload,
-              anchor: DropAnchorPosition | null,
-            ) => moveElement(node.id, node.type, targetStepId, dragged, anchor),
-          },
-        };
-      }),
-    [
-      flow.nodes,
+  // Признак «можно соединить» (повторная приёмка, ADR-14): пока тянется
+  // связь, допустимые цели — по доменному правилу connectableTargets —
+  // получают connectTarget и рисуют полый target-handle; в покое
+  // принимающих handles нет. Тот же расчёт проверяет связь (isConnectionAllowed).
+  const [connectionTargets, setConnectionTargets] = useState<ConnectableTargets | null>(null);
+  const startConnection = useCallback((handleId: string | null | undefined) => {
+    const source = parseConnectionSource(handleId);
+    setConnectionTargets(source ? connectableTargets(graphRef.current, source) : null);
+  }, []);
+  const endConnection = useCallback(() => setConnectionTargets(null), []);
+  const isConnectionAllowed = useCallback((connection: Connection | CanvasEdge): boolean => {
+    const source = parseConnectionSource(connection.sourceHandle);
+    if (!source) {
+      return false;
+    }
+    const targets = connectableTargets(graphRef.current, source);
+    if (source.kind === 'logic') {
+      const targetElementId = connection.targetHandle
+        ? parseLogicTargetHandle(connection.targetHandle)
+        : null;
+      return targetElementId !== null && targets.elements.has(targetElementId);
+    }
+    // Навигационная связь приходит в target-handle блока, не в logic-handle элемента.
+    if (connection.targetHandle && parseLogicTargetHandle(connection.targetHandle) !== null) {
+      return false;
+    }
+    return targets.pages.has(connection.target);
+  }, []);
+
+  // Узлы для канваса: интерактивные поля (обработчики, мета) внедряются
+  // поверх чистого адаптера. Производительность выделения (повторная
+  // приёмка: «лаг» при перекликивании): узел пересоздаётся, только если
+  // изменилось ЕГО состояние (выделение, цель связи, поиск) — остальные
+  // объекты сохраняют идентичность, и react-flow их не перерисовывает.
+  const nodeCacheRef = useRef(new Map<string, { base: CanvasNode; key: string; result: CanvasNode }>());
+  const nodeHandlers = useMemo(
+    () => ({
       removeNode,
       addElementToStep,
       removeStep,
       addFormStep,
       moveElement,
       toggleComplexLogic,
-      selectedElementId,
-      selectedNodeId,
       selectElement,
-      violationMarkers,
-      focus,
-    ],
+    }),
+    [removeNode, addElementToStep, removeStep, addFormStep, moveElement, toggleComplexLogic, selectElement],
   );
+  const nodeHandlersRef = useRef(nodeHandlers);
+  const nodes = useMemo<CanvasNode[]>(() => {
+    if (nodeHandlersRef.current !== nodeHandlers) {
+      nodeHandlersRef.current = nodeHandlers;
+      nodeCacheRef.current.clear();
+    }
+    const cache = nodeCacheRef.current;
+    const next = new Map<string, { base: CanvasNode; key: string; result: CanvasNode }>();
+    const result = flow.nodes.map((node) => {
+      const elementIds = [...node.data.elements, ...node.data.steps.flatMap((step) => step.elements)].map(
+        (element) => element.id,
+      );
+      const selected = selectedElementId === null && node.id === selectedNodeId;
+      const key = [
+        selected,
+        selectedElementId !== null && elementIds.includes(selectedElementId) ? selectedElementId : '',
+        focus?.nodeId === node.id ? focus.nonce : '',
+        connectionTargets?.pages.has(node.id) ?? false,
+        elementIds.filter((id) => connectionTargets?.elements.has(id)).join(','),
+      ].join('|');
+      const cached = cache.get(node.id);
+      if (cached && cached.base === node && cached.key === key) {
+        next.set(node.id, cached);
+        return cached.result;
+      }
+      const injectElement = (element: CanvasNode['data']['elements'][number]) => ({
+        ...element,
+        selected: element.id === selectedElementId,
+        connectTarget: connectionTargets?.elements.has(element.id) ?? false,
+        violations: violationMarkers.elements.get(element.id),
+        onSelect: () => nodeHandlers.selectElement(element.id),
+        ...(element.complexLogic
+          ? { onToggleComplexLogic: () => nodeHandlers.toggleComplexLogic(element.id) }
+          : null),
+      });
+      const built: CanvasNode = {
+        ...node,
+        // Выделение узла управляется отсюда (N6); взаимоисключение с элементом (F5).
+        selected,
+        data: {
+          ...node.data,
+          onDeleteNode: () => nodeHandlers.removeNode(node),
+          connectTarget: connectionTargets?.pages.has(node.id) ?? false,
+          violations: violationMarkers.nodes.get(node.id),
+          ...(focus?.nodeId === node.id && focus.elementId !== null
+            ? { reveal: { elementId: focus.elementId, nonce: focus.nonce } }
+            : null),
+          elements: node.data.elements.map(injectElement),
+          steps: node.data.steps.map((step) => ({
+            ...step,
+            elements: step.elements.map(injectElement),
+          })),
+          ...(node.type === 'form'
+            ? {
+                elementKindOptions: ELEMENT_KIND_OPTIONS,
+                onAddElementToStep: (stepId: string, kind: FormComponentKind) =>
+                  nodeHandlers.addElementToStep(node.id as ApplicationFormId, stepId as FormStepId, kind),
+                onDeleteStep: (stepId: string) =>
+                  nodeHandlers.removeStep(node.id as ApplicationFormId, stepId as FormStepId),
+                onAddStep: () => nodeHandlers.addFormStep(node.id as ApplicationFormId),
+              }
+            : null),
+          onDropElement: (
+            targetStepId: string | null,
+            dragged: ElementDragPayload,
+            anchor: DropAnchorPosition | null,
+          ) => nodeHandlers.moveElement(node.id, node.type, targetStepId, dragged, anchor),
+        },
+      };
+      next.set(node.id, { base: node, key, result: built });
+      return built;
+    });
+    nodeCacheRef.current = next;
+    return result;
+  }, [
+    flow.nodes,
+    nodeHandlers,
+    selectedElementId,
+    selectedNodeId,
+    violationMarkers,
+    focus,
+    connectionTargets,
+  ]);
 
   // Удаление выделенных узлов по Delete/Backspace: react-flow присылает их
   // в onNodesDelete, каждый уходит своей командой с каскадом связей (T-034).
@@ -800,6 +891,10 @@ export function useEditorGraph() {
     undo,
     redo,
     save,
+    startConnection,
+    endConnection,
+    isConnectionAllowed,
+    connecting: connectionTargets !== null,
     searchCanvas,
     selectSearchResult,
     focus,

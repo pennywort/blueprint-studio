@@ -56,6 +56,25 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
         backgroundImage: `radial-gradient(circle at 35% 35%, ${canvas.handleHighlight}, ${canvas.handle} 65%)`,
         boxShadow: `0 1px 3px ${canvas.handleShadow}`,
       },
+      // Принимающие handles (повторная приёмка, баг 1): в покое их нет —
+      // элемент остаётся в DOM (рёбра крепятся к нему), но невидим; пока
+      // тянется связь, у допустимых целей — полая окружность.
+      '& .react-flow__handle.editor-target-hidden': {
+        opacity: 0,
+        pointerEvents: 'none',
+      },
+      '& .react-flow__handle.editor-target-available': {
+        width: 14,
+        height: 14,
+        backgroundColor: theme.palette.background.paper,
+        backgroundImage: 'none',
+        border: `2px solid ${canvas.edgeActive}`,
+        boxShadow: 'none',
+      },
+      // Идёт протягивание связи — курсор «прицел» на всём канвасе.
+      '&.editor-connecting, &.editor-connecting *': {
+        cursor: 'crosshair',
+      },
       '& .react-flow__minimap': {
         backgroundColor: canvas.minimapBackground,
         border: `1px solid ${canvas.minimapBorder}`,

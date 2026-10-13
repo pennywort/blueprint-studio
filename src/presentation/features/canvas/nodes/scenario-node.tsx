@@ -161,7 +161,14 @@ export function ScenarioNode({ id, data, type }: NodeProps<CanvasNode>) {
     >
       {/* Точка входа рёбер — одна на левом краю блока-узла (D9). Только у
           подсценариев: Главная целью связи быть не может (домен, N5). */}
-      {type === 'home' ? null : <Handle type="target" position={Position.Left} />}
+      {/* Принимающий handle виден только как допустимая цель протягиваемой связи. */}
+      {type === 'home' ? null : (
+        <Handle
+          type="target"
+          position={Position.Left}
+          className={data.connectTarget ? 'editor-target-available' : 'editor-target-hidden'}
+        />
+      )}
       <Box className={classes.header}>
         <Box className={classes.titles}>
           <Typography variant="subtitle1">{data.title}</Typography>

@@ -3,6 +3,7 @@ import type { PageEntityId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
+import { preservePageDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
 import { findElementOwnerPageId, findPageById } from './graph-lookup';
 
@@ -24,6 +25,8 @@ export class SetPageLayerDepth implements Command {
   ) {}
 
   apply(draft: ServiceGraph): void {
+    // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
+    const depthsBeforeRemoval = computeGraphDepths(draft);
     const page = findPageById(draft, this.pageId);
     if (!page) {
       throw new Error(`Страница не найдена: ${this.pageId}`);
@@ -59,6 +62,8 @@ export class SetPageLayerDepth implements Command {
       }
       return targetDepth === sourceDepth + 1;
     });
+
+    preservePageDepths(draft, depthsBeforeRemoval, new Set([page.id]));
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

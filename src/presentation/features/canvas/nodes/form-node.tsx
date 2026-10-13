@@ -190,7 +190,12 @@ export function FormNode({ id, data }: NodeProps<CanvasNode>) {
       data-testid={`canvas-node-${id}`}
     >
       {/* Форма — цель связей на общих основаниях (D12): точка входа на краю блока (D9). */}
-      <Handle type="target" position={Position.Left} />
+      {/* Принимающий handle виден только как допустимая цель протягиваемой связи. */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        className={data.connectTarget ? 'editor-target-available' : 'editor-target-hidden'}
+      />
       <Box className={classes.header}>
         <Box>
           <Box className={classes.titleRow}>

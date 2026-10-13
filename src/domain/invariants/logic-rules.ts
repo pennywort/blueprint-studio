@@ -13,6 +13,7 @@ const RULE_ID = 'complex-logic';
 // формы» (L-I5), option'ы — правилу «существующее значение списка» (L-I2).
 type ComponentContext = {
   formId: string;
+  stepId: string;
   component: ServiceGraph['applicationForms'][number]['steps'][number]['components'][number];
 };
 
@@ -21,7 +22,7 @@ function collectComponents(graph: ServiceGraph): Map<string, ComponentContext> {
   for (const form of graph.applicationForms) {
     for (const step of form.steps) {
       for (const component of step.components) {
-        components.set(component.id, { formId: form.id, component });
+        components.set(component.id, { formId: form.id, stepId: step.id, component });
       }
     }
   }
@@ -76,12 +77,13 @@ export function checkLogicRules(graph: ServiceGraph): InvariantViolation[] {
     }
     seen.add(key);
 
-    // L-I5: источник и цель — в пределах одной формы.
-    if (source.formId !== target.formId) {
+    // L-I5: источник и цель — в пределах одного шага формы (ADR-14,
+    // [owner 2026-10-13]; ранее — одной формы).
+    if (source.formId !== target.formId || source.stepId !== target.stepId) {
       violations.push({
         rule: RULE_ID,
         path,
-        message: 'Сложная логика возможна только внутри одной формы',
+        message: 'Сложная логика возможна только внутри одного шага формы',
       });
     }
 

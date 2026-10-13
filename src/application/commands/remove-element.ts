@@ -1,7 +1,9 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ElementId, FormComponentId } from '@domain/model/ids';
+import { computeGraphDepths } from '@domain/graph-depths';
 import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
+import { preservePageDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
 import { findElementLocation } from './graph-lookup';
 
@@ -15,6 +17,8 @@ export class RemoveElement implements Command {
   constructor(private readonly elementId: ElementId | FormComponentId) {}
 
   apply(draft: ServiceGraph): void {
+    // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
+    const depthsBeforeRemoval = computeGraphDepths(draft);
     const location = findElementLocation(draft, this.elementId);
     if (!location) {
       throw new Error(`Элемент не найден: ${this.elementId}`);
@@ -27,6 +31,8 @@ export class RemoveElement implements Command {
     draft.logicRules = draft.logicRules.filter(
       (rule) => rule.sourceElementId !== this.elementId && rule.targetElementId !== this.elementId,
     );
+
+    preservePageDepths(draft, depthsBeforeRemoval);
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

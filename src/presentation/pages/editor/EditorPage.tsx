@@ -104,6 +104,10 @@ function EditorPageLayout() {
             onClearSelection={editorGraph.clearSelection}
             onNodesMeasured={editorGraph.reportNodeSizes}
             focus={editorGraph.focus}
+            onConnectionStart={editorGraph.startConnection}
+            onConnectionEnd={editorGraph.endConnection}
+            isConnectionAllowed={editorGraph.isConnectionAllowed}
+            connecting={editorGraph.connecting}
           />
           {/* Пустое состояние (T-024): поверх канваса, не перехватывает
               события мыши — pan/zoom и тулбар работают сквозь него. hasNodes

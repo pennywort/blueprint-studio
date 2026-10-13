@@ -9,12 +9,12 @@ import type {
 import { computeGraphDepths } from '@domain/graph-depths';
 import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
+import { preservePageDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
 import {
   findElementLocation,
   findElementOwnerPageId,
   findFormById,
-  findFormComponent,
   findSubScenarioById,
 } from './graph-lookup';
 
@@ -75,6 +75,8 @@ export class MoveElement implements Command {
   ) {}
 
   apply(draft: ServiceGraph): void {
+    // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
+    const depthsBeforeRemoval = computeGraphDepths(draft);
     const location = findElementLocation(draft, this.elementId);
     if (!location) {
       throw new Error(`Элемент не найден: ${this.elementId}`);
@@ -101,20 +103,13 @@ export class MoveElement implements Command {
       throw new Error('Widget card можно переносить только в виджеты Главной');
     }
 
-    // Форма-источник компонента (нужна каскаду правил); ищем до изъятия.
-    const sourceFormId =
-      location.kind === 'formComponent' ? findFormComponent(draft, this.elementId)?.form.id : undefined;
-
     const [moved] = location.list.splice(location.index, 1);
 
-    // Каскад сложной логики: компонент уходит в ДРУГУЮ форму — правила,
-    // где он источник или цель, в новой форме невалидны (L-I5); внутри
-    // одной формы (перенос между шагами) правила не трогаем.
-    if (
-      location.kind === 'formComponent' &&
-      this.target.kind === 'formStep' &&
-      sourceFormId !== this.target.formId
-    ) {
+    // Каскад сложной логики: компонент уходит в ДРУГОЙ шаг (той же или
+    // другой формы) — правила, где он источник или цель, невалидны (L-I5:
+    // логика только внутри одного шага, ADR-14); порядок внутри шага правил
+    // не трогает.
+    if (location.kind === 'formComponent' && targetList !== location.list) {
       draft.logicRules = draft.logicRules.filter(
         (rule) => rule.sourceElementId !== this.elementId && rule.targetElementId !== this.elementId,
       );
@@ -146,6 +141,8 @@ export class MoveElement implements Command {
       }
       return targetDepth === sourceDepth + 1;
     });
+
+    preservePageDepths(draft, depthsBeforeRemoval);
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

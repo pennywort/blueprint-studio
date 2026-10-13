@@ -1,8 +1,10 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { SubScenario } from '@domain/model/scenario';
 import type { ScenarioId } from '@domain/model/ids';
+import { computeGraphDepths } from '@domain/graph-depths';
 import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
+import { preservePageDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
 import { collectSubtreeElementIds, collectSubtreeScenarioIds } from './graph-lookup';
 
@@ -16,6 +18,8 @@ export class RemoveScenario implements Command {
   constructor(private readonly scenarioId: ScenarioId) {}
 
   apply(draft: ServiceGraph): void {
+    // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
+    const depthsBeforeRemoval = computeGraphDepths(draft);
     const location = findContainingList(draft.subScenarios, this.scenarioId);
     if (!location) {
       throw new Error(`Подсценарий не найден: ${this.scenarioId}`);
@@ -29,6 +33,8 @@ export class RemoveScenario implements Command {
     draft.links = draft.links.filter(
       (link) => !scenarioIds.has(link.targetId) && !elementIds.has(link.sourceElementId),
     );
+
+    preservePageDepths(draft, depthsBeforeRemoval);
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

@@ -82,6 +82,11 @@ export type CanvasElementData = {
   hiddenByLogic?: boolean;
   /** Карточка выделена (клик) — чёрная рамка, Delete удаляет элемент (T-034). */
   selected?: boolean;
+  /**
+   * Элемент — допустимая цель протягиваемой связи (правило логики):
+   * рисуется полый target-handle. Вне протягивания принимающих handles нет.
+   */
+  connectTarget?: boolean;
   /** Нарушения инвариантов, указывающие на элемент (T-043; внедряется хранилищем). */
   violations?: readonly string[];
   /**
@@ -132,6 +137,8 @@ export type CanvasNodeData = {
    * разворачивается. nonce различает повторные запросы того же элемента.
    */
   reveal?: { elementId: string; nonce: number };
+  /** Блок — допустимая цель протягиваемой навигационной связи (полый target-handle). */
+  connectTarget?: boolean;
   /** Нарушения инвариантов узла и его элементов (T-043) — рамка + тултип. */
   violations?: readonly string[];
   /** Варианты меню «+» шага формы (kind + человекочитаемая подпись). */
