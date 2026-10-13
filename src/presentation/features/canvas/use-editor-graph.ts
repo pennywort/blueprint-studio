@@ -2,12 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Connection } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { FormComponent } from '@domain/model/form-components';
-import type { FormComponentKind } from '@domain/model/form-components';
-import { isFormComponentKind } from '@domain/model/canvas-element';
+import { isFormComponentKind, type CanvasElementKind } from '@domain/model/canvas-element';
 import {
   toApplicationFormId,
   toElementId,
-  toFormComponentId,
   toFormStepId,
   toLogicRuleId,
   toOptionId,
@@ -39,8 +37,7 @@ import { RemoveScenario } from '@application/commands/remove-scenario';
 import { AddForm } from '@application/commands/add-form';
 import { RemoveForm } from '@application/commands/remove-form';
 import { RemoveFormStep } from '@application/commands/remove-form-step';
-import { AddElement } from '@application/commands/add-element';
-import { AddFormComponent } from '@application/commands/add-form-component';
+import { AddElement, type CanvasElementTarget } from '@application/commands/add-element';
 import { RemoveElement } from '@application/commands/remove-element';
 import { MoveElement, type MoveElementTarget } from '@application/commands/move-element';
 import { AddFormStep } from '@application/commands/add-form-step';
@@ -63,7 +60,7 @@ import type { CanvasSearchResult } from '@presentation/features/top-bar/editor-t
 import type { DropAnchorPosition, ElementDragPayload } from './element-dnd';
 import { computeLayout, type MeasuredNodeSizes } from './canvas-layout';
 import {
-  FORM_COMPONENT_KIND_LABELS,
+  ELEMENT_KIND_LABELS,
   LOGIC_SOURCE_HANDLE_PREFIX,
   flowConnectionToLink,
   flowNodesToLayerOrder,
@@ -74,20 +71,15 @@ import {
   type CanvasNode,
   type CanvasNodeType,
 } from './graph-flow-adapter';
-import {
-  NEW_FORM_TITLE,
-  NEW_LIST_ITEM_TITLE,
-  NEW_SCENARIO_TITLE,
-  createDefaultFormComponent,
-} from './default-elements';
+import { NEW_FORM_TITLE, NEW_SCENARIO_TITLE, createDefaultElement } from './default-elements';
 import { createSampleGraph } from './sample-graph';
 import { mapViolationsToCanvas } from './violation-markers';
 import { connectableTargets, type ConnectableTargets, type ConnectionSource } from '@domain/connection-rules';
 
-// Варианты меню «+» шага формы: все kind из маппинга подписей адаптера
-// (12 форм-компонентов манифеста), порядок — как в маппинге.
-const ELEMENT_KIND_OPTIONS = Object.entries(FORM_COMPONENT_KIND_LABELS).map(([kind, label]) => ({
-  kind: kind as FormComponentKind,
+// Варианты меню «+» шага формы: все виды элементов (List item, Widget card,
+// 12 форм-компонентов) — любой элемент в любой блок [owner 2026-10-13, ADR-17].
+const ELEMENT_KIND_OPTIONS = Object.entries(ELEMENT_KIND_LABELS).map(([kind, label]) => ({
+  kind: kind as CanvasElementKind,
   label,
 }));
 
@@ -550,16 +542,16 @@ export function useEditorGraph() {
     [runCommand],
   );
 
-  // Элемент из меню тулбара — в выделенный узел канваса. Допустимые виды
-  // элементов зависят от типа узла (меню их и показывает): Главная —
-  // List item/Widget card, Подсценарий — List item, Форма — компоненты
-  // формы (в первый шаг; в конкретный шаг степперной формы — через «+» шага).
+  // Элемент из меню тулбара — в выделенный узел канваса; любой вид в любой
+  // узел [owner 2026-10-13, ADR-17]. У формы — в первый шаг (в конкретный
+  // шаг степперной формы — через «+» шага).
   const addElement = useCallback(
     (kind: AddableElementKind) => {
       if (!selectedNodeId || !selectedNodeType) {
         notifications.showCommandFailure('Сначала выберите узел на канвасе');
         return;
       }
+      let target: CanvasElementTarget;
       if (selectedNodeType === 'form') {
         const form = findFormById(graphRef.current, selectedNodeId);
         const firstStep = form?.steps[0];
@@ -567,41 +559,22 @@ export function useEditorGraph() {
           notifications.showCommandFailure('У формы нет шага для добавления элемента');
           return;
         }
-        runCommand(
-          new AddFormComponent(
-            form.id,
-            firstStep.id,
-            createDefaultFormComponent(kind as FormComponentKind, toFormComponentId(idGenerator.next())),
-          ),
-        );
-        return;
+        target = { kind: 'formStep', formId: form.id, stepId: firstStep.id };
+      } else if (selectedNodeType === 'home') {
+        target = { kind: 'home' };
+      } else {
+        target = { kind: 'subScenario', scenarioId: selectedNodeId as ScenarioId };
       }
-      const element = {
-        id: toElementId(idGenerator.next()),
-        kind: kind === 'widgetCard' ? ('widgetCard' as const) : ('listItem' as const),
-        title: NEW_LIST_ITEM_TITLE,
-      };
-      runCommand(
-        new AddElement(
-          selectedNodeType === 'home'
-            ? { kind: 'home' }
-            : { kind: 'subScenario', scenarioId: selectedNodeId as ScenarioId },
-          element,
-        ),
-      );
+      runCommand(new AddElement(target, createDefaultElement(kind, idGenerator.next())));
     },
     [idGenerator, notifications, runCommand, selectedNodeId, selectedNodeType],
   );
 
-  // «+» конкретного шага формы → компонент выбранного kind на этот шаг.
+  // «+» конкретного шага формы → элемент выбранного вида на этот шаг.
   const addElementToStep = useCallback(
-    (formId: ApplicationFormId, stepId: FormStepId, kind: FormComponentKind) => {
+    (formId: ApplicationFormId, stepId: FormStepId, kind: CanvasElementKind) => {
       runCommand(
-        new AddFormComponent(
-          formId,
-          stepId,
-          createDefaultFormComponent(kind, toFormComponentId(idGenerator.next())),
-        ),
+        new AddElement({ kind: 'formStep', formId, stepId }, createDefaultElement(kind, idGenerator.next())),
       );
     },
     [idGenerator, runCommand],
@@ -817,7 +790,7 @@ export function useEditorGraph() {
           ...(node.type === 'form'
             ? {
                 elementKindOptions: ELEMENT_KIND_OPTIONS,
-                onAddElementToStep: (stepId: string, kind: FormComponentKind) =>
+                onAddElementToStep: (stepId: string, kind: CanvasElementKind) =>
                   nodeHandlers.addElementToStep(node.id as ApplicationFormId, stepId as FormStepId, kind),
                 onDeleteStep: (stepId: string) =>
                   nodeHandlers.removeStep(node.id as ApplicationFormId, stepId as FormStepId),

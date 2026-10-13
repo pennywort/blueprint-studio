@@ -2,12 +2,9 @@ import { useState } from 'react';
 import { Box, IconButton, Menu, MenuItem, makeStyles } from '@blueprint-vendor/flamingo-core';
 import { AccountTree, Code, NoteAdd, ViewColumn } from '@blueprint-vendor/flamingo-icons';
 import type { ElementSchema } from '@application/ports/element-schema-provider';
-import type { FormComponentKind } from '@domain/model/form-components';
+import type { CanvasElementKind } from '@domain/model/canvas-element';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
-import {
-  FORM_COMPONENT_KIND_LABELS,
-  type CanvasNodeType,
-} from '@presentation/features/canvas/graph-flow-adapter';
+import { ELEMENT_KIND_LABELS, type CanvasNodeType } from '@presentation/features/canvas/graph-flow-adapter';
 
 // Панели-заглушки кнопок 3–4: назначение не подтверждено владельцем (Q-1),
 // поэтому панели только переключаются, содержимое не выдумываем.
@@ -16,10 +13,10 @@ export type EditorSidePanel = 'json' | 'navigation';
 // Узлы из меню кнопки 1 (макет «меню-добавления-и-заглушка-пустого-проекта»).
 export type AddableNodeKind = 'home' | 'subScenario' | 'applicationForm';
 
-// Элемент из меню кнопки 2 (T-034): состав меню зависит от типа выделенного
-// узла — Главная принимает List item/Widget card, Подсценарий — List item,
-// Форма — компоненты формы из listSchemas() провайдера.
-export type AddableElementKind = 'listItem' | 'widgetCard' | FormComponentKind;
+// Элемент из меню кнопки 2 (T-034): любой элемент — в любой выделенный узел
+// [owner 2026-10-13, ADR-17]: List item, Widget card и компоненты формы из
+// listSchemas() провайдера.
+export type AddableElementKind = CanvasElementKind;
 
 export type EditorToolbarProps = {
   /** Список схем элементов — из listSchemas() порта IElementSchemaProvider (передаёт EditorPage из DI). */
@@ -66,29 +63,21 @@ const NODE_MENU_ITEMS: ReadonlyArray<{ kind: AddableNodeKind; label: string }> =
   { kind: 'applicationForm', label: 'Форма заявки' },
 ];
 
-// Состав меню элементов по типу выделенного узла (T-034). Человекочитаемые
-// подписи форм-компонентов — из маппинга адаптера: манифест схем хранит
-// только machine-kind, названия появятся, когда их начнёт отдавать провайдер.
+// Меню элементов (T-034): одинаково для любого выделенного узла — вид блока
+// вид элемента не ограничивает [owner 2026-10-13, ADR-17]. Подписи — из
+// маппинга адаптера: манифест схем хранит только machine-kind.
 function elementMenuItems(
   selectedNodeType: CanvasNodeType | null,
   elementSchemas: readonly ElementSchema[],
 ): ReadonlyArray<{ kind: AddableElementKind; label: string }> {
-  if (selectedNodeType === 'home') {
-    return [
-      { kind: 'listItem', label: 'List item' },
-      { kind: 'widgetCard', label: 'Widget card' },
-    ];
+  if (!selectedNodeType) {
+    return [];
   }
-  if (selectedNodeType === 'subScenario') {
-    return [{ kind: 'listItem', label: 'List item' }];
-  }
-  if (selectedNodeType === 'form') {
-    return elementSchemas.map((schema) => ({
-      kind: schema.kind,
-      label: FORM_COMPONENT_KIND_LABELS[schema.kind],
-    }));
-  }
-  return [];
+  return [
+    { kind: 'listItem', label: ELEMENT_KIND_LABELS.listItem },
+    { kind: 'widgetCard', label: ELEMENT_KIND_LABELS.widgetCard },
+    ...elementSchemas.map((schema) => ({ kind: schema.kind, label: ELEMENT_KIND_LABELS[schema.kind] })),
+  ];
 }
 
 // Левый вертикальный тулбар (T-021): ровно 4 IconButton с active-состоянием

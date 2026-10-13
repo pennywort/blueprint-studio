@@ -1,5 +1,6 @@
 import type { FormComponent, FormComponentKind } from '@domain/model/form-components';
-import type { FormComponentId } from '@domain/model/ids';
+import { toElementId, toFormComponentId, type FormComponentId } from '@domain/model/ids';
+import { isPageElementKind, type CanvasElement, type CanvasElementKind } from '@domain/model/canvas-element';
 
 // Фабрики элементов по умолчанию для меню добавления (Epic 002, T-034):
 // новый элемент создаётся с минимально валидными значениями полей
@@ -9,6 +10,14 @@ import type { FormComponentId } from '@domain/model/ids';
 export const NEW_LIST_ITEM_TITLE = 'Новый элемент';
 export const NEW_SCENARIO_TITLE = 'Новый подсценарий';
 export const NEW_FORM_TITLE = 'Новая форма заявки';
+
+// Минимально валидный элемент любого вида — любой элемент добавляется в
+// любой блок [owner 2026-10-13, ADR-17]. rawId — значение IIdGenerator.
+export function createDefaultElement(kind: CanvasElementKind, rawId: string): CanvasElement {
+  return isPageElementKind(kind)
+    ? { id: toElementId(rawId), kind, title: NEW_LIST_ITEM_TITLE }
+    : createDefaultFormComponent(kind, toFormComponentId(rawId));
+}
 
 // Минимально валидный форм-компонент каждого kind: обязательные поля
 // заполняются нейтральными значениями, опциональные не задаются.

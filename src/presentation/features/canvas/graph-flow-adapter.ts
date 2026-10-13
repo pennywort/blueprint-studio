@@ -2,7 +2,7 @@ import type { Connection, Edge, Node, XYPosition } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ListItem, WidgetCard } from '@domain/model/scenario';
 import type { FormComponent, FormComponentKind } from '@domain/model/form-components';
-import type { CanvasElement } from '@domain/model/canvas-element';
+import type { CanvasElement, CanvasElementKind } from '@domain/model/canvas-element';
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
 import { toElementId, type ElementId, type PageEntityId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
@@ -158,10 +158,10 @@ export type CanvasNodeData = {
   connectTarget?: boolean;
   /** Нарушения инвариантов узла и его элементов (T-043) — рамка + тултип. */
   violations?: readonly string[];
-  /** Варианты меню «+» шага формы (kind + человекочитаемая подпись). */
-  elementKindOptions?: ReadonlyArray<{ kind: FormComponentKind; label: string }>;
-  /** «+» конкретного шага формы → AddFormComponent. */
-  onAddElementToStep?: (stepId: string, kind: FormComponentKind) => void;
+  /** Варианты меню «+» шага формы (kind + человекочитаемая подпись) — все виды элементов. */
+  elementKindOptions?: ReadonlyArray<{ kind: CanvasElementKind; label: string }>;
+  /** «+» конкретного шага формы → AddElement в этот шаг. */
+  onAddElementToStep?: (stepId: string, kind: CanvasElementKind) => void;
   /** Корзина шага формы → RemoveFormStep. */
   onDeleteStep?: (stepId: string) => void;
   /**
@@ -214,6 +214,14 @@ export const FORM_COMPONENT_KIND_LABELS: Record<FormComponentKind, string> = {
   button: 'Button',
   addressPicker: 'Address',
   employeeLoginField: 'Login',
+};
+
+// Подписи всех видов элементов — меню добавления: любой элемент в любой
+// блок [owner 2026-10-13, ADR-17].
+export const ELEMENT_KIND_LABELS: Record<CanvasElementKind, string> = {
+  listItem: 'List item',
+  widgetCard: 'Widget card',
+  ...FORM_COMPONENT_KIND_LABELS,
 };
 
 // Порядковые номера уровней навигации для подписи подсценария (макеты:
