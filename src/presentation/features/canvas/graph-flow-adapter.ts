@@ -127,6 +127,8 @@ export type CanvasFormStepData = {
   /** Заголовок шага; пустой — компонент подставит «Шаг N». */
   title: string;
   elements: CanvasElementData[];
+  /** Шаг выделен (S10): тулбар добавляет элемент в него. Внедряется useEditorGraph. */
+  selected?: boolean;
 };
 
 // Данные узла для рендера карточек (T-031) и порядка в слое (T-036).

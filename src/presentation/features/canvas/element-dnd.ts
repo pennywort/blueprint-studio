@@ -71,6 +71,14 @@ export function readElementDrag(dataTransfer: DataTransfer): ElementDragPayload 
   }
 }
 
+// Drag действительно ушёл из зоны приёма (доводка dnd, ADR-16/17): Chromium
+// присылает dragleave при переходе на дочерний элемент зоны, и relatedTarget
+// у него часто null — сверяем координаты курсора с прямоугольником зоны.
+export function isDragLeavingZone(zone: HTMLElement, clientX: number, clientY: number): boolean {
+  const rect = zone.getBoundingClientRect();
+  return clientX <= rect.left || clientX >= rect.right || clientY <= rect.top || clientY >= rect.bottom;
+}
+
 /** Якорь вставки: до/после карточки. */
 export type DropAnchorPosition = {
   elementId: string;

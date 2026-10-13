@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import { Box, makeStyles } from '@blueprint-vendor/flamingo-core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { FORM_STEP_LAYOUT } from '../canvas-layout';
 import type { CanvasElementData } from '../graph-flow-adapter';
 import {
   anchorFromPoint,
+  isDragLeavingZone,
   readElementDndId,
   readElementDndKind,
   readElementDrag,
@@ -107,6 +108,21 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
   const classes = useStyles();
   const layersRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
+  // Жест закончился вне шага или отменён (Esc) — dragleave мог не дойти:
+  // состояние сбрасывается по окончании любого drag.
+  const dragActive = drag !== null;
+  useEffect(() => {
+    if (!dragActive) {
+      return;
+    }
+    const reset = () => setDrag(null);
+    window.addEventListener('dragend', reset);
+    window.addEventListener('drop', reset);
+    return () => {
+      window.removeEventListener('dragend', reset);
+      window.removeEventListener('drop', reset);
+    };
+  }, [dragActive]);
 
   // Лес правил: корни — элементы без варианта-источника в этом шаге,
   // дети — по option-handle варианта (порядок — порядок элементов шага).
@@ -190,7 +206,7 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
 
   const handleDragLeave = useCallback((event: DragEvent<HTMLElement>) => {
     // Переход на дочерний элемент слоя — не уход из зоны.
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+    if (isDragLeavingZone(event.currentTarget, event.clientX, event.clientY)) {
       setDrag(null);
     }
   }, []);
@@ -253,6 +269,11 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
       ref={layersRef}
       className={classes.layers}
       data-testid="form-step-layers"
+      // Пока над шагом идёт drag, слой расширен до пустой колонки справа
+      // (доводка dnd, ADR-16): подсветка новой колонки не вылезает за край
+      // шага/формы, колонка достижима курсором внутри шага. Курсор ушёл —
+      // шаг сужается; курсор при этом уже вне шага, «дрожания» нет.
+      style={drag ? { minWidth: (maxDepth + 1) * COLUMN_PITCH + L.elementWidth } : undefined}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}

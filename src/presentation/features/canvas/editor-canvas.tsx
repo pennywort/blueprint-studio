@@ -72,7 +72,8 @@ export type EditorCanvasProps = {
    */
   onDeleteSelectedElement?: () => boolean;
   /** Выделение узла на канвасе (клик) — цель меню добавления элементов (T-034). */
-  onSelectedNodeChange?: (nodeId: string | null) => void;
+  /** stepId — шаг формы под нажатием (S10): цель меню элементов тулбара. */
+  onSelectedNodeChange?: (nodeId: string | null, stepId?: string | null) => void;
   /** Клик по пустому полю канваса — снять выделение со всех сущностей. */
   onClearSelection?: () => void;
   /** Центрирование вьюпорта на узле — результат поиска (T-050). */
@@ -340,7 +341,11 @@ function CanvasInner({
       }
       const nodeId = target.closest('.react-flow__node')?.getAttribute('data-id');
       if (nodeId) {
-        onSelectedNodeChange?.(nodeId);
+        // Нажатие внутри шага формы выделяет и шаг (S10).
+        onSelectedNodeChange?.(
+          nodeId,
+          target.closest('[data-form-step-id]')?.getAttribute('data-form-step-id'),
+        );
       }
     },
     [onSelectedNodeChange],

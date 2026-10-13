@@ -81,6 +81,10 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     flexDirection: 'column',
     gap: theme.spacing(1.5),
   },
+  // Выделенный шаг (S10): рамка цвета выделения тенью, как у карточки элемента.
+  stepSelected: {
+    boxShadow: `0 0 0 1px ${theme.editor.canvas.edge}`,
+  },
   // «+ Добавить шаг» (N3): новая пустая колонка в конец формы.
   addStepColumn: {
     width: CANVAS_LAYOUT.formStepWidth,
@@ -281,7 +285,11 @@ function FormStepColumn({
   const visibleElements = collapseElements(step.elements, expanded);
 
   return (
-    <Box className={classes.stepColumn} data-testid={`form-step-${step.id}`}>
+    <Box
+      className={step.selected ? `${classes.stepColumn} ${classes.stepSelected}` : classes.stepColumn}
+      data-testid={`form-step-${step.id}`}
+      data-form-step-id={step.id}
+    >
       <Box className={classes.stepHeader}>
         <Typography variant="subtitle2">{step.title || `Шаг ${index + 1}`}</Typography>
         <Box className={classes.stepActions}>

@@ -40,7 +40,10 @@ export function OptionCard({ option, onSelect }: OptionCardProps) {
   const classes = useStyles();
   return (
     <Card
-      className={classes.card}
+      // nodrag: нажатие на варианте не начинает drag узла react-flow — иначе
+      // тащился весь блок формы (доводка dnd, ADR-16). Сам вариант не
+      // переносится: он часть Select'а.
+      className={`${classes.card} nodrag`}
       variant="outlined"
       data-testid={`option-card-${option.handleId}`}
       onPointerDown={(event) => {

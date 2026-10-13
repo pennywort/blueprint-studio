@@ -122,10 +122,14 @@ export function ElementCard({ element }: ElementCardProps) {
       }}
       // Выделение — по нажатию (без «лага» click); коннектор и кнопки
       // выделение не меняют (баг 2). click гасится, чтобы не дойти до узла.
+      // Выделение — следующей макрозадачей (ADR-16/17, доводка dnd): синхронный
+      // ре-рендер узла внутри pointerdown срывал старт нативного drag в
+      // Chromium — карточку, не выделенную заранее, нельзя было перетащить.
       onPointerDown={(event) => {
         pressOnActionRef.current = isActionTarget(event.target);
         if (!pressOnActionRef.current) {
-          element.onSelect?.();
+          const select = element.onSelect;
+          setTimeout(() => select?.(), 0);
         }
       }}
       onClick={(event) => event.stopPropagation()}

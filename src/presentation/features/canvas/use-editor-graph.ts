@@ -239,6 +239,9 @@ export function useEditorGraph() {
   // удаляет именно его (единое правило проекта: выделение + Delete).
   // Выделение узла и элемента взаимоисключающи — последний клик побеждает.
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  // Выделенный шаг формы (S10, §6): нажатие по шагу выделяет форму и шаг —
+  // меню элементов тулбара добавляет в него, а не в первый шаг.
+  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const selectedNodeType: CanvasNodeType | null = useMemo(
     () => flow.nodes.find((node) => node.id === selectedNodeId)?.type ?? null,
     [flow.nodes, selectedNodeId],
@@ -248,8 +251,9 @@ export function useEditorGraph() {
   // onSelectionChange, и он ловил промежуточное состояние канваса до
   // синхронизации с пропсами → выделение «качалось» между узлом и
   // элементом до Maximum update depth (N6, повторная приёмка).
-  const handleNodeSelection = useCallback((nodeId: string | null) => {
+  const handleNodeSelection = useCallback((nodeId: string | null, stepId: string | null = null) => {
     setSelectedNodeId(nodeId);
+    setSelectedStepId(nodeId !== null ? stepId : null);
     if (nodeId !== null) {
       setSelectedElementId(null);
     }
@@ -543,8 +547,8 @@ export function useEditorGraph() {
   );
 
   // Элемент из меню тулбара — в выделенный узел канваса; любой вид в любой
-  // узел [owner 2026-10-13, ADR-17]. У формы — в первый шаг (в конкретный
-  // шаг степперной формы — через «+» шага).
+  // узел [owner 2026-10-13, ADR-17]. У формы — в выделенный шаг (S10), если
+  // выделена форма целиком — в первый.
   const addElement = useCallback(
     (kind: AddableElementKind) => {
       if (!selectedNodeId || !selectedNodeType) {
@@ -554,12 +558,12 @@ export function useEditorGraph() {
       let target: CanvasElementTarget;
       if (selectedNodeType === 'form') {
         const form = findFormById(graphRef.current, selectedNodeId);
-        const firstStep = form?.steps[0];
-        if (!form || !firstStep) {
+        const step = form?.steps.find((candidate) => candidate.id === selectedStepId) ?? form?.steps[0];
+        if (!form || !step) {
           notifications.showCommandFailure('У формы нет шага для добавления элемента');
           return;
         }
-        target = { kind: 'formStep', formId: form.id, stepId: firstStep.id };
+        target = { kind: 'formStep', formId: form.id, stepId: step.id };
       } else if (selectedNodeType === 'home') {
         target = { kind: 'home' };
       } else {
@@ -567,7 +571,7 @@ export function useEditorGraph() {
       }
       runCommand(new AddElement(target, createDefaultElement(kind, idGenerator.next())));
     },
-    [idGenerator, notifications, runCommand, selectedNodeId, selectedNodeType],
+    [idGenerator, notifications, runCommand, selectedNodeId, selectedNodeType, selectedStepId],
   );
 
   // «+» конкретного шага формы → элемент выбранного вида на этот шаг.
@@ -750,6 +754,7 @@ export function useEditorGraph() {
       const selected = selectedElementId === null && node.id === selectedNodeId;
       const key = [
         selected,
+        selected ? selectedStepId : '',
         selectedElementId !== null && elementIds.includes(selectedElementId) ? selectedElementId : '',
         focus?.nodeId === node.id ? focus.nonce : '',
         connectionTargets?.pages.has(node.id) ?? false,
@@ -785,6 +790,7 @@ export function useEditorGraph() {
           elements: node.data.elements.map(injectElement),
           steps: node.data.steps.map((step) => ({
             ...step,
+            selected: selected && step.id === selectedStepId,
             elements: step.elements.map(injectElement),
           })),
           ...(node.type === 'form'
@@ -815,6 +821,7 @@ export function useEditorGraph() {
     nodeHandlers,
     selectedElementId,
     selectedNodeId,
+    selectedStepId,
     violationMarkers,
     focus,
     connectionTargets,

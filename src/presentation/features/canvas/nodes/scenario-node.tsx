@@ -7,7 +7,7 @@ import { ViolationBadge } from './violation-badge';
 import { CANVAS_LAYOUT } from '../canvas-layout';
 import { collapseElements, isCollapsible } from '../collapse-elements';
 import type { CanvasNode } from '../graph-flow-adapter';
-import { anchorFromPoint, readElementDndKind, readElementDrag } from '../element-dnd';
+import { anchorFromPoint, isDragLeavingZone, readElementDndKind, readElementDrag } from '../element-dnd';
 import { ElementCard } from './element-card';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
@@ -107,6 +107,23 @@ export function ScenarioNode({ id, data, type }: NodeProps<CanvasNode>) {
   const [dndActive, setDndActive] = useState(false);
   const [anchor, setAnchor] = useState<{ elementId: string; placement: 'before' | 'after' } | null>(null);
 
+  // Жест закончился вне узла или отменён (Esc) — сброс подсветки.
+  useEffect(() => {
+    if (!dndActive) {
+      return;
+    }
+    const reset = () => {
+      setDndActive(false);
+      setAnchor(null);
+    };
+    window.addEventListener('dragend', reset);
+    window.addEventListener('drop', reset);
+    return () => {
+      window.removeEventListener('dragend', reset);
+      window.removeEventListener('drop', reset);
+    };
+  }, [dndActive]);
+
   const acceptsKind = useCallback((kind: string | null): boolean => kind !== null, []);
 
   const handleDragOver = useCallback(
@@ -124,7 +141,11 @@ export function ScenarioNode({ id, data, type }: NodeProps<CanvasNode>) {
     [acceptsKind],
   );
 
-  const handleDragLeave = useCallback(() => {
+  const handleDragLeave = useCallback((event: DragEvent<HTMLElement>) => {
+    // Переход на дочерний элемент узла — не уход из зоны (подсветка не мигает).
+    if (!isDragLeavingZone(event.currentTarget, event.clientX, event.clientY)) {
+      return;
+    }
     setDndActive(false);
     setAnchor(null);
   }, []);

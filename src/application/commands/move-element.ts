@@ -93,6 +93,10 @@ export class MoveElement implements Command {
     // Каскад N4: исходящие связи перенесённого элемента осмысленны только
     // между смежными уровнями «источник + 1 = цель» — после смены владельца
     // страницы несмежные связи рвутся (то же правило, что у SetPageLayerDepth).
+    // Уровни — ПОСЛЕ закрепления ADR-15: иначе новая связь «через» перенесённый
+    // элемент пересчитывала уровень цели в смежный, связь оставалась, а затем
+    // закрепление возвращало цель на прежний уровень (доводка dnd, ADR-17).
+    preservePageDepths(draft, depthsBeforeRemoval);
     const depths = computeGraphDepths(draft);
     draft.links = draft.links.filter((link) => {
       if (link.sourceElementId !== this.elementId) {
