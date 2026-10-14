@@ -135,6 +135,8 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - [S8, эпик 002] RemoveForm очищает applicationFormId у сценариев type=application и удаляет связи, исходящие из элементов формы (ADR-17) [коммит cc65a1f]
 - [T-041 эпик 002] Панель атрибутов List item/Widget card: проектные stub-схемы рядом с манифестом (page-element-manifest.json, ADR-07: название, доп. текст), порт и мета D4 по CanvasElementKind, изменения через UpdateElementProps; меню тулбара — из listSchemas(); обёртка левого тулбара не перекрывает undo/redo [коммит 6926e8c]
 - [эпик 002, ADR-16] Шаг формы раскладывается колонками по правилам логики (дерево «цель напротив варианта», макеты layouting …), dnd по колонкам шага и страниц — общее ядро layers/ + LayerPolicy; MoveElement(layerDepth); сжатие T-033 выключено флагом ELEMENTS_COLLAPSE_ENABLED; исправлено распознавание вида dnd (MIME в нижнем регистре)
+- [R1, ревью 2026-10-13] Единое правило навигационной связи: Connect/ReconnectElements проверяют цель по connectableTargets, цель встаёт на уровень источника + 1, каскад N4 — removeNonAdjacentLinks [коммит 8ca9bf9]
+- [R2, ревью 2026-10-13] Производительность канваса: структурное разделение graphToFlow, батч измерений за кадр, выделение/цель связи/нарушения — стор canvas-interaction + контекст действий, memo узлов/карточек, буфер ввода атрибутов 300 мс, Box → div в узлах; стенд: загрузка 36 с → 1.4 с, выделение 3.5 с → ~65 мс, команда ~4 с → <200 мс [коммит 54f70c0]
 
 ### 4.2 NOT DONE (пробелы)
 
@@ -266,3 +268,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-10-13 | Claude | Панель атрибутов: редакторы optionList/linkList (варианты Select, ссылки infoBlock)
 - 2026-10-13 | agent:claude | Инфраструктура агентов [owner]: общий AGENTS.md (CLAUDE.md/QWEN.md импортируют), KIMI.md в docs/archive, реестр TEMPORARY в docs/temporary-registry.md; сжатые команды verify/rules/ui, state:summary/state:section; субагенты .claude/agents (порт в .qwen/agents через agents:sync); хуки и deny в .claude/settings.json
 - 2026-10-14 | agent:claude | Ревью архитектуры/chips/производительности (docs/ревью-архитектуры-2026-10-13.md); стенд stress.html (src/stress-demo), начальный граф — graphSeed из DI
+- 2026-10-14 | agent:claude | §4.1: R1 (правило связи) и R2 (производительность канваса)
