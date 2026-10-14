@@ -50,7 +50,7 @@ ESLint flat + eslint-plugin-boundaries, Prettier, Husky, commitlint, lint-staged
 
 - **Тесты НИКОГДА не пишем и НИКОГДА не запускаем** [owner]. Старые тесты
   `*.test.ts.disabled` / `*.fixture.ts.disabled` не трогаем и не чиним.
-- **Git:** работаем прямо в `master` — коммит и push в `master`, веток не заводим [owner].
+- **Git:** работа в рабочей ветке отдельными коммитами, затем merge в `master` [owner 2026-10-14].
 - Любое изменение графа — команда через `CommandBus` (immer `produceWithPatches`);
   UI не мутирует состояние напрямую.
 - 4 слоя `domain → application → infrastructure → presentation` (enforced lint).
@@ -100,7 +100,7 @@ ESLint flat + eslint-plugin-boundaries, Prettier, Husky, commitlint, lint-staged
 1. `npm run verify` — зелёный.
 2. `npm run rules` — зелёный.
 3. Если менялся UI — `npm run ui -- …` по сценарию задачи, `✅ ui OK`.
-4. Коммит (conventional, по-русски) и push в `master`.
+4. Коммит (conventional, по-русски), push рабочей ветки, merge в `master` и push `master`.
 5. `npm run state:summary` — если «⚠️ ОБНОВЛЕНИЕ: вероятно нужно», напиши владельцу,
    что предлагаешь добавить в PROJECT_STATE (сам файл правит `/update-state`).
 6. Ответ владельцу: 1–2 строки — что сделано и чем проверено.

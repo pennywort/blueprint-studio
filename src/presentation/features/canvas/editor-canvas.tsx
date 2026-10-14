@@ -172,6 +172,7 @@ function CanvasInner({
   onConnectionEnd,
   isConnectionAllowed,
   connecting,
+  interactionStore,
 }: EditorCanvasProps) {
   const theme = useEditorTheme();
   const styles = useReactFlowThemeStyles();
@@ -208,6 +209,29 @@ function CanvasInner({
   // либо отброшены).
   useEffect(() => setNodes(withMeasured(propsNodes)), [propsNodes, withMeasured]);
   useEffect(() => setEdges(propsEdges), [propsEdges]);
+  // Выделение взаимоисключающее (F5): выбран узел или элемент — выделение
+  // рёбер (оно у react-flow) снимается. До R2 его сбрасывал пересчёт рёбер
+  // при каждом выделении; после структурного разделения рёбра те же
+  // объекты, и связь оставалась выделенной вместе с блоком. Подписка на
+  // стор без перерисовки канваса (ревью P3, R2).
+  useEffect(() => {
+    const store = interactionStore ?? STANDALONE_STORE;
+    let { selectedNodeId, selectedElementId } = store.getState();
+    return store.subscribe(() => {
+      const state = store.getState();
+      const changed =
+        state.selectedNodeId !== selectedNodeId || state.selectedElementId !== selectedElementId;
+      selectedNodeId = state.selectedNodeId;
+      selectedElementId = state.selectedElementId;
+      if (changed && (selectedNodeId !== null || selectedElementId !== null)) {
+        setEdges((current) =>
+          current.some((edge) => edge.selected)
+            ? current.map((edge) => (edge.selected ? { ...edge, selected: false } : edge))
+            : current,
+        );
+      }
+    });
+  }, [interactionStore]);
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
 

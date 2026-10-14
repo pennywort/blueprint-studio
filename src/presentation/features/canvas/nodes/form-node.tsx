@@ -52,9 +52,10 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     flexDirection: 'column',
     gap: theme.spacing(1.5),
   },
-  // Выделенный шаг (S10): рамка цвета выделения тенью, как у карточки элемента.
+  // Выделенный шаг (S10): рамка цвета выделения внутри шага (inset-тень) —
+  // размер не меняется, рёбра у границы не перекрываются [owner 2026-10-14].
   stepSelected: {
-    boxShadow: `0 0 0 1px ${theme.editor.canvas.edge}`,
+    boxShadow: `inset 0 0 0 2px ${theme.editor.canvas.edge}`,
   },
   // «+ Добавить шаг» (N3): новая пустая колонка в конец формы.
   addStepColumn: {
@@ -233,6 +234,7 @@ const FormStepColumn = memo(function FormStepColumn({
       className={selected ? `${classes.stepColumn} ${classes.stepSelected}` : classes.stepColumn}
       data-testid={`form-step-${step.id}`}
       data-form-step-id={step.id}
+      data-step-selected={selected || undefined}
     >
       {/* Цель перехода между шагами [owner 2026-10-14]: невидимый handle во весь
           шаг, принимает связь, только пока шаг — допустимая цель (шаг позже
