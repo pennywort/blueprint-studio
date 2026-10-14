@@ -3,7 +3,7 @@ import type { ApplicationForm } from '@domain/model/scenario';
 import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
 import { InvariantViolationError } from './errors';
-import { nextPageOrderIndex } from './graph-lookup';
+import { nextPageLayerDepth, nextPageOrderIndex } from './graph-lookup';
 
 // Команда добавления формы заявки (Epic 002, T-035). Форм в карте может быть
 // любое количество (D8). Готовая сущность приходит в конструктор;
@@ -16,7 +16,10 @@ export class AddForm implements Command {
   constructor(private readonly form: Omit<ApplicationForm, 'orderIndex'>) {}
 
   apply(draft: ServiceGraph): void {
-    draft.applicationForms.push({ ...this.form, orderIndex: nextPageOrderIndex(draft) });
+    // Колонка нового узла — следующий уровень за самой глубокой страницей,
+    // если не задана явно (ревью A3, R3).
+    const layerDepth = this.form.layerDepth ?? nextPageLayerDepth(draft);
+    draft.applicationForms.push({ ...this.form, layerDepth, orderIndex: nextPageOrderIndex(draft) });
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

@@ -3,6 +3,7 @@ import type { SubScenario } from '@domain/model/scenario';
 import type { CanvasElement } from '@domain/model/canvas-element';
 import type { PageEntityId } from '@domain/model/ids';
 import { findElementInGraph, type ElementContainer } from '@domain/element-containers';
+import { computeGraphDepths } from '@domain/graph-depths';
 
 // Обходные помощники команд canvas (Epic 002, T-035): поиск страниц, элементов
 // и связей внутри черновика Immer. Чистые функции над ServiceGraph — работают
@@ -42,6 +43,14 @@ export function nextPageOrderIndex(graph: ServiceGraph): number {
     }
   }
   return max + 1;
+}
+
+// Колонка нового узла (AddScenario/AddForm): следующий уровень за самой
+// глубокой страницей — несвязанный узел не падает в нулевую колонку
+// (замечание владельца); расчёт перенесён из UI в команды (ревью A3, R3).
+export function nextPageLayerDepth(graph: ServiceGraph): number {
+  const depths = computeGraphDepths(graph);
+  return depths.size === 0 ? 0 : Math.max(...depths.values()) + 1;
 }
 
 // Сущность-страница по id среди всех видов страниц (ReorderInLayer, T-035).

@@ -14,15 +14,23 @@ import { walkPages } from './graph-lookup';
 // страницу из последовательности и вставляет на целевую позицию, остальные
 // сдвигаются; индексы перенумеровываются 0..n-1 без дыр.
 //
-// Какая колонка у страницы (глубина от корня) и как UI превращает вертикальный
-// drag в targetOrderIndex — забота layout-движка и канваса (T-036, S9/S10);
-// команда работает только с персистентным порядком.
+// Позиция задаётся якорем — соседней страницей колонки и стороной от неё,
+// как у MoveElement (ревью A3, R3): UI не считает индексы общей
+// последовательности, команда сама находит якорь ПОСЛЕ изъятия страницы.
+// Какая колонка у страницы (глубина от корня) — забота layout-движка (T-036).
+
+export type PageDropAnchor = {
+  /** Страница-якорь той же колонки: перемещаемая встаёт до/после неё. */
+  pageId: PageEntityId;
+  placement: 'before' | 'after';
+};
+
 export class ReorderInLayer implements Command {
   readonly name = 'ReorderInLayer';
 
   constructor(
     private readonly pageId: PageEntityId,
-    private readonly targetOrderIndex: number,
+    private readonly anchor: PageDropAnchor,
   ) {}
 
   apply(draft: ServiceGraph): void {
@@ -32,9 +40,12 @@ export class ReorderInLayer implements Command {
       throw new Error(`Страница не найдена: ${this.pageId}`);
     }
 
-    const to = Math.min(Math.max(this.targetOrderIndex, 0), pages.length - 1);
     const [moved] = pages.splice(from, 1);
-    pages.splice(to, 0, moved!);
+    const anchorIndex = pages.findIndex((page) => page.id === this.anchor.pageId);
+    if (anchorIndex < 0) {
+      throw new Error(`Страница-якорь не найдена: ${this.anchor.pageId}`);
+    }
+    pages.splice(this.anchor.placement === 'before' ? anchorIndex : anchorIndex + 1, 0, moved!);
     pages.forEach((page, index) => {
       page.orderIndex = index;
     });
