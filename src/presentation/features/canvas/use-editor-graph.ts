@@ -11,6 +11,7 @@ import {
   toPageId,
   toPageLinkId,
   toScenarioId,
+  toStepTransitionId,
   type ApplicationFormId,
   type ElementId,
   type FormComponentId,
@@ -19,6 +20,7 @@ import {
   type PageEntityId,
   type PageLinkId,
   type ScenarioId,
+  type StepTransitionId,
 } from '@domain/model/ids';
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
 import { computeGraphDepths } from '@domain/graph-depths';
@@ -46,6 +48,8 @@ import { EnableComplexLogic } from '@application/commands/enable-complex-logic';
 import { DisableComplexLogic } from '@application/commands/disable-complex-logic';
 import { AddLogicRule } from '@application/commands/add-logic-rule';
 import { RemoveLogicRule } from '@application/commands/remove-logic-rule';
+import { AddStepTransition } from '@application/commands/add-step-transition';
+import { RemoveStepTransition } from '@application/commands/remove-step-transition';
 import {
   findElementLocation,
   findFormById,
@@ -66,6 +70,7 @@ import {
   graphToFlow,
   parseLogicSourceHandle,
   parseLogicTargetHandle,
+  parseStepTargetHandle,
   type CanvasEdge,
   type CanvasNode,
   type CanvasNodeType,
@@ -81,8 +86,9 @@ const ELEMENT_KIND_OPTIONS = Object.entries(ELEMENT_KIND_LABELS).map(([kind, lab
   label,
 }));
 
-// Источник связи по id source-handle: option Select'а — правило логики,
-// иначе — навигационная связь от элемента (id handle = id элемента, D9).
+// Источник связи по id source-handle: option Select'а — правило логики или
+// переход на шаг [owner 2026-10-14], иначе — навигационная связь (или переход
+// на шаг) от элемента (id handle = id элемента, D9).
 function parseConnectionSource(handleId: string | null | undefined): ConnectionSource | null {
   if (!handleId) {
     return null;
@@ -349,6 +355,26 @@ export function useEditorGraph() {
   const connect = useCallback(
     (connection: Connection) => {
       const sourceHandle = connection.sourceHandle ?? '';
+      // Переход между шагами [owner 2026-10-14]: цель — handle шага;
+      // источник — элемент (handle = id элемента) или вариант Select'а.
+      const targetStepId = connection.targetHandle ? parseStepTargetHandle(connection.targetHandle) : null;
+      if (targetStepId !== null) {
+        const option = sourceHandle.startsWith(LOGIC_SOURCE_HANDLE_PREFIX)
+          ? parseLogicSourceHandle(sourceHandle)
+          : null;
+        if (!sourceHandle || (sourceHandle.startsWith(LOGIC_SOURCE_HANDLE_PREFIX) && !option)) {
+          return;
+        }
+        runCommand(
+          new AddStepTransition({
+            id: toStepTransitionId(idGenerator.next()),
+            sourceElementId: toElementId(option ? option.elementId : sourceHandle),
+            ...(option ? { optionId: toOptionId(option.optionId) } : null),
+            targetStepId: toFormStepId(targetStepId),
+          }),
+        );
+        return;
+      }
       if (sourceHandle.startsWith(LOGIC_SOURCE_HANDLE_PREFIX)) {
         const source = parseLogicSourceHandle(sourceHandle);
         const targetElementId = connection.targetHandle
@@ -388,7 +414,7 @@ export function useEditorGraph() {
   // reconnectable: false, здесь — защита от обхода).
   const reconnect = useCallback(
     (oldEdge: CanvasEdge, connection: Connection) => {
-      if (oldEdge.data?.kind === 'logic') {
+      if (oldEdge.data?.kind === 'logic' || oldEdge.data?.kind === 'stepTransition') {
         return;
       }
       const patch: { sourceElementId?: ElementId; targetId?: PageLinkTargetId } = {};
@@ -413,6 +439,8 @@ export function useEditorGraph() {
       for (const edge of edges) {
         if (edge.data?.kind === 'logic') {
           runCommand(new RemoveLogicRule(edge.id as LogicRuleId));
+        } else if (edge.data?.kind === 'stepTransition') {
+          runCommand(new RemoveStepTransition(edge.id as StepTransitionId));
         } else {
           runCommand(new DisconnectElements(toPageLinkId(edge.id as PageLinkId)));
         }
@@ -707,6 +735,11 @@ export function useEditorGraph() {
       return false;
     }
     const targets = connectableTargets(graphRef.current, source);
+    // Переход между шагами — в handle шага, от элемента или варианта [owner 2026-10-14].
+    const targetStepId = connection.targetHandle ? parseStepTargetHandle(connection.targetHandle) : null;
+    if (targetStepId !== null) {
+      return targets.steps.has(targetStepId);
+    }
     if (source.kind === 'logic') {
       const targetElementId = connection.targetHandle
         ? parseLogicTargetHandle(connection.targetHandle)
@@ -758,6 +791,10 @@ export function useEditorGraph() {
         focus?.nodeId === node.id ? focus.nonce : '',
         connectionTargets?.pages.has(node.id) ?? false,
         elementIds.filter((id) => connectionTargets?.elements.has(id)).join(','),
+        node.data.steps
+          .filter((step) => connectionTargets?.steps.has(step.id))
+          .map((step) => step.id)
+          .join(','),
       ].join('|');
       const cached = cache.get(node.id);
       if (cached && cached.base === node && cached.key === key) {
@@ -790,6 +827,7 @@ export function useEditorGraph() {
           steps: node.data.steps.map((step) => ({
             ...step,
             selected: selected && step.id === selectedStepId,
+            connectTarget: connectionTargets?.steps.has(step.id) ?? false,
             elements: step.elements.map(injectElement),
           })),
           ...(node.type === 'form'

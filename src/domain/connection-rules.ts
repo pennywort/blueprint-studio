@@ -2,6 +2,7 @@ import type { ServiceGraph } from './model/service-graph';
 import type { SubScenario } from './model/scenario';
 import { computeGraphDepths } from './graph-depths';
 import { findElementInGraph } from './element-containers';
+import { stepTransitionTargets } from './step-transitions';
 
 // Правила «с чем можно соединиться» (повторная приёмка Epic 002, [owner
 // 2026-10-13]) — единый источник для подсветки допустимых целей во время
@@ -13,6 +14,9 @@ import { findElementInGraph } from './element-containers';
 // — «Сложная логика»: источник — option Select'а с включённым режимом, цель —
 //   другой элемент ТОГО ЖЕ шага формы (ADR-14). Повтор правила, цикл
 //   видимости и элемент, у которого уже есть правило (L-I7), — не цели.
+// — Переход между шагами [owner 2026-10-14]: источник — элемент шага формы
+//   или вариант его Select'а, цель — любой более поздний шаг той же формы
+//   (step-transitions). Вариант — источник перехода и без «Сложной логики».
 
 export type ConnectionSource =
   { kind: 'navigation'; elementId: string } | { kind: 'logic'; elementId: string; optionId: string };
@@ -22,9 +26,11 @@ export type ConnectableTargets = {
   pages: ReadonlySet<string>;
   /** Элементы-цели правила «Сложной логики». */
   elements: ReadonlySet<string>;
+  /** Шаги-цели перехода между шагами формы. */
+  steps: ReadonlySet<string>;
 };
 
-const NONE: ConnectableTargets = { pages: new Set(), elements: new Set() };
+const NONE: ConnectableTargets = { pages: new Set(), elements: new Set(), steps: new Set() };
 
 function* walkScenarios(subScenarios: SubScenario[]): Generator<SubScenario> {
   for (const scenario of subScenarios) {
@@ -45,6 +51,7 @@ function navigationTargets(graph: ServiceGraph, elementId: string): ConnectableT
   if (sourcePageId === null) {
     return NONE;
   }
+  const steps = stepTransitionTargets(graph, elementId);
   const depths = computeGraphDepths(graph);
   const sourceDepth = depths.get(sourcePageId) ?? 0;
   const linked = new Set(
@@ -57,7 +64,7 @@ function navigationTargets(graph: ServiceGraph, elementId: string): ConnectableT
       pages.add(page.id);
     }
   }
-  return { pages, elements: new Set() };
+  return { pages, elements: new Set(), steps };
 }
 
 // Правило source → target замкнуло бы контур видимости: из цели по уже
@@ -89,9 +96,10 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
   if (!found || found.container.kind !== 'formStep') {
     return NONE;
   }
+  const steps = stepTransitionTargets(graph, elementId, optionId);
   const source = found.element;
   if (source.kind !== 'selectList' || !source.hasComplexLogic) {
-    return NONE;
+    return { pages: new Set(), elements: new Set(), steps };
   }
   // У цели — не больше одного правила видимости (L-I7, временно [owner
   // 2026-10-13]): элемент, уже зависящий от варианта, — не цель.
@@ -112,7 +120,7 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
       elements.add(element.id);
     }
   }
-  return { pages: new Set(), elements };
+  return { pages: new Set(), elements, steps };
 }
 
 export function connectableTargets(graph: ServiceGraph, source: ConnectionSource): ConnectableTargets {

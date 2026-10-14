@@ -38,6 +38,11 @@ export type LogicRuleId = z.infer<typeof LogicRuleIdSchema>;
 export const OptionIdSchema = z.string().min(1).brand<'OptionId'>();
 export type OptionId = z.infer<typeof OptionIdSchema>;
 
+// Переход между шагами формы [owner 2026-10-14]: самостоятельная сущность со
+// стабильным id (ребро на канвасе — её проекция, как у правил логики).
+export const StepTransitionIdSchema = z.string().min(1).brand<'StepTransitionId'>();
+export type StepTransitionId = z.infer<typeof StepTransitionIdSchema>;
+
 // Epic 002 (T-035): идентификатор сущности-страницы любого вида — Главная,
 // Подсценарий или Форма заявки (страницы в слоях на общих основаниях, D12/D13).
 export type PageEntityId = PageId | ScenarioId | ApplicationFormId;
@@ -54,3 +59,4 @@ export const toElementId = (raw: string): ElementId => ElementIdSchema.parse(raw
 export const toPageLinkId = (raw: string): PageLinkId => PageLinkIdSchema.parse(raw);
 export const toLogicRuleId = (raw: string): LogicRuleId => LogicRuleIdSchema.parse(raw);
 export const toOptionId = (raw: string): OptionId => OptionIdSchema.parse(raw);
+export const toStepTransitionId = (raw: string): StepTransitionId => StepTransitionIdSchema.parse(raw);

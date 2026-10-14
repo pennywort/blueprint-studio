@@ -246,7 +246,9 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
         <ElementCard element={element} />
         {indicator(element.id, 'after')}
       </Box>
-      {element.complexLogic?.enabled
+      {/* Варианты Select'а — карточки под ним всегда [owner 2026-10-14]: из
+          варианта тянется переход на шаг, а при «Сложной логике» — и правило. */}
+      {element.complexLogic
         ? element.complexLogic.options.map((option) => {
             const dependents = children.get(option.handleId) ?? [];
             return (

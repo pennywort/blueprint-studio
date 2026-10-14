@@ -4,6 +4,7 @@ import { ApplicationFormSchema, SubScenarioSchema, AdditionalInfoSchema, FaqSche
 import { CanvasElementSchema } from './canvas-element';
 import { PageLinkSchema } from './page-link';
 import { LogicRuleSchema } from './logic-rule';
+import { StepTransitionSchema } from './step-transition';
 
 // Граф сервиса — корневая доменная модель содержимого карты (спека 5.1).
 //
@@ -37,6 +38,10 @@ const ServiceGraphObjectSchema = z.object({
   // коллекция, ребро правила на канвасе — её проекция. Default [] — графы,
   // сериализованные до появления фичи, остаются валидными.
   logicRules: z.array(LogicRuleSchema).default([]),
+  // Переходы между шагами форм [owner 2026-10-14]: элемент шага (или вариант
+  // Select'а) → следующий/любой более поздний шаг той же формы. Default [] —
+  // графы, сохранённые до фичи, остаются валидными.
+  stepTransitions: z.array(StepTransitionSchema).default([]),
 });
 
 // --- Миграция модели «универсальные элементы» [owner 2026-10-13] ---

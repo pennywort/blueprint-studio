@@ -36,6 +36,18 @@ export const logicTargetHandleId = (elementId: string): string => `${LOGIC_TARGE
 
 export const logicAnchorHandleId = (elementId: string): string => `${LOGIC_ANCHOR_HANDLE_PREFIX}${elementId}`;
 
+// Переход между шагами формы [owner 2026-10-14]: target-handle во весь шаг
+// (принимает связь, пока шаг — допустимая цель). Источник перехода —
+// source-handle элемента (id = id элемента, D9) или варианта Select'а
+// (logicSourceHandleId): тот же жест, цель задаёт смысл связи.
+export const STEP_TARGET_HANDLE_PREFIX = 'step-tgt:';
+
+export const stepTargetHandleId = (stepId: string): string => `${STEP_TARGET_HANDLE_PREFIX}${stepId}`;
+
+export function parseStepTargetHandle(handle: string): string | null {
+  return handle.startsWith(STEP_TARGET_HANDLE_PREFIX) ? handle.slice(STEP_TARGET_HANDLE_PREFIX.length) : null;
+}
+
 export function parseLogicSourceHandle(handle: string): { elementId: string; optionId: string } | null {
   if (!handle.startsWith(LOGIC_SOURCE_HANDLE_PREFIX)) {
     return null;
@@ -72,8 +84,9 @@ export type CanvasElementData = {
   hasOutgoingLink: boolean;
   /**
    * «Сложная логика» (T-037): поле присутствует у Select'а — потенциального
-   * источника правил (L5). enabled — режим включён, у option'ов есть
-   * source-handle'ы; options — строки option'ов для рендера с handle-id.
+   * источника правил (L5). enabled — режим включён (варианты — источники
+   * правил); options — строки option'ов для рендера с handle-id: в шаге
+   * формы есть всегда — вариант — источник перехода на шаг [owner 2026-10-14].
    */
   complexLogic?: {
     enabled: boolean;
@@ -129,6 +142,8 @@ export type CanvasFormStepData = {
   elements: CanvasElementData[];
   /** Шаг выделен (S10): тулбар добавляет элемент в него. Внедряется useEditorGraph. */
   selected?: boolean;
+  /** Шаг — допустимая цель протягиваемого перехода (внедряется useEditorGraph). */
+  connectTarget?: boolean;
 };
 
 // Данные узла для рендера карточек (T-031) и порядка в слое (T-036).
@@ -309,19 +324,17 @@ function formComponentToElementData(
     dndKind: 'formComponent',
   };
   if (component.kind === 'selectList') {
-    // Select — потенциальный источник «Сложной логики» (L5); option-handle'ы
-    // рисуются только при включённом режиме (L4).
-    const enabled = component.hasComplexLogic === true;
+    // Select — потенциальный источник «Сложной логики» (L5) и, вариантами,
+    // переходов между шагами [owner 2026-10-14]: option-handle'ы есть всегда,
+    // правило видимости из них — только при включённом режиме (L4).
     element.complexLogic = {
-      enabled,
-      options: enabled
-        ? component.options.map((option) => ({
-            handleId: logicSourceHandleId(component.id, option.value),
-            label: option.label,
-            value: option.value,
-            isDefault: option.isDefault === true,
-          }))
-        : [],
+      enabled: component.hasComplexLogic === true,
+      options: component.options.map((option) => ({
+        handleId: logicSourceHandleId(component.id, option.value),
+        label: option.label,
+        value: option.value,
+        isDefault: option.isDefault === true,
+      })),
     };
   }
   if ('placeholder' in component && component.placeholder) {
@@ -500,6 +513,38 @@ export function graphToFlow(
       markerEnd: EDGE_ARROW_MARKER_ID,
       reconnectable: false,
       data: { kind: 'logic' },
+    });
+  }
+
+  // Проекция переходов между шагами [owner 2026-10-14]: источник — handle
+  // элемента (D9) или его варианта, цель — target-handle шага; оба конца в
+  // одном узле формы. Переназначение не поддерживаем — как у правил.
+  const stepOwnerNodeId = new Map<string, string>();
+  for (const form of graph.applicationForms) {
+    for (const step of form.steps) {
+      stepOwnerNodeId.set(step.id, form.id);
+    }
+  }
+  for (const transition of graph.stepTransitions) {
+    const sourceNodeId = elementOwnerNodeId.get(transition.sourceElementId);
+    const targetNodeId = stepOwnerNodeId.get(transition.targetStepId);
+    // Битая ссылка не роняет рендер — каскады команд и инвариант её не допускают.
+    if (!sourceNodeId || !targetNodeId) {
+      continue;
+    }
+    edges.push({
+      id: transition.id,
+      source: sourceNodeId,
+      sourceHandle:
+        transition.optionId !== undefined
+          ? logicSourceHandleId(transition.sourceElementId, transition.optionId)
+          : transition.sourceElementId,
+      target: targetNodeId,
+      targetHandle: stepTargetHandleId(transition.targetStepId),
+      type: 'smoothstep',
+      markerEnd: EDGE_ARROW_MARKER_ID,
+      reconnectable: false,
+      data: { kind: 'stepTransition' },
     });
   }
 

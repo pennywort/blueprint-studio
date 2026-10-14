@@ -2,6 +2,7 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ElementId, FormComponentId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { validateGraph } from '@domain/invariants';
+import { validStepTransitions } from '@domain/step-transitions';
 import { computeFormElementDepths } from '@domain/step-element-depths';
 import type { Command } from './command';
 import { preserveFormElementDepths, preservePageDepths } from './depth-preservation';
@@ -38,6 +39,10 @@ export class RemoveElement implements Command {
     preservePageDepths(draft, depthsBeforeRemoval);
 
     preserveFormElementDepths(draft, elementDepthsBefore);
+
+    // Каскад переходов между шагами [owner 2026-10-14]: переходы, ставшие
+    // недопустимыми (удалён элемент-источник), уходят вместе с причиной.
+    draft.stepTransitions = validStepTransitions(draft);
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {
