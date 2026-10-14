@@ -3,7 +3,7 @@ import type { PageLink } from '@domain/model/page-link';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { connectableTargets } from '@domain/connection-rules';
 import { preservePageDepths } from './depth-preservation';
-import { findElementOwnerPageId, walkPages } from './graph-lookup';
+import { findOwnerPageId, findPageEntry, setPageLayerDepth, walkPages } from './graph-lookup';
 
 // Каскад N4 (решение владельца): связь осмысленна только между смежными
 // уровнями «источник + 1 = цель». Рвёт связи, отобранные affects, у которых
@@ -15,7 +15,7 @@ export function removeNonAdjacentLinks(draft: ServiceGraph, affects: (link: Page
     if (!affects(link)) {
       return true;
     }
-    const sourcePageId = findElementOwnerPageId(draft, link.sourceElementId);
+    const sourcePageId = findOwnerPageId(draft, link.sourceElementId);
     const sourceDepth = sourcePageId !== null ? depths.get(sourcePageId) : undefined;
     const targetDepth = depths.get(link.targetId);
     if (sourceDepth === undefined || targetDepth === undefined) {
@@ -51,22 +51,23 @@ export function placeLinkTargetIntoNextLayer(
   targetId: string,
   depthsBefore: ReadonlyMap<string, number>,
 ): void {
-  const sourcePageId = findElementOwnerPageId(draft, sourceElementId);
+  const sourcePageId = findOwnerPageId(draft, sourceElementId);
   if (!sourcePageId) {
     return; // существование источника проверяют команды до вызова
   }
   const sourceDepth = computeGraphDepths(draft).get(sourcePageId);
   const pages = [...walkPages(draft)].sort((left, right) => left.orderIndex - right.orderIndex);
-  const target = pages.find((page) => page.id === targetId);
-  if (sourceDepth === undefined || !target || (draft.homePage && target.id === draft.homePage.id)) {
+  const entry = findPageEntry(draft, targetId);
+  if (sourceDepth === undefined || !entry || entry.kind === 'home') {
     return;
   }
+  const target = entry.page;
   const targetDepth = sourceDepth + 1;
-  (target as { layerDepth?: number }).layerDepth = targetDepth;
+  setPageLayerDepth(entry, targetDepth);
 
   removeNonAdjacentLinks(
     draft,
-    (link) => link.targetId === targetId || findElementOwnerPageId(draft, link.sourceElementId) === targetId,
+    (link) => link.targetId === targetId || findOwnerPageId(draft, link.sourceElementId) === targetId,
   );
   preservePageDepths(draft, depthsBefore, new Set([targetId]));
 

@@ -6,7 +6,7 @@ import type { Command } from './command';
 import { preservePageDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
 import { removeNonAdjacentLinks } from './layer-placement';
-import { findElementOwnerPageId, findPageById } from './graph-lookup';
+import { findOwnerPageId, findPageEntry, setPageLayerDepth } from './graph-lookup';
 
 // Команда переноса страницы между уровнями навигации (перетаскивание узла
 // в другую колонку канваса, dnd): выставляет явный layerDepth; null —
@@ -28,11 +28,12 @@ export class SetPageLayerDepth implements Command {
   apply(draft: ServiceGraph): void {
     // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
     const depthsBeforeRemoval = computeGraphDepths(draft);
-    const page = findPageById(draft, this.pageId);
-    if (!page) {
+    const entry = findPageEntry(draft, this.pageId);
+    if (!entry) {
       throw new Error(`Страница не найдена: ${this.pageId}`);
     }
-    if (draft.homePage && page.id === draft.homePage.id) {
+    const page = entry.page;
+    if (entry.kind === 'home') {
       throw new Error('Главная закреплена на нулевом уровне навигации');
     }
     if (this.layerDepth !== null && (!Number.isInteger(this.layerDepth) || this.layerDepth < 0)) {
@@ -40,18 +41,17 @@ export class SetPageLayerDepth implements Command {
     }
 
     // Главная уже отклонена выше — она закреплена на нулевом уровне и поля
-    // layerDepth не имеет; у всех остальных видов страниц (подсценарий,
-    // форма заявки) поле опционально — undefined снимает переопределение.
-    // Проверка по типу, а не оператором 'in': у страницы из графа, где
-    // layerDepth ни разу не выставлялся (демо-граф, старые сохранения),
+    // layerDepth не имеет; у подсценария и формы заявки поле опционально —
+    // undefined снимает переопределение. Сужение по виду страницы (ревью A6),
+    // а не оператор 'in': у страницы, где layerDepth ни разу не выставлялся,
     // свойства физически нет, и 'in' пропускал бы перенос молча (N4).
-    (page as { layerDepth?: number }).layerDepth = this.layerDepth ?? undefined;
+    setPageLayerDepth(entry, this.layerDepth ?? undefined);
 
     // Каскад N4: глубины после переноса; связи страницы, у которых уровни
     // перестали быть смежными, рвутся.
     removeNonAdjacentLinks(
       draft,
-      (link) => link.targetId === page.id || findElementOwnerPageId(draft, link.sourceElementId) === page.id,
+      (link) => link.targetId === page.id || findOwnerPageId(draft, link.sourceElementId) === page.id,
     );
 
     preservePageDepths(draft, depthsBeforeRemoval, new Set([page.id]));

@@ -26,7 +26,7 @@ export class CommandBus {
   constructor(private readonly deps: { clock: IClock }) {}
 
   execute(current: ServiceGraph, command: Command): ServiceGraph {
-    const [, patches, inversePatches] = produceWithPatches(current, (draft) => {
+    const [next, patches, inversePatches] = produceWithPatches(current, (draft) => {
       command.apply(draft);
     });
 
@@ -34,7 +34,9 @@ export class CommandBus {
     // Новая команда очищает redo-стек — иначе история перестаёт быть линейной.
     this.redoStack = [];
 
-    return applyPatches(current, patches);
+    // Новое состояние уже посчитано produceWithPatches — повторный
+    // applyPatches не нужен (ревью A12, R4).
+    return next;
   }
 
   undo(current: ServiceGraph): ServiceGraph | null {

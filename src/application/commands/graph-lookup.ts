@@ -1,5 +1,6 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { SubScenario } from '@domain/model/scenario';
+import { walkPages, walkSubScenarios, type PageEntity } from '@domain/graph-walk';
 import type { CanvasElement } from '@domain/model/canvas-element';
 import type { PageEntityId } from '@domain/model/ids';
 import { findElementInGraph, type ElementContainer } from '@domain/element-containers';
@@ -9,28 +10,10 @@ import { computeGraphDepths } from '@domain/graph-depths';
 // и связей внутри черновика Immer. Чистые функции над ServiceGraph — работают
 // и на замороженном состоянии, и на draft внутри apply().
 
-// Вложенность подсценариев через children не ограничена (БТ, раздел 7) —
-// обход всегда рекурсивный, иначе команды «не увидят» вложенные страницы.
-export function* walkSubScenarios(subScenarios: SubScenario[]): Generator<SubScenario> {
-  for (const subScenario of subScenarios) {
-    yield subScenario;
-    if (subScenario.children) {
-      yield* walkSubScenarios(subScenario.children);
-    }
-  }
-}
-
-// Все сущности-страницы карты: Главная (если есть, D8), подсценарии
-// (рекурсивно), формы заявок (D12 — в слоях на общих основаниях).
-export function* walkPages(
-  graph: ServiceGraph,
-): Generator<NonNullable<ServiceGraph['homePage']> | SubScenario | ServiceGraph['applicationForms'][number]> {
-  if (graph.homePage) {
-    yield graph.homePage;
-  }
-  yield* walkSubScenarios(graph.subScenarios);
-  yield* graph.applicationForms;
-}
+// Обходы страниц — единый доменный модуль (ревью A5, R4); здесь реэкспорт
+// для команд.
+export { walkPages, walkSubScenarios, findPageEntry, setPageLayerDepth } from '@domain/graph-walk';
+export { findOwnerPageId } from '@domain/element-containers';
 
 // Следующий персистентный порядковый номер сущности-страницы (D13):
 // последовательность общая для всех страниц карты (в колонке канваса формы
@@ -54,10 +37,7 @@ export function nextPageLayerDepth(graph: ServiceGraph): number {
 }
 
 // Сущность-страница по id среди всех видов страниц (ReorderInLayer, T-035).
-export function findPageById(
-  graph: ServiceGraph,
-  pageId: PageEntityId,
-): NonNullable<ServiceGraph['homePage']> | SubScenario | ServiceGraph['applicationForms'][number] | null {
+export function findPageById(graph: ServiceGraph, pageId: PageEntityId): PageEntity | null {
   for (const page of walkPages(graph)) {
     if (page.id === pageId) {
       return page;
@@ -128,12 +108,6 @@ export function findFormComponent(
 // Главная целью быть не может (PageLinkTargetId — только ScenarioId | ApplicationFormId).
 export function isLinkTargetPresent(graph: ServiceGraph, targetId: string): boolean {
   return findSubScenarioById(graph, targetId) !== null || findFormById(graph, targetId) !== null;
-}
-
-// Id страницы, владеющей элементом (источником связи, D9) — нужно правилу
-// слоёв (T-036): глубина источника = глубина страницы-владельца.
-export function findElementOwnerPageId(graph: ServiceGraph, elementId: string): string | null {
-  return findElementInGraph(graph, elementId)?.container.pageId ?? null;
 }
 
 // Положение элемента: блок-владелец (любой вид, [owner 2026-10-13]),
