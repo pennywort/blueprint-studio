@@ -15,8 +15,8 @@ import { stepTransitionTargets } from './step-transitions';
 //   другой элемент ТОГО ЖЕ шага формы (ADR-14). Повтор правила, цикл
 //   видимости и элемент, у которого уже есть правило (L-I7), — не цели.
 // — Переход между шагами [owner 2026-10-14]: источник — элемент шага формы
-//   или вариант его Select'а, цель — любой более поздний шаг той же формы
-//   (step-transitions). Вариант — источник перехода и без «Сложной логики».
+//   или вариант его Select'а, цель — шаг следующих уровней той же формы
+//   (step-transitions, уровни — form-step-depths). Вариант — источник перехода и без «Сложной логики».
 
 export type ConnectionSource =
   { kind: 'navigation'; elementId: string } | { kind: 'logic'; elementId: string; optionId: string };

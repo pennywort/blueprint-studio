@@ -100,7 +100,6 @@ export function createSampleGraph(): ServiceGraph {
         steps: [
           {
             id: toFormStepId('demo-form-deposit-step-1'),
-            title: 'Первый шаг',
             elements: [
               {
                 id: toFormComponentId('demo-field-amount'),
@@ -158,7 +157,6 @@ export function createSampleGraph(): ServiceGraph {
           },
           {
             id: toFormStepId('demo-form-deposit-step-2'),
-            title: 'Второй шаг',
             elements: [
               {
                 id: toFormComponentId('demo-field-comment'),
@@ -171,7 +169,6 @@ export function createSampleGraph(): ServiceGraph {
           },
           {
             id: toFormStepId('demo-form-deposit-step-3'),
-            title: 'Подтверждение',
             elements: [
               {
                 id: toFormComponentId('demo-field-confirm'),

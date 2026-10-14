@@ -3,6 +3,7 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import type { FormStep } from '@domain/model/scenario';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { computeStepElementDepths } from '@domain/step-element-depths';
+import { computeFormStepDepths } from '@domain/form-step-depths';
 
 // Слоистый layout-движок (Epic 002, T-036; D2/D7/D12/D13): координаты не
 // персистентны, колонка узла = глубина от корня (computeGraphDepths),
@@ -18,8 +19,10 @@ import { computeStepElementDepths } from '@domain/step-element-depths';
 export const CANVAS_LAYOUT = {
   /** Ширина узла Главной/Подсценария. */
   nodeWidth: 320,
-  /** Ширина колонки шага внутри узла формы (D1: шаги — горизонтальные колонки). */
+  /** Ширина колонки шагов внутри узла формы (колонка — уровень шагов, [owner 2026-10-14]). */
   formStepWidth: 280,
+  /** Зазор между колонками шагов и между шагами одного уровня в узле формы. */
+  formStepGap: 16,
   /** Горизонтальный зазор между колонками канваса. */
   columnGap: 160,
   /** Вертикальный зазор между узлами внутри колонки. */
@@ -123,28 +126,43 @@ function estimateStepHeight(step: FormStep, logicRules: ServiceGraph['logicRules
 
 function estimateFormSize(
   form: ServiceGraph['applicationForms'][number],
-  logicRules: ServiceGraph['logicRules'],
+  graph: Pick<ServiceGraph, 'logicRules' | 'stepTransitions'>,
 ): {
   width: number;
   height: number;
 } {
   const L = CANVAS_LAYOUT;
   const S = FORM_STEP_LAYOUT;
-  // Шаг — колонки по уровням элементов; высота — по дереву строк
-  // (estimateStepHeight). Только первый рендер: дальше раскладка берёт
-  // измеренные размеры (N12).
-  const steps = form.steps.length > 0 ? form.steps : [{ id: '', elements: [] }];
+  // Шаги — колонки по уровням (form-step-depths), шаги одного уровня — друг
+  // под другом [owner 2026-10-14]; шаг — колонки по уровням элементов, высота —
+  // по дереву строк (estimateStepHeight). Только первый рендер: дальше
+  // раскладка берёт измеренные размеры (N12).
+  const steps: FormStep[] = form.steps.length > 0 ? form.steps : [{ id: '' as FormStep['id'], elements: [] }];
+  const stepDepths = computeFormStepDepths({ steps }, graph.stepTransitions);
+  const columns = new Map<number, { width: number; height: number }>();
+  for (const step of steps) {
+    const depths = computeStepElementDepths(step, graph.logicRules);
+    const elementColumns = Math.max(1, ...[...depths.values()].map((depth) => depth + 1));
+    const stepWidth = Math.max(L.formStepWidth, elementColumns * (S.elementWidth + S.columnGap));
+    const stepHeight = L.formStepHeaderHeight + estimateStepHeight(step, graph.logicRules);
+    const depth = stepDepths.get(step.id) ?? 0;
+    const column = columns.get(depth);
+    columns.set(
+      depth,
+      column
+        ? { width: Math.max(column.width, stepWidth), height: column.height + L.formStepGap + stepHeight }
+        : { width: stepWidth, height: stepHeight },
+    );
+  }
   let width = L.nodePadding * 2;
   let height = 0;
-  for (const step of steps) {
-    const depths = computeStepElementDepths(step as FormStep, logicRules);
-    const columns = Math.max(1, ...[...depths.values()].map((depth) => depth + 1));
-    width += Math.max(L.formStepWidth, columns * (S.elementWidth + S.columnGap)) + L.nodePadding;
-    height = Math.max(height, estimateStepHeight(step as FormStep, logicRules));
+  for (const column of columns.values()) {
+    width += column.width + L.formStepGap;
+    height = Math.max(height, column.height);
   }
   return {
     width,
-    height: L.formHeaderHeight + L.formStepHeaderHeight + height + L.nodePadding * 2,
+    height: L.formHeaderHeight + height + L.nodePadding * 2,
   };
 }
 
@@ -193,7 +211,7 @@ export function computeLayout(graph: ServiceGraph, measured?: MeasuredNodeSizes)
   };
   collectScenarios(graph.subScenarios);
   for (const form of graph.applicationForms) {
-    const size = estimateFormSize(form, graph.logicRules);
+    const size = estimateFormSize(form, graph);
     nodes.push({ id: form.id, orderIndex: form.orderIndex, width: size.width, height: size.height });
   }
 

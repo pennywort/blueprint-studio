@@ -1,7 +1,8 @@
 // Dnd шагов формы заявки [owner 2026-10-14]: перенос шага внутри своей формы
 // за заголовок — нативный HTML5 dnd, как у карточек (element-dnd.ts), но свой
 // MIME-тип: зона приёма шагов не реагирует на карточки, а слой элементов
-// шага — на шаги. Шаги идут по горизонтали, поэтому якорь — по X.
+// шага — на шаги. Колонка (уровень) — по X общим ядром слоёв (layers/), как у
+// узлов канваса; шаги уровня идут друг под другом, поэтому якорь — по Y.
 
 /** Основной MIME-тип: в данных — JSON payload (форма и шаг). */
 export const STEP_DND_MIME = 'application/x-blueprint-form-step';
@@ -50,16 +51,17 @@ export function readStepDrag(dataTransfer: DataTransfer): StepDragPayload | null
 /** Якорь вставки шага: до/после шага-соседа. */
 export type StepAnchorPosition = { stepId: string; placement: 'before' | 'after' };
 
-// Шаг-якорь по горизонтали курсора: шаг под курсором, сторона — по его
-// середине; левее первого — до первого, правее последнего — после последнего.
-export function stepAnchorFromPoint(zone: HTMLElement, clientX: number): StepAnchorPosition | null {
-  const steps = Array.from(zone.querySelectorAll<HTMLElement>('[data-form-step-id]'));
+// Шаг-якорь в колонке по вертикали курсора: шаг под курсором, сторона — по
+// его середине; выше первого — до первого, ниже последнего — после
+// последнего; null — колонка пуста (новый уровень).
+export function stepAnchorFromPoint(column: HTMLElement | null, clientY: number): StepAnchorPosition | null {
+  const steps = column ? Array.from(column.querySelectorAll<HTMLElement>('[data-form-step-id]')) : [];
   for (const step of steps) {
     const rect = step.getBoundingClientRect();
-    if (clientX < rect.right) {
+    if (clientY < rect.bottom) {
       return {
         stepId: step.dataset.formStepId!,
-        placement: clientX < rect.left + rect.width / 2 ? 'before' : 'after',
+        placement: clientY < rect.top + rect.height / 2 ? 'before' : 'after',
       };
     }
   }
@@ -67,8 +69,9 @@ export function stepAnchorFromPoint(zone: HTMLElement, clientX: number): StepAnc
   return last ? { stepId: last.dataset.formStepId!, placement: 'after' } : null;
 }
 
-// Якорь, который действительно меняет порядок; null — шаг останется на месте
-// (якорь — сам шаг или его сосед с «внутренней» стороны). Id — без учёта
+// Якорь, который действительно меняет порядок в колонке stepIds; null — шаг
+// останется на месте (якорь — сам шаг или его сосед с «внутренней»
+// стороны). Шаг из другой колонки встаёт к якорю как есть. Id — без учёта
 // регистра: id перетаскиваемого читается из MIME-типа.
 export function effectiveStepAnchor(
   stepIds: readonly string[],
@@ -81,8 +84,11 @@ export function effectiveStepAnchor(
   const lowered = stepIds.map((id) => id.toLowerCase());
   const from = lowered.indexOf(draggedId.toLowerCase());
   const anchorIndex = lowered.indexOf(anchor.stepId.toLowerCase());
-  if (from < 0 || anchorIndex < 0) {
+  if (anchorIndex < 0) {
     return null;
+  }
+  if (from < 0) {
+    return anchor;
   }
   const to = anchor.placement === 'before' ? anchorIndex : anchorIndex + 1;
   return to === from || to === from + 1 ? null : anchor;

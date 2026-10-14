@@ -2,10 +2,11 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import { CanvasElementSchema, type CanvasElement } from '@domain/model/canvas-element';
 import type { ElementId, FormComponentId } from '@domain/model/ids';
 import { validateGraph } from '@domain/invariants';
+import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
 import { computeFormElementDepths } from '@domain/step-element-depths';
 import type { Command } from './command';
-import { preserveFormElementDepths } from './depth-preservation';
+import { preserveFormElementDepths, preserveFormStepDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
 import { findElementLocation } from './graph-lookup';
 
@@ -28,6 +29,8 @@ export class UpdateElementProps implements Command {
   ) {}
 
   apply(draft: ServiceGraph): void {
+    // Уровни шагов до мутации: шаг, потерявший входящий переход, остаётся на месте (ADR-15).
+    const stepDepthsBefore = computeAllFormStepDepths(draft);
     // Колонки элементов шагов до мутации: цель, потерявшая правило, остаётся на месте (ADR-15).
     const elementDepthsBefore = computeFormElementDepths(draft);
     if ('id' in this.props || 'kind' in this.props) {
@@ -65,6 +68,7 @@ export class UpdateElementProps implements Command {
 
     // Каскад переходов между шагами [owner 2026-10-14]: переходы, ставшие
     // недопустимыми (удалён вариант Select'а), уходят вместе с причиной.
+    preserveFormStepDepths(draft, stepDepthsBefore);
     draft.stepTransitions = validStepTransitions(draft);
 
     const violations = validateGraph(draft);

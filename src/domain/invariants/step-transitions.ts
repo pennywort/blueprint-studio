@@ -4,7 +4,7 @@ import { stepTransitionProblem, stepTransitionSourceKey } from '../step-transiti
 import type { InvariantViolation } from './index';
 
 // Инвариант переходов между шагами формы [owner 2026-10-14]: переход — от
-// элемента шага (или варианта Select'а) на более поздний шаг той же формы;
+// элемента шага (или варианта Select'а) на шаг следующего уровня той же формы;
 // у источника переход один (однозначность ветвления).
 export const STEP_TRANSITION_RULE = 'step-transition-forward-same-form';
 export const STEP_TRANSITION_UNIQUE_RULE = 'step-transition-single-per-source';

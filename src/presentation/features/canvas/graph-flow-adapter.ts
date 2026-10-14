@@ -7,6 +7,7 @@ import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/pag
 import { toElementId, type ElementId, type PageEntityId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { computeStepElementDepths } from '@domain/step-element-depths';
+import { computeFormStepDepths } from '@domain/form-step-depths';
 import { evaluateVisibility } from '@domain/logic-visibility';
 
 // Адаптер graph ↔ flow (Epic 002, T-030) — граница domain ↔ react-flow
@@ -122,11 +123,14 @@ export type CanvasElementData = {
   // R2): карточка читает их из canvas-interaction (стор + контекст действий).
 };
 
-// Колонка шага внутри узла формы (D1: шаги — горизонтальные колонки).
+// Шаг внутри узла формы: колонки — уровни шагов (form-step-depths), шаги
+// одного уровня — друг под другом [owner 2026-10-14].
 export type CanvasFormStepData = {
   id: string;
-  /** Заголовок шага; пустой — компонент подставит «Шаг N». */
+  /** Подпись шага: своё название или «Шаг N» по уровню (formStepLabel). */
   title: string;
+  /** Уровень шага в форме — колонка узла формы и группировка при dnd. */
+  depth: number;
   elements: CanvasElementData[];
 };
 
@@ -205,6 +209,13 @@ const NAVIGATION_LEVEL_ORDINALS = ['Первый', 'Второй', 'Третий
 function navigationLevelLabel(level: number): string {
   const ordinal = NAVIGATION_LEVEL_ORDINALS[level - 1];
   return ordinal ? `${ordinal} уровень навигации` : `Уровень навигации ${level}`;
+}
+
+// Подпись шага формы без своего названия — единый источник [owner
+// 2026-10-14]: номер — номер колонки (уровня) шага в форме, у шагов одного
+// уровня (ветвление) номер общий. Текст сменится при переходе к настройке.
+export function formStepLabel(level: number): string {
+  return `Шаг ${level}`;
 }
 
 // Контекст маппинга элементов: связи и правила графа; inStep — элемент
@@ -390,6 +401,10 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
   );
 
   for (const form of graph.applicationForms) {
+    // Уровни шагов формы; номер в подписи — номер занятой колонки (пустые
+    // уровни после удаления шага не дают пропусков в нумерации).
+    const formStepDepths = computeFormStepDepths(form, graph.stepTransitions);
+    const stepLevels = [...new Set(formStepDepths.values())].sort((left, right) => left - right);
     nodes.push({
       id: form.id,
       type: 'form',
@@ -401,12 +416,14 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
         subtitle: FORM_NODE_SUBTITLE,
         elements: [],
         steps: form.steps.map((step) => {
+          const depth = formStepDepths.get(step.id) ?? 0;
           // Колонки элементов шага и варианты-источники для раскладки
           // «цель напротив варианта» [owner 2026-10-13].
           const stepDepths = computeStepElementDepths(step, graph.logicRules);
           return {
             id: step.id,
-            title: step.title ?? '',
+            title: step.title ?? formStepLabel(stepLevels.indexOf(depth) + 1),
+            depth,
             elements: step.elements.map((component) => ({
               ...elementToElementData(component, elementContext, true),
               layerDepth: stepDepths.get(component.id) ?? 0,

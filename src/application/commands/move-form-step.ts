@@ -1,17 +1,21 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ApplicationFormId, FormStepId } from '@domain/model/ids';
 import { validateGraph } from '@domain/invariants';
+import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { moveByAnchor } from '@domain/ordered-move';
 import { validStepTransitions } from '@domain/step-transitions';
 import type { Command } from './command';
 import { InvariantViolationError } from './errors';
 import { findFormById } from './graph-lookup';
+import { placeFormStepIntoLayer } from './step-placement';
 
 // Перенос шага формы заявки внутри формы (dnd заголовка шага [owner
-// 2026-10-14]) — как ReorderInLayer у страниц колонки: позиция — якорь
-// (соседний шаг и сторона от него), шаги упорядочены массивом (БТ 6.5).
-// Каскад: переходы, ставшие переходами назад, рвутся (validStepTransitions);
-// переходы вперёд через несколько шагов допустимы и остаются.
+// 2026-10-14]) — как dnd узлов канваса: шаги разложены по уровням
+// (form-step-depths), своя колонка — порядок (якорь: соседний шаг и
+// сторона от него, как ReorderInLayer), другая колонка — перенос на уровень
+// явным layerDepth (как SetPageLayerDepth) и, если задан якорь, — на его
+// место в колонке. Каскад переноса на уровень: переходы шага, ставшие
+// несмежными, рвутся (N4); шаги, чей уровень сдвинулся, закрепляются (ADR-15).
 
 export type StepDropAnchor = {
   /** Шаг-якорь той же формы: перемещаемый встаёт до/после него. */
@@ -25,10 +29,13 @@ export class MoveFormStep implements Command {
   constructor(
     private readonly formId: ApplicationFormId,
     private readonly stepId: FormStepId,
-    private readonly anchor: StepDropAnchor,
+    private readonly anchor: StepDropAnchor | null,
+    /** Новый уровень шага; undefined — порядок внутри своего уровня. */
+    private readonly layerDepth?: number,
   ) {}
 
   apply(draft: ServiceGraph): void {
+    const depthsBefore = computeAllFormStepDepths(draft);
     const form = findFormById(draft, this.formId);
     if (!form) {
       throw new Error(`Форма не найдена: ${this.formId}`);
@@ -36,10 +43,18 @@ export class MoveFormStep implements Command {
     if (!form.steps.some((step) => step.id === this.stepId)) {
       throw new Error(`Шаг не найден: ${this.stepId} (форма ${this.formId})`);
     }
-    if (!form.steps.some((step) => step.id === this.anchor.stepId)) {
+    if (this.anchor && !form.steps.some((step) => step.id === this.anchor!.stepId)) {
       throw new Error(`Шаг-якорь не найден: ${this.anchor.stepId} (форма ${this.formId})`);
     }
-    moveByAnchor(form.steps, this.stepId, { id: this.anchor.stepId, placement: this.anchor.placement });
+    const anchor = this.anchor ? { id: this.anchor.stepId, placement: this.anchor.placement } : undefined;
+    if (this.layerDepth !== undefined) {
+      if (!Number.isInteger(this.layerDepth) || this.layerDepth < 0) {
+        throw new Error(`Недопустимый уровень шага: ${this.layerDepth}`);
+      }
+      placeFormStepIntoLayer(draft, this.stepId, this.layerDepth, depthsBefore, anchor);
+    } else if (anchor) {
+      moveByAnchor(form.steps, this.stepId, anchor);
+    }
     draft.stepTransitions = validStepTransitions(draft);
 
     const violations = validateGraph(draft);

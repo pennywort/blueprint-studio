@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState, type DragEvent } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { Handle, Position, useConnection, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import {
   Button,
@@ -27,6 +27,15 @@ import {
   writeStepDrag,
   type StepAnchorPosition,
 } from '../step-dnd';
+import {
+  buildLayerColumns,
+  nearestLayerColumn,
+  resolveLayerDrop,
+  type LayerColumn,
+  type LayerDropDecision,
+} from '../layers/layer-columns';
+import { FORM_STEPS_LAYER_POLICY } from '../layers/layer-policy';
+import { LayerDropHighlight } from '../layers/layer-drop-highlight';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { FormStepLayers } from './form-step-layers';
 
@@ -73,12 +82,23 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
       backgroundColor: theme.editor.canvas.controlsHoverBackground,
     },
   },
-  // Шаги формы — горизонтальные колонки внутри узла (D1, макет
-  // «добавление-шагов-формы-и-элементов-в-шаги»).
+  // Шаги формы — колонки по уровням внутри узла (D1, макет
+  // «добавление-шагов-формы-и-элементов-в-шаги»); шаги одного уровня —
+  // друг под другом, как узлы колонки канваса [owner 2026-10-14].
+  // position — для подсветки колонки-цели dnd.
   stepsRow: {
+    position: 'relative',
     display: 'flex',
     alignItems: 'flex-start',
-    gap: theme.spacing(2),
+    gap: CANVAS_LAYOUT.formStepGap,
+  },
+  // Колонка уровня: ширина — по самому широкому шагу уровня.
+  stepLevel: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: CANVAS_LAYOUT.formStepGap,
+    flexShrink: 0,
   },
   // Шаг растёт вправо по колонкам своего слоя [owner 2026-10-13]; ширина
   // пустого шага — formStepWidth.
@@ -99,7 +119,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   stepSelected: {
     boxShadow: `inset 0 0 0 2px ${theme.editor.canvas.edge}`,
   },
-  // «+ Добавить шаг» (N3): новая пустая колонка в конец формы.
+  // «+ Добавить шаг» (N3): новый шаг на следующий уровень — колонкой справа.
   addStepColumn: {
     width: CANVAS_LAYOUT.formStepWidth,
     flexShrink: 0,
@@ -123,22 +143,22 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     minWidth: 0,
     cursor: 'grab',
   },
-  // Индикатор вставки шага — вертикальная линия посередине зазора между
-  // шагами; абсолютный — раскладка формы при drag не меняется (как ADR-16).
+  // Индикатор вставки шага — горизонтальная линия посередине зазора между
+  // шагами уровня; абсолютный — раскладка формы при drag не меняется (как ADR-16).
   stepDropIndicator: {
     position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 2,
+    left: 0,
+    right: 0,
+    height: 2,
     borderRadius: 1,
     backgroundColor: theme.editor.canvas.edge,
     pointerEvents: 'none',
   },
   stepDropBefore: {
-    left: -theme.spacing(1) - 1,
+    top: -CANVAS_LAYOUT.formStepGap / 2 - 1,
   },
   stepDropAfter: {
-    right: -theme.spacing(1) - 1,
+    bottom: -CANVAS_LAYOUT.formStepGap / 2 - 1,
   },
   stepHeader: {
     display: 'flex',
@@ -158,8 +178,8 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
 }));
 
 // Узел «Форма заявки» (T-031, D1): заголовок «Форма заявки» + название,
-// чип «Одностраничная»/«Степперная», корзина; шаги — горизонтальные колонки,
-// у каждого шага заголовок, корзина и «+». Обработчики добавления/удаления
+// чип «Одностраничная»/«Степперная», корзина; шаги — колонки по уровням
+// (шаги уровня — друг под другом), у каждого шага заголовок, корзина и «+». Обработчики добавления/удаления
 // (T-034) и dnd (N2) — из контекста действий канваса, выделение, цель
 // связи и нарушения — подпиской на стор (ревью A4, R2), не из data.
 // Элементы каждого шага сжимаются независимо при >6 (T-033).
@@ -212,10 +232,25 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
     [],
   );
 
-  // Dnd шагов внутри формы [owner 2026-10-14]: ряд шагов — зона приёма,
-  // якорь — шаг под курсором по горизонтали (как порядок страниц колонки,
-  // ReorderInLayer). Индикатор — только там, где порядок изменится.
-  const [stepDrop, setStepDrop] = useState<StepAnchorPosition | null>(null);
+  // Колонки уровней шагов: шаги уровня — в порядке массива (как orderIndex
+  // узлов колонки канваса).
+  const stepLevels = useMemo(() => {
+    const byDepth = new Map<number, CanvasFormStepData[]>();
+    for (const step of data.steps) {
+      byDepth.set(step.depth, [...(byDepth.get(step.depth) ?? []), step]);
+    }
+    return [...byDepth.entries()]
+      .sort(([left], [right]) => left - right)
+      .map(([depth, steps]) => ({ depth, steps }));
+  }, [data.steps]);
+
+  // Dnd шагов внутри формы [owner 2026-10-14] — как dnd узлов канваса, общим
+  // ядром слоёв (layers/): колонка-кандидат — ближайшая по X (справа — пустой
+  // слот нового уровня на месте «Добавить шаг»); своя колонка — порядок по Y,
+  // другая — перенос на уровень с подсветкой колонки (LayerDropHighlight).
+  // Индикатор вставки — только там, где порядок изменится.
+  const stepsRowRef = useRef<HTMLDivElement>(null);
+  const [stepDrop, setStepDrop] = useState<StepDropState | null>(null);
   const stepDragActive = stepDrop !== null;
   useEffect(() => {
     if (!stepDragActive) {
@@ -230,16 +265,43 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
       window.removeEventListener('drop', reset);
     };
   }, [stepDragActive]);
-  const locateStepDrop = (event: DragEvent<HTMLElement>): StepAnchorPosition | null => {
+  // Координаты — локальные координаты ряда: узел внутри zoom react-flow,
+  // масштаб снимается по отношению экранной ширины к собственной.
+  const locateStepDrop = (event: DragEvent<HTMLElement>): StepDropState | null => {
+    const zone = stepsRowRef.current;
     const draggedId = readStepDragId(event.dataTransfer.types);
-    if (!draggedId) {
+    if (!zone || !draggedId) {
       return null;
     }
-    return effectiveStepAnchor(
-      data.steps.map((step) => step.id),
-      draggedId,
-      stepAnchorFromPoint(event.currentTarget, event.clientX),
+    const zoneRect = zone.getBoundingClientRect();
+    const scale = zone.offsetWidth > 0 ? zoneRect.width / zone.offsetWidth : 1;
+    const levelElements = Array.from(zone.querySelectorAll<HTMLElement>('[data-step-level]'));
+    const column = nearestLayerColumn(
+      buildLayerColumns(
+        levelElements.map((element) => {
+          const rect = element.getBoundingClientRect();
+          return {
+            depth: Number(element.dataset.stepLevel),
+            x: (rect.left - zoneRect.left) / scale,
+            width: rect.width / scale,
+          };
+        }),
+        FORM_STEPS_LAYER_POLICY,
+      ),
+      (event.clientX - zoneRect.left) / scale,
     );
+    const own = data.steps.find((step) => step.id.toLowerCase() === draggedId);
+    const decision = resolveLayerDrop(own ? own.depth : null, column, true);
+    const level = column ? stepLevels.find((candidate) => candidate.depth === column.depth) : undefined;
+    const anchor = effectiveStepAnchor(
+      level?.steps.map((step) => step.id) ?? [],
+      draggedId,
+      stepAnchorFromPoint(
+        levelElements.find((element) => Number(element.dataset.stepLevel) === column?.depth) ?? null,
+        event.clientY,
+      ),
+    );
+    return { column, decision, anchor };
   };
   const handleStepDragOver = (event: DragEvent<HTMLElement>) => {
     if (!isStepDragOfForm(event.dataTransfer.types, id)) {
@@ -261,13 +323,19 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
     }
     event.preventDefault();
     event.stopPropagation();
-    const anchor = locateStepDrop(event);
+    const state = locateStepDrop(event);
     const dragged = readStepDrag(event.dataTransfer);
     setStepDrop(null);
-    if (anchor && dragged) {
-      actions?.moveStep(id, dragged.stepId, anchor);
+    if (!state || !dragged) {
+      return;
+    }
+    if (state.decision.kind === 'moveToLayer') {
+      actions?.moveStep(id, dragged.stepId, state.anchor, state.decision.depth);
+    } else if (state.anchor) {
+      actions?.moveStep(id, dragged.stepId, state.anchor);
     }
   };
+  const dropAnchor = stepDrop?.anchor ?? null;
 
   return (
     <Card
@@ -313,25 +381,42 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
         </IconButton>
       </div>
       <div
+        ref={stepsRowRef}
         className={classes.stepsRow}
         data-testid="form-steps-row"
         onDragOver={handleStepDragOver}
         onDragLeave={handleStepDragLeave}
         onDrop={handleStepDrop}
       >
-        {data.steps.map((step, index) => (
-          <FormStepColumn
-            key={step.id}
-            formId={id}
-            step={step}
-            index={index}
-            dropPlacement={stepDrop?.stepId === step.id ? stepDrop.placement : null}
-            expanded={expandedSteps[step.id] === true}
-            onToggleExpanded={toggleStep}
-            onOpenAddMenu={openAddMenu}
+        {stepDrop?.decision.kind === 'moveToLayer' && stepDrop.column ? (
+          <LayerDropHighlight
+            left={stepDrop.column.x}
+            width={stepDrop.column.width}
+            style={{ borderRadius: 12, zIndex: 0 }}
           />
+        ) : null}
+        {stepLevels.map((level) => (
+          <div
+            key={level.depth}
+            className={classes.stepLevel}
+            data-step-level={level.depth}
+            data-testid={`form-step-level-${level.depth}`}
+          >
+            {level.steps.map((step) => (
+              <FormStepColumn
+                key={step.id}
+                formId={id}
+                step={step}
+                dropPlacement={dropAnchor?.stepId === step.id ? dropAnchor.placement : null}
+                expanded={expandedSteps[step.id] === true}
+                onToggleExpanded={toggleStep}
+                onOpenAddMenu={openAddMenu}
+              />
+            ))}
+          </div>
         ))}
-        {/* «+ Добавить шаг» (N3): пустая колонка-ячейка в конец формы. */}
+        {/* «+ Добавить шаг» (N3): новый шаг на следующий уровень; при dnd
+            шага — место пустого слота нового уровня. */}
         <div
           className={`${classes.addStepColumn} nodrag`}
           data-testid="add-form-step"
@@ -362,10 +447,16 @@ export const FormNode = memo(
   (previous, next) => previous.id === next.id && previous.data === next.data,
 );
 
+// Состояние dnd шага: колонка-кандидат, решение и якорь в колонке.
+type StepDropState = {
+  column: LayerColumn | null;
+  decision: LayerDropDecision;
+  anchor: StepAnchorPosition | null;
+};
+
 type FormStepColumnProps = {
   formId: string;
   step: CanvasFormStepData;
-  index: number;
   /** Индикатор вставки перетаскиваемого шага у этого шага (dnd шагов). */
   dropPlacement: 'before' | 'after' | null;
   expanded: boolean;
@@ -379,7 +470,6 @@ type FormStepColumnProps = {
 const FormStepColumn = memo(function FormStepColumn({
   formId,
   step,
-  index,
   dropPlacement,
   expanded,
   onToggleExpanded,
@@ -410,8 +500,8 @@ const FormStepColumn = memo(function FormStepColumn({
       data-step-selected={selected || undefined}
     >
       {/* Цель перехода между шагами [owner 2026-10-14]: невидимый handle во весь
-          шаг, принимает связь, только пока шаг — допустимая цель (шаг позже
-          источника в той же форме). */}
+          шаг, принимает связь, только пока шаг — допустимая цель (шаг следующих
+          уровней той же формы). */}
       <Handle
         type="target"
         position={Position.Left}
@@ -438,7 +528,7 @@ const FormStepColumn = memo(function FormStepColumn({
             writeStepDrag(event.dataTransfer, { formId, stepId: step.id });
           }}
         >
-          <Typography variant="subtitle2">{step.title || `Шаг ${index + 1}`}</Typography>
+          <Typography variant="subtitle2">{step.title}</Typography>
         </div>
         <div className={classes.stepActions}>
           <IconButton

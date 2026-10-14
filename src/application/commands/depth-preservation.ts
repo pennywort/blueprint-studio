@@ -1,6 +1,7 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { computeFormElementDepths } from '@domain/step-element-depths';
+import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { walkPages } from './graph-lookup';
 
 // Блок без связей остаётся на своём уровне (ADR-15, [owner 2026-10-13]):
@@ -49,6 +50,30 @@ export function preserveFormElementDepths(
         if (before !== undefined && depthsAfter.get(component.id) !== before) {
           component.layerDepth = before;
         }
+      }
+    }
+  }
+}
+
+// То же правило ADR-15 для шагов формы [owner 2026-10-14]: уровень шага
+// выводится из переходов, и шаг, потерявший входящий переход, «падал» бы
+// на первый уровень формы. Команды, рвущие переходы, снимают уровни ДО
+// мутации (computeAllFormStepDepths) и вызывают это ПОСЛЕ. exclude — шаги,
+// чей уровень команда меняет намеренно (перенос dnd, новая цель перехода).
+export function preserveFormStepDepths(
+  draft: ServiceGraph,
+  depthsBefore: ReadonlyMap<string, number>,
+  exclude: ReadonlySet<string> = new Set(),
+): void {
+  const depthsAfter = computeAllFormStepDepths(draft);
+  for (const form of draft.applicationForms) {
+    for (const step of form.steps) {
+      if (exclude.has(step.id)) {
+        continue;
+      }
+      const before = depthsBefore.get(step.id);
+      if (before !== undefined && depthsAfter.get(step.id) !== before) {
+        step.layerDepth = before;
       }
     }
   }

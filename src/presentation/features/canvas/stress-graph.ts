@@ -147,7 +147,8 @@ export function createStressGraph(options: StressGraphOptions = DEFAULT_STRESS_O
       const prefix = `form-${form}-s${step}`;
       const { elements, rules } = stepFields(prefix, fieldsPerStep);
       logicRules.push(...rules);
-      return { id: toFormStepId(prefix), title: `Шаг ${step + 1}`, elements };
+      // Шаги стенда — подряд по уровням, подпись — formStepLabel [owner 2026-10-14].
+      return { id: toFormStepId(prefix), layerDepth: step, elements };
     });
     applicationForms.push({
       id: formId,

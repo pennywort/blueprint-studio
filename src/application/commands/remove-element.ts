@@ -2,10 +2,11 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ElementId, FormComponentId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { validateGraph } from '@domain/invariants';
+import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
 import { computeFormElementDepths } from '@domain/step-element-depths';
 import type { Command } from './command';
-import { preserveFormElementDepths, preservePageDepths } from './depth-preservation';
+import { preserveFormElementDepths, preservePageDepths, preserveFormStepDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
 import { findElementLocation } from './graph-lookup';
 
@@ -19,6 +20,8 @@ export class RemoveElement implements Command {
   constructor(private readonly elementId: ElementId | FormComponentId) {}
 
   apply(draft: ServiceGraph): void {
+    // Уровни шагов до мутации: шаг, потерявший входящий переход, остаётся на месте (ADR-15).
+    const stepDepthsBefore = computeAllFormStepDepths(draft);
     // Колонки элементов шагов до мутации: цель, потерявшая правило, остаётся на месте (ADR-15).
     const elementDepthsBefore = computeFormElementDepths(draft);
     // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
@@ -42,6 +45,7 @@ export class RemoveElement implements Command {
 
     // Каскад переходов между шагами [owner 2026-10-14]: переходы, ставшие
     // недопустимыми (удалён элемент-источник), уходят вместе с причиной.
+    preserveFormStepDepths(draft, stepDepthsBefore);
     draft.stepTransitions = validStepTransitions(draft);
 
     const violations = validateGraph(draft);

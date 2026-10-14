@@ -119,6 +119,9 @@ export const FormStepSchema = z.object({
   // Элементы шага — любые элементы канваса [owner 2026-10-13], не только
   // компоненты форм.
   elements: z.array(CanvasElementSchema),
+  // Явный уровень шага в форме (колонка) — как layerDepth страниц [owner
+  // 2026-10-14]; без него уровень выводится из переходов (form-step-depths).
+  layerDepth: z.number().int().nonnegative().optional(),
 });
 export type FormStep = z.infer<typeof FormStepSchema>;
 

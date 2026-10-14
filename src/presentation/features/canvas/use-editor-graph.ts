@@ -269,7 +269,7 @@ export function useEditorGraph() {
     [runCommand],
   );
 
-  // «+ Добавить шаг» на узле формы (N3): пустая колонка в конец формы.
+  // «+ Добавить шаг» на узле формы (N3): пустой шаг на следующий уровень формы.
   const addFormStep = useCallback(
     (formId: string) => {
       runCommand(
@@ -279,15 +279,17 @@ export function useEditorGraph() {
     [idGenerator, runCommand],
   );
 
-  // Dnd шага формы за заголовок [owner 2026-10-14]: перенос внутри формы,
-  // каскад переходов назад — в команде.
+  // Dnd шага формы за заголовок [owner 2026-10-14]: порядок в своём уровне
+  // или перенос на другой уровень (layerDepth) — каскад переходов в команде.
   const moveStep = useCallback(
-    (formId: string, stepId: string, anchor: StepAnchorPosition) => {
+    (formId: string, stepId: string, anchor: StepAnchorPosition | null, layerDepth?: number) => {
       runCommand(
-        new MoveFormStep(formId as ApplicationFormId, stepId as FormStepId, {
-          stepId: anchor.stepId as FormStepId,
-          placement: anchor.placement,
-        }),
+        new MoveFormStep(
+          formId as ApplicationFormId,
+          stepId as FormStepId,
+          anchor ? { stepId: anchor.stepId as FormStepId, placement: anchor.placement } : null,
+          layerDepth,
+        ),
       );
     },
     [runCommand],

@@ -43,3 +43,13 @@ export const FORM_STEP_LAYER_POLICY: LayerPolicy<ElementDndKind> = {
   allowNewLayer: true,
   movableKinds: ELEMENT_DND_KINDS,
 };
+
+// Шаги формы заявки [owner 2026-10-14]: колонки — уровни шагов, тот же dnd,
+// что у узлов канваса (своя колонка — порядок, другая — перенос на уровень,
+// пустая справа — новый уровень). Переносится только шаг.
+export const FORM_STEPS_LAYER_POLICY: LayerPolicy<'formStep'> = {
+  columnWidth: CANVAS_LAYOUT.formStepWidth,
+  columnGap: CANVAS_LAYOUT.formStepGap,
+  allowNewLayer: true,
+  movableKinds: ['formStep'],
+};

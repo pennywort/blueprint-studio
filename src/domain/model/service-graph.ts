@@ -39,7 +39,7 @@ const ServiceGraphObjectSchema = z.object({
   // сериализованные до появления фичи, остаются валидными.
   logicRules: z.array(LogicRuleSchema).default([]),
   // Переходы между шагами форм [owner 2026-10-14]: элемент шага (или вариант
-  // Select'а) → следующий/любой более поздний шаг той же формы. Default [] —
+  // Select'а) → шаг следующего уровня той же формы. Default [] —
   // графы, сохранённые до фичи, остаются валидными.
   stepTransitions: z.array(StepTransitionSchema).default([]),
 });
@@ -85,10 +85,35 @@ function migrateLegacySubScenarios(subScenarios: unknown): unknown {
   });
 }
 
-function migrateLegacyForms(forms: unknown): unknown {
+// Шаги формы до уровней [owner 2026-10-14] шли подряд слева направо по
+// порядку массива. Чтобы сохранённые формы не схлопнулись в одну колонку
+// (шаг без входящего перехода — корень уровня 0), шагам без входящих
+// переходов выставляется прежний уровень — индекс в массиве; цели переходов
+// получают уровень из переходов. Только для форм, где уровней ещё нет.
+function migrateLegacyStepDepths(steps: unknown[], transitionTargets: ReadonlySet<string>): unknown[] {
+  if (steps.length < 2 || steps.some((step) => isRecord(step) && 'layerDepth' in step)) {
+    return steps;
+  }
+  return steps.map((step, index) =>
+    isRecord(step) && typeof step.id === 'string' && !transitionTargets.has(step.id)
+      ? { ...step, layerDepth: index }
+      : step,
+  );
+}
+
+function migrateLegacyForms(forms: unknown, stepTransitions: unknown): unknown {
   if (!Array.isArray(forms)) {
     return forms;
   }
+  const transitionTargets = new Set<string>(
+    Array.isArray(stepTransitions)
+      ? stepTransitions.flatMap((transition: unknown) =>
+          isRecord(transition) && typeof transition.targetStepId === 'string'
+            ? [transition.targetStepId]
+            : [],
+        )
+      : [],
+  );
   return forms.map((form) => {
     if (!isRecord(form) || !Array.isArray(form.steps)) {
       return form;
@@ -100,7 +125,7 @@ function migrateLegacyForms(forms: unknown): unknown {
       const { components, ...rest } = step;
       return { ...rest, elements: components };
     });
-    return { ...form, steps };
+    return { ...form, steps: migrateLegacyStepDepths(steps, transitionTargets) };
   });
 }
 
@@ -112,7 +137,7 @@ export function migrateLegacyServiceGraph(raw: unknown): unknown {
     ...raw,
     ...(isRecord(raw.homePage) ? { homePage: migrateLegacyPage(raw.homePage) } : null),
     subScenarios: migrateLegacySubScenarios(raw.subScenarios),
-    applicationForms: migrateLegacyForms(raw.applicationForms),
+    applicationForms: migrateLegacyForms(raw.applicationForms, raw.stepTransitions),
   };
 }
 

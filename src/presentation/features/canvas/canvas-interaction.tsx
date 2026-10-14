@@ -75,8 +75,11 @@ export type CanvasActions = {
   addElementToStep: (formId: string, stepId: string, kind: CanvasElementKind) => void;
   removeStep: (formId: string, stepId: string) => void;
   addFormStep: (formId: string) => void;
-  /** Dnd шага за заголовок [owner 2026-10-14]: перенос внутри своей формы к якорю-соседу. */
-  moveStep: (formId: string, stepId: string, anchor: StepAnchorPosition) => void;
+  /**
+   * Dnd шага за заголовок [owner 2026-10-14]: внутри своей формы — к якорю-соседу
+   * в своём уровне или на другой уровень (layerDepth; якорь — место в колонке).
+   */
+  moveStep: (formId: string, stepId: string, anchor: StepAnchorPosition | null, layerDepth?: number) => void;
   /**
    * Dnd карточек (N2): drop в списке узла или колонке шага. targetStepId —
    * шаг-цель у форм; null — общий список узла страницы. Якорь — позиция
