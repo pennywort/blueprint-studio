@@ -5,7 +5,7 @@ import { ShowChart, Visibility } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { logicAnchorHandleId, logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
 import { FORM_STEP_LAYOUT } from '../canvas-layout';
-import { writeElementDrag } from '../element-dnd';
+import { endElementDrag, writeElementDrag } from '../element-dnd';
 import { isActionTarget } from '../canvas-events';
 import { ViolationBadge } from './violation-badge';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
@@ -130,8 +130,9 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
           event.preventDefault();
           return;
         }
-        writeElementDrag(event.dataTransfer, { elementId: element.id, kind: element.dndKind });
+        writeElementDrag(event.dataTransfer, { elementId: element.id });
       }}
+      onDragEnd={endElementDrag}
       // Выделение — по нажатию (без «лага» click); коннектор и кнопки
       // выделение не меняют (баг 2). click гасится, чтобы не дойти до узла.
       // Выделение — следующей макрозадачей (ADR-16/17, доводка dnd): синхронный

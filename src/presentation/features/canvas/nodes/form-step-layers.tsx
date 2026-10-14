@@ -1,17 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, type DragEvent, type ReactNode } from 'react';
 import { makeStyles } from '@blueprint-vendor/flamingo-core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { FORM_STEP_LAYOUT } from '../canvas-layout';
 import type { CanvasElementData } from '../graph-flow-adapter';
-import {
-  anchorFromPoint,
-  isDragLeavingZone,
-  readElementDndId,
-  readElementDndKind,
-  readElementDrag,
-  type DropAnchorPosition,
-  type ElementDragPayload,
-} from '../element-dnd';
+import { anchorFromPoint, type DropAnchorPosition, type ElementDragPayload } from '../element-dnd';
 import {
   gridLayerColumns,
   nearestLayerColumn,
@@ -19,18 +11,19 @@ import {
   type LayerColumn,
   type LayerDropDecision,
 } from '../layers/layer-columns';
-import { FORM_STEP_LAYER_POLICY, canMoveToLayer } from '../layers/layer-policy';
+import { FORM_STEP_LAYER_POLICY } from '../layers/layer-policy';
 import { LayerDropHighlight } from '../layers/layer-drop-highlight';
 import { packLayerBands } from '../layers/layer-bands';
 import { ElementCard } from './element-card';
 import { OptionCard } from './option-card';
 import { useCanvasActions } from '../canvas-interaction';
+import { DropIndicator, useElementDropZone } from './use-element-drop-zone';
 
 const L = FORM_STEP_LAYOUT;
 /** Шаг сетки колонок шага: колонка + зазор. */
 const COLUMN_PITCH = L.elementWidth + L.columnGap;
 
-const useStyles = makeStyles<EditorTheme>((theme) => ({
+const useStyles = makeStyles<EditorTheme>(() => ({
   // Слой шага: деревья элементов друг под другом; шаг растёт по
   // содержимому, скролла нет [owner 2026-10-13]. minHeight — пустой шаг
   // тоже принимает drop.
@@ -74,12 +67,6 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     flexDirection: 'column',
     gap: L.rowGap,
   },
-  dropIndicator: {
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: theme.editor.canvas.edge,
-    margin: '-1px 0',
-  },
 }));
 
 type DragState = {
@@ -109,23 +96,6 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
   const classes = useStyles();
   const actions = useCanvasActions();
   const layersRef = useRef<HTMLDivElement>(null);
-  const [drag, setDrag] = useState<DragState | null>(null);
-  // Жест закончился вне шага или отменён (Esc) — dragleave мог не дойти:
-  // состояние сбрасывается по окончании любого drag.
-  const dragActive = drag !== null;
-  useEffect(() => {
-    if (!dragActive) {
-      return;
-    }
-    const reset = () => setDrag(null);
-    window.addEventListener('dragend', reset);
-    window.addEventListener('drop', reset);
-    return () => {
-      window.removeEventListener('dragend', reset);
-      window.removeEventListener('drop', reset);
-    };
-  }, [dragActive]);
-
   // Лес правил: корни — элементы без варианта-источника в этом шаге,
   // дети — по option-handle варианта (порядок — порядок элементов шага).
   const { rows, children, maxDepth } = useMemo(() => {
@@ -163,18 +133,16 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
   // координаты слоя: узел внутри zoom react-flow, масштаб снимается по
   // отношению экранной ширины к собственной.
   const locate = useCallback(
-    (event: DragEvent<HTMLElement>): DragState | null => {
+    (event: DragEvent<HTMLElement>, dragged: ElementDragPayload): DragState | null => {
       const container = layersRef.current;
-      const kind = readElementDndKind(event.dataTransfer.types);
-      if (!container || !kind || !canMoveToLayer(FORM_STEP_LAYER_POLICY, kind)) {
+      if (!container) {
         return null;
       }
       const rect = container.getBoundingClientRect();
       const scale = container.offsetWidth > 0 ? rect.width / container.offsetWidth : 1;
       const localX = (event.clientX - rect.left) / scale;
       const column = nearestLayerColumn(gridLayerColumns(maxDepth, FORM_STEP_LAYER_POLICY), localX);
-      const draggedId = readElementDndId(event.dataTransfer.types);
-      const own = elements.find((element) => element.id.toLowerCase() === draggedId);
+      const own = elements.find((element) => element.id === dragged.elementId);
       const decision = resolveLayerDrop(own ? (own.layerDepth ?? 0) : null, column, true);
       let anchor = column
         ? anchorFromPoint(
@@ -183,7 +151,7 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
             `[data-layer-depth="${column.depth}"] > [data-element-card]`,
           )
         : null;
-      if (anchor && anchor.elementId.toLowerCase() === draggedId) {
+      if (anchor && anchor.elementId === dragged.elementId) {
         anchor = null; // якорь на самой карточке — позиция не меняется
       }
       return { column, decision, anchor };
@@ -191,38 +159,8 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
     [elements, maxDepth],
   );
 
-  const handleDragOver = useCallback(
-    (event: DragEvent<HTMLElement>) => {
-      const state = locate(event);
-      if (!state) {
-        setDrag(null);
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      event.dataTransfer.dropEffect = 'move';
-      setDrag(state);
-    },
-    [locate],
-  );
-
-  const handleDragLeave = useCallback((event: DragEvent<HTMLElement>) => {
-    // Переход на дочерний элемент слоя — не уход из зоны.
-    if (isDragLeavingZone(event.currentTarget, event.clientX, event.clientY)) {
-      setDrag(null);
-    }
-  }, []);
-
-  const handleDrop = useCallback(
-    (event: DragEvent<HTMLElement>) => {
-      const state = locate(event);
-      setDrag(null);
-      const dragged = readElementDrag(event.dataTransfer);
-      if (!state || !dragged) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
+  const dropElement = useCallback(
+    (dragged: ElementDragPayload, state: DragState) => {
       if (state.decision.kind === 'moveToLayer') {
         onDropElement(dragged, state.anchor, state.decision.depth);
         return;
@@ -232,21 +170,24 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
         onDropElement(dragged, state.anchor);
       }
     },
-    [locate, onDropElement],
+    [onDropElement],
   );
 
+  // Шаг — внутренняя зона узла формы: события drag дальше не идут.
+  const { state: drag, handlers: dropHandlers } = useElementDropZone({
+    locate,
+    onDrop: dropElement,
+    isolate: true,
+  });
+
   const anchor = drag?.anchor ?? null;
-  const indicator = (elementId: string, placement: 'before' | 'after') =>
-    anchor?.elementId === elementId && anchor.placement === placement ? (
-      <div className={classes.dropIndicator} data-testid="drop-indicator" />
-    ) : null;
 
   const renderTree = (element: CanvasElementData): ReactNode => (
     <div key={element.id} className={classes.tree}>
       <div className={classes.cell} data-layer-depth={element.layerDepth ?? 0}>
-        {indicator(element.id, 'before')}
+        <DropIndicator anchor={anchor} elementId={element.id} placement="before" />
         <ElementCard element={element} />
-        {indicator(element.id, 'after')}
+        <DropIndicator anchor={anchor} elementId={element.id} placement="after" />
       </div>
       {/* Варианты Select'а — карточки под ним всегда [owner 2026-10-14]: из
           варианта тянется переход на шаг, а при «Сложной логике» — и правило. */}
@@ -269,14 +210,7 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
   );
 
   return (
-    <div
-      ref={layersRef}
-      className={classes.layers}
-      data-testid="form-step-layers"
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
+    <div ref={layersRef} className={classes.layers} data-testid="form-step-layers" {...dropHandlers}>
       {/* Пока над шагом идёт drag, зона приёма продлена до пустой колонки
           справа (ADR-16) абсолютным слоем — размер шага не меняется: иначе
           узел формы рос, раскладка канваса (N12, measured) пересчитывалась

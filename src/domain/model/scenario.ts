@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ApplicationFormIdSchema, FormComponentIdSchema, FormStepIdSchema, ScenarioIdSchema } from './ids';
+import { ApplicationFormIdSchema, FormStepIdSchema, ScenarioIdSchema } from './ids';
 import { CanvasElementSchema, IconRefSchema, type CanvasElement } from './canvas-element';
 
 // Сценарии, контент страниц и формы заявок — спецификация 001-foundation, разделы 5.1–5.3.
@@ -134,10 +134,3 @@ export const ApplicationFormSchema = z.object({
   layerDepth: z.number().int().nonnegative().optional(),
 });
 export type ApplicationForm = z.infer<typeof ApplicationFormSchema>;
-
-// Удобный тип для ссылки на компонент внутри формы (команды application-слоя).
-export type FormComponentRef = {
-  formId: z.infer<typeof ApplicationFormIdSchema>;
-  stepId: z.infer<typeof FormStepIdSchema>;
-  componentId: z.infer<typeof FormComponentIdSchema>;
-};

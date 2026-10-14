@@ -89,15 +89,15 @@ export function findFormById(
 // логики» (T-037/T-064) нужны и сам элемент (флаг, option'ы), и форма
 // (правило «внутри одного шага», L-I5). Элемент шага — любой элемент
 // канваса [owner 2026-10-13]; элементы страниц сюда не попадают.
-export function findFormComponent(
+export function findFormElement(
   graph: ServiceGraph,
-  componentId: string,
-): { form: ServiceGraph['applicationForms'][number]; component: CanvasElement } | null {
+  elementId: string,
+): { form: ServiceGraph['applicationForms'][number]; element: CanvasElement } | null {
   for (const form of graph.applicationForms) {
     for (const step of form.steps) {
-      const component = step.elements.find((candidate) => candidate.id === componentId);
-      if (component) {
-        return { form, component };
+      const element = step.elements.find((candidate) => candidate.id === elementId);
+      if (element) {
+        return { form, element };
       }
     }
   }

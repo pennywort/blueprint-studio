@@ -1,5 +1,4 @@
 import { CANVAS_LAYOUT, FORM_STEP_LAYOUT } from '../canvas-layout';
-import { ELEMENT_DND_KINDS, type ElementDndKind } from '../element-dnd';
 import type { CanvasNodeType } from '../graph-flow-adapter';
 
 // Политика слоя [owner 2026-10-13]: всё, чем слои редактора отличаются друг
@@ -17,12 +16,12 @@ export type LayerPolicy<TKind extends string = string> = {
   columnGap: number;
   /** Пустая колонка справа от последней — перенос на новый уровень. */
   allowNewLayer: boolean;
-  /** Что можно переносить между уровнями этого слоя. */
-  movableKinds: readonly TKind[];
+  /** Что можно переносить между уровнями этого слоя; не задано — всё. */
+  movableKinds?: readonly TKind[];
 };
 
 export function canMoveToLayer<TKind extends string>(policy: LayerPolicy<TKind>, kind: string): boolean {
-  return (policy.movableKinds as readonly string[]).includes(kind);
+  return policy.movableKinds === undefined || (policy.movableKinds as readonly string[]).includes(kind);
 }
 
 // Канвас страниц: Главная закреплена на нулевом уровне (переносится только
@@ -35,11 +34,9 @@ export const PAGE_LAYER_POLICY: LayerPolicy<CanvasNodeType> = {
 };
 
 // Шаг формы: колонки по правилам «Сложной логики», карточки меньше.
-// Состав — любые элементы канваса (универсальные элементы [owner 2026-10-13]:
-// List item/Widget card переносятся в шаг наравне с компонентами форм).
-export const FORM_STEP_LAYER_POLICY: LayerPolicy<ElementDndKind> = {
+// Переносится любой элемент канваса (ADR-17) — ограничения состава нет.
+export const FORM_STEP_LAYER_POLICY: LayerPolicy = {
   columnWidth: FORM_STEP_LAYOUT.elementWidth,
   columnGap: FORM_STEP_LAYOUT.columnGap,
   allowNewLayer: true,
-  movableKinds: ELEMENT_DND_KINDS,
 };

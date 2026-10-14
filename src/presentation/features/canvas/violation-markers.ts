@@ -1,7 +1,7 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { SubScenario } from '@domain/model/scenario';
 import type { InvariantViolation } from '@domain/invariants';
-import { findFormComponent } from '@application/commands/graph-lookup';
+import { findFormElement } from '@application/commands/graph-lookup';
 
 // Подсветка нарушений инвариантов на канвасе (T-043): violation.path
 // (формат инвариантов домена) → id узла и, если путь указывает на элемент,
@@ -78,7 +78,7 @@ export function mapViolationsToCanvas(
     const logicRule = rule ? graph.logicRules[Number(rule[1])] : undefined;
     if (logicRule) {
       for (const elementId of [logicRule.sourceElementId, logicRule.targetElementId]) {
-        const found = findFormComponent(graph, elementId);
+        const found = findFormElement(graph, elementId);
         if (found) {
           push(elements, elementId, message);
           push(nodes, found.form.id, message);

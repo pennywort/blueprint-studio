@@ -117,8 +117,6 @@ export type CanvasElementData = {
    * рисуется — соединить его доменно невозможно, лишняя точка путает (N5).
    */
   logicTarget: boolean;
-  /** Класс элемента для dnd: допустимые зоны приёма зависят от вида (N2). */
-  dndKind: 'listItem' | 'widgetCard' | 'formComponent';
   // Выделение, цель связи, нарушения и обработчики — не в data (ревью A4,
   // R2): карточка читает их из canvas-interaction (стор + контекст действий).
 };
@@ -251,7 +249,6 @@ function listItemToElementData(
     kindLabel: item.kind === 'widgetCard' ? 'Widget card' : 'List item',
     hasOutgoingLink: linkSources.has(item.id),
     logicTarget: false,
-    dndKind: item.kind,
   };
   if (item.secondaryText) {
     element.secondaryText = item.secondaryText;
@@ -273,7 +270,6 @@ function formComponentToElementData(
     hasIncomingLogic: logicTargets.has(component.id),
     hiddenByLogic: logicHidden.has(component.id),
     logicTarget: true,
-    dndKind: 'formComponent',
   };
   if (component.kind === 'selectList') {
     // Select — потенциальный источник «Сложной логики» (L5) и, вариантами,

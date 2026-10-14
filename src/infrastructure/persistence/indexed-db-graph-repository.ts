@@ -1,10 +1,12 @@
 import type { IGraphRepository } from '@application/ports/graph-repository';
 import { ServiceGraphSchema, type ServiceGraph } from '@domain/model/service-graph';
 import type { BlueprintId } from '@domain/model/ids';
+import { migrateGraphRecord, toGraphRecord } from './graph-record-migration';
 
 // Адаптер IGraphRepository поверх IndexedDB (T-053): одна object store,
-// ключ — id карты. Данные валидируются Zod-схемой при чтении: повреждённая
-// или устаревшая запись не попадает в редактор молча, а даёт ошибку.
+// ключ — id карты. Запись хранит номер версии формата; при чтении старые
+// версии мигрируются (ревью A11), затем валидируются Zod-схемой: повреждённая
+// запись не попадает в редактор молча, а даёт ошибку.
 
 const DB_NAME = 'blueprint-studio';
 const DB_VERSION = 1;
@@ -45,7 +47,7 @@ export class IndexedDbGraphRepository implements IGraphRepository {
     if (raw === undefined) {
       return null;
     }
-    const parsed = ServiceGraphSchema.safeParse(raw);
+    const parsed = ServiceGraphSchema.safeParse(migrateGraphRecord(raw));
     if (!parsed.success) {
       throw new Error('Сохранённая карта повреждена или устарела и не может быть загружена');
     }
@@ -55,7 +57,7 @@ export class IndexedDbGraphRepository implements IGraphRepository {
   async save(graph: ServiceGraph): Promise<void> {
     const database = await this.open();
     const transaction = database.transaction(STORE, 'readwrite');
-    transaction.objectStore(STORE).put(graph);
+    transaction.objectStore(STORE).put(toGraphRecord(graph));
     await new Promise<void>((resolve, reject) => {
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error ?? new Error('Ошибка сохранения в IndexedDB'));

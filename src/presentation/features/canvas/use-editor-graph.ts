@@ -29,7 +29,7 @@ import { UpdateElementProps, type ElementPropsPatch } from '@application/command
 import { EnableComplexLogic } from '@application/commands/enable-complex-logic';
 import { DisableComplexLogic } from '@application/commands/disable-complex-logic';
 import { RemoveLogicRule } from '@application/commands/remove-logic-rule';
-import { findFormById, findFormComponent } from '@application/commands/graph-lookup';
+import { findFormById, findFormElement } from '@application/commands/graph-lookup';
 import { useContainer } from '@presentation/app/App';
 import { useEditorNotifications } from '@presentation/features/notifications/editor-notifications';
 import type { AddableElementKind, AddableNodeKind } from '@presentation/features/toolbar/editor-toolbar';
@@ -324,7 +324,7 @@ export function useEditorGraph() {
   const toggleComplexLogic = useCallback(
     (elementId: string) => {
       // Режим логики — только у Select'а в шаге формы (L-I5).
-      const component = findFormComponent(graphRef.current, elementId)?.component;
+      const component = findFormElement(graphRef.current, elementId)?.element;
       if (!component || component.kind !== 'selectList') {
         return;
       }
