@@ -25,6 +25,7 @@ import { AddElement, type CanvasElementTarget } from '@application/commands/add-
 import { RemoveElement } from '@application/commands/remove-element';
 import { MoveElement, type MoveElementTarget } from '@application/commands/move-element';
 import { AddFormStep } from '@application/commands/add-form-step';
+import { MoveFormStep } from '@application/commands/move-form-step';
 import { SetPageLayerDepth } from '@application/commands/set-page-layer-depth';
 import { UpdateElementProps, type ElementPropsPatch } from '@application/commands/update-element-props';
 import { EnableComplexLogic } from '@application/commands/enable-complex-logic';
@@ -35,6 +36,7 @@ import { useContainer } from '@presentation/app/App';
 import { useEditorNotifications } from '@presentation/features/notifications/editor-notifications';
 import type { AddableElementKind, AddableNodeKind } from '@presentation/features/toolbar/editor-toolbar';
 import type { DropAnchorPosition, ElementDragPayload } from './element-dnd';
+import type { StepAnchorPosition } from './step-dnd';
 import {
   ELEMENT_KIND_LABELS,
   flowNodesToLayerOrder,
@@ -277,6 +279,20 @@ export function useEditorGraph() {
     [idGenerator, runCommand],
   );
 
+  // Dnd шага формы за заголовок [owner 2026-10-14]: перенос внутри формы,
+  // каскад переходов назад — в команде.
+  const moveStep = useCallback(
+    (formId: string, stepId: string, anchor: StepAnchorPosition) => {
+      runCommand(
+        new MoveFormStep(formId as ApplicationFormId, stepId as FormStepId, {
+          stepId: anchor.stepId as FormStepId,
+          placement: anchor.placement,
+        }),
+      );
+    },
+    [runCommand],
+  );
+
   // Drop карточки элемента (N2): приёмник — блок узла (у формы — шаг);
   // вид элемента блок не ограничивает [owner 2026-10-13]. Якорь — позиция вставки.
   const moveElement = useCallback(
@@ -358,10 +374,20 @@ export function useEditorGraph() {
       addElementToStep,
       removeStep,
       addFormStep,
+      moveStep,
       moveElement,
       elementKindOptions: ELEMENT_KIND_OPTIONS,
     }),
-    [selectElement, toggleComplexLogic, removeNode, addElementToStep, removeStep, addFormStep, moveElement],
+    [
+      selectElement,
+      toggleComplexLogic,
+      removeNode,
+      addElementToStep,
+      removeStep,
+      addFormStep,
+      moveStep,
+      moveElement,
+    ],
   );
 
   // Удаление выделенных узлов по Delete/Backspace: react-flow присылает их

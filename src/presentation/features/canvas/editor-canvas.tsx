@@ -626,6 +626,7 @@ const NO_ACTIONS: CanvasActions = {
   addElementToStep: () => undefined,
   removeStep: () => undefined,
   addFormStep: () => undefined,
+  moveStep: () => undefined,
   moveElement: () => undefined,
   elementKindOptions: [],
 };
