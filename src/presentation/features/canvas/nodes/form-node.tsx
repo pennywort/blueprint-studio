@@ -35,10 +35,9 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   // Нарушение инвариантов узла или его элементов (T-043): кольцо цвета
   // ошибки (T-043).
   invalid: {
-    // Одна рамка: тот же outline, что у выделения, цветом ошибки (без второго
-    // кольца тенью); выделение важнее — его селектор специфичнее (T-043).
-    outline: `2px solid ${theme.palette.error.main}`,
-    outlineOffset: 2,
+    // Одна рамка: та же внутренняя (inset), что у выделения, цветом ошибки;
+    // выделение важнее — его селектор специфичнее (T-043, [owner 2026-10-14]).
+    boxShadow: `${theme.shadows[1]}, inset 0 0 0 2px ${theme.palette.error.main}`,
   },
   dropTarget: {
     backgroundColor: theme.editor.canvas.nodeHoverBackground,
@@ -86,9 +85,10 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     flexDirection: 'column',
     gap: theme.spacing(1.5),
   },
-  // Выделенный шаг (S10): рамка цвета выделения тенью, как у карточки элемента.
+  // Выделенный шаг (S10): рамка цвета выделения внутри шага (inset-тень) —
+  // размер не меняется, рёбра у границы не перекрываются [owner 2026-10-14].
   stepSelected: {
-    boxShadow: `0 0 0 1px ${theme.editor.canvas.edge}`,
+    boxShadow: `inset 0 0 0 2px ${theme.editor.canvas.edge}`,
   },
   // «+ Добавить шаг» (N3): новая пустая колонка в конец формы.
   addStepColumn: {

@@ -25,15 +25,16 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     transition: 'none',
   },
   // Выделение элемента (F7): чёрная рамка цвета стрелок — как у узлов и связей.
-  // Вторая половина рамки — тенью, а не толщиной border: размер карточки
-  // не меняется, и handles/рёбра узла не сдвигаются при выделении (N10).
+  // Вторая половина рамки — внутренней (inset) тенью, а не толщиной border:
+  // размер карточки не меняется, handles/рёбра не сдвигаются (N10), рамка не
+  // выходит наружу и не пересекает входящие рёбра [owner 2026-10-14].
   // Нарушение инварианта (T-043): рамка цвета ошибки; выделение важнее.
   cardInvalid: {
     borderColor: theme.palette.error.main,
   },
   cardSelected: {
     borderColor: theme.editor.canvas.edge,
-    boxShadow: `0 0 0 1px ${theme.editor.canvas.edge}`,
+    boxShadow: `inset 0 0 0 1px ${theme.editor.canvas.edge}`,
   },
   content: {
     display: 'flex',
