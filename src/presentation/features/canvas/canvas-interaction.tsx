@@ -7,7 +7,7 @@ import type { StepAnchorPosition } from './step-dnd';
 import type { ViolationMarkers } from './violation-markers';
 
 // Состояние взаимодействия канваса — НЕ в data узлов (ревью A4/P3, R2):
-// выделение, цель протягиваемой связи, нарушения и запрос раскрытия живут
+// выделение, цель протягиваемой связи и нарушения живут
 // во внешнем сторе; узел/карточка подписываются селектором
 // (useSyncExternalStore) и перерисовываются, только когда меняется ИХ
 // значение. Иначе любое выделение пересоздавало data всех узлов, и
@@ -22,8 +22,6 @@ export type CanvasInteractionState = {
   connectionTargets: ConnectableTargets | null;
   /** Нарушения инвариантов узлов и элементов (T-043). */
   violations: ViolationMarkers;
-  /** Поиск (T-050): элемент, который надо показать, — сжатый узел раскрывается. */
-  reveal: { nodeId: string; elementId: string; nonce: number } | null;
 };
 
 export type CanvasInteractionStore = {
@@ -40,7 +38,6 @@ export const INITIAL_CANVAS_INTERACTION: CanvasInteractionState = {
   selectedStepId: null,
   connectionTargets: null,
   violations: NO_VIOLATIONS,
-  reveal: null,
 };
 
 export function createCanvasInteractionStore(): CanvasInteractionStore {

@@ -1,7 +1,6 @@
 import { memo, useCallback, useEffect, useState, type DragEvent } from 'react';
-import { Handle, Position, useConnection, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
+import { Handle, Position, useConnection, type NodeProps } from '@xyflow/react';
 import {
-  Button,
   Card,
   Chip,
   IconButton,
@@ -10,12 +9,11 @@ import {
   Typography,
   makeStyles,
 } from '@blueprint-vendor/flamingo-core';
-import { Add, Delete, ExpandLess, ExpandMore } from '@blueprint-vendor/flamingo-icons';
+import { Add, Delete } from '@blueprint-vendor/flamingo-icons';
 import type { CanvasElementKind } from '@domain/model/canvas-element';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
 import { CANVAS_LAYOUT } from '../canvas-layout';
-import { collapseElements, isCollapsible } from '../collapse-elements';
 import { stepTargetHandleId, type CanvasFormStepData, type CanvasNode } from '../graph-flow-adapter';
 import { isDragLeavingZone, type DropAnchorPosition, type ElementDragPayload } from '../element-dnd';
 import {
@@ -29,35 +27,10 @@ import {
 } from '../step-dnd';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { FormStepLayers } from './form-step-layers';
+import { useNodeStyles } from './node-styles';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
-  card: {
-    // Не обрезать target-handle узла на левой границе (N7/N11).
-    overflow: 'visible',
-    borderRadius: 16,
-    backgroundColor: theme.palette.background.paper,
-    padding: theme.spacing(2),
-    display: 'flex',
-    flexDirection: 'column',
-    gap: theme.spacing(1.5),
-  },
-  // Нарушение инвариантов узла или его элементов (T-043): кольцо цвета
-  // ошибки (T-043).
-  invalid: {
-    // Одна рамка: та же внутренняя (inset), что у выделения, цветом ошибки;
-    // выделение важнее — его селектор специфичнее (T-043, [owner 2026-10-14]).
-    boxShadow: `${theme.shadows[1]}, inset 0 0 0 2px ${theme.palette.error.main}`,
-  },
-  dropTarget: {
-    backgroundColor: theme.editor.canvas.nodeHoverBackground,
-    outline: `2px solid ${theme.editor.canvas.nodeHoverBorder}`,
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: theme.spacing(1),
-  },
+  // Карточка, рамки, заголовок и кнопки — общие стили узлов (ревью A8, R4).
   titleRow: {
     display: 'flex',
     alignItems: 'center',
@@ -66,12 +39,6 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   neutralChip: {
     backgroundColor: theme.editor.canvas.controlsBackground,
     color: theme.palette.text.secondary,
-  },
-  iconButton: {
-    backgroundColor: theme.editor.canvas.controlsBackground,
-    '&:hover': {
-      backgroundColor: theme.editor.canvas.controlsHoverBackground,
-    },
   },
   // Шаги формы — горизонтальные колонки внутри узла (D1, макет
   // «добавление-шагов-формы-и-элементов-в-шаги»).
@@ -151,10 +118,6 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     alignItems: 'center',
     gap: theme.spacing(0.5),
   },
-  expandButton: {
-    alignSelf: 'center',
-    textTransform: 'none',
-  },
 }));
 
 // Узел «Форма заявки» (T-031, D1): заголовок «Форма заявки» + название,
@@ -162,41 +125,17 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
 // у каждого шага заголовок, корзина и «+». Обработчики добавления/удаления
 // (T-034) и dnd (N2) — из контекста действий канваса, выделение, цель
 // связи и нарушения — подпиской на стор (ревью A4, R2), не из data.
-// Элементы каждого шага сжимаются независимо при >6 (T-033).
 function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
+  const nodeClasses = useNodeStyles();
   const classes = useStyles();
   const actions = useCanvasActions();
   const isDropTarget = useConnection((connection) => connection.inProgress && connection.toNode?.id === id);
   const connectTarget = useCanvasInteraction((state) => state.connectionTargets?.pages.has(id) ?? false);
   const violations = useCanvasInteraction((state) => state.violations.nodes.get(id));
-  const reveal = useCanvasInteraction((state) => (state.reveal?.nodeId === id ? state.reveal : null));
 
   // Меню «+» шага: якорь + шаг, в который добавляем. Варианты kind приходят
   // из контекста действий (elementKindOptions) — узел не знает о провайдере схем.
   const [stepMenu, setStepMenu] = useState<{ anchor: HTMLElement; stepId: string } | null>(null);
-
-  // Сжатие элементов каждого шага независимо (T-033); при смене — пересчёт
-  // handles, чтобы рёбра позиционировались в обоих состояниях.
-  const [expandedSteps, setExpandedSteps] = useState<Readonly<Record<string, boolean>>>({});
-  const updateNodeInternals = useUpdateNodeInternals();
-  const toggleStep = useCallback(
-    (stepId: string) => {
-      setExpandedSteps((current) => ({ ...current, [stepId]: !current[stepId] }));
-      updateNodeInternals(id);
-    },
-    [id, updateNodeInternals],
-  );
-  // Поиск нашёл элемент в сжатом шаге (T-050) — развернуть этот шаг.
-  useEffect(() => {
-    const step = reveal
-      ? data.steps.find((candidate) => candidate.elements.some((element) => element.id === reveal.elementId))
-      : undefined;
-    if (step) {
-      setExpandedSteps((current) => ({ ...current, [step.id]: true }));
-      updateNodeInternals(id);
-    }
-    // data.steps намеренно вне зависимостей: реагируем только на новый запрос поиска.
-  }, [reveal, id, updateNodeInternals]);
 
   // Handles при смене данных узла пересчитывает канвас (editor-canvas,
   // только узлы с новым data — ревью P4, R2).
@@ -272,9 +211,9 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
   return (
     <Card
       className={[
-        classes.card,
-        violations ? classes.invalid : '',
-        isDropTarget ? classes.dropTarget : '',
+        nodeClasses.card,
+        violations ? nodeClasses.invalid : '',
+        isDropTarget ? nodeClasses.dropTarget : '',
       ].join(' ')}
       data-testid={`canvas-node-${id}`}
     >
@@ -285,7 +224,7 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
         position={Position.Left}
         className={connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
       />
-      <div className={classes.header}>
+      <div className={nodeClasses.header}>
         <div>
           <div className={classes.titleRow}>
             <Typography variant="subtitle1">Форма заявки</Typography>
@@ -304,7 +243,7 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
         </div>
         {violations ? <ViolationBadge messages={violations} inHeader /> : null}
         <IconButton
-          className={`${classes.iconButton} nodrag`}
+          className={`${nodeClasses.iconButton} nodrag`}
           size="small"
           aria-label="Удалить форму"
           onClick={() => actions?.removeNode(id, 'form')}
@@ -326,8 +265,6 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
             step={step}
             index={index}
             dropPlacement={stepDrop?.stepId === step.id ? stepDrop.placement : null}
-            expanded={expandedSteps[step.id] === true}
-            onToggleExpanded={toggleStep}
             onOpenAddMenu={openAddMenu}
           />
         ))}
@@ -368,8 +305,6 @@ type FormStepColumnProps = {
   index: number;
   /** Индикатор вставки перетаскиваемого шага у этого шага (dnd шагов). */
   dropPlacement: 'before' | 'after' | null;
-  expanded: boolean;
-  onToggleExpanded: (stepId: string) => void;
   onOpenAddMenu: (anchor: HTMLElement, stepId: string) => void;
 };
 
@@ -381,10 +316,9 @@ const FormStepColumn = memo(function FormStepColumn({
   step,
   index,
   dropPlacement,
-  expanded,
-  onToggleExpanded,
   onOpenAddMenu,
 }: FormStepColumnProps) {
+  const nodeClasses = useNodeStyles();
   const classes = useStyles();
   const actions = useCanvasActions();
   // Выделенный шаг (S10): форма выделена целиком, элемент — нет.
@@ -399,8 +333,6 @@ const FormStepColumn = memo(function FormStepColumn({
       actions?.moveElement(formId, 'form', step.id, dragged, anchor, layerDepth),
     [actions, formId, step.id],
   );
-  // Сжатие T-033 временно выключено (ELEMENTS_COLLAPSE_ENABLED) — список полный.
-  const visibleElements = collapseElements(step.elements, expanded);
 
   return (
     <div
@@ -442,7 +374,7 @@ const FormStepColumn = memo(function FormStepColumn({
         </div>
         <div className={classes.stepActions}>
           <IconButton
-            className={`${classes.iconButton} nodrag`}
+            className={`${nodeClasses.iconButton} nodrag`}
             size="small"
             aria-label="Удалить шаг"
             onClick={() => actions?.removeStep(formId, step.id)}
@@ -450,7 +382,7 @@ const FormStepColumn = memo(function FormStepColumn({
             <Delete fontSize="small" />
           </IconButton>
           <IconButton
-            className={`${classes.iconButton} nodrag`}
+            className={`${nodeClasses.iconButton} nodrag`}
             size="small"
             aria-label="Добавить элемент в шаг"
             onClick={(event) => onOpenAddMenu(event.currentTarget, step.id)}
@@ -459,17 +391,7 @@ const FormStepColumn = memo(function FormStepColumn({
           </IconButton>
         </div>
       </div>
-      <FormStepLayers elements={visibleElements} onDropElement={onDropElement} />
-      {isCollapsible(step.elements) ? (
-        <Button
-          className={`${classes.expandButton} nodrag`}
-          size="small"
-          onClick={() => onToggleExpanded(step.id)}
-          endIcon={expanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
-        >
-          {expanded ? 'Свернуть' : `Показать все (${step.elements.length})`}
-        </Button>
-      ) : null}
+      <FormStepLayers elements={step.elements} onDropElement={onDropElement} />
     </div>
   );
 });

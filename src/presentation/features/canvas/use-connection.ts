@@ -9,9 +9,6 @@ import {
   toPageLinkId,
   toStepTransitionId,
   type ElementId,
-  type LogicRuleId,
-  type PageLinkId,
-  type StepTransitionId,
 } from '@domain/model/ids';
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
 import { connectableTargets, type ConnectableTargets, type ConnectionSource } from '@domain/connection-rules';
@@ -145,11 +142,11 @@ export function useConnection(
     (edges: CanvasEdge[]) => {
       for (const edge of edges) {
         if (edge.data?.kind === 'logic') {
-          runCommand(new RemoveLogicRule(edge.id as LogicRuleId));
+          runCommand(new RemoveLogicRule(toLogicRuleId(edge.id)));
         } else if (edge.data?.kind === 'stepTransition') {
-          runCommand(new RemoveStepTransition(edge.id as StepTransitionId));
+          runCommand(new RemoveStepTransition(toStepTransitionId(edge.id)));
         } else {
-          runCommand(new DisconnectElements(toPageLinkId(edge.id as PageLinkId)));
+          runCommand(new DisconnectElements(toPageLinkId(edge.id)));
         }
       }
     },

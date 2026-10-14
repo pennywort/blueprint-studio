@@ -5,7 +5,7 @@ import { computeFormElementDepths } from '@domain/step-element-depths';
 import type { Command } from './command';
 import { preserveFormElementDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
-import { findFormComponent } from './graph-lookup';
+import { findFormElement } from './graph-lookup';
 
 // Выключение режима «Сложная логика» (T-037/T-064, L4): при наличии правил —
 // каскадное удаление всех рёбер этого источника (UI заранее спрашивает
@@ -19,16 +19,16 @@ export class DisableComplexLogic implements Command {
   apply(draft: ServiceGraph): void {
     // Колонки элементов шагов до мутации: цель, потерявшая правило, остаётся на месте (ADR-15).
     const elementDepthsBefore = computeFormElementDepths(draft);
-    const found = findFormComponent(draft, this.componentId);
+    const found = findFormElement(draft, this.componentId);
     if (!found) {
       throw new Error(`Элемент не найден: ${this.componentId}`);
     }
-    if (found.component.kind !== 'selectList') {
+    if (found.element.kind !== 'selectList') {
       throw new Error(
-        `Сложная логика v1 поддерживает только Select (элемент ${this.componentId}: ${found.component.kind})`,
+        `Сложная логика v1 поддерживает только Select (элемент ${this.componentId}: ${found.element.kind})`,
       );
     }
-    found.component.hasComplexLogic = false;
+    found.element.hasComplexLogic = false;
     draft.logicRules = draft.logicRules.filter(
       (rule) => (rule.sourceElementId as string) !== this.componentId,
     );

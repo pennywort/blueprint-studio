@@ -1,7 +1,7 @@
 import type { ServiceGraph } from './model/service-graph';
-import type { SubScenario } from './model/scenario';
 import { computeLayerDepths, type LayerEdge } from './layer-depths';
 import { walkElementContainers } from './element-containers';
+import { walkPageEntries } from './graph-walk';
 
 // Глубины страниц графа (Epic 002, T-036, D7/D8/D12/D13): глубина страницы —
 // длина кратчайшего пути от корня (BFS по links). Ребро «элемент → страница»
@@ -15,39 +15,19 @@ import { walkElementContainers } from './element-containers';
 // Чистая функция доменного слоя: без внешних импортов, работает и на
 // замороженном состоянии, и на черновике Immer внутри команд.
 
-function collectSubScenarioIds(subScenarios: SubScenario[], into: string[]): void {
-  for (const scenario of subScenarios) {
-    into.push(scenario.id);
-    if (scenario.children) {
-      collectSubScenarioIds(scenario.children, into);
-    }
-  }
-}
-
-// Явные переопределения колонки (layerDepth): узел может быть перенесён
-// dnd на другой уровень навигации — тогда глубина фиксирована и не
-// выводится из связей.
-function collectLayerDepths(subScenarios: SubScenario[], into: Map<string, number>): void {
-  for (const scenario of subScenarios) {
-    if (scenario.layerDepth !== undefined) {
-      into.set(scenario.id, scenario.layerDepth);
-    }
-    if (scenario.children) {
-      collectLayerDepths(scenario.children, into);
-    }
-  }
-}
-
 // Глубина каждой страницы карты. Ключи — id страниц (брендированные id
 // приводятся к string, чтобы функция не зависела от вида страницы).
 export function computeGraphDepths(graph: ServiceGraph): ReadonlyMap<string, number> {
   const pageIds: string[] = [];
-  if (graph.homePage) {
-    pageIds.push(graph.homePage.id);
-  }
-  collectSubScenarioIds(graph.subScenarios, pageIds);
-  for (const form of graph.applicationForms) {
-    pageIds.push(form.id);
+  // Явные переопределения колонки (layerDepth): узел может быть перенесён
+  // dnd на другой уровень навигации — тогда глубина фиксирована и не
+  // выводится из связей. У Главной поля нет (ADR-15).
+  const explicitDepths = new Map<string, number>();
+  for (const entry of walkPageEntries(graph)) {
+    pageIds.push(entry.page.id);
+    if (entry.kind !== 'home' && entry.page.layerDepth !== undefined) {
+      explicitDepths.set(entry.page.id, entry.page.layerDepth);
+    }
   }
   const pageSet = new Set(pageIds);
 
@@ -67,14 +47,6 @@ export function computeGraphDepths(graph: ServiceGraph): ReadonlyMap<string, num
     const source = elementOwner.get(link.sourceElementId);
     if (source && pageSet.has(link.targetId)) {
       edges.push({ from: source, to: link.targetId });
-    }
-  }
-
-  const explicitDepths = new Map<string, number>();
-  collectLayerDepths(graph.subScenarios, explicitDepths);
-  for (const form of graph.applicationForms) {
-    if (form.layerDepth !== undefined) {
-      explicitDepths.set(form.id, form.layerDepth);
     }
   }
 

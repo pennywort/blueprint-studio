@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { CanvasElement } from '@domain/model/canvas-element';
 import type { LogicRuleId } from '@domain/model/ids';
-import { findElementLocation, findFormComponent } from '@application/commands/graph-lookup';
+import { findElementLocation, findFormElement } from '@application/commands/graph-lookup';
 
 // Данные инспектора для выделенного элемента: сам компонент формы + его
 // правила видимости, где он — цель (T-067).
@@ -65,7 +65,7 @@ export function useSelection(graph: ServiceGraph) {
     const incomingRules = graph.logicRules
       .filter((rule) => rule.targetElementId === selectedElementId)
       .map((rule) => {
-        const source = findFormComponent(graph, rule.sourceElementId)?.component;
+        const source = findFormElement(graph, rule.sourceElementId)?.element;
         const sourceLabel = source && 'label' in source ? source.label : (source?.kind ?? 'Элемент');
         let optionLabel: string | null = null;
         if (rule.condition.kind === 'optionSelected' && source?.kind === 'selectList') {

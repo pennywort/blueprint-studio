@@ -6,7 +6,6 @@ import { computeLayout, type MeasuredNodeSizes } from './canvas-layout';
 import { graphToFlow, type CanvasNode, type FlowGraph } from './graph-flow-adapter';
 import { mapViolationsToCanvas } from './violation-markers';
 import { createCanvasInteractionStore } from './canvas-interaction';
-import type { CanvasFocus } from './use-canvas-search';
 
 // Узлы и рёбра канваса (ревью A3, R3): раскладка по измеренным размерам,
 // graphToFlow со структурным разделением, выделение узла и синхронизация
@@ -18,10 +17,9 @@ export function useCanvasNodes(
     selectedElementId: string | null;
     selectedStepId: string | null;
     connectionTargets: ConnectableTargets | null;
-    focus: CanvasFocus | null;
   },
 ) {
-  const { selectedNodeId, selectedElementId, selectedStepId, connectionTargets, focus } = interaction;
+  const { selectedNodeId, selectedElementId, selectedStepId, connectionTargets } = interaction;
   // Фактические размеры узлов от react-flow (N12): стек колонки строится по
   // ним, чтобы зазор между узлами был ровно rowGap. Обновляется только при
   // реальном изменении (> 1px) — иначе пересчёт раскладки зациклился бы.
@@ -86,13 +84,6 @@ export function useCanvasNodes(
   // (ревью A4/P3, R2): узлы и карточки подписаны селектором и перерисовываются
   // только при смене своего значения. Синхронизация до отрисовки кадра.
   const [interactionStore] = useState(createCanvasInteractionStore);
-  const reveal = useMemo(
-    () =>
-      focus && focus.elementId !== null
-        ? { nodeId: focus.nodeId, elementId: focus.elementId, nonce: focus.nonce }
-        : null,
-    [focus],
-  );
   useLayoutEffect(() => {
     interactionStore.setState({
       selectedNodeId,
@@ -100,7 +91,6 @@ export function useCanvasNodes(
       selectedStepId,
       connectionTargets,
       violations: violationMarkers,
-      reveal,
     });
   }, [
     interactionStore,
@@ -109,7 +99,6 @@ export function useCanvasNodes(
     selectedStepId,
     connectionTargets,
     violationMarkers,
-    reveal,
   ]);
 
   // Выделение узла управляется отсюда (N6; взаимоисключение с элементом,

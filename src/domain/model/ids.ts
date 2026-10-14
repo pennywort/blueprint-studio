@@ -59,4 +59,7 @@ export const toElementId = (raw: string): ElementId => ElementIdSchema.parse(raw
 export const toPageLinkId = (raw: string): PageLinkId => PageLinkIdSchema.parse(raw);
 export const toLogicRuleId = (raw: string): LogicRuleId => LogicRuleIdSchema.parse(raw);
 export const toOptionId = (raw: string): OptionId => OptionIdSchema.parse(raw);
+// Id страницы любого вида (ревью A6, R4): бренды — только типовая метка,
+// проверка та же (непустая строка), вид страницы определяет граф.
+export const toPageEntityId = (raw: string): PageEntityId => PageIdSchema.parse(raw);
 export const toStepTransitionId = (raw: string): StepTransitionId => StepTransitionIdSchema.parse(raw);
