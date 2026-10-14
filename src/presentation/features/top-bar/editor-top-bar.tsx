@@ -89,7 +89,7 @@ export type EditorTopBarProps = {
   onPreview?: () => void;
   /** Поиск по канвасу (T-050): совпадения по названиям узлов и элементов. */
   searchCanvas?: (query: string) => CanvasSearchResult[];
-  /** Выбор результата: выделение + центрирование вьюпорта (+ раскрытие сжатого узла). */
+  /** Выбор результата: выделение + центрирование вьюпорта. */
   onSelectSearchResult?: (result: CanvasSearchResult) => void;
 };
 

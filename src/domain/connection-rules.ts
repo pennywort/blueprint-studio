@@ -1,7 +1,7 @@
 import type { ServiceGraph } from './model/service-graph';
-import type { SubScenario } from './model/scenario';
 import { computeGraphDepths } from './graph-depths';
-import { findElementInGraph } from './element-containers';
+import { findElementInGraph, findOwnerPageId } from './element-containers';
+import { walkSubScenarios } from './graph-walk';
 import { stepTransitionTargets } from './step-transitions';
 
 // Правила «с чем можно соединиться» (повторная приёмка Epic 002, [owner
@@ -32,20 +32,6 @@ export type ConnectableTargets = {
 
 const NONE: ConnectableTargets = { pages: new Set(), elements: new Set(), steps: new Set() };
 
-function* walkScenarios(subScenarios: SubScenario[]): Generator<SubScenario> {
-  for (const scenario of subScenarios) {
-    yield scenario;
-    if (scenario.children) {
-      yield* walkScenarios(scenario.children);
-    }
-  }
-}
-
-// Страница — владелец элемента (любой блок, [owner 2026-10-13]).
-function findOwnerPageId(graph: ServiceGraph, elementId: string): string | null {
-  return findElementInGraph(graph, elementId)?.container.pageId ?? null;
-}
-
 function navigationTargets(graph: ServiceGraph, elementId: string): ConnectableTargets {
   const sourcePageId = findOwnerPageId(graph, elementId);
   if (sourcePageId === null) {
@@ -58,7 +44,7 @@ function navigationTargets(graph: ServiceGraph, elementId: string): ConnectableT
     graph.links.filter((link) => link.sourceElementId === elementId).map((link) => link.targetId),
   );
   const pages = new Set<string>();
-  const candidates = [...walkScenarios(graph.subScenarios), ...graph.applicationForms];
+  const candidates = [...walkSubScenarios(graph.subScenarios), ...graph.applicationForms];
   for (const page of candidates) {
     if (page.id !== sourcePageId && !linked.has(page.id) && (depths.get(page.id) ?? 0) > sourceDepth) {
       pages.add(page.id);

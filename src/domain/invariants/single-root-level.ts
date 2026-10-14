@@ -1,6 +1,6 @@
 import type { ServiceGraph } from '../model/service-graph';
-import type { SubScenario } from '../model/scenario';
 import { computeGraphDepths } from '../graph-depths';
+import { walkPages } from '../graph-walk';
 import type { InvariantViolation } from './index';
 
 // На нулевом уровне навигации — не больше одного блока (ADR-15, [owner
@@ -9,22 +9,9 @@ import type { InvariantViolation } from './index';
 
 export const SINGLE_ROOT_LEVEL_RULE = 'single-root-level';
 
-function* walkScenarios(subScenarios: SubScenario[]): Generator<SubScenario> {
-  for (const scenario of subScenarios) {
-    yield scenario;
-    if (scenario.children) {
-      yield* walkScenarios(scenario.children);
-    }
-  }
-}
-
 export function checkSingleRootLevel(graph: ServiceGraph): InvariantViolation[] {
   const depths = computeGraphDepths(graph);
-  const pages = [
-    ...(graph.homePage ? [graph.homePage] : []),
-    ...walkScenarios(graph.subScenarios),
-    ...graph.applicationForms,
-  ].sort((left, right) => left.orderIndex - right.orderIndex);
+  const pages = [...walkPages(graph)].sort((left, right) => left.orderIndex - right.orderIndex);
   const roots = pages.filter((page) => depths.get(page.id) === 0);
   // Главная всегда корень; без неё корнем считается первый по порядку блок.
   const keep = graph.homePage ? graph.homePage.id : roots[0]?.id;

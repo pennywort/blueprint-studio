@@ -1,71 +1,49 @@
 // Dnd карточек элементов канваса (замечание приёмки N2): нативный HTML5
 // drag-and-drop — без новых зависимостей. Карточка (ElementCard) ставит
 // draggable и кладёт payload в dataTransfer; зоны приёма (узел страницы,
-// колонка шага формы) читают тип во время dragover (данные в dragover
-// недоступны — только типы, поэтому вид элемента кодируем в MIME-типе)
-// и вычисляют якорь по карточке под курсором.
+// колонка шага формы) в dragover видят только типы данных, поэтому сам
+// перетаскиваемый элемент берут из модульного состояния текущего drag
+// (ревью A9, R4) — раньше id и вид элемента кодировались в MIME-типах,
+// которые браузер приводит к нижнему регистру. Вид элемента зону приёма
+// не интересует: любой элемент переносится в любой блок (ADR-17).
 
-/** Вид перетаскиваемого элемента — совместимость с зонами приёма. */
-export type ElementDndKind = 'listItem' | 'widgetCard' | 'formComponent';
-
-/** Все виды: любой элемент переносится в любой блок [owner 2026-10-13]. */
-export const ELEMENT_DND_KINDS: readonly ElementDndKind[] = ['listItem', 'widgetCard', 'formComponent'];
-
-/** Основной MIME-тип: в данных — JSON payload (id элемента). */
+/** MIME-тип drag карточки элемента: в данных — JSON payload (id элемента). */
 export const ELEMENT_DND_MIME = 'application/x-blueprint-element';
-
-/** Маркер вида: читается в dragover через dataTransfer.types. */
-export const elementDndKindType = (kind: ElementDndKind): string => `${ELEMENT_DND_MIME}-kind-${kind}`;
 
 export type ElementDragPayload = {
   elementId: string;
-  kind: ElementDndKind;
 };
 
-// Маркер id перетаскиваемого: зоне приёма в dragover нужен его текущий
-// уровень (своя колонка — порядок, чужая — перенос, layers/). MIME-типы
-// браузер приводит к нижнему регистру — id сверяется так же.
-const ELEMENT_DND_ID_PREFIX = `${ELEMENT_DND_MIME}-id-`;
+// Текущий drag карточки в этом документе. Сбрасывается по dragend карточки;
+// если карточка размонтировалась до конца жеста, устаревшее значение не
+// мешает: оно читается только при наличии нашего MIME-типа в событии.
+let currentDrag: ElementDragPayload | null = null;
 
-export function writeElementDrag(dataTransfer: DataTransfer, { elementId, kind }: ElementDragPayload): void {
-  dataTransfer.setData(ELEMENT_DND_MIME, JSON.stringify({ elementId }));
-  dataTransfer.setData(elementDndKindType(kind), '');
-  dataTransfer.setData(`${ELEMENT_DND_ID_PREFIX}${elementId.toLowerCase()}`, '');
+export function writeElementDrag(dataTransfer: DataTransfer, payload: ElementDragPayload): void {
+  dataTransfer.setData(ELEMENT_DND_MIME, JSON.stringify(payload));
   dataTransfer.effectAllowed = 'move';
+  currentDrag = payload;
 }
 
-// Вид элемента из types drag-события; null — это не drag карточки элемента.
-export function readElementDndKind(types: readonly string[] | DOMStringList): ElementDndKind | null {
-  // Браузер приводит MIME-типы к нижнему регистру (dataTransfer.types) —
-  // сверка без учёта регистра, иначе formComponent/listItem не распознавались.
-  const lowered = Array.from(types, (type) => type.toLowerCase());
-  for (const kind of ELEMENT_DND_KINDS) {
-    if (lowered.includes(elementDndKindType(kind).toLowerCase())) {
-      return kind;
-    }
-  }
-  return null;
+export function endElementDrag(): void {
+  currentDrag = null;
 }
 
-// Id перетаскиваемого из types drag-события (в нижнем регистре); null — не
-// drag карточки. Сверять с id элементов через toLowerCase().
-export function readElementDndId(types: readonly string[] | DOMStringList): string | null {
-  const marker = Array.from(types).find((type) => type.startsWith(ELEMENT_DND_ID_PREFIX));
-  return marker ? marker.slice(ELEMENT_DND_ID_PREFIX.length) : null;
+// Перетаскиваемая карточка во время dragover; null — это не drag карточки
+// элемента (файл, текст, drag из другого окна).
+export function draggedElement(dataTransfer: DataTransfer): ElementDragPayload | null {
+  return Array.from(dataTransfer.types).includes(ELEMENT_DND_MIME) ? currentDrag : null;
 }
 
+// Payload на drop — из данных события (они доступны только в drop).
 export function readElementDrag(dataTransfer: DataTransfer): ElementDragPayload | null {
   const raw = dataTransfer.getData(ELEMENT_DND_MIME);
   if (!raw) {
     return null;
   }
-  const kind = readElementDndKind(dataTransfer.types);
-  if (!kind) {
-    return null;
-  }
   try {
     const { elementId } = JSON.parse(raw) as { elementId?: string };
-    return elementId ? { elementId, kind } : null;
+    return elementId ? { elementId } : null;
   } catch {
     return null;
   }

@@ -61,8 +61,7 @@ export function createSampleGraph(): ServiceGraph {
         type: 'navigation',
         title: 'Документы',
         orderIndex: 2,
-        // Больше 6 элементов — узел демонстрирует автосжатие (T-033);
-        // один из скрытых элементов имеет исходящую связь и остаётся видимым.
+        // Длинный список элементов; у одного из последних — исходящая связь.
         elements: [
           { id: toElementId('demo-scenario-documents-item-1'), kind: 'listItem', title: 'Справка о доходах' },
           { id: toElementId('demo-scenario-documents-item-2'), kind: 'listItem', title: 'Выписка по счёту' },
@@ -198,8 +197,7 @@ export function createSampleGraph(): ServiceGraph {
         targetId: toApplicationFormId('demo-form-deposit'),
       },
       {
-        // Исходящая связь из скрытого при сжатии элемента: карточка остаётся
-        // видимой, иначе react-flow уронил бы ребро без source-handle (T-033).
+        // Связь из элемента в конце длинного списка «Документы».
         id: toPageLinkId('demo-link-documents-apply'),
         sourceElementId: toElementId('demo-scenario-documents-item-8'),
         targetId: toApplicationFormId('demo-form-deposit'),

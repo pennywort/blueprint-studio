@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import type { CanvasSearchResult } from '@presentation/features/top-bar/editor-top-bar';
 import type { CanvasNode } from './graph-flow-adapter';
 
-/** Запрос центрирования вьюпорта на узле (и раскрытия элемента) — результат поиска. */
+/** Запрос центрирования вьюпорта на узле — результат поиска. */
 export type CanvasFocus = { nodeId: string; elementId: string | null; nonce: number };
 
 // Поиск по канвасу (T-050): узлы и элементы по вхождению подстроки без
@@ -38,7 +38,7 @@ export function searchCanvasNodes(nodes: readonly CanvasNode[], query: string): 
 }
 
 // Выбор результата поиска (ревью A3, R3): выделение + центрирование вьюпорта
-// (focus) + раскрытие сжатого узла (reveal в сторе взаимодействия).
+// (focus).
 export function useCanvasSearch(
   selectNode: (nodeId: string) => void,
   selectElement: (elementId: string) => void,
@@ -46,7 +46,7 @@ export function useCanvasSearch(
   const [focus, setFocus] = useState<CanvasFocus | null>(null);
 
   // Выбор результата поиска (T-050): выделение по единому правилу (ADR-12)
-  // + запрос центрирования/раскрытия (nonce — повторный выбор того же).
+  // + запрос центрирования (nonce — повторный выбор того же).
   const selectSearchResult = useCallback(
     (result: CanvasSearchResult) => {
       if (result.elementId !== null) {

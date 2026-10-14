@@ -2,16 +2,15 @@ import { useCallback, useMemo } from 'react';
 import type { CanvasElementKind } from '@domain/model/canvas-element';
 import {
   toApplicationFormId,
+  toElementId,
+  toFormComponentId,
   toFormStepId,
+  toPageEntityId,
   toPageId,
   toScenarioId,
-  type ApplicationFormId,
   type ElementId,
   type FormComponentId,
-  type FormStepId,
   type LogicRuleId,
-  type PageEntityId,
-  type ScenarioId,
 } from '@domain/model/ids';
 import { ReorderInLayer } from '@application/commands/reorder-in-layer';
 import { AddHomePage } from '@application/commands/add-home-page';
@@ -31,7 +30,7 @@ import { UpdateElementProps, type ElementPropsPatch } from '@application/command
 import { EnableComplexLogic } from '@application/commands/enable-complex-logic';
 import { DisableComplexLogic } from '@application/commands/disable-complex-logic';
 import { RemoveLogicRule } from '@application/commands/remove-logic-rule';
-import { findFormById, findFormComponent } from '@application/commands/graph-lookup';
+import { findFormById, findFormElement } from '@application/commands/graph-lookup';
 import { useContainer } from '@presentation/app/App';
 import { useEditorNotifications } from '@presentation/features/notifications/editor-notifications';
 import type { AddableElementKind, AddableNodeKind } from '@presentation/features/toolbar/editor-toolbar';
@@ -96,7 +95,6 @@ export function useEditorGraph() {
     selectedElementId,
     selectedStepId,
     connectionTargets,
-    focus,
   });
   const searchCanvas = useCallback((query: string) => searchCanvasNodes(flowNodes, query), [flowNodes]);
 
@@ -115,7 +113,7 @@ export function useEditorGraph() {
       const current = [...layerNodes]
         .sort((left, right) => left.data.orderIndex - right.data.orderIndex)
         .map((node) => node.id);
-      const slot = desired.indexOf(draggedNode.id as PageEntityId);
+      const slot = desired.indexOf(toPageEntityId(draggedNode.id));
       if (slot < 0 || current.indexOf(draggedNode.id) === slot) {
         return; // порядок не изменился — команда не нужна
       }
@@ -123,7 +121,7 @@ export function useEditorGraph() {
         slot > 0
           ? { pageId: desired[slot - 1]!, placement: 'after' as const }
           : { pageId: desired[1]!, placement: 'before' as const };
-      runCommand(new ReorderInLayer(draggedNode.id as PageEntityId, anchor));
+      runCommand(new ReorderInLayer(toPageEntityId(draggedNode.id), anchor));
     },
     [runCommand],
   );
@@ -169,7 +167,7 @@ export function useEditorGraph() {
   // layerDepth; вертикальный порядок внутри новой колонки — по orderIndex.
   const moveNodeToDepth = useCallback(
     (nodeId: string, depth: number) => {
-      runCommand(new SetPageLayerDepth(nodeId as PageEntityId, depth));
+      runCommand(new SetPageLayerDepth(toPageEntityId(nodeId), depth));
     },
     [runCommand],
   );
@@ -183,7 +181,7 @@ export function useEditorGraph() {
     }
     const elementId = selectedElementId;
     selectElement(null);
-    runCommand(new RemoveElement(elementId as ElementId));
+    runCommand(new RemoveElement(toElementId(elementId)));
     return true;
   }, [runCommand, selectElement, selectedElementId]);
 
@@ -225,7 +223,7 @@ export function useEditorGraph() {
       } else if (selectedNodeType === 'home') {
         target = { kind: 'home' };
       } else {
-        target = { kind: 'subScenario', scenarioId: selectedNodeId as ScenarioId };
+        target = { kind: 'subScenario', scenarioId: toScenarioId(selectedNodeId) };
       }
       runCommand(new AddElement(target, createDefaultElement(kind, idGenerator.next())));
     },
@@ -237,7 +235,7 @@ export function useEditorGraph() {
     (formId: string, stepId: string, kind: CanvasElementKind) => {
       runCommand(
         new AddElement(
-          { kind: 'formStep', formId: formId as ApplicationFormId, stepId: stepId as FormStepId },
+          { kind: 'formStep', formId: toApplicationFormId(formId), stepId: toFormStepId(stepId) },
           createDefaultElement(kind, idGenerator.next()),
         ),
       );
@@ -253,9 +251,9 @@ export function useEditorGraph() {
       if (nodeType === 'home') {
         runCommand(new RemoveHomePage());
       } else if (nodeType === 'form') {
-        runCommand(new RemoveForm(nodeId as ApplicationFormId));
+        runCommand(new RemoveForm(toApplicationFormId(nodeId)));
       } else {
-        runCommand(new RemoveScenario(nodeId as ScenarioId));
+        runCommand(new RemoveScenario(toScenarioId(nodeId)));
       }
       forgetNode(nodeId);
     },
@@ -264,7 +262,7 @@ export function useEditorGraph() {
 
   const removeStep = useCallback(
     (formId: string, stepId: string) => {
-      runCommand(new RemoveFormStep(formId as ApplicationFormId, stepId as FormStepId));
+      runCommand(new RemoveFormStep(toApplicationFormId(formId), toFormStepId(stepId)));
     },
     [runCommand],
   );
@@ -273,7 +271,7 @@ export function useEditorGraph() {
   const addFormStep = useCallback(
     (formId: string) => {
       runCommand(
-        new AddFormStep(formId as ApplicationFormId, { id: toFormStepId(idGenerator.next()), elements: [] }),
+        new AddFormStep(toApplicationFormId(formId), { id: toFormStepId(idGenerator.next()), elements: [] }),
       );
     },
     [idGenerator, runCommand],
@@ -285,9 +283,9 @@ export function useEditorGraph() {
     (formId: string, stepId: string, anchor: StepAnchorPosition | null, layerDepth?: number) => {
       runCommand(
         new MoveFormStep(
-          formId as ApplicationFormId,
-          stepId as FormStepId,
-          anchor ? { stepId: anchor.stepId as FormStepId, placement: anchor.placement } : null,
+          toApplicationFormId(formId),
+          toFormStepId(stepId),
+          anchor ? { stepId: toFormStepId(anchor.stepId), placement: anchor.placement } : null,
           layerDepth,
         ),
       );
@@ -310,7 +308,7 @@ export function useEditorGraph() {
       if (nodeType === 'home') {
         target = { kind: 'home' };
       } else if (nodeType === 'subScenario') {
-        target = { kind: 'subScenario', scenarioId: nodeId as ScenarioId };
+        target = { kind: 'subScenario', scenarioId: toScenarioId(nodeId) };
       } else {
         if (!targetStepId) {
           notifications.showCommandFailure('Переносите элемент в конкретный шаг формы');
@@ -318,15 +316,15 @@ export function useEditorGraph() {
         }
         target = {
           kind: 'formStep',
-          formId: nodeId as ApplicationFormId,
-          stepId: targetStepId as FormStepId,
+          formId: toApplicationFormId(nodeId),
+          stepId: toFormStepId(targetStepId),
         };
       }
       runCommand(
         new MoveElement(
-          dragged.elementId as ElementId,
+          toElementId(dragged.elementId),
           target,
-          anchor ? { elementId: anchor.elementId as ElementId, placement: anchor.placement } : undefined,
+          anchor ? { elementId: toElementId(anchor.elementId), placement: anchor.placement } : undefined,
           target.kind === 'formStep' ? layerDepth : undefined,
         ),
       );
@@ -343,11 +341,11 @@ export function useEditorGraph() {
   const toggleComplexLogic = useCallback(
     (elementId: string) => {
       // Режим логики — только у Select'а в шаге формы (L-I5).
-      const component = findFormComponent(graphRef.current, elementId)?.component;
+      const component = findFormElement(graphRef.current, elementId)?.element;
       if (!component || component.kind !== 'selectList') {
         return;
       }
-      const componentId = component.id as FormComponentId;
+      const componentId = toFormComponentId(component.id);
       if (component.hasComplexLogic) {
         const rulesCount = graphRef.current.logicRules.filter(
           (rule) => rule.sourceElementId === elementId,

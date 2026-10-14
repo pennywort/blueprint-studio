@@ -3,7 +3,7 @@ import type { FormComponentId } from '@domain/model/ids';
 import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
 import { InvariantViolationError } from './errors';
-import { findFormComponent } from './graph-lookup';
+import { findFormElement } from './graph-lookup';
 
 // Включение режима «Сложная логика» на элементе-источнике (T-037/T-064, L4):
 // само по себе не создаёт правил — только открывает возможность протягивать
@@ -14,16 +14,16 @@ export class EnableComplexLogic implements Command {
   constructor(private readonly componentId: FormComponentId) {}
 
   apply(draft: ServiceGraph): void {
-    const found = findFormComponent(draft, this.componentId);
+    const found = findFormElement(draft, this.componentId);
     if (!found) {
       throw new Error(`Элемент не найден: ${this.componentId}`);
     }
-    if (found.component.kind !== 'selectList') {
+    if (found.element.kind !== 'selectList') {
       throw new Error(
-        `Сложная логика v1 поддерживает только Select (элемент ${this.componentId}: ${found.component.kind})`,
+        `Сложная логика v1 поддерживает только Select (элемент ${this.componentId}: ${found.element.kind})`,
       );
     }
-    found.component.hasComplexLogic = true;
+    found.element.hasComplexLogic = true;
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

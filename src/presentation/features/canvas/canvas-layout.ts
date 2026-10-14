@@ -2,6 +2,7 @@ import type { XYPosition } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { FormStep } from '@domain/model/scenario';
 import { computeGraphDepths } from '@domain/graph-depths';
+import { walkSubScenarios } from '@domain/graph-walk';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
 
@@ -62,17 +63,6 @@ export const FORM_STEP_LAYOUT = {
    */
   logicHandleTop: 36,
 } as const;
-
-// Автосжатие узла при избытке элементов (T-033; Q-14, решение владельца):
-// скролла внутри узла нет — при превышении порога список обрезается и
-// появляется кнопка раскрытия. Константы в одном месте; handles/рёбра
-// пересчитываются через updateNodeInternals при смене состояния.
-export const ELEMENTS_COLLAPSE_THRESHOLD = 6;
-// Сжатие временно выключено [owner 2026-10-13]: узлы и шаги показывают все
-// элементы, до уточнения с заказчиком. Механика T-033 остаётся — true вернёт её.
-export const ELEMENTS_COLLAPSE_ENABLED = false;
-/** Сколько первых элементов остаётся видимыми в сжатом состоянии. */
-export const COLLAPSED_VISIBLE_ELEMENTS = 3;
 
 // Оценка ширины/высоты узла по содержимому графа — нужна для стека колонки.
 function estimateScenarioNodeHeight(elementCount: number): number {
@@ -180,8 +170,8 @@ export type MeasuredNodeSizes = Readonly<Record<string, { width: number; height:
 // Y внутри колонки — стек по orderIndex (D13). Каждый несвязанный подграф
 // раскладывается от своего корня (глубина 0, D8) — подграфы встают в одну
 // колонку друг под другом, отдельного «островного» раскладщика нет.
-// measured — фактические размеры узлов (N12): оценка не учитывает сжатие
-// (T-033) и реальную высоту строк, из-за чего зазоры в колонке «плыли»;
+// measured — фактические размеры узлов (N12): оценка не учитывает реальную
+// высоту строк, из-за чего зазоры в колонке «плыли»;
 // оценка остаётся только для ещё не измеренных узлов (первый рендер).
 export function computeLayout(graph: ServiceGraph, measured?: MeasuredNodeSizes): Record<string, XYPosition> {
   const depths = computeGraphDepths(graph);
@@ -196,20 +186,14 @@ export function computeLayout(graph: ServiceGraph, measured?: MeasuredNodeSizes)
       height: estimateScenarioNodeHeight(home.elements.length),
     });
   }
-  const collectScenarios = (subScenarios: ServiceGraph['subScenarios']): void => {
-    for (const scenario of subScenarios) {
-      nodes.push({
-        id: scenario.id,
-        orderIndex: scenario.orderIndex,
-        width: CANVAS_LAYOUT.nodeWidth,
-        height: estimateScenarioNodeHeight(scenario.elements.length),
-      });
-      if (scenario.children) {
-        collectScenarios(scenario.children);
-      }
-    }
-  };
-  collectScenarios(graph.subScenarios);
+  for (const scenario of walkSubScenarios(graph.subScenarios)) {
+    nodes.push({
+      id: scenario.id,
+      orderIndex: scenario.orderIndex,
+      width: CANVAS_LAYOUT.nodeWidth,
+      height: estimateScenarioNodeHeight(scenario.elements.length),
+    });
+  }
   for (const form of graph.applicationForms) {
     const size = estimateFormSize(form, graph);
     nodes.push({ id: form.id, orderIndex: form.orderIndex, width: size.width, height: size.height });

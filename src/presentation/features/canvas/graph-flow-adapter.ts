@@ -4,8 +4,9 @@ import type { ListItem, WidgetCard } from '@domain/model/scenario';
 import type { FormComponent, FormComponentKind } from '@domain/model/form-components';
 import type { CanvasElement, CanvasElementKind } from '@domain/model/canvas-element';
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
-import { toElementId, type ElementId, type PageEntityId } from '@domain/model/ids';
+import { toElementId, toPageEntityId, type ElementId, type PageEntityId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
+import { walkSubScenarios } from '@domain/graph-walk';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
 import { evaluateVisibility } from '@domain/logic-visibility';
@@ -77,12 +78,6 @@ export type CanvasElementData = {
   /** Подпись чипа типа («List item», «Text field»…). */
   kindLabel: string;
   /**
-   * Из элемента исходит связь. В сжатом состоянии (T-033) такие карточки
-   * остаются видимыми: скрытая карточка унесла бы свой source-handle,
-   * и react-flow уронил бы ребро.
-   */
-  hasOutgoingLink: boolean;
-  /**
    * «Сложная логика» (T-037): поле присутствует у Select'а — потенциального
    * источника правил (L5). enabled — режим включён (варианты — источники
    * правил); options — строки option'ов для рендера с handle-id: в шаге
@@ -117,8 +112,6 @@ export type CanvasElementData = {
    * рисуется — соединить его доменно невозможно, лишняя точка путает (N5).
    */
   logicTarget: boolean;
-  /** Класс элемента для dnd: допустимые зоны приёма зависят от вида (N2). */
-  dndKind: 'listItem' | 'widgetCard' | 'formComponent';
   // Выделение, цель связи, нарушения и обработчики — не в data (ревью A4,
   // R2): карточка читает их из canvas-interaction (стор + контекст действий).
 };
@@ -221,7 +214,6 @@ export function formStepLabel(level: number): string {
 // Контекст маппинга элементов: связи и правила графа; inStep — элемент
 // лежит в шаге формы (логика возможна только там, L-I5/ADR-14).
 type ElementMapContext = {
-  linkSources: ReadonlySet<string>;
   logicTargets: ReadonlySet<string>;
   logicHidden: ReadonlySet<string>;
 };
@@ -235,8 +227,8 @@ function elementToElementData(
 ): CanvasElementData {
   const data =
     element.kind === 'listItem' || element.kind === 'widgetCard'
-      ? listItemToElementData(element, context.linkSources)
-      : formComponentToElementData(element, context.linkSources, context.logicTargets, context.logicHidden);
+      ? listItemToElementData(element)
+      : formComponentToElementData(element, context.logicTargets, context.logicHidden);
   if (inStep) {
     data.logicTarget = true;
     data.hasIncomingLogic = context.logicTargets.has(element.id);
@@ -251,17 +243,12 @@ function elementToElementData(
   return data;
 }
 
-function listItemToElementData(
-  item: ListItem | WidgetCard,
-  linkSources: ReadonlySet<string>,
-): CanvasElementData {
+function listItemToElementData(item: ListItem | WidgetCard): CanvasElementData {
   const element: CanvasElementData = {
     id: item.id,
     title: item.title,
     kindLabel: item.kind === 'widgetCard' ? 'Widget card' : 'List item',
-    hasOutgoingLink: linkSources.has(item.id),
     logicTarget: false,
-    dndKind: item.kind,
   };
   if (item.secondaryText) {
     element.secondaryText = item.secondaryText;
@@ -271,7 +258,6 @@ function listItemToElementData(
 
 function formComponentToElementData(
   component: FormComponent,
-  linkSources: ReadonlySet<string>,
   logicTargets: ReadonlySet<string>,
   logicHidden: ReadonlySet<string>,
 ): CanvasElementData {
@@ -279,11 +265,9 @@ function formComponentToElementData(
     id: component.id,
     title: 'label' in component ? component.label : component.kind,
     kindLabel: FORM_COMPONENT_KIND_LABELS[component.kind],
-    hasOutgoingLink: linkSources.has(component.id),
     hasIncomingLogic: logicTargets.has(component.id),
     hiddenByLogic: logicHidden.has(component.id),
     logicTarget: true,
-    dndKind: 'formComponent',
   };
   if (component.kind === 'selectList') {
     // Select — потенциальный источник «Сложной логики» (L5) и, вариантами,
@@ -334,16 +318,13 @@ export function graphToFlow(
 function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPosition>>): FlowGraph {
   const positionOf = (id: string): XYPosition => positions?.[id] ?? { x: 0, y: 0 };
   const depths = computeGraphDepths(graph);
-  // Источники связей — для флага hasOutgoingLink (сжатие T-033 не прячет
-  // карточки, от которых исходит ребро).
-  const linkSources = new Set<string>(graph.links.map((link) => link.sourceElementId));
   // Цели правил видимости — индикатор зависимости на карточке (T-037, L-Q1).
   const logicTargets = new Set<string>(graph.logicRules.map((rule) => rule.targetElementId));
   // Скрытые по умолчанию цели (L3): оценка при пустом состоянии формы —
   // демонстрация семантики видимости до появления /preview (T-062).
   const visibleTargets = evaluateVisibility(graph.logicRules, new Map());
   const logicHidden = new Set<string>(
-    [...logicTargets].filter((elementId) => !visibleTargets.has(elementId as ElementId)),
+    [...logicTargets].filter((elementId) => !visibleTargets.has(toElementId(elementId))),
   );
 
   // Цель правила → option-handle варианта-источника (L-I7: источник один;
@@ -358,7 +339,7 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
     }
   }
 
-  const elementContext: ElementMapContext = { linkSources, logicTargets, logicHidden };
+  const elementContext: ElementMapContext = { logicTargets, logicHidden };
 
   const nodes: CanvasNode[] = [];
   // Владелец элемента → id узла: нужен, чтобы ребро вышло из узла страницы,
@@ -390,15 +371,26 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
   // первый её подсценарий — «Первый уровень»; без Главной (D8) первый
   // уровень — корневые страницы (глубина 0).
   const levelOffset = graph.homePage ? 0 : 1;
-  collectSubScenarioNodes(
-    graph.subScenarios,
-    nodes,
-    elementOwnerNodeId,
-    positionOf,
-    depths,
-    levelOffset,
-    elementContext,
-  );
+  for (const scenario of walkSubScenarios(graph.subScenarios)) {
+    const depth = depths.get(scenario.id) ?? 0;
+    nodes.push({
+      id: scenario.id,
+      type: 'subScenario',
+      position: positionOf(scenario.id),
+      data: {
+        title: scenario.title,
+        orderIndex: scenario.orderIndex,
+        depth,
+        subtitle: navigationLevelLabel(depth + levelOffset || 1),
+        elements: scenario.elements.map((element) => elementToElementData(element, elementContext, false)),
+        steps: [],
+        formKindLabel: null,
+      },
+    });
+    for (const element of scenario.elements) {
+      elementOwnerNodeId.set(element.id, scenario.id);
+    }
+  }
 
   for (const form of graph.applicationForms) {
     // Уровни шагов формы; номер в подписи — номер занятой колонки (пустые
@@ -586,48 +578,6 @@ function shareFlow(next: FlowGraph, previous: FlowGraph): FlowGraph {
   return nodes === previous.nodes && edges === previous.edges ? previous : { nodes, edges };
 }
 
-function collectSubScenarioNodes(
-  subScenarios: ServiceGraph['subScenarios'],
-  nodes: CanvasNode[],
-  elementOwnerNodeId: Map<string, string>,
-  positionOf: (id: string) => XYPosition,
-  depths: ReadonlyMap<string, number>,
-  levelOffset: number,
-  elementContext: ElementMapContext,
-): void {
-  for (const scenario of subScenarios) {
-    const depth = depths.get(scenario.id) ?? 0;
-    nodes.push({
-      id: scenario.id,
-      type: 'subScenario',
-      position: positionOf(scenario.id),
-      data: {
-        title: scenario.title,
-        orderIndex: scenario.orderIndex,
-        depth,
-        subtitle: navigationLevelLabel(depth + levelOffset || 1),
-        elements: scenario.elements.map((element) => elementToElementData(element, elementContext, false)),
-        steps: [],
-        formKindLabel: null,
-      },
-    });
-    for (const element of scenario.elements) {
-      elementOwnerNodeId.set(element.id, scenario.id);
-    }
-    if (scenario.children) {
-      collectSubScenarioNodes(
-        scenario.children,
-        nodes,
-        elementOwnerNodeId,
-        positionOf,
-        depths,
-        levelOffset,
-        elementContext,
-      );
-    }
-  }
-}
-
 // Обратный маппинг связей: Connection react-flow (события onConnect /
 // onReconnect) → поля доменной связи для команд ConnectElements /
 // ReconnectElements (T-035). Id новой связи генерирует вызывающая сторона
@@ -651,5 +601,5 @@ export function flowConnectionToLink(
 export function flowNodesToLayerOrder(nodes: CanvasNode[]): PageEntityId[] {
   return [...nodes]
     .sort((left, right) => left.position.y - right.position.y)
-    .map((node) => node.id as PageEntityId);
+    .map((node) => toPageEntityId(node.id));
 }
