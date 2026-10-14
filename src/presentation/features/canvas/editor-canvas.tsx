@@ -1,4 +1,5 @@
 import {
+  memo,
   useCallback,
   useEffect,
   useRef,
@@ -20,6 +21,7 @@ import {
   getSmoothStepPath,
   useReactFlow,
   useStoreApi,
+  useUpdateNodeInternals,
   useViewport,
   type Connection,
   type EdgeChange,
@@ -43,7 +45,18 @@ import { LayerDropHighlight } from './layers/layer-drop-highlight';
 import { isActionTarget } from './canvas-events';
 import { EditorCanvasControls } from './editor-canvas-controls';
 import { canvasNodeTypes } from './nodes/node-types';
-import { EDGE_ARROW_MARKER_ID, type CanvasEdge, type CanvasNode } from './graph-flow-adapter';
+import {
+  EDGE_ARROW_MARKER_ID,
+  type CanvasEdge,
+  type CanvasNode,
+  type CanvasNodeData,
+} from './graph-flow-adapter';
+import {
+  CanvasInteractionProvider,
+  createCanvasInteractionStore,
+  type CanvasActions,
+  type CanvasInteractionStore,
+} from './canvas-interaction';
 
 /**
  * Маркер-стрелка рёбер (дизайн): «галочка» из двух отрезков с круглыми
@@ -121,6 +134,10 @@ export type EditorCanvasProps = {
   connecting?: boolean;
   /** Фактические размеры узлов после рендера — стек колонки по ним (N12). */
   onNodesMeasured?: (sizes: Record<string, { width: number; height: number }>) => void;
+  /** Выделение, цель связи, нарушения — стор взаимодействия (ревью A4, R2). */
+  interactionStore?: CanvasInteractionStore;
+  /** Действия узлов и карточек (ревью A4, R2). */
+  canvasActions?: CanvasActions;
 };
 
 // Стабильные пустые значения по умолчанию: литерал в дефолте параметра
@@ -162,15 +179,58 @@ function CanvasInner({
   const [miniMapVisible, setMiniMapVisible] = useState(false);
   const canvas = theme.editor.canvas;
 
+  // Измеренные react-flow размеры узлов (ревью P2/P4, R2): узел из
+  // пересчёта приходит без measured, и react-flow перемерял бы ВСЕ узлы
+  // (сброс handleBounds) — новые объекты узлов получают прошлый measured.
+  // Кэш по объекту узла: неизменённый узел остаётся тем же объектом.
+  const measuredRef = useRef(new Map<string, { width: number; height: number }>());
+  const mergedRef = useRef(new WeakMap<CanvasNode, CanvasNode>());
+  const withMeasured = useCallback((incoming: CanvasNode[]): CanvasNode[] => {
+    return incoming.map((node) => {
+      const measured = measuredRef.current.get(node.id);
+      if (!measured || node.measured) {
+        return node;
+      }
+      const cached = mergedRef.current.get(node);
+      if (cached && cached.measured === measured) {
+        return cached;
+      }
+      const merged = { ...node, measured };
+      mergedRef.current.set(node, merged);
+      return merged;
+    });
+  }, []);
+
   const [nodes, setNodes] = useState<CanvasNode[]>(propsNodes);
   const [edges, setEdges] = useState<CanvasEdge[]>(propsEdges);
   // Граф — источник правды: любой пересчёт из команды заменяет локальное
   // состояние целиком (позиции drag'а при этом либо зафиксированы командой,
   // либо отброшены).
-  useEffect(() => setNodes(propsNodes), [propsNodes]);
+  useEffect(() => setNodes(withMeasured(propsNodes)), [propsNodes, withMeasured]);
   useEffect(() => setEdges(propsEdges), [propsEdges]);
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
+
+  // Handles пересчитываются только у узлов с новыми данными (ревью P4, R2):
+  // их карточки могли сдвинуться при том же размере узла; остальные узлы
+  // сохраняют measured и handleBounds.
+  const updateNodeInternals = useUpdateNodeInternals();
+  const nodeDataRef = useRef(new Map<string, CanvasNodeData>());
+  useEffect(() => {
+    const changed: string[] = [];
+    const next = new Map<string, CanvasNodeData>();
+    for (const node of propsNodes) {
+      const previous = nodeDataRef.current.get(node.id);
+      if (previous !== undefined && previous !== node.data) {
+        changed.push(node.id);
+      }
+      next.set(node.id, node.data);
+    }
+    nodeDataRef.current = next;
+    if (changed.length > 0) {
+      updateNodeInternals(changed);
+    }
+  }, [propsNodes, updateNodeInternals]);
 
   // Центрирование на найденном узле (T-050). Задержка — узел мог только что
   // развернуться (reveal) и ещё не перемериться react-flow.
@@ -208,6 +268,7 @@ function CanvasInner({
       for (const change of changes) {
         if (change.type === 'dimensions' && change.dimensions) {
           sizes[change.id] = change.dimensions;
+          measuredRef.current.set(change.id, change.dimensions);
         }
       }
       if (Object.keys(sizes).length > 0) {
@@ -278,7 +339,7 @@ function CanvasInner({
       candidateDepthRef.current = null;
       // Возврат к раскладке: результат drag'а фиксирует команда, пересчитанные
       // узлы придут сверху; отклонённый drag не оставляет узел в брошенной позиции.
-      setNodes(propsNodes);
+      setNodes(withMeasured(propsNodes));
       if (candidateDepth !== null) {
         onMoveNodeToDepth?.(draggedNode.id, candidateDepth);
         return;
@@ -288,7 +349,7 @@ function CanvasInner({
       const layerNodes = nodesRef.current.filter((node) => node.data.depth === draggedNode.data.depth);
       onReorderNode?.(draggedNode, layerNodes);
     },
-    [onMoveNodeToDepth, onReorderNode, propsNodes],
+    [onMoveNodeToDepth, onReorderNode, propsNodes, withMeasured],
   );
 
   // Единое удаление проекта (F5): выделение + Delete/Backspace. Сначала шанс
@@ -384,6 +445,34 @@ function CanvasInner({
     [onSelectedNodeChange],
   );
 
+  // Обработчики react-flow стабильны (ревью P3, R2): новая функция в пропсе
+  // ReactFlow обновляет его стор, и все подписчики (тысячи handles стенда)
+  // перепроверяют селекторы.
+  const handleConnect = useCallback((connection: Connection) => onConnectLink?.(connection), [onConnectLink]);
+  const handleConnectStart: OnConnectStart = useCallback(
+    (_event, params) => onConnectionStart?.(params.handleId),
+    [onConnectionStart],
+  );
+  const handleConnectEnd = useCallback(() => onConnectionEnd?.(), [onConnectionEnd]);
+  const handleClickConnectEnd = useCallback(() => {
+    setClickLine(null);
+    onConnectionEnd?.();
+  }, [onConnectionEnd]);
+  const handleReconnect = useCallback(
+    (oldEdge: CanvasEdge, connection: Connection) => onReconnectLink?.(oldEdge, connection),
+    [onReconnectLink],
+  );
+  const handleEdgesDelete = useCallback((deleted: CanvasEdge[]) => onDeleteLinks?.(deleted), [onDeleteLinks]);
+  const handleNodesDelete = useCallback((deleted: CanvasNode[]) => onDeleteNodes?.(deleted), [onDeleteNodes]);
+  const handleEdgeClick = useCallback(() => onClearSelection?.(), [onClearSelection]);
+  const handlePaneClick = useCallback(() => {
+    if (pointerDownOnNodeRef.current) {
+      return; // click «унаследован» от нажатия на узле — не клик по полотну
+    }
+    cancelClickConnection();
+    onClearSelection?.();
+  }, [cancelClickConnection, onClearSelection]);
+
   return (
     <div
       className={connecting ? `${styles.root} editor-connecting` : styles.root}
@@ -411,31 +500,22 @@ function CanvasInner({
         nodeTypes={canvasNodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={(connection) => onConnectLink?.(connection)}
-        onConnectStart={(_event, params) => onConnectionStart?.(params.handleId)}
-        onConnectEnd={() => onConnectionEnd?.()}
+        onConnect={handleConnect}
+        onConnectStart={handleConnectStart}
+        onConnectEnd={handleConnectEnd}
         onClickConnectStart={handleClickConnectStart}
-        onClickConnectEnd={() => {
-          setClickLine(null);
-          onConnectionEnd?.();
-        }}
+        onClickConnectEnd={handleClickConnectEnd}
         // Линия протягивания — того же вида, что рёбра между блоками
         // (smoothstep, стиль .react-flow__connection-path), повторная приёмка, 4.
         connectionLineType={ConnectionLineType.SmoothStep}
-        onReconnect={(oldEdge, connection) => onReconnectLink?.(oldEdge, connection)}
-        onEdgesDelete={(deleted) => onDeleteLinks?.(deleted)}
-        onNodesDelete={(deleted) => onDeleteNodes?.(deleted)}
+        onReconnect={handleReconnect}
+        onEdgesDelete={handleEdgesDelete}
+        onNodesDelete={handleNodesDelete}
         onNodeDrag={handleNodeDrag}
         onNodeDragStop={handleNodeDragStop}
         // Клик по связи выделяет только её (выделение рёбер — у react-flow).
-        onEdgeClick={() => onClearSelection?.()}
-        onPaneClick={() => {
-          if (pointerDownOnNodeRef.current) {
-            return; // click «унаследован» от нажатия на узле — не клик по полотну
-          }
-          cancelClickConnection();
-          onClearSelection?.();
-        }}
+        onEdgeClick={handleEdgeClick}
+        onPaneClick={handlePaneClick}
         isValidConnection={isValidConnection}
         // Рёбра всегда над блоками, в том числе выделенными (N8): react-flow
         // по умолчанию поднимает выделенный узел на z-index 1000 — выше слоя
@@ -513,10 +593,30 @@ function DropZoneHighlight({ zone }: { zone: { x: number; width: number } }) {
   return <LayerDropHighlight left={zone.x * zoom + viewportX} width={zone.width * zoom} />;
 }
 
-export function EditorCanvas(props: EditorCanvasProps) {
+// Без внешнего стора (изолированный рендер канваса) — свой пустой.
+const STANDALONE_STORE = createCanvasInteractionStore();
+const NO_ACTIONS: CanvasActions = {
+  selectElement: () => undefined,
+  toggleComplexLogic: () => undefined,
+  removeNode: () => undefined,
+  addElementToStep: () => undefined,
+  removeStep: () => undefined,
+  addFormStep: () => undefined,
+  moveElement: () => undefined,
+  elementKindOptions: [],
+};
+
+// memo: выделение элемента меняет состояние страницы, но не пропсы
+// канваса — канвас и react-flow не перерисовываются (ревью P3, R2).
+export const EditorCanvas = memo(function EditorCanvas(props: EditorCanvasProps) {
   return (
     <ReactFlowProvider>
-      <CanvasInner {...props} />
+      <CanvasInteractionProvider
+        store={props.interactionStore ?? STANDALONE_STORE}
+        actions={props.canvasActions ?? NO_ACTIONS}
+      >
+        <CanvasInner {...props} />
+      </CanvasInteractionProvider>
     </ReactFlowProvider>
   );
-}
+});

@@ -8,7 +8,6 @@ import { toElementId, type ElementId, type PageEntityId } from '@domain/model/id
 import { computeGraphDepths } from '@domain/graph-depths';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { evaluateVisibility } from '@domain/logic-visibility';
-import type { DropAnchorPosition, ElementDragPayload } from './element-dnd';
 
 // Адаптер graph ↔ flow (Epic 002, T-030) — граница domain ↔ react-flow
 // (архитектурный принцип 4 декомпозиции): домен не знает о react-flow,
@@ -97,15 +96,6 @@ export type CanvasElementData = {
    * (L3). Бейдж на карточке — демонстрация семантики до появления /preview.
    */
   hiddenByLogic?: boolean;
-  /** Карточка выделена (клик) — чёрная рамка, Delete удаляет элемент (T-034). */
-  selected?: boolean;
-  /**
-   * Элемент — допустимая цель протягиваемой связи (правило логики):
-   * принимает связь target-handle во всю сущность. Вне протягивания принимающих handles нет.
-   */
-  connectTarget?: boolean;
-  /** Нарушения инвариантов, указывающие на элемент (T-043; внедряется хранилищем). */
-  violations?: readonly string[];
   /**
    * Карточка может быть целью правил «Сложной логики» — target-handle на
    * левом краю. Только элементы шагов форм (источник — Select того же шага,
@@ -115,10 +105,8 @@ export type CanvasElementData = {
   logicTarget: boolean;
   /** Класс элемента для dnd: допустимые зоны приёма зависят от вида (N2). */
   dndKind: 'listItem' | 'widgetCard' | 'formComponent';
-  /** Клик по карточке — выделение элемента (внедряется хранилищем). */
-  onSelect?: () => void;
-  /** Чип «Сложная логика» — переключатель режима (внедряется хранилищем, T-066). */
-  onToggleComplexLogic?: () => void;
+  // Выделение, цель связи, нарушения и обработчики — не в data (ревью A4,
+  // R2): карточка читает их из canvas-interaction (стор + контекст действий).
 };
 
 // Колонка шага внутри узла формы (D1: шаги — горизонтальные колонки).
@@ -127,8 +115,6 @@ export type CanvasFormStepData = {
   /** Заголовок шага; пустой — компонент подставит «Шаг N». */
   title: string;
   elements: CanvasElementData[];
-  /** Шаг выделен (S10): тулбар добавляет элемент в него. Внедряется useEditorGraph. */
-  selected?: boolean;
 };
 
 // Данные узла для рендера карточек (T-031) и порядка в слое (T-036).
@@ -147,42 +133,9 @@ export type CanvasNodeData = {
   steps: CanvasFormStepData[];
   /** Чип типа формы («Одностраничная»/«Степперная»); у не-форм — null. */
   formKindLabel: string | null;
-  // --- Интерактивные поля (T-034): НЕ строятся адаптером (он чистый),
-  // внедряются хранилищем состояния (useEditorGraph) после graphToFlow. ---
-  /** Корзина в заголовке узла → RemoveHomePage/RemoveScenario/RemoveForm. */
-  onDeleteNode?: () => void;
-  /**
-   * Поиск (T-050): элемент, который надо показать, — сжатый узел (T-033)
-   * разворачивается. nonce различает повторные запросы того же элемента.
-   */
-  reveal?: { elementId: string; nonce: number };
-  /** Блок — допустимая цель протягиваемой навигационной связи (target-handle во весь блок). */
-  connectTarget?: boolean;
-  /** Нарушения инвариантов узла и его элементов (T-043) — рамка + тултип. */
-  violations?: readonly string[];
-  /** Варианты меню «+» шага формы (kind + человекочитаемая подпись) — все виды элементов. */
-  elementKindOptions?: ReadonlyArray<{ kind: CanvasElementKind; label: string }>;
-  /** «+» конкретного шага формы → AddElement в этот шаг. */
-  onAddElementToStep?: (stepId: string, kind: CanvasElementKind) => void;
-  /** Корзина шага формы → RemoveFormStep. */
-  onDeleteStep?: (stepId: string) => void;
-  /**
-   * «+» шага формы на узле (N3) → AddFormStep: новая пустая колонка шага
-   * в конец формы. Только у узлов-форм.
-   */
-  onAddStep?: () => void;
-  /**
-   * Dnd карточек элементов (N2): drop в списке узла или колонке шага.
-   * targetStepId — шаг-цель у форм; null — общий список узла страницы.
-   * Якорь (карточка + сторона) даёт позицию вставки; null — в конец.
-   * layerDepth — колонка внутри шага-приёмника (layers/); undefined — не меняется.
-   */
-  onDropElement?: (
-    targetStepId: string | null,
-    dragged: ElementDragPayload,
-    anchor: DropAnchorPosition | null,
-    layerDepth?: number,
-  ) => void;
+  // Интерактивное (обработчики T-034, выделение, цель связи, нарушения,
+  // reveal поиска) — НЕ в data: data содержит только данные графа и
+  // сохраняет идентичность между пересчётами (ревью A4/P1, R2).
 };
 
 export type CanvasNode = Node<CanvasNodeData, CanvasNodeType>;
@@ -342,10 +295,21 @@ function formComponentToElementData(
 // computeLayout (T-036) и передаёт параметром positions; без него узлы
 // встают в (0, 0). Глубины для подписей уровня и drag-группировки
 // вычисляются здесь же (computeGraphDepths — чистая доменная функция).
+//
+// previous — результат прошлого вызова (ревью P1, R2): неизменённые узлы,
+// их data, карточки элементов и рёбра сохраняют идентичность объектов, а
+// смена позиции не пересоздаёт data. Так react-flow и memo-компоненты
+// перерисовывают только то, что действительно изменилось.
 export function graphToFlow(
   graph: ServiceGraph,
   positions?: Readonly<Record<string, XYPosition>>,
+  previous?: FlowGraph,
 ): FlowGraph {
+  const next = buildFlow(graph, positions);
+  return previous ? shareFlow(next, previous) : next;
+}
+
+function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPosition>>): FlowGraph {
   const positionOf = (id: string): XYPosition => positions?.[id] ?? { x: 0, y: 0 };
   const depths = computeGraphDepths(graph);
   // Источники связей — для флага hasOutgoingLink (сжатие T-033 не прячет
@@ -504,6 +468,62 @@ export function graphToFlow(
   }
 
   return { nodes, edges };
+}
+
+// Структурное разделение: значение, равное прошлому по содержимому,
+// заменяется прошлым объектом (вложенные — рекурсивно). Элементы массивов
+// с полем id сопоставляются по id — вставка в начало списка не «сдвигает»
+// идентичность остальных карточек.
+function share<T>(next: T, prev: unknown): T {
+  if (Object.is(next, prev) || typeof next !== 'object' || next === null) {
+    return next;
+  }
+  if (typeof prev !== 'object' || prev === null) {
+    return next;
+  }
+  if (Array.isArray(next)) {
+    if (!Array.isArray(prev)) {
+      return next;
+    }
+    const prevById = new Map<unknown, unknown>();
+    for (const item of prev as unknown[]) {
+      if (typeof item === 'object' && item !== null && 'id' in item) {
+        prevById.set(item.id, item);
+      }
+    }
+    let same = next.length === prev.length;
+    const result = next.map((item: unknown, index) => {
+      const candidate =
+        typeof item === 'object' && item !== null && 'id' in item ? prevById.get(item.id) : prev[index];
+      const shared = share(item, candidate);
+      if (shared !== prev[index]) {
+        same = false;
+      }
+      return shared;
+    });
+    return (same ? prev : result) as T;
+  }
+  if (Array.isArray(prev)) {
+    return next;
+  }
+  const prevRecord = prev as Record<string, unknown>;
+  const keys = Object.keys(next);
+  let same = keys.length === Object.keys(prevRecord).length;
+  const result: Record<string, unknown> = {};
+  for (const key of keys) {
+    const shared = share((next as Record<string, unknown>)[key], prevRecord[key]);
+    result[key] = shared;
+    if (shared !== prevRecord[key]) {
+      same = false;
+    }
+  }
+  return (same ? prev : result) as T;
+}
+
+function shareFlow(next: FlowGraph, previous: FlowGraph): FlowGraph {
+  const nodes = share(next.nodes, previous.nodes);
+  const edges = share(next.edges, previous.edges);
+  return nodes === previous.nodes && edges === previous.edges ? previous : { nodes, edges };
 }
 
 function collectSubScenarioNodes(

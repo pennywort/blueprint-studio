@@ -1,6 +1,6 @@
-import { useRef } from 'react';
+import { memo, useRef } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Box, Card, CardContent, Chip, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Card, CardContent, Chip, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import { ShowChart, Visibility } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { logicAnchorHandleId, logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
@@ -8,6 +8,7 @@ import { FORM_STEP_LAYOUT } from '../canvas-layout';
 import { writeElementDrag } from '../element-dnd';
 import { isActionTarget } from '../canvas-events';
 import { ViolationBadge } from './violation-badge';
+import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
@@ -88,8 +89,19 @@ export type ElementCardProps = {
 // начинается от элемента, не от узла. Target-handle правил видимости — на
 // левом краю (T-037), только у компонентов форм (logicTarget, N5). Карточка
 // draggable — dnd элементов (N2): перенос между узлами/шагами и порядок.
-export function ElementCard({ element }: ElementCardProps) {
+// memo + подписка по селектору (ревью P3, R2): выделение другой карточки
+// перерисовывает только две карточки — прежнюю и новую выделенную.
+// Обёртки в узлах и карточках — div с классами makeStyles, не Box: Box
+// MUI v4 вставляет свой <style> на каждый экземпляр (7 тыс. тегов и ~10 с
+// загрузки стенда, R2).
+export const ElementCard = memo(function ElementCard({ element }: ElementCardProps) {
   const classes = useStyles();
+  const actions = useCanvasActions();
+  const selected = useCanvasInteraction((state) => state.selectedElementId === element.id);
+  const connectTarget = useCanvasInteraction(
+    (state) => state.connectionTargets?.elements.has(element.id) ?? false,
+  );
+  const violations = useCanvasInteraction((state) => state.violations.elements.get(element.id));
   // Нажатие пришлось на коннектор/кнопку: нативный dnd карточки (N2) не
   // начинается — иначе браузер забирал жест протягивания связи у source-handle
   // и линия «залипала» после отмены dnd (повторная приёмка, 5.2).
@@ -105,8 +117,8 @@ export function ElementCard({ element }: ElementCardProps) {
       className={[
         classes.card,
         'nodrag',
-        element.violations ? classes.cardInvalid : '',
-        element.selected ? classes.cardSelected : '',
+        violations ? classes.cardInvalid : '',
+        selected ? classes.cardSelected : '',
       ].join(' ')}
       variant="outlined"
       data-testid={`element-card-${element.id}`}
@@ -128,8 +140,7 @@ export function ElementCard({ element }: ElementCardProps) {
       onPointerDown={(event) => {
         pressOnActionRef.current = isActionTarget(event.target);
         if (!pressOnActionRef.current) {
-          const select = element.onSelect;
-          setTimeout(() => select?.(), 0);
+          setTimeout(() => actions?.selectElement(element.id), 0);
         }
       }}
       onClick={(event) => event.stopPropagation()}
@@ -143,7 +154,7 @@ export function ElementCard({ element }: ElementCardProps) {
           type="target"
           position={Position.Left}
           id={logicTargetHandleId(element.id)}
-          className={element.connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
+          className={connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
         />
       ) : null}
       {/* Якорь входа рёбер правил [owner 2026-10-13]: на высоте варианта-
@@ -169,19 +180,19 @@ export function ElementCard({ element }: ElementCardProps) {
         />
       ) : null}
       <CardContent className={classes.content}>
-        <Box className={classes.iconWrap}>
+        <div className={classes.iconWrap}>
           {/* Иконки элементов платформы придут с пакетом element-schemas;
               пока — единый плейсхолдер из дизайн-системы. */}
           <ShowChart fontSize="small" />
-        </Box>
-        <Box className={classes.texts}>
+        </div>
+        <div className={classes.texts}>
           <Typography variant="body2">{element.title}</Typography>
           {element.secondaryText ? (
             <Typography variant="caption" color="textSecondary">
               {element.secondaryText}
             </Typography>
           ) : null}
-          <Box className={classes.chips}>
+          <div className={classes.chips}>
             <Chip size="small" color="secondary" label={element.kindLabel} />
             {element.complexLogic ? (
               <Chip
@@ -191,7 +202,7 @@ export function ElementCard({ element }: ElementCardProps) {
                 label="Сложная логика"
                 onClick={(event) => {
                   event.stopPropagation();
-                  element.onToggleComplexLogic?.();
+                  actions?.toggleComplexLogic(element.id);
                 }}
               />
             ) : null}
@@ -202,14 +213,14 @@ export function ElementCard({ element }: ElementCardProps) {
             ) : null}
             {/* Индикатор «элемент кому-то подчинён» (L-Q1): виден даже при
                 выключенной логике у источника. */}
-            {element.violations ? <ViolationBadge messages={element.violations} /> : null}
+            {violations ? <ViolationBadge messages={violations} /> : null}
             {element.hasIncomingLogic ? (
               <Visibility className={classes.dependencyIcon} fontSize="small" />
             ) : null}
-          </Box>
-        </Box>
+          </div>
+        </div>
       </CardContent>
       <Handle type="source" position={Position.Right} id={element.id} />
     </Card>
   );
-}
+});

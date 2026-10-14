@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
-import { Box, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { makeStyles } from '@blueprint-vendor/flamingo-core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { FORM_STEP_LAYOUT } from '../canvas-layout';
 import type { CanvasElementData } from '../graph-flow-adapter';
@@ -24,6 +24,7 @@ import { LayerDropHighlight } from '../layers/layer-drop-highlight';
 import { packLayerBands } from '../layers/layer-bands';
 import { ElementCard } from './element-card';
 import { OptionCard } from './option-card';
+import { useCanvasActions } from '../canvas-interaction';
 
 const L = FORM_STEP_LAYOUT;
 /** Шаг сетки колонок шага: колонка + зазор. */
@@ -106,6 +107,7 @@ export type FormStepLayersProps = {
 // шага/формы — перенос в колонку-кандидат.
 export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps) {
   const classes = useStyles();
+  const actions = useCanvasActions();
   const layersRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   // Жест закончился вне шага или отменён (Esc) — dragleave мог не дойти:
@@ -236,32 +238,32 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
   const anchor = drag?.anchor ?? null;
   const indicator = (elementId: string, placement: 'before' | 'after') =>
     anchor?.elementId === elementId && anchor.placement === placement ? (
-      <Box className={classes.dropIndicator} data-testid="drop-indicator" />
+      <div className={classes.dropIndicator} data-testid="drop-indicator" />
     ) : null;
 
   const renderTree = (element: CanvasElementData): ReactNode => (
-    <Box key={element.id} className={classes.tree}>
-      <Box className={classes.cell} data-layer-depth={element.layerDepth ?? 0}>
+    <div key={element.id} className={classes.tree}>
+      <div className={classes.cell} data-layer-depth={element.layerDepth ?? 0}>
         {indicator(element.id, 'before')}
         <ElementCard element={element} />
         {indicator(element.id, 'after')}
-      </Box>
+      </div>
       {element.complexLogic?.enabled
         ? element.complexLogic.options.map((option) => {
             const dependents = children.get(option.handleId) ?? [];
             return (
-              <Box key={option.handleId} className={classes.optionRow}>
-                <Box className={classes.cell}>
-                  <OptionCard option={option} onSelect={element.onSelect} />
-                </Box>
+              <div key={option.handleId} className={classes.optionRow}>
+                <div className={classes.cell}>
+                  <OptionCard option={option} onSelect={() => actions?.selectElement(element.id)} />
+                </div>
                 {dependents.length > 0 ? (
-                  <Box className={classes.subtrees}>{dependents.map(renderTree)}</Box>
+                  <div className={classes.subtrees}>{dependents.map(renderTree)}</div>
                 ) : null}
-              </Box>
+              </div>
             );
           })
         : null}
-    </Box>
+    </div>
   );
 
   return (
@@ -297,7 +299,7 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
         />
       ) : null}
       {rows.map((row) => (
-        <Box key={row[0]!.item.id} className={classes.row}>
+        <div key={row[0]!.item.id} className={classes.row}>
           {row.map((band, index) => {
             const previous = row[index - 1];
             // Отступ до колонки start: от левого края ряда или от предыдущей полосы.
@@ -305,16 +307,16 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
               ? (band.start - previous.end - 1) * COLUMN_PITCH + L.columnGap
               : band.start * COLUMN_PITCH;
             return (
-              <Box
+              <div
                 key={band.item.id}
                 className={classes.band}
                 style={{ marginLeft, width: (band.end - band.start) * COLUMN_PITCH + L.elementWidth }}
               >
                 {renderTree(band.item)}
-              </Box>
+              </div>
             );
           })}
-        </Box>
+        </div>
       ))}
     </div>
   );

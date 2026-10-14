@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Connection } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { CanvasElement, CanvasElementKind } from '@domain/model/canvas-element';
@@ -69,9 +69,11 @@ import {
   type CanvasEdge,
   type CanvasNode,
   type CanvasNodeType,
+  type FlowGraph,
 } from './graph-flow-adapter';
 import { NEW_FORM_TITLE, NEW_SCENARIO_TITLE, createDefaultElement } from './default-elements';
 import { mapViolationsToCanvas } from './violation-markers';
+import { createCanvasInteractionStore, type CanvasActions } from './canvas-interaction';
 import { connectableTargets, type ConnectableTargets, type ConnectionSource } from '@domain/connection-rules';
 
 // Варианты меню «+» шага формы: все виды элементов (List item, Widget card,
@@ -165,28 +167,58 @@ export function useEditorGraph() {
   // Фактические размеры узлов от react-flow (N12): стек колонки строится по
   // ним, чтобы зазор между узлами был ровно rowGap. Обновляется только при
   // реальном изменении (> 1px) — иначе пересчёт раскладки зациклился бы.
+  // Измерения копятся за кадр и применяются одним проходом раскладки
+  // (ревью P2, R2): react-flow присылает размеры пачками, и каждая пачка
+  // раньше давала полную раскладку (44 раскладки на загрузке стенда).
   const [measuredSizes, setMeasuredSizes] = useState<MeasuredNodeSizes>({});
+  const pendingSizesRef = useRef<Record<string, { width: number; height: number }>>({});
+  const sizesFrameRef = useRef<number | null>(null);
   const reportNodeSizes = useCallback((sizes: MeasuredNodeSizes) => {
-    setMeasuredSizes((current) => {
-      let changed = false;
-      const next = { ...current };
-      for (const [id, size] of Object.entries(sizes)) {
-        const previous = current[id];
-        if (
-          !previous ||
-          Math.abs(previous.width - size.width) > 1 ||
-          Math.abs(previous.height - size.height) > 1
-        ) {
-          next[id] = size;
-          changed = true;
+    Object.assign(pendingSizesRef.current, sizes);
+    if (sizesFrameRef.current !== null) {
+      return;
+    }
+    sizesFrameRef.current = requestAnimationFrame(() => {
+      sizesFrameRef.current = null;
+      const pending = pendingSizesRef.current;
+      pendingSizesRef.current = {};
+      setMeasuredSizes((current) => {
+        let changed = false;
+        const next = { ...current };
+        for (const [id, size] of Object.entries(pending)) {
+          const previous = current[id];
+          if (
+            !previous ||
+            Math.abs(previous.width - size.width) > 1 ||
+            Math.abs(previous.height - size.height) > 1
+          ) {
+            next[id] = size;
+            changed = true;
+          }
         }
-      }
-      return changed ? next : current;
+        return changed ? next : current;
+      });
     });
   }, []);
+  useEffect(
+    () => () => {
+      if (sizesFrameRef.current !== null) {
+        cancelAnimationFrame(sizesFrameRef.current);
+      }
+    },
+    [],
+  );
 
   const positions = useMemo(() => computeLayout(graph, measuredSizes), [graph, measuredSizes]);
-  const flow = useMemo(() => graphToFlow(graph, positions), [graph, positions]);
+  // Структурное разделение (ревью P1, R2): прошлый результат передаётся в
+  // адаптер — неизменённые узлы, data, карточки и рёбра сохраняют
+  // идентичность, смена позиции не пересоздаёт data.
+  const previousFlowRef = useRef<FlowGraph | undefined>(undefined);
+  const flow = useMemo(() => {
+    const next = graphToFlow(graph, positions, previousFlowRef.current);
+    previousFlowRef.current = next;
+    return next;
+  }, [graph, positions]);
   // Поиск по канвасу (T-050): узлы и элементы по вхождению подстроки без
   // учёта регистра; выбор результата = выделение + центрирование вьюпорта
   // (focus) + раскрытие сжатого узла (reveal в data узла).
@@ -575,9 +607,12 @@ export function useEditorGraph() {
 
   // «+» конкретного шага формы → элемент выбранного вида на этот шаг.
   const addElementToStep = useCallback(
-    (formId: ApplicationFormId, stepId: FormStepId, kind: CanvasElementKind) => {
+    (formId: string, stepId: string, kind: CanvasElementKind) => {
       runCommand(
-        new AddElement({ kind: 'formStep', formId, stepId }, createDefaultElement(kind, idGenerator.next())),
+        new AddElement(
+          { kind: 'formStep', formId: formId as ApplicationFormId, stepId: stepId as FormStepId },
+          createDefaultElement(kind, idGenerator.next()),
+        ),
       );
     },
     [idGenerator, runCommand],
@@ -587,30 +622,32 @@ export function useEditorGraph() {
   // (RemoveHomePage/RemoveScenario/RemoveForm). Если удалённый узел был
   // выделен — выделение сбрасывается.
   const removeNode = useCallback(
-    (node: CanvasNode) => {
-      if (node.type === 'home') {
+    (nodeId: string, nodeType: CanvasNodeType) => {
+      if (nodeType === 'home') {
         runCommand(new RemoveHomePage());
-      } else if (node.type === 'form') {
-        runCommand(new RemoveForm(node.id as ApplicationFormId));
+      } else if (nodeType === 'form') {
+        runCommand(new RemoveForm(nodeId as ApplicationFormId));
       } else {
-        runCommand(new RemoveScenario(node.id as ScenarioId));
+        runCommand(new RemoveScenario(nodeId as ScenarioId));
       }
-      setSelectedNodeId((current) => (current === node.id ? null : current));
+      setSelectedNodeId((current) => (current === nodeId ? null : current));
     },
     [runCommand],
   );
 
   const removeStep = useCallback(
-    (formId: ApplicationFormId, stepId: FormStepId) => {
-      runCommand(new RemoveFormStep(formId, stepId));
+    (formId: string, stepId: string) => {
+      runCommand(new RemoveFormStep(formId as ApplicationFormId, stepId as FormStepId));
     },
     [runCommand],
   );
 
   // «+ Добавить шаг» на узле формы (N3): пустая колонка в конец формы.
   const addFormStep = useCallback(
-    (formId: ApplicationFormId) => {
-      runCommand(new AddFormStep(formId, { id: toFormStepId(idGenerator.next()), elements: [] }));
+    (formId: string) => {
+      runCommand(
+        new AddFormStep(formId as ApplicationFormId, { id: toFormStepId(idGenerator.next()), elements: [] }),
+      );
     },
     [idGenerator, runCommand],
   );
@@ -686,15 +723,11 @@ export function useEditorGraph() {
     [runCommand],
   );
 
-  // Интерактивные поля узлов (onDeleteNode, меню «+» шага и т.п.) адаптер
-  // не строит — он чистый; внедряем здесь, поверх graphToFlow. Карточкам
-  // элементов внедряются выделение (selected/onSelect — Delete удаляет
-  // выделенный элемент) и переключатель «Сложной логики» (T-037).
   // Признак «можно соединить» (повторная приёмка, ADR-14): пока тянется
-  // связь, допустимые цели — по доменному правилу connectableTargets —
-  // получают connectTarget — их target-handle (невидимый, во всю сущность)
-  // принимает drop/клик курсора; в покое
-  // принимающих handles нет. Тот же расчёт проверяет связь (isConnectionAllowed).
+  // связь, допустимые цели — по доменному правилу connectableTargets — их
+  // target-handle (невидимый, во всю сущность) принимает drop/клик курсора;
+  // в покое принимающих handles нет. Тот же расчёт проверяет связь
+  // (isConnectionAllowed).
   const [connectionTargets, setConnectionTargets] = useState<ConnectableTargets | null>(null);
   const startConnection = useCallback((handleId: string | null | undefined) => {
     const source = parseConnectionSource(handleId);
@@ -720,118 +753,70 @@ export function useEditorGraph() {
     return targets.pages.has(connection.target);
   }, []);
 
-  // Узлы для канваса: интерактивные поля (обработчики, мета) внедряются
-  // поверх чистого адаптера. Производительность выделения (повторная
-  // приёмка: «лаг» при перекликивании): узел пересоздаётся, только если
-  // изменилось ЕГО состояние (выделение, цель связи, поиск) — остальные
-  // объекты сохраняют идентичность, и react-flow их не перерисовывает.
-  const nodeCacheRef = useRef(new Map<string, { base: CanvasNode; key: string; result: CanvasNode }>());
-  const nodeHandlers = useMemo(
+  // Состояние взаимодействия — во внешний стор канваса, не в data узлов
+  // (ревью A4/P3, R2): узлы и карточки подписаны селектором и перерисовываются
+  // только при смене своего значения. Синхронизация до отрисовки кадра.
+  const [interactionStore] = useState(createCanvasInteractionStore);
+  const reveal = useMemo(
+    () =>
+      focus && focus.elementId !== null
+        ? { nodeId: focus.nodeId, elementId: focus.elementId, nonce: focus.nonce }
+        : null,
+    [focus],
+  );
+  useLayoutEffect(() => {
+    interactionStore.setState({
+      selectedNodeId,
+      selectedElementId,
+      selectedStepId,
+      connectionTargets,
+      violations: violationMarkers,
+      reveal,
+    });
+  }, [
+    interactionStore,
+    selectedNodeId,
+    selectedElementId,
+    selectedStepId,
+    connectionTargets,
+    violationMarkers,
+    reveal,
+  ]);
+
+  // Действия узлов и карточек — стабильный объект в контексте канваса
+  // (ревью A4): все обработчики стабильны, замыканий в data больше нет.
+  const canvasActions = useMemo<CanvasActions>(
     () => ({
+      selectElement,
+      toggleComplexLogic,
       removeNode,
       addElementToStep,
       removeStep,
       addFormStep,
       moveElement,
-      toggleComplexLogic,
-      selectElement,
+      elementKindOptions: ELEMENT_KIND_OPTIONS,
     }),
-    [removeNode, addElementToStep, removeStep, addFormStep, moveElement, toggleComplexLogic, selectElement],
+    [selectElement, toggleComplexLogic, removeNode, addElementToStep, removeStep, addFormStep, moveElement],
   );
-  const nodeHandlersRef = useRef(nodeHandlers);
+
+  // Выделение узла управляется отсюда (N6; взаимоисключение с элементом,
+  // F5): новый объект — только у выделенного узла, data общая.
   const nodes = useMemo<CanvasNode[]>(() => {
-    if (nodeHandlersRef.current !== nodeHandlers) {
-      nodeHandlersRef.current = nodeHandlers;
-      nodeCacheRef.current.clear();
+    const selectedId = selectedElementId === null ? selectedNodeId : null;
+    if (selectedId === null) {
+      return flow.nodes;
     }
-    const cache = nodeCacheRef.current;
-    const next = new Map<string, { base: CanvasNode; key: string; result: CanvasNode }>();
-    const result = flow.nodes.map((node) => {
-      const elementIds = [...node.data.elements, ...node.data.steps.flatMap((step) => step.elements)].map(
-        (element) => element.id,
-      );
-      const selected = selectedElementId === null && node.id === selectedNodeId;
-      const key = [
-        selected,
-        selected ? selectedStepId : '',
-        selectedElementId !== null && elementIds.includes(selectedElementId) ? selectedElementId : '',
-        focus?.nodeId === node.id ? focus.nonce : '',
-        connectionTargets?.pages.has(node.id) ?? false,
-        elementIds.filter((id) => connectionTargets?.elements.has(id)).join(','),
-      ].join('|');
-      const cached = cache.get(node.id);
-      if (cached && cached.base === node && cached.key === key) {
-        next.set(node.id, cached);
-        return cached.result;
-      }
-      const injectElement = (element: CanvasNode['data']['elements'][number]) => ({
-        ...element,
-        selected: element.id === selectedElementId,
-        connectTarget: connectionTargets?.elements.has(element.id) ?? false,
-        violations: violationMarkers.elements.get(element.id),
-        onSelect: () => nodeHandlers.selectElement(element.id),
-        ...(element.complexLogic
-          ? { onToggleComplexLogic: () => nodeHandlers.toggleComplexLogic(element.id) }
-          : null),
-      });
-      const built: CanvasNode = {
-        ...node,
-        // Выделение узла управляется отсюда (N6); взаимоисключение с элементом (F5).
-        selected,
-        data: {
-          ...node.data,
-          onDeleteNode: () => nodeHandlers.removeNode(node),
-          connectTarget: connectionTargets?.pages.has(node.id) ?? false,
-          violations: violationMarkers.nodes.get(node.id),
-          ...(focus?.nodeId === node.id && focus.elementId !== null
-            ? { reveal: { elementId: focus.elementId, nonce: focus.nonce } }
-            : null),
-          elements: node.data.elements.map(injectElement),
-          steps: node.data.steps.map((step) => ({
-            ...step,
-            selected: selected && step.id === selectedStepId,
-            elements: step.elements.map(injectElement),
-          })),
-          ...(node.type === 'form'
-            ? {
-                elementKindOptions: ELEMENT_KIND_OPTIONS,
-                onAddElementToStep: (stepId: string, kind: CanvasElementKind) =>
-                  nodeHandlers.addElementToStep(node.id as ApplicationFormId, stepId as FormStepId, kind),
-                onDeleteStep: (stepId: string) =>
-                  nodeHandlers.removeStep(node.id as ApplicationFormId, stepId as FormStepId),
-                onAddStep: () => nodeHandlers.addFormStep(node.id as ApplicationFormId),
-              }
-            : null),
-          onDropElement: (
-            targetStepId: string | null,
-            dragged: ElementDragPayload,
-            anchor: DropAnchorPosition | null,
-            layerDepth?: number,
-          ) => nodeHandlers.moveElement(node.id, node.type, targetStepId, dragged, anchor, layerDepth),
-        },
-      };
-      next.set(node.id, { base: node, key, result: built });
-      return built;
-    });
-    nodeCacheRef.current = next;
-    return result;
-  }, [
-    flow.nodes,
-    nodeHandlers,
-    selectedElementId,
-    selectedNodeId,
-    selectedStepId,
-    violationMarkers,
-    focus,
-    connectionTargets,
-  ]);
+    return flow.nodes.map((node) => (node.id === selectedId ? { ...node, selected: true } : node));
+  }, [flow.nodes, selectedNodeId, selectedElementId]);
 
   // Удаление выделенных узлов по Delete/Backspace: react-flow присылает их
   // в onNodesDelete, каждый уходит своей командой с каскадом связей (T-034).
   const removeNodes = useCallback(
     (deleted: CanvasNode[]) => {
       for (const node of deleted) {
-        removeNode(node);
+        if (node.type) {
+          removeNode(node.id, node.type);
+        }
       }
     },
     [removeNode],
@@ -856,6 +841,8 @@ export function useEditorGraph() {
   return {
     nodes,
     edges: flow.edges,
+    interactionStore,
+    canvasActions,
     hasNodes: nodes.length > 0,
     hasHome: graph.homePage !== undefined,
     selectedNodeType,

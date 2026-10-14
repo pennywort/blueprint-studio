@@ -1,5 +1,5 @@
 import { Handle, Position } from '@xyflow/react';
-import { Box, Card, Chip, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Card, Chip, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { isActionTarget } from '../canvas-events';
 import { FORM_STEP_LAYOUT } from '../canvas-layout';
@@ -54,10 +54,10 @@ export function OptionCard({ option, onSelect }: OptionCardProps) {
       onClick={(event) => event.stopPropagation()}
     >
       <Typography variant="body2">{option.label}</Typography>
-      <Box className={classes.chips}>
+      <div className={classes.chips}>
         <Chip size="small" color="secondary" label={option.value} />
         {option.isDefault ? <Chip size="small" label="Предвыбор" /> : null}
-      </Box>
+      </div>
       {/* Выход ребра — на высоте якоря цели (logicHandleTop), не по центру карточки. */}
       <Handle
         type="source"

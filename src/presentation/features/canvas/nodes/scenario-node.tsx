@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, type DragEvent } from 'react';
+import { memo, useCallback, useEffect, useState, type DragEvent } from 'react';
 import { Handle, Position, useConnection, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
-import { Box, Button, Card, IconButton, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Button, Card, IconButton, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import { Delete, ExpandLess, ExpandMore } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
@@ -9,6 +9,7 @@ import { collapseElements, isCollapsible } from '../collapse-elements';
 import type { CanvasNode } from '../graph-flow-adapter';
 import { anchorFromPoint, isDragLeavingZone, readElementDndKind, readElementDrag } from '../element-dnd';
 import { ElementCard } from './element-card';
+import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
@@ -75,17 +76,22 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
 
 // Узел страницы-сценария (T-031): «Главная» и «Подсценарий» — один компонент,
 // различаются данными (заголовок, подпись уровня навигации) из адаптера.
-// Корзина удаляет узел командой (T-034) — обработчик внедряется хранилищем
-// состояния через data.onDeleteNode. При избытке элементов (>6, Q-14) список
+// Корзина удаляет узел командой (T-034) — обработчик из контекста действий
+// канваса, выделение/цель связи/нарушения — подпиской на стор (ревью A4,
+// R2), не из data. При избытке элементов (>6, Q-14) список
 // автосжимается с кнопкой раскрытия (T-033).
 //
 // Dnd (N2): весь узел — зона приёма карточек своего вида (List item на
 // Главной и в подсценариях, Widget card только на Главной); позиция — по
 // якорю-карточке под курсором, без якоря — в конец списка.
-export function ScenarioNode({ id, data, type }: NodeProps<CanvasNode>) {
+function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
   const classes = useStyles();
+  const actions = useCanvasActions();
   // Подсветка цели связи: узел под курсором во время drag рёбер (D9/T-032).
   const isDropTarget = useConnection((connection) => connection.inProgress && connection.toNode?.id === id);
+  const connectTarget = useCanvasInteraction((state) => state.connectionTargets?.pages.has(id) ?? false);
+  const violations = useCanvasInteraction((state) => state.violations.nodes.get(id));
+  const reveal = useCanvasInteraction((state) => (state.reveal?.nodeId === id ? state.reveal : null));
 
   // Сжатие (T-033): состояние локальное в узле; при смене — пересчёт handles,
   // чтобы рёбра корректно позиционировались в обоих состояниях.
@@ -96,7 +102,6 @@ export function ScenarioNode({ id, data, type }: NodeProps<CanvasNode>) {
     updateNodeInternals(id);
   }, [id, updateNodeInternals]);
   // Поиск нашёл элемент в сжатом узле (T-050) — развернуть, иначе его не показать.
-  const reveal = data.reveal;
   useEffect(() => {
     if (reveal && data.elements.some((element) => element.id === reveal.elementId)) {
       setExpanded(true);
@@ -159,19 +164,19 @@ export function ScenarioNode({ id, data, type }: NodeProps<CanvasNode>) {
       setDndActive(false);
       setAnchor(null);
       const dragged = readElementDrag(event.dataTransfer);
-      if (!dragged || !acceptsKind(dragged.kind) || !data.onDropElement) {
+      if (!dragged || !acceptsKind(dragged.kind) || !actions || !type) {
         return;
       }
-      data.onDropElement(null, dragged, anchorFromPoint(event.currentTarget, event.clientY));
+      actions.moveElement(id, type, null, dragged, anchorFromPoint(event.currentTarget, event.clientY));
     },
-    [acceptsKind, data],
+    [acceptsKind, actions, id, type],
   );
 
   const visibleElements = collapseElements(data.elements, expanded);
 
   return (
     <Card
-      className={`${classes.card}${data.violations ? ` ${classes.invalid}` : ''}${isDropTarget ? ` ${classes.dropTarget}` : ''}${
+      className={`${classes.card}${violations ? ` ${classes.invalid}` : ''}${isDropTarget ? ` ${classes.dropTarget}` : ''}${
         dndActive ? ` ${classes.dndActive}` : ''
       }`}
       data-testid={`canvas-node-${id}`}
@@ -186,40 +191,40 @@ export function ScenarioNode({ id, data, type }: NodeProps<CanvasNode>) {
         <Handle
           type="target"
           position={Position.Left}
-          className={data.connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
+          className={connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
         />
       )}
-      <Box className={classes.header}>
-        <Box className={classes.titles}>
+      <div className={classes.header}>
+        <div className={classes.titles}>
           <Typography variant="subtitle1">{data.title}</Typography>
           <Typography variant="body2" color="textSecondary">
             {data.subtitle}
           </Typography>
-        </Box>
-        {data.violations ? <ViolationBadge messages={data.violations} inHeader /> : null}
+        </div>
+        {violations ? <ViolationBadge messages={violations} inHeader /> : null}
         <IconButton
           className={`${classes.deleteButton} nodrag`}
           size="small"
           aria-label="Удалить узел"
-          onClick={data.onDeleteNode}
+          onClick={() => type && actions?.removeNode(id, type)}
         >
           <Delete fontSize="small" />
         </IconButton>
-      </Box>
+      </div>
       {visibleElements.length > 0 ? (
-        <Box className={classes.elements}>
+        <div className={classes.elements}>
           {visibleElements.map((element) => (
-            <Box key={element.id}>
+            <div key={element.id}>
               {anchor?.elementId === element.id && anchor.placement === 'before' ? (
-                <Box className={classes.dropIndicator} data-testid="drop-indicator" />
+                <div className={classes.dropIndicator} data-testid="drop-indicator" />
               ) : null}
               <ElementCard element={element} />
               {anchor?.elementId === element.id && anchor.placement === 'after' ? (
-                <Box className={classes.dropIndicator} data-testid="drop-indicator" />
+                <div className={classes.dropIndicator} data-testid="drop-indicator" />
               ) : null}
-            </Box>
+            </div>
           ))}
-        </Box>
+        </div>
       ) : null}
       {isCollapsible(data.elements) ? (
         <Button
@@ -234,3 +239,11 @@ export function ScenarioNode({ id, data, type }: NodeProps<CanvasNode>) {
     </Card>
   );
 }
+
+// Перерисовка только при смене своих данных (data сохраняет идентичность,
+// ревью P1/P3, R2): позиция, выделение чужой карточки и прочие пропсы
+// react-flow на содержимое узла не влияют.
+export const ScenarioNode = memo(
+  ScenarioNodeView,
+  (previous, next) => previous.id === next.id && previous.type === next.type && previous.data === next.data,
+);

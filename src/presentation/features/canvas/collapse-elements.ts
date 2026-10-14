@@ -14,9 +14,10 @@ import type { CanvasElementData } from './graph-flow-adapter';
 export function collapseElements(
   elements: readonly CanvasElementData[],
   expanded: boolean,
-): CanvasElementData[] {
+): readonly CanvasElementData[] {
+  // Без сжатия — тот же массив: идентичность нужна memo-раскладке шага (R2).
   if (expanded || !isCollapsible(elements)) {
-    return [...elements];
+    return elements;
   }
   const head = elements.slice(0, COLLAPSED_VISIBLE_ELEMENTS);
   const linkedTail = elements.slice(COLLAPSED_VISIBLE_ELEMENTS).filter((element) => element.hasOutgoingLink);
