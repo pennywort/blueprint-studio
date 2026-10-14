@@ -71,7 +71,6 @@ import {
   type CanvasNodeType,
 } from './graph-flow-adapter';
 import { NEW_FORM_TITLE, NEW_SCENARIO_TITLE, createDefaultElement } from './default-elements';
-import { createSampleGraph } from './sample-graph';
 import { mapViolationsToCanvas } from './violation-markers';
 import { connectableTargets, type ConnectableTargets, type ConnectionSource } from '@domain/connection-rules';
 
@@ -108,7 +107,8 @@ export type SelectedElementInfo = {
 // в React state страницы редактора. Мутации — ТОЛЬКО через
 // commandBus.execute/undo/redo (конституция, железное правило 1); после каждой
 // команды узлы/рёбра пересчитываются: computeLayout(graph) → positions →
-// graphToFlow(graph, positions). Начальное значение — демо-граф (sample).
+// graphToFlow(graph, positions). Начальное значение — graphSeed из DI
+// (демо-граф или нагрузочный граф стенда stress-demo).
 // При появлении effector хук заменяется подпиской на стор, публичная
 // сигнатура сохраняется.
 export function useEditorGraph() {
@@ -118,7 +118,7 @@ export function useEditorGraph() {
   const idGenerator = container.cradle.idGenerator;
   const graphRepository = container.cradle.graphRepository;
 
-  const [graph, setGraph] = useState<ServiceGraph>(() => createSampleGraph());
+  const [graph, setGraph] = useState<ServiceGraph>(() => container.cradle.graphSeed());
   // Актуальный граф в ref: колбэки react-flow не должны зависеть от замыканий
   // на устаревший state, а мутации идут только через CommandBus.
   const graphRef = useRef(graph);

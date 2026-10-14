@@ -1,4 +1,5 @@
-import { asClass, createContainer, InjectionMode, type AwilixContainer } from 'awilix';
+import { asClass, asValue, createContainer, InjectionMode, type AwilixContainer } from 'awilix';
+import type { ServiceGraph } from '@domain/model/service-graph';
 import type { IElementSchemaProvider } from '@application/ports/element-schema-provider';
 import type { IIdGenerator } from '@application/ports/id-generator';
 import type { IClock } from '@application/ports/clock';
@@ -22,9 +23,17 @@ export interface Cradle {
   elementSchemaProvider: IElementSchemaProvider;
   commandBus: CommandBus;
   graphRepository: IGraphRepository;
+  // Начальный граф редактора, пока карты нет в хранилище (TEMPORARY, до
+  // списка проектов): демо-граф основного приложения или нагрузочный граф
+  // стенда stress-demo — выбирает точка входа.
+  graphSeed: () => ServiceGraph;
 }
 
-export function buildContainer(): AwilixContainer<Cradle> {
+export type ContainerOptions = {
+  graphSeed: () => ServiceGraph;
+};
+
+export function buildContainer(options: ContainerOptions): AwilixContainer<Cradle> {
   const container = createContainer<Cradle>({ injectionMode: InjectionMode.PROXY, strict: true });
 
   container.register({
@@ -38,6 +47,7 @@ export function buildContainer(): AwilixContainer<Cradle> {
       .singleton(),
     commandBus: asClass(CommandBus).singleton(),
     graphRepository: asClass(IndexedDbGraphRepository).singleton(),
+    graphSeed: asValue(options.graphSeed),
   });
 
   return container;

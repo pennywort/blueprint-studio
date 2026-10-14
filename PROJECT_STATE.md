@@ -23,7 +23,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 -->
 
 > **SCHEMA_VERSION:** 2
-> **UPDATED:** 2026-10-13
+> **UPDATED:** 2026-10-14
 > **CURRENT_EPIC:** 002 (Canvas, in-progress)
 
 ---
@@ -265,3 +265,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-10-13 | agent:claude | Доводка dnd элементов (option-card nodrag, расширение шага на время drag, старт drag невыделенной карточки, каскад N4 после ADR-15); S10 тулбар — в выделенный шаг; S8 RemoveForm чистит applicationFormId; T-041 панель атрибутов List item/Widget card на stub-схемах; T-042 отложена [owner]; KIMI.md — без «48 unit-тестов»
 - 2026-10-13 | Claude | Панель атрибутов: редакторы optionList/linkList (варианты Select, ссылки infoBlock)
 - 2026-10-13 | agent:claude | Инфраструктура агентов [owner]: общий AGENTS.md (CLAUDE.md/QWEN.md импортируют), KIMI.md в docs/archive, реестр TEMPORARY в docs/temporary-registry.md; сжатые команды verify/rules/ui, state:summary/state:section; субагенты .claude/agents (порт в .qwen/agents через agents:sync); хуки и deny в .claude/settings.json
+- 2026-10-14 | agent:claude | Ревью архитектуры/chips/производительности (docs/ревью-архитектуры-2026-10-13.md); стенд stress.html (src/stress-demo), начальный граф — graphSeed из DI
