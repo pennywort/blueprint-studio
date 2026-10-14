@@ -8,18 +8,30 @@ import {
 } from '../element-dnd';
 import { useNodeStyles } from './node-styles';
 
-type ElementDropZoneOptions<T> = {
+type DropZoneOptions<P, T> = {
+  /** Перетаскиваемое во время dragover; null — drag не этой зоны. */
+  dragged: (dataTransfer: DataTransfer) => P | null;
+  /** Payload на drop (из данных события). */
+  read: (dataTransfer: DataTransfer) => P | null;
   /** Решение зоны по жесту; null — drag здесь не принимается. */
-  locate: (event: DragEvent<HTMLElement>, dragged: ElementDragPayload) => T | null;
-  onDrop: (dragged: ElementDragPayload, state: T) => void;
+  locate: (event: DragEvent<HTMLElement>, dragged: P) => T | null;
+  onDrop: (dragged: P, state: T) => void;
   /** Не пускать dragover/drop к внешней зоне (шаг формы внутри узла). */
   isolate?: boolean;
 };
 
-// Зона приёма карточек элементов (N2, ревью A8, R4): общая для узла страницы
-// и колонок шага формы — подсветка во время drag, сброс по окончании жеста
-// и drop с решением, посчитанным в момент отпускания.
-export function useElementDropZone<T>({ locate, onDrop, isolate = false }: ElementDropZoneOptions<T>) {
+type ElementDropZoneOptions<T> = Omit<DropZoneOptions<ElementDragPayload, T>, 'dragged' | 'read'>;
+
+// Зона приёма карточек элементов (N2, ревью A8, R4): узел страницы и
+// колонки шага формы.
+export function useElementDropZone<T>(options: ElementDropZoneOptions<T>) {
+  return useDropZone({ ...options, dragged: draggedElement, read: readElementDrag });
+}
+
+// Зона приёма нативного dnd (ревью A8, R4): подсветка во время drag, сброс
+// по окончании жеста и drop с решением, посчитанным в момент отпускания.
+// Общая для карточек элементов и шагов формы (dnd шагов, [owner 2026-10-14]).
+export function useDropZone<P, T>({ dragged, read, locate, onDrop, isolate = false }: DropZoneOptions<P, T>) {
   const [state, setState] = useState<T | null>(null);
 
   // Жест закончился вне зоны или отменён (Esc) — dragleave мог не дойти:
@@ -40,8 +52,8 @@ export function useElementDropZone<T>({ locate, onDrop, isolate = false }: Eleme
 
   const onDragOver = useCallback(
     (event: DragEvent<HTMLElement>) => {
-      const dragged = draggedElement(event.dataTransfer);
-      const next = dragged ? locate(event, dragged) : null;
+      const current = dragged(event.dataTransfer);
+      const next = current ? locate(event, current) : null;
       if (next === null) {
         setState(null);
         return; // не preventDefault — курсор «нельзя», drop не случится
@@ -53,7 +65,7 @@ export function useElementDropZone<T>({ locate, onDrop, isolate = false }: Eleme
       event.dataTransfer.dropEffect = 'move';
       setState(next);
     },
-    [isolate, locate],
+    [dragged, isolate, locate],
   );
 
   const onDragLeave = useCallback((event: DragEvent<HTMLElement>) => {
@@ -65,19 +77,19 @@ export function useElementDropZone<T>({ locate, onDrop, isolate = false }: Eleme
 
   const handleDrop = useCallback(
     (event: DragEvent<HTMLElement>) => {
-      const dragged = readElementDrag(event.dataTransfer);
-      const decided = dragged ? locate(event, dragged) : null;
+      const payload = read(event.dataTransfer);
+      const decided = payload ? locate(event, payload) : null;
       setState(null);
-      if (!dragged || decided === null) {
+      if (!payload || decided === null) {
         return;
       }
       event.preventDefault();
       if (isolate) {
         event.stopPropagation();
       }
-      onDrop(dragged, decided);
+      onDrop(payload, decided);
     },
-    [isolate, locate, onDrop],
+    [isolate, locate, onDrop, read],
   );
 
   return { state, handlers: { onDragOver, onDragLeave, onDrop: handleDrop } };

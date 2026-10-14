@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { memo, useCallback, useMemo, useRef, useState, type DragEvent } from 'react';
 import { Handle, Position, useConnection, type NodeProps } from '@xyflow/react';
 import {
   Card,
@@ -15,15 +15,16 @@ import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
 import { CANVAS_LAYOUT } from '../canvas-layout';
 import { stepTargetHandleId, type CanvasFormStepData, type CanvasNode } from '../graph-flow-adapter';
-import { isDragLeavingZone, type DropAnchorPosition, type ElementDragPayload } from '../element-dnd';
+import { type DropAnchorPosition, type ElementDragPayload } from '../element-dnd';
 import {
+  draggedStep,
   effectiveStepAnchor,
-  isStepDragOfForm,
+  endStepDrag,
   readStepDrag,
-  readStepDragId,
   stepAnchorFromPoint,
   writeStepDrag,
   type StepAnchorPosition,
+  type StepDragPayload,
 } from '../step-dnd';
 import {
   buildLayerColumns,
@@ -37,6 +38,7 @@ import { LayerDropHighlight } from '../layers/layer-drop-highlight';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { FormStepLayers } from './form-step-layers';
 import { useNodeStyles } from './node-styles';
+import { useDropZone } from './use-element-drop-zone';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   // Карточка, рамки, заголовок и кнопки — общие стили узлов (ревью A8, R4).
@@ -189,91 +191,66 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
   // другая — перенос на уровень с подсветкой колонки (LayerDropHighlight).
   // Индикатор вставки — только там, где порядок изменится.
   const stepsRowRef = useRef<HTMLDivElement>(null);
-  const [stepDrop, setStepDrop] = useState<StepDropState | null>(null);
-  const stepDragActive = stepDrop !== null;
-  useEffect(() => {
-    if (!stepDragActive) {
-      return;
-    }
-    // Жест закончился вне ряда или отменён (Esc) — dragleave мог не дойти.
-    const reset = () => setStepDrop(null);
-    window.addEventListener('dragend', reset);
-    window.addEventListener('drop', reset);
-    return () => {
-      window.removeEventListener('dragend', reset);
-      window.removeEventListener('drop', reset);
-    };
-  }, [stepDragActive]);
   // Координаты — локальные координаты ряда: узел внутри zoom react-flow,
   // масштаб снимается по отношению экранной ширины к собственной.
-  const locateStepDrop = (event: DragEvent<HTMLElement>): StepDropState | null => {
-    const zone = stepsRowRef.current;
-    const draggedId = readStepDragId(event.dataTransfer.types);
-    if (!zone || !draggedId) {
-      return null;
-    }
-    const zoneRect = zone.getBoundingClientRect();
-    const scale = zone.offsetWidth > 0 ? zoneRect.width / zone.offsetWidth : 1;
-    const levelElements = Array.from(zone.querySelectorAll<HTMLElement>('[data-step-level]'));
-    const column = nearestLayerColumn(
-      buildLayerColumns(
-        levelElements.map((element) => {
-          const rect = element.getBoundingClientRect();
-          return {
-            depth: Number(element.dataset.stepLevel),
-            x: (rect.left - zoneRect.left) / scale,
-            width: rect.width / scale,
-          };
-        }),
-        FORM_STEPS_LAYER_POLICY,
-      ),
-      (event.clientX - zoneRect.left) / scale,
-    );
-    const own = data.steps.find((step) => step.id.toLowerCase() === draggedId);
-    const decision = resolveLayerDrop(own ? own.depth : null, column, true);
-    const level = column ? stepLevels.find((candidate) => candidate.depth === column.depth) : undefined;
-    const anchor = effectiveStepAnchor(
-      level?.steps.map((step) => step.id) ?? [],
-      draggedId,
-      stepAnchorFromPoint(
-        levelElements.find((element) => Number(element.dataset.stepLevel) === column?.depth) ?? null,
-        event.clientY,
-      ),
-    );
-    return { column, decision, anchor };
-  };
-  const handleStepDragOver = (event: DragEvent<HTMLElement>) => {
-    if (!isStepDragOfForm(event.dataTransfer.types, id)) {
-      return; // карточка элемента или шаг другой формы — не наша зона
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    event.dataTransfer.dropEffect = 'move';
-    setStepDrop(locateStepDrop(event));
-  };
-  const handleStepDragLeave = (event: DragEvent<HTMLElement>) => {
-    if (isDragLeavingZone(event.currentTarget, event.clientX, event.clientY)) {
-      setStepDrop(null);
-    }
-  };
-  const handleStepDrop = (event: DragEvent<HTMLElement>) => {
-    if (!isStepDragOfForm(event.dataTransfer.types, id)) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    const state = locateStepDrop(event);
-    const dragged = readStepDrag(event.dataTransfer);
-    setStepDrop(null);
-    if (!state || !dragged) {
-      return;
-    }
-    if (state.decision.kind === 'moveToLayer') {
-      actions?.moveStep(id, dragged.stepId, state.anchor, state.decision.depth);
-    } else if (state.anchor) {
-      actions?.moveStep(id, dragged.stepId, state.anchor);
-    }
-  };
+  // Шаг переносится только внутри своей формы — шаг другой формы зона не принимает.
+  const locateStepDrop = useCallback(
+    (event: DragEvent<HTMLElement>, dragged: StepDragPayload): StepDropState | null => {
+      const zone = stepsRowRef.current;
+      if (!zone || dragged.formId !== id) {
+        return null;
+      }
+      const draggedId = dragged.stepId;
+      const zoneRect = zone.getBoundingClientRect();
+      const scale = zone.offsetWidth > 0 ? zoneRect.width / zone.offsetWidth : 1;
+      const levelElements = Array.from(zone.querySelectorAll<HTMLElement>('[data-step-level]'));
+      const column = nearestLayerColumn(
+        buildLayerColumns(
+          levelElements.map((element) => {
+            const rect = element.getBoundingClientRect();
+            return {
+              depth: Number(element.dataset.stepLevel),
+              x: (rect.left - zoneRect.left) / scale,
+              width: rect.width / scale,
+            };
+          }),
+          FORM_STEPS_LAYER_POLICY,
+        ),
+        (event.clientX - zoneRect.left) / scale,
+      );
+      const own = data.steps.find((step) => step.id === draggedId);
+      const decision = resolveLayerDrop(own ? own.depth : null, column, true);
+      const level = column ? stepLevels.find((candidate) => candidate.depth === column.depth) : undefined;
+      const anchor = effectiveStepAnchor(
+        level?.steps.map((step) => step.id) ?? [],
+        draggedId,
+        stepAnchorFromPoint(
+          levelElements.find((element) => Number(element.dataset.stepLevel) === column?.depth) ?? null,
+          event.clientY,
+        ),
+      );
+      return { column, decision, anchor };
+    },
+    [data.steps, id, stepLevels],
+  );
+  const dropStep = useCallback(
+    (dragged: StepDragPayload, state: StepDropState) => {
+      if (state.decision.kind === 'moveToLayer') {
+        actions?.moveStep(id, dragged.stepId, state.anchor, state.decision.depth);
+      } else if (state.anchor) {
+        actions?.moveStep(id, dragged.stepId, state.anchor);
+      }
+    },
+    [actions, id],
+  );
+  // Зона приёма — общий хук dnd (ревью A8, R4); шаг — внутренняя зона узла.
+  const { state: stepDrop, handlers: stepDropHandlers } = useDropZone({
+    dragged: draggedStep,
+    read: readStepDrag,
+    locate: locateStepDrop,
+    onDrop: dropStep,
+    isolate: true,
+  });
   const dropAnchor = stepDrop?.anchor ?? null;
 
   return (
@@ -319,14 +296,7 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
           <Delete fontSize="small" />
         </IconButton>
       </div>
-      <div
-        ref={stepsRowRef}
-        className={classes.stepsRow}
-        data-testid="form-steps-row"
-        onDragOver={handleStepDragOver}
-        onDragLeave={handleStepDragLeave}
-        onDrop={handleStepDrop}
-      >
+      <div ref={stepsRowRef} className={classes.stepsRow} data-testid="form-steps-row" {...stepDropHandlers}>
         {stepDrop?.decision.kind === 'moveToLayer' && stepDrop.column ? (
           <LayerDropHighlight
             left={stepDrop.column.x}
@@ -459,6 +429,7 @@ const FormStepColumn = memo(function FormStepColumn({
             event.stopPropagation();
             writeStepDrag(event.dataTransfer, { formId, stepId: step.id });
           }}
+          onDragEnd={endStepDrag}
         >
           <Typography variant="subtitle2">{step.title}</Typography>
         </div>
