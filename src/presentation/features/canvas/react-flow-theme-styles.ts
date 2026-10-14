@@ -83,6 +83,21 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
         boxShadow: 'none',
         pointerEvents: 'none',
       },
+      // Точка входа шага формы [owner 2026-10-14]: в покое — видимый handle
+      // на левом краю шага (видно, что шаг соединяем; из него можно тянуть
+      // связь к элементу более раннего шага). Пока тянется связь и шаг —
+      // допустимая цель, handle снова накрывает шаг целиком (правило ниже).
+      '& .react-flow__handle.editor-target.editor-step-target:not(.editor-target-available)': {
+        top: '50%',
+        left: 0,
+        width: 12,
+        height: 12,
+        borderRadius: '50%',
+        transform: 'translate(-50%, -50%)',
+        backgroundColor: canvas.handle,
+        boxShadow: `0 1px 3px ${canvas.handleShadow}`,
+        pointerEvents: 'all',
+      },
       '& .react-flow__handle.editor-target.editor-target-available': {
         pointerEvents: 'all',
         // Над карточками элементов внутри блока.

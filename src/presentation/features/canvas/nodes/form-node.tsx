@@ -295,14 +295,18 @@ function FormStepColumn({
       data-testid={`form-step-${step.id}`}
       data-form-step-id={step.id}
     >
-      {/* Цель перехода между шагами [owner 2026-10-14]: невидимый handle во весь
-          шаг, принимает связь, только пока шаг — допустимая цель (шаг позже
-          источника в той же форме). */}
+      {/* Цель перехода между шагами [owner 2026-10-14]: в покое — видимая точка
+          на левом краю шага (из неё можно тянуть связь к элементу); пока шаг —
+          допустимая цель протягивания, handle накрывает шаг целиком. */}
       <Handle
         type="target"
         position={Position.Left}
         id={stepTargetHandleId(step.id)}
-        className={step.connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
+        className={
+          step.connectTarget
+            ? 'editor-target editor-step-target editor-target-available'
+            : 'editor-target editor-step-target'
+        }
       />
       <Box className={classes.stepHeader}>
         <Typography variant="subtitle2">{step.title || `Шаг ${index + 1}`}</Typography>
