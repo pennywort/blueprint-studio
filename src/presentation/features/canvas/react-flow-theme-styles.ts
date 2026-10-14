@@ -40,7 +40,9 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
       // выделения всех сущностей проекта. Рамка внутри блока (inset-тень):
       // размер не меняется ни на пиксель, рёбра входят в границу блока без
       // пересечения с рамкой [owner 2026-10-14]. Тень elevation Card сохраняется.
-      '& .react-flow__node.selected [data-testid^="canvas-node-"]': {
+      // Выделен шаг формы (S10) — рамка только у шага, не у формы: одна
+      // рамка на одно выделение (F5) [owner 2026-10-14].
+      '& .react-flow__node.selected [data-testid^="canvas-node-"]:not(:has([data-step-selected]))': {
         boxShadow: `${theme.shadows[1]}, inset 0 0 0 2px ${canvas.edge}`,
       },
       // Рёбра «Сложной логики» рисуются в общем стиле навигации (решение

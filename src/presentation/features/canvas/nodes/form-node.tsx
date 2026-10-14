@@ -308,6 +308,7 @@ const FormStepColumn = memo(function FormStepColumn({
       className={selected ? `${classes.stepColumn} ${classes.stepSelected}` : classes.stepColumn}
       data-testid={`form-step-${step.id}`}
       data-form-step-id={step.id}
+      data-step-selected={selected || undefined}
     >
       {/* Цель перехода между шагами [owner 2026-10-14]: невидимый handle во весь
           шаг, принимает связь, только пока шаг — допустимая цель (шаг позже
