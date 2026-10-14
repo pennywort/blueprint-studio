@@ -2,6 +2,7 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import type { PageLink } from '@domain/model/page-link';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { connectableTargets } from '@domain/connection-rules';
+import { moveByAnchor } from '@domain/ordered-move';
 import { preservePageDepths } from './depth-preservation';
 import { findOwnerPageId, findPageEntry, setPageLayerDepth, walkPages } from './graph-lookup';
 
@@ -80,10 +81,7 @@ export function placeLinkTargetIntoNextLayer(
   if (!lastInColumn || lastInColumn.orderIndex < target.orderIndex) {
     return; // цель единственная в колонке или уже стоит в её конце
   }
-  const from = pages.findIndex((page) => page.id === targetId);
-  const [moved] = pages.splice(from, 1);
-  const to = pages.findIndex((page) => page.id === lastInColumn.id) + 1;
-  pages.splice(to, 0, moved!);
+  moveByAnchor(pages, targetId, { id: lastInColumn.id, placement: 'after' });
   pages.forEach((page, index) => {
     page.orderIndex = index;
   });

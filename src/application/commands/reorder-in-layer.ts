@@ -1,6 +1,7 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { PageEntityId } from '@domain/model/ids';
 import { validateGraph } from '@domain/invariants';
+import { moveByAnchor } from '@domain/ordered-move';
 import type { Command } from './command';
 import { InvariantViolationError } from './errors';
 import { walkPages } from './graph-lookup';
@@ -35,17 +36,13 @@ export class ReorderInLayer implements Command {
 
   apply(draft: ServiceGraph): void {
     const pages = [...walkPages(draft)].sort((left, right) => left.orderIndex - right.orderIndex);
-    const from = pages.findIndex((page) => page.id === this.pageId);
-    if (from < 0) {
+    if (!pages.some((page) => page.id === this.pageId)) {
       throw new Error(`Страница не найдена: ${this.pageId}`);
     }
-
-    const [moved] = pages.splice(from, 1);
-    const anchorIndex = pages.findIndex((page) => page.id === this.anchor.pageId);
-    if (anchorIndex < 0) {
+    if (!pages.some((page) => page.id === this.anchor.pageId)) {
       throw new Error(`Страница-якорь не найдена: ${this.anchor.pageId}`);
     }
-    pages.splice(this.anchor.placement === 'before' ? anchorIndex : anchorIndex + 1, 0, moved!);
+    moveByAnchor(pages, this.pageId, { id: this.anchor.pageId, placement: this.anchor.placement });
     pages.forEach((page, index) => {
       page.orderIndex = index;
     });

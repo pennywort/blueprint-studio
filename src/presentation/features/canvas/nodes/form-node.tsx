@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useEffect, useState, type DragEvent } from 'react';
 import { Handle, Position, useConnection, type NodeProps } from '@xyflow/react';
 import {
   Card,
@@ -15,7 +15,16 @@ import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
 import { CANVAS_LAYOUT } from '../canvas-layout';
 import { stepTargetHandleId, type CanvasFormStepData, type CanvasNode } from '../graph-flow-adapter';
-import type { DropAnchorPosition, ElementDragPayload } from '../element-dnd';
+import { isDragLeavingZone, type DropAnchorPosition, type ElementDragPayload } from '../element-dnd';
+import {
+  effectiveStepAnchor,
+  isStepDragOfForm,
+  readStepDrag,
+  readStepDragId,
+  stepAnchorFromPoint,
+  writeStepDrag,
+  type StepAnchorPosition,
+} from '../step-dnd';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { FormStepLayers } from './form-step-layers';
 import { useNodeStyles } from './node-styles';
@@ -75,6 +84,29 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
       borderColor: theme.editor.canvas.nodeHoverBorder,
     },
   },
+  // Заголовок шага — ручка dnd шага [owner 2026-10-14].
+  stepGrip: {
+    flex: 1,
+    minWidth: 0,
+    cursor: 'grab',
+  },
+  // Индикатор вставки шага — вертикальная линия посередине зазора между
+  // шагами; абсолютный — раскладка формы при drag не меняется (как ADR-16).
+  stepDropIndicator: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 2,
+    borderRadius: 1,
+    backgroundColor: theme.editor.canvas.edge,
+    pointerEvents: 'none',
+  },
+  stepDropBefore: {
+    left: -theme.spacing(1) - 1,
+  },
+  stepDropAfter: {
+    right: -theme.spacing(1) - 1,
+  },
   stepHeader: {
     display: 'flex',
     alignItems: 'center',
@@ -119,6 +151,63 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
     [],
   );
 
+  // Dnd шагов внутри формы [owner 2026-10-14]: ряд шагов — зона приёма,
+  // якорь — шаг под курсором по горизонтали (как порядок страниц колонки,
+  // ReorderInLayer). Индикатор — только там, где порядок изменится.
+  const [stepDrop, setStepDrop] = useState<StepAnchorPosition | null>(null);
+  const stepDragActive = stepDrop !== null;
+  useEffect(() => {
+    if (!stepDragActive) {
+      return;
+    }
+    // Жест закончился вне ряда или отменён (Esc) — dragleave мог не дойти.
+    const reset = () => setStepDrop(null);
+    window.addEventListener('dragend', reset);
+    window.addEventListener('drop', reset);
+    return () => {
+      window.removeEventListener('dragend', reset);
+      window.removeEventListener('drop', reset);
+    };
+  }, [stepDragActive]);
+  const locateStepDrop = (event: DragEvent<HTMLElement>): StepAnchorPosition | null => {
+    const draggedId = readStepDragId(event.dataTransfer.types);
+    if (!draggedId) {
+      return null;
+    }
+    return effectiveStepAnchor(
+      data.steps.map((step) => step.id),
+      draggedId,
+      stepAnchorFromPoint(event.currentTarget, event.clientX),
+    );
+  };
+  const handleStepDragOver = (event: DragEvent<HTMLElement>) => {
+    if (!isStepDragOfForm(event.dataTransfer.types, id)) {
+      return; // карточка элемента или шаг другой формы — не наша зона
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'move';
+    setStepDrop(locateStepDrop(event));
+  };
+  const handleStepDragLeave = (event: DragEvent<HTMLElement>) => {
+    if (isDragLeavingZone(event.currentTarget, event.clientX, event.clientY)) {
+      setStepDrop(null);
+    }
+  };
+  const handleStepDrop = (event: DragEvent<HTMLElement>) => {
+    if (!isStepDragOfForm(event.dataTransfer.types, id)) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const anchor = locateStepDrop(event);
+    const dragged = readStepDrag(event.dataTransfer);
+    setStepDrop(null);
+    if (anchor && dragged) {
+      actions?.moveStep(id, dragged.stepId, anchor);
+    }
+  };
+
   return (
     <Card
       className={[
@@ -162,9 +251,22 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
           <Delete fontSize="small" />
         </IconButton>
       </div>
-      <div className={classes.stepsRow}>
+      <div
+        className={classes.stepsRow}
+        data-testid="form-steps-row"
+        onDragOver={handleStepDragOver}
+        onDragLeave={handleStepDragLeave}
+        onDrop={handleStepDrop}
+      >
         {data.steps.map((step, index) => (
-          <FormStepColumn key={step.id} formId={id} step={step} index={index} onOpenAddMenu={openAddMenu} />
+          <FormStepColumn
+            key={step.id}
+            formId={id}
+            step={step}
+            index={index}
+            dropPlacement={stepDrop?.stepId === step.id ? stepDrop.placement : null}
+            onOpenAddMenu={openAddMenu}
+          />
         ))}
         {/* «+ Добавить шаг» (N3): пустая колонка-ячейка в конец формы. */}
         <div
@@ -201,6 +303,8 @@ type FormStepColumnProps = {
   formId: string;
   step: CanvasFormStepData;
   index: number;
+  /** Индикатор вставки перетаскиваемого шага у этого шага (dnd шагов). */
+  dropPlacement: 'before' | 'after' | null;
   onOpenAddMenu: (anchor: HTMLElement, stepId: string) => void;
 };
 
@@ -211,6 +315,7 @@ const FormStepColumn = memo(function FormStepColumn({
   formId,
   step,
   index,
+  dropPlacement,
   onOpenAddMenu,
 }: FormStepColumnProps) {
   const nodeClasses = useNodeStyles();
@@ -245,8 +350,28 @@ const FormStepColumn = memo(function FormStepColumn({
         id={stepTargetHandleId(step.id)}
         className={connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
       />
+      {dropPlacement ? (
+        <div
+          className={`${classes.stepDropIndicator} ${
+            dropPlacement === 'before' ? classes.stepDropBefore : classes.stepDropAfter
+          }`}
+          data-testid="step-drop-indicator"
+        />
+      ) : null}
       <div className={classes.stepHeader}>
-        <Typography variant="subtitle2">{step.title || `Шаг ${index + 1}`}</Typography>
+        {/* Ручка dnd шага [owner 2026-10-14]: nodrag — нажатие не тащит узел
+            react-flow; кнопки шага — вне ручки, их нажатие dnd не начинает. */}
+        <div
+          className={`${classes.stepGrip} nodrag`}
+          data-testid={`form-step-grip-${step.id}`}
+          draggable
+          onDragStart={(event) => {
+            event.stopPropagation();
+            writeStepDrag(event.dataTransfer, { formId, stepId: step.id });
+          }}
+        >
+          <Typography variant="subtitle2">{step.title || `Шаг ${index + 1}`}</Typography>
+        </div>
         <div className={classes.stepActions}>
           <IconButton
             className={`${nodeClasses.iconButton} nodrag`}
