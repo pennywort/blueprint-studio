@@ -43,24 +43,24 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 <!-- status: installed | planned | removed
 Версии — ТОЛЬКО из package.json. planned = решение принято, пакет не установлен. -->
 
-| Слой            | Пакет                                                                 | Версия                 | Статус                                                                                                  |
-| --------------- | --------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------- |
-| Сборка          | @rsbuild/core + @rsbuild/plugin-react                                 | 2.2.0                  | installed                                                                                               |
-| Микрофронтенд   | Module Federation (Rsbuild MF plugin)                                 | —                      | planned [owner 2026-10-06]                                                                              |
-| Фреймворк       | react + react-dom                                                     | 19.3.0                 | installed                                                                                               |
-| Язык            | typescript (strict)                                                   | 5.7.3                  | installed                                                                                               |
-| UI-кит          | @blueprint-vendor/flamingo-components (core/icons/pickers/animations) | 4.9.17                 | TEMPORARY: недоступен, шимы `file:vendor/flamingo/*` поверх @material-ui/core 4.12.4 [owner 2026-10-09] |
-| Подмена UI-кита | @material-ui/core + @material-ui/icons                                | 4.12.4 / 4.11.3        | installed TEMPORARY — удаляются вместе с шимами (KIMI.md §4.1)                                          |
-| Состояние       | effector + patronum                                                   | —                      | planned                                                                                                 |
-| DI              | awilix                                                                | 13.0.5                 | installed, используется (container.ts)                                                                  |
-| Валидация       | zod                                                                   | 4.6.5                  | installed                                                                                               |
-| Патчи/undo      | immer                                                                 | 11.1.18                | installed                                                                                               |
-| Роутер          | react-router-dom (createHashRouter)                                   | 7.18.3                 | installed — под вопросом в микрофронте, см. §6                                                          |
-| Тесты           | vitest + @testing-library/react (+ @testing-library/dom, jsdom)       | 5.0.0 / 16.3.3         | installed                                                                                               |
-| Canvas          | @xyflow/react                                                         | 12.12.0                | installed [коммит b2dfd1e]                                                                              |
-| Workflow        | xstate                                                                | —                      | planned (Epic 004)                                                                                      |
-| Линтинг         | eslint (flat) + eslint-plugin-boundaries                              | 9.39.5 / 7.2.0         | installed                                                                                               |
-| Форматирование  | prettier + husky + commitlint + lint-staged                           | 3.9.6 / 9.1.7 / 21.2.2 | installed                                                                                               |
+| Слой            | Пакет                                                                 | Версия                           | Статус                                                                                                  |
+| --------------- | --------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Сборка          | @rsbuild/core + @rsbuild/plugin-react                                 | 2.2.0 / 2.1.1                    | installed                                                                                               |
+| Микрофронтенд   | Module Federation (Rsbuild MF plugin)                                 | —                                | planned [owner 2026-10-06]                                                                              |
+| Фреймворк       | react + react-dom                                                     | 19.3.0                           | installed                                                                                               |
+| Язык            | typescript (strict)                                                   | 5.7.3                            | installed                                                                                               |
+| UI-кит          | @blueprint-vendor/flamingo-components (core/icons/pickers/animations) | 4.9.17                           | TEMPORARY: недоступен, шимы `file:vendor/flamingo/*` поверх @material-ui/core 4.12.4 [owner 2026-10-09] |
+| Подмена UI-кита | @material-ui/core + @material-ui/icons                                | 4.12.4 / 4.11.3                  | installed TEMPORARY — удаляются вместе с шимами (KIMI.md §4.1)                                          |
+| Состояние       | effector + patronum                                                   | —                                | planned                                                                                                 |
+| DI              | awilix                                                                | 13.0.5                           | installed, используется (container.ts)                                                                  |
+| Валидация       | zod                                                                   | 4.6.5                            | installed                                                                                               |
+| Патчи/undo      | immer                                                                 | 11.1.18                          | installed                                                                                               |
+| Роутер          | react-router-dom (createHashRouter)                                   | 7.18.3                           | installed — под вопросом в микрофронте, см. §6                                                          |
+| Тесты           | vitest + @testing-library/react (+ @testing-library/dom, jsdom)       | 5.0.0 / 16.3.3 / 10.4.2 / 27.2.0 | installed                                                                                               |
+| Canvas          | @xyflow/react                                                         | 12.12.0                          | installed [коммит b2dfd1e]                                                                              |
+| Workflow        | xstate                                                                | —                                | planned (Epic 004)                                                                                      |
+| Линтинг         | eslint (flat) + eslint-plugin-boundaries                              | 9.39.5 / 7.2.0                   | installed                                                                                               |
+| Форматирование  | prettier + husky + commitlint + lint-staged                           | 3.9.6 / 9.1.7 / 21.2.2 / 16.2.6  | installed                                                                                               |
 
 ---
 
@@ -138,6 +138,9 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - [R1, ревью 2026-10-13] Единое правило навигационной связи: Connect/ReconnectElements проверяют цель по connectableTargets, цель встаёт на уровень источника + 1, каскад N4 — removeNonAdjacentLinks [коммит 8ca9bf9]
 - [R2, ревью 2026-10-13] Производительность канваса: структурное разделение graphToFlow, батч измерений за кадр, выделение/цель связи/нарушения — стор canvas-interaction + контекст действий, memo узлов/карточек, буфер ввода атрибутов 300 мс, Box → div в узлах; стенд: загрузка 36 с → 1.4 с, выделение 3.5 с → ~65 мс, команда ~4 с → <200 мс [коммит 54f70c0]
 - [R3, ревью 2026-10-13] use-editor-graph разрезан: editor-store, use-selection, use-connection, use-canvas-search, use-canvas-nodes; ReorderInLayer принимает якорь (соседняя страница + before/after), колонку нового узла считают AddScenario/AddForm
+- [эпик 002] Переходы между шагами формы [owner 2026-10-14]: сущность StepTransition (от элемента шага или варианта Select'а — на более поздний шаг той же формы, у источника один переход), AddStepTransition/RemoveStepTransition, инвариант и каскады [коммит 90b6fdc]
+- [эпик 002] Шаг-цель перехода встаёт сразу за шагом-источником (в конец группы его целей), переходы назад рвутся; dnd шагов за заголовок внутри формы (MoveFormStep); общая перестановка по якорю moveByAnchor для страниц и шагов [коммиты a5a1b14, 194aebc, 6ac3950]
+- [эпик 002] Выделение: рамка внутри сущности (inset), без изменения размера [owner 2026-10-14]; связь, блок и шаг не выделяются вместе [коммиты 65fc534, 2846939]
 
 ### 4.2 NOT DONE (пробелы)
 
@@ -271,3 +274,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-10-14 | agent:claude | Ревью архитектуры/chips/производительности (docs/ревью-архитектуры-2026-10-13.md); стенд stress.html (src/stress-demo), начальный граф — graphSeed из DI
 - 2026-10-14 | agent:claude | §4.1: R1 (правило связи) и R2 (производительность канваса)
 - 2026-10-14 | agent:claude | §4.1: R3 (разрез use-editor-graph)
+- 2026-10-14 | agent:claude | DONE: переходы между шагами, размещение шага-цели и dnd шагов, выделение; версии §2 из package.json
