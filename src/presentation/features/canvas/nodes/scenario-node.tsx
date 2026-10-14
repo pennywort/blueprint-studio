@@ -1,11 +1,10 @@
-import { memo, useCallback, useEffect, useState, type DragEvent } from 'react';
-import { Handle, Position, useConnection, useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
-import { Button, Card, IconButton, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
-import { Delete, ExpandLess, ExpandMore } from '@blueprint-vendor/flamingo-icons';
+import { memo, useCallback, type DragEvent } from 'react';
+import { Handle, Position, useConnection, type NodeProps } from '@xyflow/react';
+import { Card, IconButton, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Delete } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
 import { CANVAS_LAYOUT } from '../canvas-layout';
-import { collapseElements, isCollapsible } from '../collapse-elements';
 import type { CanvasNode } from '../graph-flow-adapter';
 import { anchorFromPoint, type DropAnchorPosition, type ElementDragPayload } from '../element-dnd';
 import { ElementCard } from './element-card';
@@ -33,8 +32,8 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
 // различаются данными (заголовок, подпись уровня навигации) из адаптера.
 // Корзина удаляет узел командой (T-034) — обработчик из контекста действий
 // канваса, выделение/цель связи/нарушения — подпиской на стор (ревью A4,
-// R2), не из data. При избытке элементов (>6, Q-14) список
-// автосжимается с кнопкой раскрытия (T-033).
+// R2), не из data. Список элементов показывается целиком: сжатие T-033
+// удалено [owner 2026-10-14].
 //
 // Dnd (N2): весь узел — зона приёма карточек любого вида (ADR-17); позиция
 // — по якорю-карточке под курсором, без якоря — в конец списка.
@@ -46,24 +45,6 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
   const isDropTarget = useConnection((connection) => connection.inProgress && connection.toNode?.id === id);
   const connectTarget = useCanvasInteraction((state) => state.connectionTargets?.pages.has(id) ?? false);
   const violations = useCanvasInteraction((state) => state.violations.nodes.get(id));
-  const reveal = useCanvasInteraction((state) => (state.reveal?.nodeId === id ? state.reveal : null));
-
-  // Сжатие (T-033): состояние локальное в узле; при смене — пересчёт handles,
-  // чтобы рёбра корректно позиционировались в обоих состояниях.
-  const [expanded, setExpanded] = useState(false);
-  const updateNodeInternals = useUpdateNodeInternals();
-  const toggleExpanded = useCallback(() => {
-    setExpanded((current) => !current);
-    updateNodeInternals(id);
-  }, [id, updateNodeInternals]);
-  // Поиск нашёл элемент в сжатом узле (T-050) — развернуть, иначе его не показать.
-  useEffect(() => {
-    if (reveal && data.elements.some((element) => element.id === reveal.elementId)) {
-      setExpanded(true);
-      updateNodeInternals(id);
-    }
-    // data.elements намеренно вне зависимостей: реагируем только на новый запрос поиска.
-  }, [reveal, id, updateNodeInternals]);
 
   // Зона приёма карточек: подсветка во время drag + линия-индикатор якоря.
   // Узел принимает элемент любого вида (ADR-17).
@@ -86,8 +67,6 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
     onDrop: dropElement,
   });
   const anchor = drop?.anchor ?? null;
-
-  const visibleElements = collapseElements(data.elements, expanded);
 
   return (
     <Card
@@ -128,9 +107,9 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
           <Delete fontSize="small" />
         </IconButton>
       </div>
-      {visibleElements.length > 0 ? (
+      {data.elements.length > 0 ? (
         <div className={classes.elements}>
-          {visibleElements.map((element) => (
+          {data.elements.map((element) => (
             <div key={element.id}>
               <DropIndicator anchor={anchor} elementId={element.id} placement="before" />
               <ElementCard element={element} />
@@ -138,16 +117,6 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
             </div>
           ))}
         </div>
-      ) : null}
-      {isCollapsible(data.elements) ? (
-        <Button
-          className={`${nodeClasses.expandButton} nodrag`}
-          size="small"
-          onClick={toggleExpanded}
-          endIcon={expanded ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
-        >
-          {expanded ? 'Свернуть' : `Показать все (${data.elements.length})`}
-        </Button>
       ) : null}
     </Card>
   );

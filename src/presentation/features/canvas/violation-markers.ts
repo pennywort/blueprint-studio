@@ -6,7 +6,7 @@ import { findFormElement } from '@application/commands/graph-lookup';
 // Подсветка нарушений инвариантов на канвасе (T-043): violation.path
 // (формат инвариантов домена) → id узла и, если путь указывает на элемент,
 // id карточки элемента. Сообщения элемента дублируются на его узел — узел
-// подсвечен, даже когда элемент скрыт сжатием (T-033).
+// подсвечен, даже когда сам элемент вне видимой области канваса.
 
 export type ViolationMarkers = {
   nodes: ReadonlyMap<string, readonly string[]>;

@@ -61,17 +61,6 @@ export const FORM_STEP_LAYOUT = {
   logicHandleTop: 36,
 } as const;
 
-// Автосжатие узла при избытке элементов (T-033; Q-14, решение владельца):
-// скролла внутри узла нет — при превышении порога список обрезается и
-// появляется кнопка раскрытия. Константы в одном месте; handles/рёбра
-// пересчитываются через updateNodeInternals при смене состояния.
-export const ELEMENTS_COLLAPSE_THRESHOLD = 6;
-// Сжатие временно выключено [owner 2026-10-13]: узлы и шаги показывают все
-// элементы, до уточнения с заказчиком. Механика T-033 остаётся — true вернёт её.
-export const ELEMENTS_COLLAPSE_ENABLED = false;
-/** Сколько первых элементов остаётся видимыми в сжатом состоянии. */
-export const COLLAPSED_VISIBLE_ELEMENTS = 3;
-
 // Оценка ширины/высоты узла по содержимому графа — нужна для стека колонки.
 function estimateScenarioNodeHeight(elementCount: number): number {
   const L = CANVAS_LAYOUT;
@@ -163,8 +152,8 @@ export type MeasuredNodeSizes = Readonly<Record<string, { width: number; height:
 // Y внутри колонки — стек по orderIndex (D13). Каждый несвязанный подграф
 // раскладывается от своего корня (глубина 0, D8) — подграфы встают в одну
 // колонку друг под другом, отдельного «островного» раскладщика нет.
-// measured — фактические размеры узлов (N12): оценка не учитывает сжатие
-// (T-033) и реальную высоту строк, из-за чего зазоры в колонке «плыли»;
+// measured — фактические размеры узлов (N12): оценка не учитывает реальную
+// высоту строк, из-за чего зазоры в колонке «плыли»;
 // оценка остаётся только для ещё не измеренных узлов (первый рендер).
 export function computeLayout(graph: ServiceGraph, measured?: MeasuredNodeSizes): Record<string, XYPosition> {
   const depths = computeGraphDepths(graph);

@@ -232,8 +232,8 @@ function CanvasInner({
     }
   }, [propsNodes, updateNodeInternals]);
 
-  // Центрирование на найденном узле (T-050). Задержка — узел мог только что
-  // развернуться (reveal) и ещё не перемериться react-flow.
+  // Центрирование на найденном узле (T-050). Задержка — react-flow мог ещё
+  // не перемерить узел после смены выделения.
   const { fitView, screenToFlowPosition } = useReactFlow();
   useEffect(() => {
     if (!focus) {

@@ -77,12 +77,6 @@ export type CanvasElementData = {
   /** Подпись чипа типа («List item», «Text field»…). */
   kindLabel: string;
   /**
-   * Из элемента исходит связь. В сжатом состоянии (T-033) такие карточки
-   * остаются видимыми: скрытая карточка унесла бы свой source-handle,
-   * и react-flow уронил бы ребро.
-   */
-  hasOutgoingLink: boolean;
-  /**
    * «Сложная логика» (T-037): поле присутствует у Select'а — потенциального
    * источника правил (L5). enabled — режим включён (варианты — источники
    * правил); options — строки option'ов для рендера с handle-id: в шаге
@@ -209,7 +203,6 @@ function navigationLevelLabel(level: number): string {
 // Контекст маппинга элементов: связи и правила графа; inStep — элемент
 // лежит в шаге формы (логика возможна только там, L-I5/ADR-14).
 type ElementMapContext = {
-  linkSources: ReadonlySet<string>;
   logicTargets: ReadonlySet<string>;
   logicHidden: ReadonlySet<string>;
 };
@@ -223,8 +216,8 @@ function elementToElementData(
 ): CanvasElementData {
   const data =
     element.kind === 'listItem' || element.kind === 'widgetCard'
-      ? listItemToElementData(element, context.linkSources)
-      : formComponentToElementData(element, context.linkSources, context.logicTargets, context.logicHidden);
+      ? listItemToElementData(element)
+      : formComponentToElementData(element, context.logicTargets, context.logicHidden);
   if (inStep) {
     data.logicTarget = true;
     data.hasIncomingLogic = context.logicTargets.has(element.id);
@@ -239,15 +232,11 @@ function elementToElementData(
   return data;
 }
 
-function listItemToElementData(
-  item: ListItem | WidgetCard,
-  linkSources: ReadonlySet<string>,
-): CanvasElementData {
+function listItemToElementData(item: ListItem | WidgetCard): CanvasElementData {
   const element: CanvasElementData = {
     id: item.id,
     title: item.title,
     kindLabel: item.kind === 'widgetCard' ? 'Widget card' : 'List item',
-    hasOutgoingLink: linkSources.has(item.id),
     logicTarget: false,
   };
   if (item.secondaryText) {
@@ -258,7 +247,6 @@ function listItemToElementData(
 
 function formComponentToElementData(
   component: FormComponent,
-  linkSources: ReadonlySet<string>,
   logicTargets: ReadonlySet<string>,
   logicHidden: ReadonlySet<string>,
 ): CanvasElementData {
@@ -266,7 +254,6 @@ function formComponentToElementData(
     id: component.id,
     title: 'label' in component ? component.label : component.kind,
     kindLabel: FORM_COMPONENT_KIND_LABELS[component.kind],
-    hasOutgoingLink: linkSources.has(component.id),
     hasIncomingLogic: logicTargets.has(component.id),
     hiddenByLogic: logicHidden.has(component.id),
     logicTarget: true,
@@ -320,9 +307,6 @@ export function graphToFlow(
 function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPosition>>): FlowGraph {
   const positionOf = (id: string): XYPosition => positions?.[id] ?? { x: 0, y: 0 };
   const depths = computeGraphDepths(graph);
-  // Источники связей — для флага hasOutgoingLink (сжатие T-033 не прячет
-  // карточки, от которых исходит ребро).
-  const linkSources = new Set<string>(graph.links.map((link) => link.sourceElementId));
   // Цели правил видимости — индикатор зависимости на карточке (T-037, L-Q1).
   const logicTargets = new Set<string>(graph.logicRules.map((rule) => rule.targetElementId));
   // Скрытые по умолчанию цели (L3): оценка при пустом состоянии формы —
@@ -344,7 +328,7 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
     }
   }
 
-  const elementContext: ElementMapContext = { linkSources, logicTargets, logicHidden };
+  const elementContext: ElementMapContext = { logicTargets, logicHidden };
 
   const nodes: CanvasNode[] = [];
   // Владелец элемента → id узла: нужен, чтобы ребро вышло из узла страницы,

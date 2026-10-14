@@ -52,8 +52,4 @@ export const useNodeStyles = makeStyles<EditorTheme>((theme) => ({
       backgroundColor: theme.editor.canvas.controlsHoverBackground,
     },
   },
-  expandButton: {
-    alignSelf: 'center',
-    textTransform: 'none',
-  },
 }));

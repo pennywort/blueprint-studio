@@ -93,7 +93,6 @@ export function useEditorGraph() {
     selectedElementId,
     selectedStepId,
     connectionTargets,
-    focus,
   });
   const searchCanvas = useCallback((query: string) => searchCanvasNodes(flowNodes, query), [flowNodes]);
 
