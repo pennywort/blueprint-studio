@@ -138,6 +138,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - [R1, ревью 2026-10-13] Единое правило навигационной связи: Connect/ReconnectElements проверяют цель по connectableTargets, цель встаёт на уровень источника + 1, каскад N4 — removeNonAdjacentLinks [коммит 8ca9bf9]
 - [R2, ревью 2026-10-13] Производительность канваса: структурное разделение graphToFlow, батч измерений за кадр, выделение/цель связи/нарушения — стор canvas-interaction + контекст действий, memo узлов/карточек, буфер ввода атрибутов 300 мс, Box → div в узлах; стенд: загрузка 36 с → 1.4 с, выделение 3.5 с → ~65 мс, команда ~4 с → <200 мс [коммит 54f70c0]
 - [R3, ревью 2026-10-13] use-editor-graph разрезан: editor-store, use-selection, use-connection, use-canvas-search, use-canvas-nodes; ReorderInLayer принимает якорь (соседняя страница + before/after), колонку нового узла считают AddScenario/AddForm
+- [R4, ревью 2026-10-13] Чистка долга: единый обход страниц domain/graph-walk (A5), PageEntry с дискриминатором и id только через to*Id (A6), без хвостов до ADR-17 в dnd, findFormElement (A7), общий useElementDropZone + node-styles (A8), модульный «текущий drag» вместо id в MIME (A9; запись в стор xyflow для отмены клик-связи оставлена — реестр подмен п.7), миграция legacy-формата в адаптер хранилища с schemaVersion (A11), CommandBus без повторного applyPatches (A12), сжатие T-033 удалено [owner 2026-10-14] (A13)
 
 ### 4.2 NOT DONE (пробелы)
 
@@ -271,3 +272,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-10-14 | agent:claude | Ревью архитектуры/chips/производительности (docs/ревью-архитектуры-2026-10-13.md); стенд stress.html (src/stress-demo), начальный граф — graphSeed из DI
 - 2026-10-14 | agent:claude | §4.1: R1 (правило связи) и R2 (производительность канваса)
 - 2026-10-14 | agent:claude | §4.1: R3 (разрез use-editor-graph)
+- 2026-10-14 | claude | R4: чистка долга после ревью (A5–A9, A11–A13)

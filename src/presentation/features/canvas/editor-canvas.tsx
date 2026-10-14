@@ -385,6 +385,9 @@ function CanvasInner({
   const [clickLine, setClickLine] = useState<{ from: XYPosition; to: XYPosition } | null>(null);
   const cancelClickConnection = useCallback(() => {
     if (clickLine) {
+      // Публичного API отмены клик-связи нет: cancelConnection режим не
+      // сбрасывает (ревью A9, R4) — решение владельца оставить запись в стор;
+      // реестр подмен, п.7 (проверять при обновлении react-flow).
       store.setState({ connectionClickStartHandle: null });
       setClickLine(null);
       onConnectionEnd?.();
