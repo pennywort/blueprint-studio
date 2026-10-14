@@ -6,8 +6,9 @@ import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
 import { preserveFormElementDepths, preservePageDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
+import { removeNonAdjacentLinks } from './layer-placement';
 import { resolveElementTarget, type CanvasElementTarget } from './add-element';
-import { findElementLocation, findElementOwnerPageId } from './graph-lookup';
+import { findElementLocation } from './graph-lookup';
 
 // Команда переноса элемента канваса (замечание приёмки N2): dnd карточек —
 // переупорядочивание внутри списка блока и перенос между блоками. Любой
@@ -97,19 +98,7 @@ export class MoveElement implements Command {
     // элемент пересчитывала уровень цели в смежный, связь оставалась, а затем
     // закрепление возвращало цель на прежний уровень (доводка dnd, ADR-17).
     preservePageDepths(draft, depthsBeforeRemoval);
-    const depths = computeGraphDepths(draft);
-    draft.links = draft.links.filter((link) => {
-      if (link.sourceElementId !== this.elementId) {
-        return true;
-      }
-      const sourcePageId = findElementOwnerPageId(draft, link.sourceElementId);
-      const sourceDepth = sourcePageId !== null ? depths.get(sourcePageId) : undefined;
-      const targetDepth = depths.get(link.targetId);
-      if (sourceDepth === undefined || targetDepth === undefined) {
-        return true; // битая ссылка — инварианты фиксируют, здесь не трогаем
-      }
-      return targetDepth === sourceDepth + 1;
-    });
+    removeNonAdjacentLinks(draft, (link) => link.sourceElementId === this.elementId);
 
     preservePageDepths(draft, depthsBeforeRemoval);
     preserveFormElementDepths(draft, elementDepthsBefore, new Set([this.elementId]));

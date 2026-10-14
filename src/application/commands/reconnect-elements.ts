@@ -4,18 +4,17 @@ import type { ElementId, PageLinkId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
-import { preservePageDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
 import { findElementLocation, isLinkTargetPresent } from './graph-lookup';
-import { placeLinkTargetIntoNextLayer } from './layer-placement';
+import { assertConnectableTarget, placeLinkTargetIntoNextLayer } from './layer-placement';
 
 // Команда переназначения связи на другой источник и/или цель (Epic 002,
 // T-035; reconnect разрешён в любой момент — D7/D13). Связь — стабильная
 // сущность: переназначение — обновление полей той же записи, id не меняется.
 //
-// Правило запрета перескока слоёв (D7, T-036) действует и при переназначении:
-// если связь сменила колонку цели, цель переносится в конец слоя «глубина
-// нового источника + 1» (placeLinkTargetIntoNextLayer).
+// Единое правило связи (R1, [owner 2026-10-14]) действует и при переназначении:
+// цель — из connectableTargets, затем встаёт на уровень «новый источник + 1»
+// (placeLinkTargetIntoNextLayer).
 export class ReconnectElements implements Command {
   readonly name = 'ReconnectElements';
 
@@ -50,9 +49,10 @@ export class ReconnectElements implements Command {
       link.targetId = this.patch.targetId;
     }
 
+    // Правило подсветки (R1): проверка на графе без самой переназначаемой связи.
+    const others = { ...draft, links: draft.links.filter((candidate) => candidate.id !== this.linkId) };
+    assertConnectableTarget(others, link.sourceElementId, link.targetId);
     placeLinkTargetIntoNextLayer(draft, link.sourceElementId, link.targetId, depthsBefore);
-
-    preservePageDepths(draft, depthsBefore, new Set([link.targetId]));
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

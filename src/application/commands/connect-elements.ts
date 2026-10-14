@@ -5,16 +5,16 @@ import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
 import { InvariantViolationError } from './errors';
 import { findElementLocation, isLinkTargetPresent } from './graph-lookup';
-import { placeLinkTargetIntoNextLayer } from './layer-placement';
+import { assertConnectableTarget, placeLinkTargetIntoNextLayer } from './layer-placement';
 
 // Команда создания связи на канвасе (Epic 002, T-035): ребро от элемента
 // страницы (source-handle на карточке, D9) к странице-цели — подсценарию
 // или форме заявки (D12). Готовая связь со стабильным id приходит в
 // конструктор (id — от IIdGenerator вызывающей стороны).
 //
-// Правило запрета перескока слоёв (D7, T-036): если связь сменила колонку
-// цели, цель переносится в конец слоя «глубина источника + 1»
-// (placeLinkTargetIntoNextLayer).
+// Единое правило связи (R1, [owner 2026-10-14]): цель — блок любой колонки
+// правее источника (connectableTargets); после связи цель встаёт на уровень
+// «источник + 1» (placeLinkTargetIntoNextLayer, каскад N4 — там же).
 export class ConnectElements implements Command {
   readonly name = 'ConnectElements';
 
@@ -35,6 +35,7 @@ export class ConnectElements implements Command {
     if (duplicate) {
       throw new Error('Связь между этими элементами уже существует');
     }
+    assertConnectableTarget(draft, this.link.sourceElementId, this.link.targetId);
 
     // Глубины до мутации — чтобы отличить перенос колонки от связи в тот же слой.
     const depthsBefore = computeGraphDepths(draft);
