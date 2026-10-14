@@ -2,6 +2,7 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import { CanvasElementSchema, type CanvasElement } from '@domain/model/canvas-element';
 import type { ElementId, FormComponentId } from '@domain/model/ids';
 import { validateGraph } from '@domain/invariants';
+import { validStepTransitions } from '@domain/step-transitions';
 import { computeFormElementDepths } from '@domain/step-element-depths';
 import type { Command } from './command';
 import { preserveFormElementDepths } from './depth-preservation';
@@ -61,6 +62,10 @@ export class UpdateElementProps implements Command {
     }
 
     preserveFormElementDepths(draft, elementDepthsBefore);
+
+    // Каскад переходов между шагами [owner 2026-10-14]: переходы, ставшие
+    // недопустимыми (удалён вариант Select'а), уходят вместе с причиной.
+    draft.stepTransitions = validStepTransitions(draft);
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

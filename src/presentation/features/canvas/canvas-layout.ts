@@ -106,7 +106,8 @@ function estimateStepHeight(step: FormStep, logicRules: ServiceGraph['logicRules
     }
     const inner = new Set(seen).add(id);
     let height = S.elementHeight;
-    if (component.kind === 'selectList' && component.hasComplexLogic) {
+    // Варианты Select'а в шаге — карточки всегда (переходы на шаги, [owner 2026-10-14]).
+    if (component.kind === 'selectList') {
       for (const option of component.options) {
         const children = dependents.get(`${id}:${option.value}`) ?? [];
         height += S.rowGap + Math.max(S.optionHeight, stack(children, inner));

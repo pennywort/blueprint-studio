@@ -57,6 +57,8 @@ ESLint flat + eslint-plugin-boundaries, Prettier, Husky, commitlint, lint-staged
   Внешние контракты — только за портами `application/ports`.
 - UI только из `@blueprint-vendor/*`; импорт `@material-ui/*` в `src` запрещён.
 - Цвета только из темы `src/presentation/theme/editor-theme.ts`; hex в компонентах запрещён.
+- Принимающие (target) handles в покое невидимы и не ловят мышь; появляются только во время
+  протягивания связи и только у допустимых целей (ADR-14). Постоянных target-точек не добавлять.
 - Комментарии в коде — по-русски, со ссылкой (T-xxx, D-x, ADR-xx, Nx).
 - Коммиты — conventional commits по-русски (commitlint проверит).
 - Нельзя ослаблять tsconfig/eslint ради зелёного lint.

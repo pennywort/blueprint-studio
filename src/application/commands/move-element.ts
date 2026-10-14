@@ -3,6 +3,7 @@ import type { ElementId, FormComponentId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { computeFormElementDepths } from '@domain/step-element-depths';
 import { validateGraph } from '@domain/invariants';
+import { validStepTransitions } from '@domain/step-transitions';
 import type { Command } from './command';
 import { preserveFormElementDepths, preservePageDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
@@ -102,6 +103,10 @@ export class MoveElement implements Command {
 
     preservePageDepths(draft, depthsBeforeRemoval);
     preserveFormElementDepths(draft, elementDepthsBefore, new Set([this.elementId]));
+
+    // Каскад переходов между шагами [owner 2026-10-14]: переходы, ставшие
+    // недопустимыми (элемент перенесён в другой шаг/блок), уходят вместе с причиной.
+    draft.stepTransitions = validStepTransitions(draft);
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

@@ -16,7 +16,7 @@ import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
 import { CANVAS_LAYOUT } from '../canvas-layout';
 import { collapseElements, isCollapsible } from '../collapse-elements';
-import type { CanvasFormStepData, CanvasNode } from '../graph-flow-adapter';
+import { stepTargetHandleId, type CanvasFormStepData, type CanvasNode } from '../graph-flow-adapter';
 import type { DropAnchorPosition, ElementDragPayload } from '../element-dnd';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { FormStepLayers } from './form-step-layers';
@@ -75,6 +75,8 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   // Шаг растёт вправо по колонкам своего слоя [owner 2026-10-13]; ширина
   // пустого шага — formStepWidth.
   stepColumn: {
+    // Target-handle перехода позиционируется относительно шага ([owner 2026-10-14]).
+    position: 'relative',
     minWidth: CANVAS_LAYOUT.formStepWidth,
     flexShrink: 0,
     borderRadius: 12,
@@ -291,6 +293,8 @@ const FormStepColumn = memo(function FormStepColumn({
     (state) =>
       state.selectedElementId === null && state.selectedNodeId === formId && state.selectedStepId === step.id,
   );
+  // Шаг — допустимая цель протягиваемого перехода [owner 2026-10-14].
+  const connectTarget = useCanvasInteraction((state) => state.connectionTargets?.steps.has(step.id) ?? false);
   const onDropElement = useCallback(
     (dragged: ElementDragPayload, anchor: DropAnchorPosition | null, layerDepth?: number) =>
       actions?.moveElement(formId, 'form', step.id, dragged, anchor, layerDepth),
@@ -305,6 +309,15 @@ const FormStepColumn = memo(function FormStepColumn({
       data-testid={`form-step-${step.id}`}
       data-form-step-id={step.id}
     >
+      {/* Цель перехода между шагами [owner 2026-10-14]: невидимый handle во весь
+          шаг, принимает связь, только пока шаг — допустимая цель (шаг позже
+          источника в той же форме). */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id={stepTargetHandleId(step.id)}
+        className={connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
+      />
       <div className={classes.stepHeader}>
         <Typography variant="subtitle2">{step.title || `Шаг ${index + 1}`}</Typography>
         <div className={classes.stepActions}>

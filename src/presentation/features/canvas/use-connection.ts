@@ -5,10 +5,13 @@ import {
   toElementId,
   toLogicRuleId,
   toOptionId,
+  toFormStepId,
   toPageLinkId,
+  toStepTransitionId,
   type ElementId,
   type LogicRuleId,
   type PageLinkId,
+  type StepTransitionId,
 } from '@domain/model/ids';
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
 import { connectableTargets, type ConnectableTargets, type ConnectionSource } from '@domain/connection-rules';
@@ -19,16 +22,20 @@ import { ReconnectElements } from '@application/commands/reconnect-elements';
 import { DisconnectElements } from '@application/commands/disconnect-elements';
 import { AddLogicRule } from '@application/commands/add-logic-rule';
 import { RemoveLogicRule } from '@application/commands/remove-logic-rule';
+import { AddStepTransition } from '@application/commands/add-step-transition';
+import { RemoveStepTransition } from '@application/commands/remove-step-transition';
 import {
   LOGIC_SOURCE_HANDLE_PREFIX,
   flowConnectionToLink,
   parseLogicSourceHandle,
   parseLogicTargetHandle,
+  parseStepTargetHandle,
   type CanvasEdge,
 } from './graph-flow-adapter';
 
-// Источник связи по id source-handle: option Select'а — правило логики,
-// иначе — навигационная связь от элемента (id handle = id элемента, D9).
+// Источник связи по id source-handle: option Select'а — правило логики или
+// переход на шаг [owner 2026-10-14], иначе — навигационная связь (или переход
+// на шаг) от элемента (id handle = id элемента, D9).
 function parseConnectionSource(handleId: string | null | undefined): ConnectionSource | null {
   if (!handleId) {
     return null;
@@ -55,6 +62,26 @@ export function useConnection(
   const connect = useCallback(
     (connection: Connection) => {
       const sourceHandle = connection.sourceHandle ?? '';
+      // Переход между шагами [owner 2026-10-14]: цель — handle шага;
+      // источник — элемент (handle = id элемента) или вариант Select'а.
+      const targetStepId = connection.targetHandle ? parseStepTargetHandle(connection.targetHandle) : null;
+      if (targetStepId !== null) {
+        const option = sourceHandle.startsWith(LOGIC_SOURCE_HANDLE_PREFIX)
+          ? parseLogicSourceHandle(sourceHandle)
+          : null;
+        if (!sourceHandle || (sourceHandle.startsWith(LOGIC_SOURCE_HANDLE_PREFIX) && !option)) {
+          return;
+        }
+        runCommand(
+          new AddStepTransition({
+            id: toStepTransitionId(idGenerator.next()),
+            sourceElementId: toElementId(option ? option.elementId : sourceHandle),
+            ...(option ? { optionId: toOptionId(option.optionId) } : null),
+            targetStepId: toFormStepId(targetStepId),
+          }),
+        );
+        return;
+      }
       if (sourceHandle.startsWith(LOGIC_SOURCE_HANDLE_PREFIX)) {
         const source = parseLogicSourceHandle(sourceHandle);
         const targetElementId = connection.targetHandle
@@ -94,7 +121,7 @@ export function useConnection(
   // reconnectable: false, здесь — защита от обхода).
   const reconnect = useCallback(
     (oldEdge: CanvasEdge, connection: Connection) => {
-      if (oldEdge.data?.kind === 'logic') {
+      if (oldEdge.data?.kind === 'logic' || oldEdge.data?.kind === 'stepTransition') {
         return;
       }
       const patch: { sourceElementId?: ElementId; targetId?: PageLinkTargetId } = {};
@@ -119,6 +146,8 @@ export function useConnection(
       for (const edge of edges) {
         if (edge.data?.kind === 'logic') {
           runCommand(new RemoveLogicRule(edge.id as LogicRuleId));
+        } else if (edge.data?.kind === 'stepTransition') {
+          runCommand(new RemoveStepTransition(edge.id as StepTransitionId));
         } else {
           runCommand(new DisconnectElements(toPageLinkId(edge.id as PageLinkId)));
         }
@@ -144,6 +173,11 @@ export function useConnection(
       return false;
     }
     const targets = connectableTargets(graphRef.current, source);
+    // Переход между шагами — в handle шага, от элемента или варианта [owner 2026-10-14].
+    const targetStepId = connection.targetHandle ? parseStepTargetHandle(connection.targetHandle) : null;
+    if (targetStepId !== null) {
+      return targets.steps.has(targetStepId);
+    }
     if (source.kind === 'logic') {
       const targetElementId = connection.targetHandle
         ? parseLogicTargetHandle(connection.targetHandle)

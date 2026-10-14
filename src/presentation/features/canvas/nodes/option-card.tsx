@@ -31,9 +31,10 @@ export type OptionCardProps = {
   onSelect?: () => void;
 };
 
-// Вариант Select'а со «Сложной логикой» — отдельная карточка под Select'ом
+// Вариант Select'а в шаге формы — отдельная карточка под Select'ом
 // в той же колонке шага [owner 2026-10-13; макеты «layouting …»]: из неё
-// тянется правило видимости (source-handle справа), цель встаёт напротив.
+// тянется правило видимости (при «Сложной логике»; цель встаёт напротив) или
+// переход на следующий шаг [owner 2026-10-14] — source-handle справа.
 // TEMPORARY: макет покажут заказчику — вид «оторванных» от Select'а вариантов
 // может измениться (PROJECT_STATE, ADR-16).
 export function OptionCard({ option, onSelect }: OptionCardProps) {

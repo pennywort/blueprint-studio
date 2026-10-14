@@ -5,6 +5,7 @@ import {
   toElementId,
   toFormComponentId,
   toFormStepId,
+  toStepTransitionId,
   toLogicRuleId,
   toOptionId,
   toPageId,
@@ -168,6 +169,18 @@ export function createSampleGraph(): ServiceGraph {
               },
             ],
           },
+          {
+            id: toFormStepId('demo-form-deposit-step-3'),
+            title: 'Подтверждение',
+            elements: [
+              {
+                id: toFormComponentId('demo-field-confirm'),
+                kind: 'checkbox',
+                label: 'Подтверждаю введённые данные',
+                required: true,
+              },
+            ],
+          },
         ],
       },
     ],
@@ -215,6 +228,21 @@ export function createSampleGraph(): ServiceGraph {
         sourceElementId: toElementId('demo-field-payout'),
         condition: { kind: 'optionSelected', optionId: toOptionId('monthly') },
         targetElementId: toElementId('demo-field-notify'),
+      },
+    ],
+    // Переходы между шагами [owner 2026-10-14]: «Сумма» → следующий шаг;
+    // вариант «В конце срока» — сразу на подтверждение, через шаг.
+    stepTransitions: [
+      {
+        id: toStepTransitionId('demo-transition-amount'),
+        sourceElementId: toElementId('demo-field-amount'),
+        targetStepId: toFormStepId('demo-form-deposit-step-2'),
+      },
+      {
+        id: toStepTransitionId('demo-transition-payout-end'),
+        sourceElementId: toElementId('demo-field-payout'),
+        optionId: toOptionId('end'),
+        targetStepId: toFormStepId('demo-form-deposit-step-3'),
       },
     ],
   });

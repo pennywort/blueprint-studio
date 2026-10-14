@@ -5,6 +5,7 @@ import { checkScenarioTypeFields } from './scenario-type-fields';
 import { checkRoutingExcludesDynamicContent } from './routing-excludes-dynamic-content';
 import { checkLogicRules } from './logic-rules';
 import { checkSingleRootLevel } from './single-root-level';
+import { checkStepTransitions } from './step-transitions';
 
 // Единая точка проверки доменных инвариантов (конституция, раздел 4).
 // Инварианты #6–8 вне этого оркестратора: #6 — workflow-FSM (эпик 004),
@@ -24,5 +25,6 @@ export function validateGraph(graph: ServiceGraph): InvariantViolation[] {
     ...checkRoutingExcludesDynamicContent(graph),
     ...checkLogicRules(graph),
     ...checkSingleRootLevel(graph),
+    ...checkStepTransitions(graph),
   ];
 }
