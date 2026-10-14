@@ -18,6 +18,7 @@ import { ELEMENT_KIND_LABELS } from '@presentation/features/canvas/graph-flow-ad
 import { getElementAttributeMeta, type AttributeMeta } from './element-attribute-meta';
 import { resolvePropertyEditor } from './property-editor-registry';
 import './builtin-property-editors';
+import { useBufferedProps } from './use-buffered-props';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   panel: {
@@ -53,8 +54,11 @@ export type AttributesPanelProps = {
   component: CanvasElement;
   /** Схема элемента из IElementSchemaProvider (ADR-07); null — схемы нет. */
   schema: ElementSchema | null;
-  /** Изменение любого поля → UpdateElementProps (undo/redo из коробки). */
-  onUpdateProps: (patch: ElementPropsPatch) => void;
+  /**
+   * Изменение полей → UpdateElementProps (undo/redo из коробки): через
+   * буфер панели — одна команда на паузу ввода/blur (R2).
+   */
+  onUpdateProps: (elementId: CanvasElement['id'], patch: ElementPropsPatch) => void;
   /** Только для selectList: свитч «Сложная логика» (T-067). */
   onToggleComplexLogic?: () => void;
   /** Правила видимости, где элемент — цель (T-067). */
@@ -79,6 +83,9 @@ export function AttributesPanel({
   onRemoveRule,
 }: AttributesPanelProps) {
   const classes = useStyles();
+  // Буфер ввода (R2): поля показывают черновик поверх значений графа.
+  const buffer = useBufferedProps<CanvasElement['id']>(component.id, onUpdateProps);
+  const view = (buffer.draft ? { ...component, ...buffer.draft } : component) as CanvasElement;
   const meta = getElementAttributeMeta(component.kind);
   const title = ELEMENT_KIND_LABELS[component.kind];
 
@@ -90,7 +97,7 @@ export function AttributesPanel({
       return false;
     }
     const rule = meta.attributes[attribute.key]?.visibleWhen;
-    return !rule || (component as unknown as Record<string, unknown>)[rule.key] === rule.equals;
+    return !rule || (view as unknown as Record<string, unknown>)[rule.key] === rule.equals;
   });
 
   // Группировка по секциям (мета D4): поля без секции — первыми, далее —
@@ -110,7 +117,7 @@ export function AttributesPanel({
   }
 
   return (
-    <Box className={classes.panel} data-testid="attributes-panel">
+    <Box className={classes.panel} data-testid="attributes-panel" onBlur={buffer.flush}>
       <Box>
         <Typography variant="h6">{title}</Typography>
         <Typography variant="body2" color="textSecondary">
@@ -140,7 +147,7 @@ export function AttributesPanel({
           ) : null}
           {group.keys.map((attribute) => {
             const attributeMeta: AttributeMeta = meta.attributes[attribute.key] ?? {};
-            const value = (component as unknown as Record<string, unknown>)[attribute.key];
+            const value = (view as unknown as Record<string, unknown>)[attribute.key];
             const label = attributeMeta.label ?? attribute.key;
             // Значение должно соответствовать типу атрибута: иначе (stub-
             // манифест ADR-07 шире/уже доменной модели) — read-only сводка,
@@ -165,7 +172,7 @@ export function AttributesPanel({
                   value={value}
                   required={attribute.required}
                   meta={{ label, ...attributeMeta }}
-                  onChange={(next) => onUpdateProps({ [attribute.key]: next } as ElementPropsPatch)}
+                  onChange={(next) => buffer.change({ [attribute.key]: next } as ElementPropsPatch)}
                 />
               </Box>
             ) : (
@@ -215,8 +222,8 @@ export function AttributesPanel({
           multiline
           rows={2}
           label="Комментарий для разработки"
-          value={component.comment ?? ''}
-          onChange={(event) => onUpdateProps({ comment: event.target.value })}
+          value={view.comment ?? ''}
+          onChange={(event) => buffer.change({ comment: event.target.value })}
         />
       </Box>
     </Box>

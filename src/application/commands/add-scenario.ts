@@ -3,7 +3,7 @@ import type { SubScenario } from '@domain/model/scenario';
 import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
 import { InvariantViolationError } from './errors';
-import { nextPageOrderIndex } from './graph-lookup';
+import { nextPageLayerDepth, nextPageOrderIndex } from './graph-lookup';
 
 // Команда добавления подсценария (Epic 002, T-035). Готовая сущность приходит
 // в конструктор (id генерирует вызывающая сторона через IIdGenerator);
@@ -15,7 +15,10 @@ export class AddScenario implements Command {
   constructor(private readonly scenario: Omit<SubScenario, 'orderIndex'>) {}
 
   apply(draft: ServiceGraph): void {
-    draft.subScenarios.push({ ...this.scenario, orderIndex: nextPageOrderIndex(draft) });
+    // Колонка нового узла — следующий уровень за самой глубокой страницей,
+    // если не задана явно (ревью A3, R3).
+    const layerDepth = this.scenario.layerDepth ?? nextPageLayerDepth(draft);
+    draft.subScenarios.push({ ...this.scenario, layerDepth, orderIndex: nextPageOrderIndex(draft) });
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

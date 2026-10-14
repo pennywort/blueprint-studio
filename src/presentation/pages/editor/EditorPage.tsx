@@ -89,6 +89,8 @@ function EditorPageLayout() {
           <EditorCanvas
             nodes={editorGraph.nodes}
             edges={editorGraph.edges}
+            interactionStore={editorGraph.interactionStore}
+            canvasActions={editorGraph.canvasActions}
             canUndo={editorGraph.canUndo}
             canRedo={editorGraph.canRedo}
             onUndo={editorGraph.undo}
@@ -146,7 +148,7 @@ function EditorPageLayout() {
               <AttributesPanel
                 component={selectedElement.component}
                 schema={schemaByKind.get(selectedElement.component.kind) ?? null}
-                onUpdateProps={(patch) => editorGraph.updateElementProps(selectedElement.component.id, patch)}
+                onUpdateProps={editorGraph.updateElementProps}
                 onToggleComplexLogic={
                   selectedElement.component.kind === 'selectList' && selectedElement.inFormStep
                     ? () => editorGraph.toggleComplexLogic(selectedElement.component.id)

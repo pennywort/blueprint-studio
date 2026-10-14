@@ -5,6 +5,7 @@ import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
 import { preservePageDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
+import { removeNonAdjacentLinks } from './layer-placement';
 import { findElementOwnerPageId, findPageById } from './graph-lookup';
 
 // Команда переноса страницы между уровнями навигации (перетаскивание узла
@@ -48,20 +49,10 @@ export class SetPageLayerDepth implements Command {
 
     // Каскад N4: глубины после переноса; связи страницы, у которых уровни
     // перестали быть смежными, рвутся.
-    const depths = computeGraphDepths(draft);
-    draft.links = draft.links.filter((link) => {
-      const sourcePageId = findElementOwnerPageId(draft, link.sourceElementId);
-      const touchesMovedPage = link.targetId === page.id || sourcePageId === page.id;
-      if (!touchesMovedPage) {
-        return true;
-      }
-      const sourceDepth = sourcePageId !== null ? depths.get(sourcePageId) : undefined;
-      const targetDepth = depths.get(link.targetId);
-      if (sourceDepth === undefined || targetDepth === undefined) {
-        return true; // битая ссылка — инварианты фиксируют, здесь не трогаем
-      }
-      return targetDepth === sourceDepth + 1;
-    });
+    removeNonAdjacentLinks(
+      draft,
+      (link) => link.targetId === page.id || findElementOwnerPageId(draft, link.sourceElementId) === page.id,
+    );
 
     preservePageDepths(draft, depthsBeforeRemoval, new Set([page.id]));
 

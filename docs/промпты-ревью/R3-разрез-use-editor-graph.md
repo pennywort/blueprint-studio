@@ -1,4 +1,4 @@
-# R3 — разрезать use-editor-graph.ts (после R2)
+# R3 — разрезать use-editor-graph.ts (после R2) — ✅ ВЫПОЛНЕНО 2026-10-14
 
 Контекст: `docs/ревью-архитектуры-2026-10-13.md` (A3). Файл ~890 строк делает всё:
 состояние графа, загрузку/сохранение, выделение, поиск, протягивание связей, маппинг
@@ -16,3 +16,9 @@
 
 Поведение не меняется. Проверка: `npm run verify`, `npm run rules`, `npm run ui`
 (добавление узлов, перестановка в колонке, выделение, поиск, undo/redo).
+
+Итог: `editor-store.ts` (граф, CommandBus, undo/redo, загрузка/сохранение), `use-selection.ts`,
+`use-connection.ts`, `use-canvas-search.ts`, `use-canvas-nodes.ts`; `use-editor-graph.ts` —
+композиция и маппинг событий в команды (890 → ~420 строк), интерфейс для `EditorPage` прежний.
+`ReorderInLayer` принимает якорь `{ pageId, placement }`; колонку нового узла считают
+`AddScenario`/`AddForm` (`nextPageLayerDepth` в graph-lookup), если `layerDepth` не задан.
