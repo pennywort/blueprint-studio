@@ -60,6 +60,19 @@ function ProjectList() {
             </Typography>
           </CardContent>
         </Card>
+        <Card
+          className={classes.card}
+          variant="outlined"
+          data-testid="project-card-stress"
+          onClick={() => navigate('/editor?project=stress')}
+        >
+          <CardContent>
+            <Typography variant="h6">Стенд производительности</Typography>
+            <Typography variant="body2" color="textSecondary">
+              Большой нагрузочный граф
+            </Typography>
+          </CardContent>
+        </Card>
         {STUB_TITLES.map((title) => (
           <Card className={classes.stub} variant="outlined" key={title} data-testid="project-card-stub">
             <CardContent>

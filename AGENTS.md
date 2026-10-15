@@ -82,9 +82,9 @@ ESLint flat + eslint-plugin-boundaries, Prettier, Husky, commitlint, lint-staged
 Полные логи — в `.agent-logs/*.log`; читай только нужный фрагмент (поиск по
 файлу/строке), не целиком.
 
-Стенд производительности (второе приложение, `src/stress-demo/`) —
-`/stress.html#/editor` на dev-сервере; размеры графа — query
-(`?levels=&pagesPerLevel=&elementsPerPage=&forms=&stepsPerForm=&fieldsPerStep=`).
+Стенд производительности — проект на главной («Стенд производительности»),
+`/#/editor?project=stress` на dev-сервере; размеры графа — query
+(`&levels=&pagesPerLevel=&elementsPerPage=&forms=&stepsPerForm=&fieldsPerStep=`).
 
 ## 6. Экономия контекста
 

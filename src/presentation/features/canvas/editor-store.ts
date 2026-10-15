@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { Command } from '@application/commands/command';
 import { InvariantViolationError } from '@application/commands/errors';
@@ -9,7 +10,7 @@ import { useEditorNotifications } from '@presentation/features/notifications/edi
 // загрузка/сохранение. TEMPORARY (до effector — запланирован, но не
 // установлен): ServiceGraph живёт в React state страницы редактора. Мутации —
 // ТОЛЬКО через commandBus.execute/undo/redo (конституция, железное правило 1).
-// Начальное значение — graphSeed из DI (демо-граф или граф стенда stress-demo).
+// Начальное значение — graphSeed из DI (демо-граф или нагрузочный граф проекта stress).
 // При появлении effector хук заменяется подпиской на стор, сигнатура сохраняется.
 export function useEditorStore() {
   const container = useContainer();
@@ -17,7 +18,11 @@ export function useEditorStore() {
   const commandBus = container.cradle.commandBus;
   const graphRepository = container.cradle.graphRepository;
 
-  const [graph, setGraph] = useState<ServiceGraph>(() => container.cradle.graphSeed());
+  // Проект выбирается query-параметром роута (/editor?project=stress&levels=…).
+  const [searchParams] = useSearchParams();
+  const [graph, setGraph] = useState<ServiceGraph>(() =>
+    container.cradle.graphSeed(searchParams.get('project'), searchParams.toString()),
+  );
   // Актуальный граф в ref: колбэки react-flow не должны зависеть от замыканий
   // на устаревший state, а мутации идут только через CommandBus.
   const graphRef = useRef(graph);
