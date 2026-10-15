@@ -38,7 +38,7 @@ import { FORM_STEPS_LAYER_POLICY } from '../layers/layer-policy';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { FormStepLayers } from './form-step-layers';
 import { useNodeStyles } from './node-styles';
-import { ColumnDropBar, DropBar, useDropZone } from './use-element-drop-zone';
+import { ColumnDropBar, DROP_BAR_INSET, DropBar, useDropZone } from './use-element-drop-zone';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   // Карточка, рамки, заголовок и кнопки — общие стили узлов (ревью A8, R4).
@@ -397,8 +397,8 @@ const FormStepColumn = memo(function FormStepColumn({
           orientation="horizontal"
           style={{
             position: 'absolute',
-            left: 0,
-            right: 0,
+            left: DROP_BAR_INSET,
+            right: DROP_BAR_INSET,
             [dropPlacement === 'before' ? 'top' : 'bottom']: -CANVAS_LAYOUT.formStepGap / 2 - 1,
           }}
           testId="step-drop-indicator"

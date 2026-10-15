@@ -16,7 +16,13 @@ import { packLayerBands } from '../layers/layer-bands';
 import { ElementCard } from './element-card';
 import { OptionCard } from './option-card';
 import { useCanvasActions } from '../canvas-interaction';
-import { ColumnDropBar, DropBar, DropIndicator, useElementDropZone } from './use-element-drop-zone';
+import {
+  ColumnDropBar,
+  DROP_BAR_INSET,
+  DropBar,
+  DropIndicator,
+  useElementDropZone,
+} from './use-element-drop-zone';
 
 const L = FORM_STEP_LAYOUT;
 /** Шаг сетки колонок шага: колонка + зазор. */
@@ -50,6 +56,7 @@ const useStyles = makeStyles<EditorTheme>(() => ({
   // Ячейка колонки: ширина фиксирована — колонки всех деревьев шага
   // выровнены по одной сетке (gridLayerColumns).
   cell: {
+    position: 'relative', // якорь полосы вставки (DropIndicator)
     width: L.elementWidth,
     flexShrink: 0,
   },
@@ -189,9 +196,9 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
   const renderTree = (element: CanvasElementData): ReactNode => (
     <div key={element.id} className={classes.tree}>
       <div className={classes.cell} data-layer-depth={element.layerDepth ?? 0}>
-        <DropIndicator anchor={anchor} elementId={element.id} placement="before" />
+        <DropIndicator anchor={anchor} elementId={element.id} placement="before" gap={L.rowGap} />
         <ElementCard element={element} />
-        <DropIndicator anchor={anchor} elementId={element.id} placement="after" />
+        <DropIndicator anchor={anchor} elementId={element.id} placement="after" gap={L.rowGap} />
       </div>
       {/* Варианты Select'а — карточки под ним всегда [owner 2026-10-14]: из
           варианта тянется переход на шаг, а при «Сложной логике» — и правило. */}
@@ -235,7 +242,12 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
         maxDepth < 0 ? (
           <DropBar
             orientation="horizontal"
-            style={{ position: 'absolute', top: 0, left: 0, width: L.elementWidth }}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: DROP_BAR_INSET,
+              width: L.elementWidth - 2 * DROP_BAR_INSET,
+            }}
             testId="drop-zone-bar"
           />
         ) : (

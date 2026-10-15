@@ -95,6 +95,9 @@ export function useDropZone<P, T>({ dragged, read, locate, onDrop, isolate = fal
   return { state, handlers: { onDragOver, onDragLeave, onDrop: handleDrop } };
 }
 
+/** Полоса короче карточки/колонки на столько с каждого конца — точки не у краёв карточек. */
+export const DROP_BAR_INSET = 16;
+
 // Полоса-индикатор вставки (N2, [owner 2026-10-15]) — единая для узлов:
 // карточки в шаге, шаги в форме. style — положение в месте использования.
 export function DropBar({
@@ -112,17 +115,29 @@ export function DropBar({
 }
 
 // Полоса у карточки-якоря (N2): в потоке колонки, посередине зазора.
+// Абсолютная — посередине зазора gap до соседней карточки, раскладка не
+// меняется; обёртка карточки — position: relative.
 export function DropIndicator({
   anchor,
   elementId,
   placement,
+  gap,
 }: {
   anchor: DropAnchorPosition | null | undefined;
   elementId: string;
   placement: DropAnchorPosition['placement'];
+  gap: number;
 }) {
   return anchor?.elementId === elementId && anchor.placement === placement ? (
-    <DropBar orientation="horizontal" style={{ position: 'relative', margin: '-1px 0' }} />
+    <DropBar
+      orientation="horizontal"
+      style={{
+        position: 'absolute',
+        left: DROP_BAR_INSET,
+        right: DROP_BAR_INSET,
+        [placement === 'before' ? 'top' : 'bottom']: -gap / 2 - 1,
+      }}
+    />
   ) : null;
 }
 
@@ -132,7 +147,7 @@ export function ColumnDropBar({ x }: { x: number }) {
   return (
     <DropBar
       orientation="vertical"
-      style={{ position: 'absolute', top: 6, bottom: 6, left: x - 1 }}
+      style={{ position: 'absolute', top: DROP_BAR_INSET, bottom: DROP_BAR_INSET, left: x - 1 }}
       testId="drop-zone-bar"
     />
   );

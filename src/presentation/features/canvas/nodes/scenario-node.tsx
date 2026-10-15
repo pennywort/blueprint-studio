@@ -12,19 +12,26 @@ import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { useNodeStyles } from './node-styles';
 import { DropIndicator, useElementDropZone } from './use-element-drop-zone';
 
+/** Зазор между карточками элементов страницы. */
+const ELEMENTS_GAP = 24;
+
 // Своё у узла страницы — фиксированная ширина и список элементов; остальное
 // — общие стили узлов (ревью A8, R4).
-const useStyles = makeStyles<EditorTheme>((theme) => ({
+const useStyles = makeStyles<EditorTheme>(() => ({
   card: {
     width: CANVAS_LAYOUT.nodeWidth,
   },
   titles: {
     minWidth: 0,
   },
+  // Зазор вмещает полосу вставки с точками и отступом (DropBar, [owner 2026-10-15]).
   elements: {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing(1.5),
+    gap: ELEMENTS_GAP,
+  },
+  elementSlot: {
+    position: 'relative', // якорь полосы вставки (DropIndicator)
   },
 }));
 
@@ -110,10 +117,10 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
       {data.elements.length > 0 ? (
         <div className={classes.elements}>
           {data.elements.map((element) => (
-            <div key={element.id}>
-              <DropIndicator anchor={anchor} elementId={element.id} placement="before" />
+            <div key={element.id} className={classes.elementSlot}>
+              <DropIndicator anchor={anchor} elementId={element.id} placement="before" gap={ELEMENTS_GAP} />
               <ElementCard element={element} />
-              <DropIndicator anchor={anchor} elementId={element.id} placement="after" />
+              <DropIndicator anchor={anchor} elementId={element.id} placement="after" gap={ELEMENTS_GAP} />
             </div>
           ))}
         </div>
