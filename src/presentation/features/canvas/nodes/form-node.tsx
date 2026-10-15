@@ -16,6 +16,7 @@ import { ViolationBadge } from './violation-badge';
 import { CANVAS_LAYOUT, FORM_STEP_LAYOUT } from '../canvas-layout';
 import { stepTargetHandleId, type CanvasFormStepData, type CanvasNode } from '../graph-flow-adapter';
 import { setScaledDragPreview } from '../drag-preview';
+import { isActionTarget } from '../canvas-events';
 import { type DropAnchorPosition, type ElementDragPayload } from '../element-dnd';
 import {
   draggedStep,
@@ -83,6 +84,8 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     display: 'flex',
     flexDirection: 'column',
     gap: theme.spacing(1.5),
+    // Весь шаг — ручка dnd шага [owner 2026-10-15].
+    cursor: 'grab',
   },
   // Выделенный шаг (S10): рамка цвета выделения внутри шага (inset-тень) —
   // размер не меняется, рёбра у границы не перекрываются [owner 2026-10-14].
@@ -107,11 +110,10 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
       borderColor: theme.editor.canvas.nodeHoverBorder,
     },
   },
-  // Заголовок шага — ручка dnd шага [owner 2026-10-14].
+  // Заголовок шага; ручка dnd — весь шаг (stepColumn, [owner 2026-10-15]).
   stepGrip: {
     flex: 1,
     minWidth: 0,
-    cursor: 'grab',
   },
   stepHeader: {
     display: 'flex',
@@ -382,6 +384,8 @@ const FormStepColumn = memo(function FormStepColumn({
   );
   // Шаг — допустимая цель протягиваемого перехода [owner 2026-10-14].
   const connectTarget = useCanvasInteraction((state) => state.connectionTargets?.steps.has(step.id) ?? false);
+  // Нажатие пришлось на кнопку/handle — жест не dnd шага.
+  const pressedOnActionRef = useRef(false);
   const onDropElement = useCallback(
     (dragged: ElementDragPayload, anchor: DropAnchorPosition | null, layerDepth?: number) =>
       actions?.moveElement(formId, 'form', step.id, dragged, anchor, layerDepth),
@@ -392,6 +396,8 @@ const FormStepColumn = memo(function FormStepColumn({
     <div
       className={[
         classes.stepColumn,
+        // nodrag — нажатие на шаге тащит шаг, а не узел react-flow.
+        'nodrag',
         selected ? classes.stepSelected : '',
         swapTarget ? nodeClasses.dropTarget : '',
       ].join(' ')}
@@ -399,6 +405,24 @@ const FormStepColumn = memo(function FormStepColumn({
       data-form-step-id={step.id}
       data-step-selected={selected || undefined}
       data-step-swap-target={swapTarget || undefined}
+      // Dnd шага за весь блок [owner 2026-10-15] — та же зона, что выделяет шаг
+      // кликом (S10): карточки элементов тащатся сами (их dragstart не
+      // всплывает), кнопки шага dnd не начинают.
+      draggable
+      onPointerDown={(event) => {
+        pressedOnActionRef.current = isActionTarget(event.target);
+      }}
+      onDragStart={(event) => {
+        if (pressedOnActionRef.current) {
+          event.preventDefault();
+          return;
+        }
+        event.stopPropagation();
+        writeStepDrag(event.dataTransfer, { formId, stepId: step.id });
+        // Превью в масштабе канваса, не в 100% (доводка N2).
+        setScaledDragPreview(event);
+      }}
+      onDragEnd={endStepDrag}
     >
       {/* Цель перехода между шагами [owner 2026-10-14]: невидимый handle во весь
           шаг, принимает связь, только пока шаг — допустимая цель (шаг следующих
@@ -424,20 +448,7 @@ const FormStepColumn = memo(function FormStepColumn({
         />
       ) : null}
       <div className={classes.stepHeader}>
-        {/* Ручка dnd шага [owner 2026-10-14]: nodrag — нажатие не тащит узел
-            react-flow; кнопки шага — вне ручки, их нажатие dnd не начинает. */}
-        <div
-          className={`${classes.stepGrip} nodrag`}
-          data-testid={`form-step-grip-${step.id}`}
-          draggable
-          onDragStart={(event) => {
-            event.stopPropagation();
-            writeStepDrag(event.dataTransfer, { formId, stepId: step.id });
-            // Превью в масштабе канваса, не в 100% (доводка N2).
-            setScaledDragPreview(event);
-          }}
-          onDragEnd={endStepDrag}
-        >
+        <div className={classes.stepGrip} data-testid={`form-step-grip-${step.id}`}>
           <Typography variant="subtitle2">{step.title}</Typography>
         </div>
         <div className={classes.stepActions}>
