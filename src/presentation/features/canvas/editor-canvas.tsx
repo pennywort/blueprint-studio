@@ -32,7 +32,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useEditorTheme } from '@presentation/theme/editor-theme';
-import { useHotkeyHandlers } from '@presentation/features/hotkeys/hotkeys-scope';
+import { useHotkeyHandlers } from '@presentation/features/hotkeys/hotkeys-provider';
 import { useReactFlowThemeStyles } from './react-flow-theme-styles';
 import {
   buildLayerColumns,

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Divider, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Divider, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import { useContainer } from '@presentation/app/App';
 import { EditorThemeProvider } from '@presentation/theme/editor-theme-provider';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
@@ -9,7 +9,11 @@ import { useEditorGraph } from '@presentation/features/canvas/use-editor-graph';
 import { useCanvasPointerHeld } from '@presentation/features/canvas/use-selection';
 import { AttributesPanel } from '@presentation/features/attributes/attributes-panel';
 import { EditorNotificationsProvider } from '@presentation/features/notifications/editor-notifications';
-import { HotkeysScope, useHotkeyHandlers } from '@presentation/features/hotkeys/hotkeys-scope';
+import {
+  HotkeysProvider,
+  useHotkeyHandlers,
+  useHotkeysRoot,
+} from '@presentation/features/hotkeys/hotkeys-provider';
 import { EditorTopBar } from '@presentation/features/top-bar/editor-top-bar';
 import { EditorToolbar, type EditorSidePanel } from '@presentation/features/toolbar/editor-toolbar';
 
@@ -17,7 +21,42 @@ const SIDE_PANEL_TITLES: Record<EditorSidePanel, string> = {
   navigation: 'Навигация',
 };
 
+// Вёрстка — div + makeStyles, а не Box (R-BOX, docs/refactoring): Box MUI v4
+// пересчитывает стили на каждый рендер, а страница перерисовывается на
+// каждую команду графа; классы makeStyles создаются один раз.
 const useStyles = makeStyles<EditorTheme>((theme) => ({
+  root: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100vh',
+    backgroundColor: theme.palette.background.default,
+  },
+  body: {
+    display: 'flex',
+    flexGrow: 1,
+    minHeight: 0,
+  },
+  canvasArea: {
+    flexGrow: 1,
+    minWidth: 0,
+    position: 'relative',
+  },
+  // Полоса на всю высоту только центрирует тулбар: события мыши пропускает
+  // (pointer-events: none) — иначе перекрывала undo/redo в левом нижнем углу
+  // и полотно под собой.
+  toolbarRail: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    display: 'flex',
+    alignItems: 'center',
+    paddingLeft: theme.spacing(2),
+    pointerEvents: 'none',
+  },
+  toolbarSlot: {
+    pointerEvents: 'auto',
+  },
   sidePanel: {
     width: 320,
     flexShrink: 0,
@@ -40,21 +79,19 @@ export function EditorPage() {
       {/* Единый Snackbar-фасад страницы (T-023): уведомления живут в одном
           провайдере, а не размазаны по компонентам. */}
       <EditorNotificationsProvider>
-        {/* Область хоткеев редактора [owner 2026-10-15]: один слушатель
-            клавиш на страницу, компоненты регистрируют только команды. */}
-        <HotkeysScope>
+        {/* Хоткеи редактора [owner 2026-10-15]: провайдер без разметки,
+            значение не меняется — перерисовок не вызывает. */}
+        <HotkeysProvider>
           <EditorPageLayout />
-        </HotkeysScope>
+        </HotkeysProvider>
       </EditorNotificationsProvider>
     </EditorThemeProvider>
   );
 }
 
-// Каркас страницы (T-022) собран полностью из компонентов дизайн-системы
-// (Box/Divider, самописной вёрстки нет): TopBar сверху, левый тулбар —
-// плавающая пилюля поверх канваса по левому краю (как на макетах), панель
-// атрибутов справа скрыта, пока нет выделения (D10). Канвас и нижние
-// контролы не меняются (T-011).
+// Каркас страницы (T-022): TopBar сверху, левый тулбар — плавающая пилюля
+// поверх канваса по левому краю (как на макетах), панель атрибутов справа
+// скрыта, пока нет выделения (D10). Канвас и нижние контролы не меняются (T-011).
 function EditorPageLayout() {
   const classes = useStyles();
   const container = useContainer();
@@ -72,8 +109,9 @@ function EditorPageLayout() {
   // удержана, это попытка переноса, и сужение канваса её срывает (баг drag).
   const pointerHeld = useCanvasPointerHeld();
 
-  // Команды хоткеев страницы [owner 2026-10-15]; комбинации — в keybindings
-  // (features/hotkeys), здесь только «команда → действие».
+  // Корень страницы — граница хоткеев; команды страницы — только
+  // «команда → действие», комбинации — в keybindings (features/hotkeys).
+  const hotkeysRoot = useHotkeysRoot();
   useHotkeyHandlers({
     'project.save': editorGraph.save,
     'edit.undo': editorGraph.undo,
@@ -84,26 +122,26 @@ function EditorPageLayout() {
   });
 
   return (
-    <Box display="flex" flexDirection="column" height="100vh" bgcolor="background.default">
+    <div ref={hotkeysRoot} className={classes.root}>
       <EditorTopBar
         onSave={editorGraph.save}
         onExport={editorGraph.exportJson}
         searchCanvas={editorGraph.searchCanvas}
         onSelectSearchResult={editorGraph.selectSearchResult}
       />
-      <Box display="flex" flexGrow={1} minHeight={0}>
+      <div className={classes.body}>
         {sidePanel !== null ? (
           <>
-            <Box className={classes.sidePanel} data-testid={`side-panel-${sidePanel}`}>
+            <div className={classes.sidePanel} data-testid={`side-panel-${sidePanel}`}>
               <Typography variant="h6">{SIDE_PANEL_TITLES[sidePanel]}</Typography>
               <Typography variant="body2" color="textSecondary">
                 Панель-заглушка: назначение уточняется у владельца (Q-1).
               </Typography>
-            </Box>
+            </div>
             <Divider orientation="vertical" flexItem />
           </>
         ) : null}
-        <Box flexGrow={1} minWidth={0} position="relative">
+        <div className={classes.canvasArea}>
           {/* Узлы/рёбра — из графа (graphToFlow + computeLayout); связи и
               порядок в слое уходят обратно командами (T-032/T-036). */}
           <EditorCanvas
@@ -135,20 +173,8 @@ function EditorPageLayout() {
               события мыши — pan/zoom и тулбар работают сквозь него. hasNodes
               подключён к реальному графу (S9). */}
           <EmptyCanvasState hasNodes={editorGraph.hasNodes} />
-          {/* Полоса на всю высоту только центрирует тулбар: события мыши
-              пропускает (pointer-events: none) — иначе перекрывала undo/redo
-              в левом нижнем углу и полотно под собой. */}
-          <Box
-            position="absolute"
-            left={0}
-            top={0}
-            bottom={0}
-            display="flex"
-            alignItems="center"
-            paddingLeft={2}
-            style={{ pointerEvents: 'none' }}
-          >
-            <Box style={{ pointerEvents: 'auto' }}>
+          <div className={classes.toolbarRail}>
+            <div className={classes.toolbarSlot}>
               <EditorToolbar
                 elementSchemas={elementSchemas}
                 activePanel={sidePanel}
@@ -158,13 +184,13 @@ function EditorPageLayout() {
                 onAddNode={editorGraph.addNode}
                 onAddElement={editorGraph.addElement}
               />
-            </Box>
-          </Box>
-        </Box>
+            </div>
+          </div>
+        </div>
         {selectedElement !== null && !pointerHeld ? (
           <>
             <Divider orientation="vertical" flexItem />
-            <Box className={classes.attributesPanel} data-testid="attributes-panel">
+            <div className={classes.attributesPanel} data-testid="attributes-panel">
               <AttributesPanel
                 component={selectedElement.component}
                 schema={schemaByKind.get(selectedElement.component.kind) ?? null}
@@ -177,10 +203,10 @@ function EditorPageLayout() {
                 incomingRules={selectedElement.incomingRules}
                 onRemoveRule={editorGraph.removeLogicRule}
               />
-            </Box>
+            </div>
           </>
         ) : null}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }

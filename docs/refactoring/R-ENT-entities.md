@@ -18,7 +18,7 @@
 | DnD                   | react-flow (узлы)                                         | HTML5, `canvas/step-dnd.ts`                        | HTML5, `canvas/element-dnd.ts`                  | ❌                                                                |
 | Выделение             | `selectedNodeId`                                          | `selectedStepId`                                   | `selectedElementId` (`canvas/use-selection.ts`) | ❌ три id вместо `{kind, id}`                                     |
 | Рамка состояния       | `.react-flow__node.selected` (theme), `dropTarget`        | `stepSelected`, `dropTarget`                       | `cardSelected`, `cardInvalid`                   | ❌ + цель связи — `outline` handle (`react-flow-theme-styles.ts`) |
-| Хоткеи                | `features/hotkeys` (`HotkeysScope` + `useHotkeyHandlers`) | то же                                              | то же                                           | ✅ один слушатель; react-flow `deleteKeyCode={null}`              |
+| Хоткеи                | `features/hotkeys` (реестр + `useHotkeyHandlers`)         | то же                                              | то же                                           | ✅ один слушатель; react-flow `deleteKeyCode={null}`              |
 
 Целевое состояние для ❌: одно ядро с параметром-различием (scope / рёбра); для рамки —
 одно значение `'connect-target' | 'drop-target' | 'selected' | 'invalid' | null`
@@ -32,8 +32,8 @@
 
 Скажи агенту одну из фраз:
 
-- «Сделай шаг R-ENT-1 из `docs/architecture-entities.md`» — один шаг;
-- «Сделай R-ENT-1 и R-ENT-2 из `docs/architecture-entities.md`» — несколько по порядку.
+- «Сделай шаг R-ENT-1 из `docs/refactoring/R-ENT-entities.md`» — один шаг;
+- «Сделай R-ENT-1 и R-ENT-2 из `docs/refactoring/R-ENT-entities.md`» — несколько по порядку.
 
 Агенту: прочитай ТОЛЬКО этот файл и файлы, перечисленные в шаге; PROJECT_STATE — через
 `npm run state:summary`. Один шаг = одна ветка работы = один коммит

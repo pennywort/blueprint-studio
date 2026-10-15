@@ -45,7 +45,7 @@ scoped-стили, динамический import в `index.tsx` (консти�
 Rsbuild 2.2 (не Vite), React 19.3, TypeScript 5.7 strict, @xyflow/react 12.12,
 zod 4.6, immer 11.1 (`produceWithPatches` — единственный механизм мутации),
 awilix 13 (только `InjectionMode.PROXY`), react-router-dom 7 (`createHashRouter`),
-ESLint flat + eslint-plugin-boundaries, Prettier, Husky, commitlint, lint-staged.
+tinykeys 4 (хоткеи — только через `features/hotkeys`, [owner 2026-10-15]), ESLint flat + eslint-plugin-boundaries, Prettier, Husky, commitlint, lint-staged.
 Версии точные (`npm install -E`). Effector и xstate — запланированы, НЕ установлены.
 
 **TEMPORARY-подмена UI:** `@blueprint-vendor/flamingo-*` — шимы `vendor/flamingo/*`
@@ -64,6 +64,11 @@ ESLint flat + eslint-plugin-boundaries, Prettier, Husky, commitlint, lint-staged
   Внешние контракты — только за портами `application/ports`.
 - UI только из `@blueprint-vendor/*`; импорт `@material-ui/*` в `src` запрещён.
 - Цвета только из темы `src/presentation/theme/editor-theme.ts`; hex в компонентах запрещён.
+- Вёрстка — `div` + `makeStyles`; `Box` не использовать (пересчёт стилей на каждый рендер
+  тормозит UI) [owner 2026-10-15]. Старые `Box` убирает план `docs/refactoring/R-BOX-layout.md`.
+- Клавиши — только система хоткеев `features/hotkeys` (команда в `hotkey-commands.ts`,
+  комбинация в `default-keybindings.json`, обработчик — `useHotkeyHandlers`); свои
+  `onKeyDown`/`keydown` для хоткеев запрещены (поведение полей ввода — можно) [owner 2026-10-15].
 - Принимающие (target) handles в покое невидимы и не ловят мышь; появляются только во время
   протягивания связи и только у допустимых целей (ADR-14). Постоянных target-точек не добавлять.
 - Комментарии в коде — по-русски, со ссылкой (T-xxx, D-x, ADR-xx, Nx).
@@ -87,7 +92,8 @@ ESLint flat + eslint-plugin-boundaries, Prettier, Husky, commitlint, lint-staged
   (цель связи > цель dnd > выделение > ошибка) и одна геометрия рамки; новый вид
   подсветки — новое значение, а не новая рамка.
 - В отчёте после правки поведения: «точечно / объединил; параллельные механизмы: …».
-- Карта «сущность × возможность» и известные дубли — `docs/architecture-entities.md`.
+- Карта «сущность × возможность» и известные дубли — `docs/refactoring/R-ENT-entities.md`;
+  все отложенные рефакторинги и как их запускать — `docs/refactoring/README.md`.
 
 ## 5. Команды (вывод уже сжат — не запускай «сырые» варианты)
 
