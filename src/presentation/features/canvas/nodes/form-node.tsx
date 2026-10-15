@@ -15,6 +15,7 @@ import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
 import { CANVAS_LAYOUT } from '../canvas-layout';
 import { stepTargetHandleId, type CanvasFormStepData, type CanvasNode } from '../graph-flow-adapter';
+import { setScaledDragPreview } from '../drag-preview';
 import { type DropAnchorPosition, type ElementDragPayload } from '../element-dnd';
 import {
   draggedStep,
@@ -428,6 +429,8 @@ const FormStepColumn = memo(function FormStepColumn({
           onDragStart={(event) => {
             event.stopPropagation();
             writeStepDrag(event.dataTransfer, { formId, stepId: step.id });
+            // Превью в масштабе канваса, не в 100% (доводка N2).
+            setScaledDragPreview(event);
           }}
           onDragEnd={endStepDrag}
         >

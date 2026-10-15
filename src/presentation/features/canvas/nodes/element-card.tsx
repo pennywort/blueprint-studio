@@ -5,6 +5,7 @@ import { ShowChart, Visibility } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { logicAnchorHandleId, logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
 import { FORM_STEP_LAYOUT } from '../canvas-layout';
+import { setScaledDragPreview } from '../drag-preview';
 import { endElementDrag, writeElementDrag } from '../element-dnd';
 import { isActionTarget } from '../canvas-events';
 import { ViolationBadge } from './violation-badge';
@@ -170,6 +171,8 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
           return;
         }
         writeElementDrag(event.dataTransfer, { elementId: element.id });
+        // Превью в масштабе канваса, не в 100% (доводка N2).
+        setScaledDragPreview(event);
       }}
       onDragEnd={endElementDrag}
       // Выделение — по нажатию (без «лага» click); коннектор и кнопки
