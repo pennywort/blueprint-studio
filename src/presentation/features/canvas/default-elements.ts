@@ -30,6 +30,18 @@ export function createDefaultElement(kind: CanvasElementKind, rawId: string): Ca
     : createDefaultFormComponent(kind, toFormComponentId(rawId));
 }
 
+// Копия элемента под новым id — вставка из буфера (хоткеи Ctrl+C/X/V
+// [owner 2026-10-15]). Явная колонка шага не копируется: вставленный элемент
+// раскладывается в блоке-приёмнике заново (AddElement). Связи и правила
+// «Сложной логики» живут в графе, а не в элементе, — копия их не несёт.
+export function cloneElementWithId(element: CanvasElement, rawId: string): CanvasElement {
+  const copy = structuredClone(element);
+  delete copy.layerDepth;
+  copy.id =
+    isPageElementKind(copy.kind) || isCommentKind(copy.kind) ? toElementId(rawId) : toFormComponentId(rawId);
+  return copy;
+}
+
 // Минимально валидный форм-компонент каждого kind: обязательные поля
 // заполняются нейтральными значениями, опциональные не задаются.
 export function createDefaultFormComponent(kind: FormComponentKind, id: FormComponentId): FormComponent {

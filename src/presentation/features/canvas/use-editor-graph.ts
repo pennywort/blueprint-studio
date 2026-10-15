@@ -1,5 +1,5 @@
-import { useCallback, useMemo } from 'react';
-import type { CanvasElementKind } from '@domain/model/canvas-element';
+import { useCallback, useMemo, useRef } from 'react';
+import type { CanvasElement, CanvasElementKind } from '@domain/model/canvas-element';
 import {
   toApplicationFormId,
   toElementId,
@@ -31,7 +31,7 @@ import { UpdateElementProps, type ElementPropsPatch } from '@application/command
 import { EnableComplexLogic } from '@application/commands/enable-complex-logic';
 import { DisableComplexLogic } from '@application/commands/disable-complex-logic';
 import { RemoveLogicRule } from '@application/commands/remove-logic-rule';
-import { findFormById, findFormElement } from '@application/commands/graph-lookup';
+import { findElementLocation, findFormById, findFormElement } from '@application/commands/graph-lookup';
 import { useContainer } from '@presentation/app/App';
 import { useEditorNotifications } from '@presentation/features/notifications/editor-notifications';
 import type { AddableElementKind, AddableNodeKind } from '@presentation/features/toolbar/editor-toolbar';
@@ -43,7 +43,12 @@ import {
   type CanvasNode,
   type CanvasNodeType,
 } from './graph-flow-adapter';
-import { NEW_FORM_TITLE, NEW_SCENARIO_TITLE, createDefaultElement } from './default-elements';
+import {
+  NEW_FORM_TITLE,
+  NEW_SCENARIO_TITLE,
+  cloneElementWithId,
+  createDefaultElement,
+} from './default-elements';
 import type { CanvasActions } from './canvas-interaction';
 import { useEditorStore } from './editor-store';
 import { useSelection } from './use-selection';
@@ -225,30 +230,91 @@ export function useEditorGraph() {
   // Элемент из меню тулбара — в выделенный узел канваса; любой вид в любой
   // узел [owner 2026-10-13, ADR-17]. У формы — в выделенный шаг (S10), если
   // выделена форма целиком — в первый.
+  // Блок выделенного узла — приёмник нового элемента; null — отказ уже
+  // показан пользователю. Общее ядро меню тулбара и вставки из буфера.
+  const selectedNodeTarget = useCallback((): CanvasElementTarget | null => {
+    if (!selectedNodeId || !selectedNodeType) {
+      notifications.showCommandFailure('Сначала выберите узел на канвасе');
+      return null;
+    }
+    if (selectedNodeType === 'form') {
+      const form = findFormById(graphRef.current, selectedNodeId);
+      const step = form?.steps.find((candidate) => candidate.id === selectedStepId) ?? form?.steps[0];
+      if (!form || !step) {
+        notifications.showCommandFailure('У формы нет шага для добавления элемента');
+        return null;
+      }
+      return { kind: 'formStep', formId: form.id, stepId: step.id };
+    }
+    if (selectedNodeType === 'home') {
+      return { kind: 'home' };
+    }
+    return { kind: 'subScenario', scenarioId: toScenarioId(selectedNodeId) };
+  }, [graphRef, notifications, selectedNodeId, selectedNodeType, selectedStepId]);
+
   const addElement = useCallback(
     (kind: AddableElementKind) => {
-      if (!selectedNodeId || !selectedNodeType) {
-        notifications.showCommandFailure('Сначала выберите узел на канвасе');
-        return;
+      const target = selectedNodeTarget();
+      if (target) {
+        runCommand(new AddElement(target, createDefaultElement(kind, idGenerator.next())));
       }
-      let target: CanvasElementTarget;
-      if (selectedNodeType === 'form') {
-        const form = findFormById(graphRef.current, selectedNodeId);
-        const step = form?.steps.find((candidate) => candidate.id === selectedStepId) ?? form?.steps[0];
-        if (!form || !step) {
-          notifications.showCommandFailure('У формы нет шага для добавления элемента');
-          return;
-        }
-        target = { kind: 'formStep', formId: form.id, stepId: step.id };
-      } else if (selectedNodeType === 'home') {
-        target = { kind: 'home' };
-      } else {
-        target = { kind: 'subScenario', scenarioId: toScenarioId(selectedNodeId) };
-      }
-      runCommand(new AddElement(target, createDefaultElement(kind, idGenerator.next())));
     },
-    [idGenerator, notifications, runCommand, selectedNodeId, selectedNodeType, selectedStepId],
+    [idGenerator, runCommand, selectedNodeTarget],
   );
+
+  // Буфер обмена элементов (хоткеи Ctrl+C/X/V [owner 2026-10-15]): копия
+  // элемента в памяти редактора, системный буфер не трогается. Обработчики
+  // возвращают false, если делать нечего, — тогда работает действие браузера.
+  const clipboardRef = useRef<CanvasElement | null>(null);
+
+  const copySelectedElement = useCallback((): boolean => {
+    const location = selectedElementId ? findElementLocation(graphRef.current, selectedElementId) : null;
+    const element = location?.list[location.index];
+    if (!element) {
+      return false;
+    }
+    clipboardRef.current = structuredClone(element);
+    return true;
+  }, [graphRef, selectedElementId]);
+
+  // Вырезать = копировать + штатное удаление выделенного элемента (RemoveElement).
+  const cutSelectedElement = useCallback(
+    (): boolean => copySelectedElement() && deleteSelectedElement(),
+    [copySelectedElement, deleteSelectedElement],
+  );
+
+  // Вставка: выделен элемент — в его блок, иначе — в выделенный узел (как
+  // меню тулбара). Копия получает новый id и становится выделенной.
+  const pasteElement = useCallback((): boolean => {
+    const copied = clipboardRef.current;
+    if (!copied) {
+      return false;
+    }
+    const location = selectedElementId ? findElementLocation(graphRef.current, selectedElementId) : null;
+    let target: CanvasElementTarget | null;
+    if (location?.container.kind === 'formStep') {
+      target = {
+        kind: 'formStep',
+        formId: toApplicationFormId(location.container.formId),
+        stepId: toFormStepId(location.container.stepId),
+      };
+    } else if (location) {
+      target =
+        location.container.pageId === graphRef.current.homePage?.id
+          ? { kind: 'home' }
+          : { kind: 'subScenario', scenarioId: toScenarioId(location.container.pageId) };
+    } else {
+      target = selectedNodeTarget();
+    }
+    if (target) {
+      const element = cloneElementWithId(copied, idGenerator.next());
+      runCommand(new AddElement(target, element));
+      if (findElementLocation(graphRef.current, element.id)) {
+        selectElement(element.id);
+      }
+    }
+    return true;
+  }, [graphRef, idGenerator, runCommand, selectElement, selectedElementId, selectedNodeTarget]);
 
   // «+» конкретного шага формы → элемент выбранного вида на этот шаг.
   const addElementToStep = useCallback(
@@ -457,6 +523,9 @@ export function useEditorGraph() {
     moveNodeToDepth,
     removeNodes,
     deleteSelectedElement,
+    copySelectedElement,
+    cutSelectedElement,
+    pasteElement,
     addNode,
     addElement,
     undo,

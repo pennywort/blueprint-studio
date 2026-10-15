@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Box, Divider, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import { useContainer } from '@presentation/app/App';
 import { EditorThemeProvider } from '@presentation/theme/editor-theme-provider';
@@ -9,6 +9,7 @@ import { useEditorGraph } from '@presentation/features/canvas/use-editor-graph';
 import { useCanvasPointerHeld } from '@presentation/features/canvas/use-selection';
 import { AttributesPanel } from '@presentation/features/attributes/attributes-panel';
 import { EditorNotificationsProvider } from '@presentation/features/notifications/editor-notifications';
+import { useHotkeys } from '@presentation/features/hotkeys/use-hotkeys';
 import { EditorTopBar } from '@presentation/features/top-bar/editor-top-bar';
 import { EditorToolbar, type EditorSidePanel } from '@presentation/features/toolbar/editor-toolbar';
 
@@ -17,6 +18,12 @@ const SIDE_PANEL_TITLES: Record<EditorSidePanel, string> = {
 };
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
+  root: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100vh',
+    backgroundColor: theme.palette.background.default,
+  },
   sidePanel: {
     width: 320,
     flexShrink: 0,
@@ -67,8 +74,22 @@ function EditorPageLayout() {
   // удержана, это попытка переноса, и сужение канваса её срывает (баг drag).
   const pointerHeld = useCanvasPointerHeld();
 
+  // Хоткеи редактора [owner 2026-10-15]: независимый слой — компоненты о
+  // хоткеях не знают, комбинации — в keybindings (features/hotkeys).
+  const rootRef = useRef<HTMLDivElement>(null);
+  useHotkeys(rootRef, {
+    'project.save': editorGraph.save,
+    'edit.undo': editorGraph.undo,
+    'edit.redo': editorGraph.redo,
+    'edit.copy': editorGraph.copySelectedElement,
+    'edit.cut': editorGraph.cutSelectedElement,
+    'edit.paste': editorGraph.pasteElement,
+  });
+
   return (
-    <Box display="flex" flexDirection="column" height="100vh" bgcolor="background.default">
+    // Корень — div, а не Box: Box MUI v4 не типизирует ref, а корень нужен
+    // слою хоткеев как граница редактора.
+    <div ref={rootRef} className={classes.root}>
       <EditorTopBar
         onSave={editorGraph.save}
         onExport={editorGraph.exportJson}
@@ -165,6 +186,6 @@ function EditorPageLayout() {
           </>
         ) : null}
       </Box>
-    </Box>
+    </div>
   );
 }
