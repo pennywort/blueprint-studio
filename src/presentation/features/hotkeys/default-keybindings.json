@@ -1,0 +1,9 @@
+[
+  { "key": "mod+s", "command": "project.save" },
+  { "key": "mod+z", "command": "edit.undo" },
+  { "key": "mod+shift+z", "command": "edit.redo" },
+  { "key": "ctrl+y", "command": "edit.redo", "mac": "" },
+  { "key": "mod+c", "command": "edit.copy" },
+  { "key": "mod+x", "command": "edit.cut" },
+  { "key": "mod+v", "command": "edit.paste" }
+]
