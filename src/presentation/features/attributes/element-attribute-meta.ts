@@ -25,6 +25,8 @@ export type AttributeMeta = {
   helperText?: string;
   /** Placeholder-пример в поле ввода. */
   placeholder?: string;
+  /** Многострочное поле ввода (текст комментария). */
+  multiline?: boolean;
   /** Секция панели («Настройки»); без секции поле идёт в общий поток. */
   section?: string;
   /** Опции выбора для radio/select. */
@@ -57,6 +59,15 @@ const META: Record<CanvasElementKind, ElementAttributeMeta> = {
     attributes: {
       title: { label: 'Название', placeholder: 'Например, Мои заявки' },
       secondaryText: { label: 'Дополнительный текст', placeholder: 'Например, Статусы и сроки' },
+    },
+  },
+  // Комментарий-элемент [owner 2026-10-15]: основной текст и адресат-бейдж.
+  comment: {
+    category: 'Комментарий',
+    description: 'Заметка на канвасе для разработчика',
+    attributes: {
+      text: { label: 'Текст комментария', placeholder: 'Что нужно знать разработчику', multiline: true },
+      audience: { label: 'Для кого', helperText: 'Показывается бейджем внизу карточки' },
     },
   },
   textField: {

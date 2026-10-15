@@ -24,13 +24,16 @@ export interface Cradle {
   commandBus: CommandBus;
   graphRepository: IGraphRepository;
   // Начальный граф редактора, пока карты нет в хранилище (TEMPORARY, до
-  // списка проектов): демо-граф основного приложения или нагрузочный граф
-  // стенда stress-demo — выбирает точка входа.
-  graphSeed: () => ServiceGraph;
+  // списка проектов): по projectId из роута выбирается демо-граф или
+  // нагрузочный граф (проект «Стенд производительности»); search — query
+  // роута с параметрами размера графа.
+  graphSeed: GraphSeed;
 }
 
+export type GraphSeed = (projectId: string | null, search: string) => ServiceGraph;
+
 export type ContainerOptions = {
-  graphSeed: () => ServiceGraph;
+  graphSeed: GraphSeed;
 };
 
 export function buildContainer(options: ContainerOptions): AwilixContainer<Cradle> {

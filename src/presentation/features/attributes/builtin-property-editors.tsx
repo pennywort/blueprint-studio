@@ -32,6 +32,8 @@ function TextPropertyEditor({ value, onChange, meta, required }: PropertyEditorP
       label={meta.label}
       placeholder={meta.placeholder}
       helperText={meta.helperText}
+      multiline={meta.multiline}
+      rows={meta.multiline ? 3 : undefined}
       value={typeof value === 'string' ? value : ''}
       onChange={(event) => onChange(event.target.value)}
     />

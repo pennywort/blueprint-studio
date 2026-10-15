@@ -4,11 +4,6 @@ import path from 'node:path';
 
 export default defineConfig({
   plugins: [pluginReact()],
-  source: {
-    // stress — второе приложение: стенд производительности канваса на
-    // нагрузочном графе (src/stress-demo), открывается stress.html#/editor.
-    entry: { index: './src/index.tsx', stress: './src/stress-demo/index.tsx' },
-  },
   resolve: {
     alias: {
       // TEMPORARY: polyfill findDOMNode для MUI v4-подмены Flamingo (react-dom 19

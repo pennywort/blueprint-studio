@@ -38,6 +38,14 @@ export interface EditorCanvasPalette {
   nodeHoverBorder: string;
   /** Рамка карточки элемента внутри узла. */
   elementBorder: string;
+  /** Фон комментария (элемент-комментарий и комментарий-часть элемента). */
+  commentBackground: string;
+  /** Рамка комментария. */
+  commentBorder: string;
+  /** Фон бейджа адресата комментария («Разработчику»). */
+  commentBadgeBackground: string;
+  /** Текст бейджа адресата. */
+  commentBadgeForeground: string;
 }
 
 // Полная палитра темы редактора: canvas-токены + цвета, уходящие в palette
@@ -108,6 +116,10 @@ const lightTheme: EditorThemeDefinition = {
     nodeHoverBackground: '#e8e9ee',
     nodeHoverBorder: '#d6d7db',
     elementBorder: '#d6d7db',
+    commentBackground: '#ebf5fc',
+    commentBorder: '#d9eaf7',
+    commentBadgeBackground: '#5d616f',
+    commentBadgeForeground: '#ffffff',
   },
 };
 

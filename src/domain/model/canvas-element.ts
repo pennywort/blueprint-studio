@@ -52,9 +52,28 @@ export const WidgetCardSchema = z.object({
 });
 export type WidgetCard = z.infer<typeof WidgetCardSchema>;
 
+// Адресат комментария-элемента по умолчанию (бейдж на карточке): комментарий
+// для разработчика — поэтому в левом меню он с иконкой кода.
+export const DEFAULT_COMMENT_AUDIENCE = 'Разработчику';
+
+// Комментарий-элемент [owner 2026-10-15]: полноценный элемент канваса, лежит в
+// любом блоке рядом с другими элементами (ADR-17), но не участвует ни в
+// связях навигации, ни в «Сложной логике». Не путать с полем `comment`
+// остальных элементов (комментарий-часть элемента, US-05).
+export const CommentElementSchema = z.object({
+  id: ElementIdSchema,
+  kind: z.literal('comment'),
+  text: z.string(),
+  // Для кого комментарий — бейдж внизу карточки.
+  audience: z.string(),
+  layerDepth: z.number().int().nonnegative().optional(),
+});
+export type CommentElement = z.infer<typeof CommentElementSchema>;
+
 export const CanvasElementSchema = z.discriminatedUnion('kind', [
   ListItemSchema,
   WidgetCardSchema,
+  CommentElementSchema,
   ...FormComponentSchema.options,
 ]);
 export type CanvasElement = z.infer<typeof CanvasElementSchema>;
@@ -78,5 +97,11 @@ export function isPageElementKind(kind: CanvasElementKind): kind is PageElementK
 // Kind'ы форм-компонентов — для мест, которым нужен именно компонент формы
 // (провайдер схем ADR-07, меню «+» шага).
 export function isFormComponentKind(kind: CanvasElementKind): kind is FormComponentKind {
-  return !isPageElementKind(kind);
+  return !isPageElementKind(kind) && !isCommentKind(kind);
+}
+
+// Комментарий-элемент: добавляется отдельной кнопкой тулбара, а не из меню
+// элементов, и не участвует в связях.
+export function isCommentKind(kind: CanvasElementKind): kind is 'comment' {
+  return kind === 'comment';
 }

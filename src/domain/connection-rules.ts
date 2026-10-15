@@ -92,7 +92,7 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
   const ruleTargets = new Set<string>(graph.logicRules.map((rule) => rule.targetElementId));
   const elements = new Set<string>();
   for (const element of found.container.elements) {
-    if (ruleTargets.has(element.id)) {
+    if (ruleTargets.has(element.id) || element.kind === 'comment') {
       continue;
     }
     const duplicate = graph.logicRules.some(
@@ -110,6 +110,10 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
 }
 
 export function connectableTargets(graph: ServiceGraph, source: ConnectionSource): ConnectableTargets {
+  // Комментарий-элемент не источник и не цель связей [owner 2026-10-15].
+  if (findElementInGraph(graph, source.elementId)?.element.kind === 'comment') {
+    return NONE;
+  }
   return source.kind === 'navigation'
     ? navigationTargets(graph, source.elementId)
     : logicTargets(graph, source.elementId, source.optionId);

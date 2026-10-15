@@ -78,6 +78,47 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   dependencyIcon: {
     color: theme.palette.text.secondary,
   },
+  // Комментарий-элемент [owner 2026-10-15, макет «комментарий-элемент»]:
+  // голубая карточка с текстом сверху и бейджем адресата внизу.
+  commentCard: {
+    backgroundColor: theme.editor.canvas.commentBackground,
+    borderColor: theme.editor.canvas.commentBorder,
+  },
+  commentContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    gap: theme.spacing(1.5),
+    minHeight: FORM_STEP_LAYOUT.elementHeight,
+    padding: theme.spacing(2),
+    '&:last-child': {
+      paddingBottom: theme.spacing(2),
+    },
+  },
+  commentText: {
+    whiteSpace: 'pre-wrap',
+    overflowWrap: 'anywhere',
+  },
+  commentBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: theme.editor.canvas.commentBadgeBackground,
+    color: theme.editor.canvas.commentBadgeForeground,
+  },
+  // Комментарий-часть элемента [макет «комментарий-часть элемента»]: подложка
+  // под карточкой — верхние края прямые и скрыты за карточкой (она
+  // position: relative и рисуется поверх), в скруглениях её нижних углов
+  // виден голубой фон; скруглены только нижние углы подложки.
+  note: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.spacing(1.5),
+    marginTop: -12,
+    padding: theme.spacing(3, 2, 2),
+    border: `1px solid ${theme.editor.canvas.commentBorder}`,
+    borderTop: 'none',
+    borderRadius: '0 0 12px 12px',
+    backgroundColor: theme.editor.canvas.commentBackground,
+  },
 }));
 
 export type ElementCardProps = {
@@ -107,21 +148,18 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
   // начинается — иначе браузер забирал жест протягивания связи у source-handle
   // и линия «залипала» после отмены dnd (повторная приёмка, 5.2).
   const pressOnActionRef = useRef(false);
+  const isComment = element.commentAudience !== undefined;
 
   return (
     // Клик выделяет элемент (единое правило F5/F7: выделение + Delete).
     // stopPropagation: иначе клик дошёл бы до узла, и react-flow выделил бы
     // его вместо элемента. data-element-card — якорь для drop-зон dnd (N2).
-    <Card
+    // Корень — div: комментарий-часть элемента (note) висит под карточкой и
+    // тащится/выделяется вместе с ней; без note раскладка прежняя.
+    <div
       // nodrag: нажатие на карточке не начинает drag узла react-flow —
       // иначе тащился весь блок, а нативный dnd карточки не стартовал.
-      className={[
-        classes.card,
-        'nodrag',
-        violations ? classes.cardInvalid : '',
-        selected ? classes.cardSelected : '',
-      ].join(' ')}
-      variant="outlined"
+      className="nodrag"
       data-testid={`element-card-${element.id}`}
       data-element-card={element.id}
       draggable
@@ -147,82 +185,110 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
       }}
       onClick={(event) => event.stopPropagation()}
     >
-      {/* Цель правил «Сложной логики» (T-037): рёбра видимости приходят
+      <Card
+        className={[
+          classes.card,
+          isComment ? classes.commentCard : '',
+          violations ? classes.cardInvalid : '',
+          selected ? classes.cardSelected : '',
+        ].join(' ')}
+        variant="outlined"
+      >
+        {/* Цель правил «Сложной логики» (T-037): рёбра видимости приходят
           на левый край карточки элемента, не шага и не формы. Только у
           компонентов форм (N5); невидим, накрывает карточку и принимает связь, только пока
           тянется правило и элемент — допустимая цель (повторная приёмка). */}
-      {element.logicTarget ? (
-        <Handle
-          type="target"
-          position={Position.Left}
-          id={logicTargetHandleId(element.id)}
-          className={connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
-        />
-      ) : null}
-      {/* Якорь входа рёбер правил [owner 2026-10-13]: на высоте варианта-
+        {element.logicTarget ? (
+          <Handle
+            type="target"
+            position={Position.Left}
+            id={logicTargetHandleId(element.id)}
+            className={connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
+          />
+        ) : null}
+        {/* Якорь входа рёбер правил [owner 2026-10-13]: на высоте варианта-
           источника (logicHandleTop) — ребро идёт прямой горизонталью. Только
           отрисовка: невидим и связь не принимает. */}
-      {element.logicTarget && element.hasIncomingLogic ? (
-        <Handle
-          type="target"
-          position={Position.Left}
-          id={logicAnchorHandleId(element.id)}
-          isConnectable={false}
-          // Нулевой размер: ребро упирается ровно в край карточки, а не за
-          // полширины handle до неё [owner 2026-10-13].
-          style={{
-            top: FORM_STEP_LAYOUT.logicHandleTop,
-            width: 0,
-            height: 0,
-            minWidth: 0,
-            minHeight: 0,
-            opacity: 0,
-            pointerEvents: 'none',
-          }}
-        />
-      ) : null}
-      <CardContent className={classes.content}>
-        <div className={classes.iconWrap}>
-          {/* Иконки элементов платформы придут с пакетом element-schemas;
-              пока — единый плейсхолдер из дизайн-системы. */}
-          <ShowChart fontSize="small" />
-        </div>
-        <div className={classes.texts}>
-          <Typography variant="body2">{element.title}</Typography>
-          {element.secondaryText ? (
-            <Typography variant="caption" color="textSecondary">
-              {element.secondaryText}
+        {element.logicTarget && element.hasIncomingLogic ? (
+          <Handle
+            type="target"
+            position={Position.Left}
+            id={logicAnchorHandleId(element.id)}
+            isConnectable={false}
+            // Нулевой размер: ребро упирается ровно в край карточки, а не за
+            // полширины handle до неё [owner 2026-10-13].
+            style={{
+              top: FORM_STEP_LAYOUT.logicHandleTop,
+              width: 0,
+              height: 0,
+              minWidth: 0,
+              minHeight: 0,
+              opacity: 0,
+              pointerEvents: 'none',
+            }}
+          />
+        ) : null}
+        {isComment ? (
+          <CardContent className={classes.commentContent}>
+            <Typography className={classes.commentText} variant="body2">
+              {element.title}
             </Typography>
-          ) : null}
-          <div className={classes.chips}>
-            <Chip size="small" color="secondary" label={element.kindLabel} />
-            {element.complexLogic ? (
-              <Chip
-                className={classes.logicChip}
-                size="small"
-                color={element.complexLogic.enabled ? 'primary' : 'default'}
-                label="Сложная логика"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  actions?.toggleComplexLogic(element.id);
-                }}
-              />
-            ) : null}
-            {/* Демонстрация семантики видимости (T-062): цель правил скрыта
+            <Chip className={classes.commentBadge} size="small" label={element.commentAudience} />
+          </CardContent>
+        ) : (
+          <CardContent className={classes.content}>
+            <div className={classes.iconWrap}>
+              {/* Иконки элементов платформы придут с пакетом element-schemas;
+              пока — единый плейсхолдер из дизайн-системы. */}
+              <ShowChart fontSize="small" />
+            </div>
+            <div className={classes.texts}>
+              <Typography variant="body2">{element.title}</Typography>
+              {element.secondaryText ? (
+                <Typography variant="caption" color="textSecondary">
+                  {element.secondaryText}
+                </Typography>
+              ) : null}
+              <div className={classes.chips}>
+                <Chip size="small" color="secondary" label={element.kindLabel} />
+                {element.complexLogic ? (
+                  <Chip
+                    className={classes.logicChip}
+                    size="small"
+                    color={element.complexLogic.enabled ? 'primary' : 'default'}
+                    label="Сложная логика"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      actions?.toggleComplexLogic(element.id);
+                    }}
+                  />
+                ) : null}
+                {/* Демонстрация семантики видимости (T-062): цель правил скрыта
                 по умолчанию (L3) — до появления /preview это видно бейджем. */}
-            {element.hiddenByLogic ? (
-              <Chip size="small" color="default" label="Скрыт в предпросмотре" />
-            ) : null}
-            {/* Индикатор «элемент кому-то подчинён» (L-Q1): виден даже при
+                {element.hiddenByLogic ? (
+                  <Chip size="small" color="default" label="Скрыт в предпросмотре" />
+                ) : null}
+                {/* Индикатор «элемент кому-то подчинён» (L-Q1): виден даже при
                 выключенной логике у источника. */}
-            {violations ? <ViolationBadge messages={violations} /> : null}
-            {element.hasIncomingLogic ? (
-              <Visibility className={classes.dependencyIcon} fontSize="small" />
-            ) : null}
-          </div>
+                {violations ? <ViolationBadge messages={violations} /> : null}
+                {element.hasIncomingLogic ? (
+                  <Visibility className={classes.dependencyIcon} fontSize="small" />
+                ) : null}
+              </div>
+            </div>
+          </CardContent>
+        )}
+        {/* Комментарий-элемент вне связей: ни источника, ни цели. */}
+        {isComment ? null : <Handle type="source" position={Position.Right} id={element.id} />}
+      </Card>
+      {element.note ? (
+        <div className={classes.note} data-testid={`element-note-${element.id}`}>
+          <Typography className={classes.commentText} variant="body2">
+            {element.note.text}
+          </Typography>
+          <Chip className={classes.commentBadge} size="small" label={element.note.audience} />
         </div>
-      </CardContent>
-      <Handle type="source" position={Position.Right} id={element.id} />
-    </Card>
+      ) : null}
+    </div>
   );
 });

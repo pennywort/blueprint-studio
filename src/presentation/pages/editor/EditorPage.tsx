@@ -12,7 +12,6 @@ import { EditorTopBar } from '@presentation/features/top-bar/editor-top-bar';
 import { EditorToolbar, type EditorSidePanel } from '@presentation/features/toolbar/editor-toolbar';
 
 const SIDE_PANEL_TITLES: Record<EditorSidePanel, string> = {
-  json: 'JSON',
   navigation: 'Навигация',
 };
 
@@ -59,7 +58,7 @@ function EditorPageLayout() {
   // CommandBus — см. use-editor-graph.ts.
   const editorGraph = useEditorGraph();
 
-  // Панели-заглушки кнопок 3–4 тулбара (Q-1: назначение не подтверждено).
+  // Панель-заглушка кнопки 4 тулбара (Q-1: назначение не подтверждено).
   const [sidePanel, setSidePanel] = useState<EditorSidePanel | null>(null);
   // Инспектор: выделенный компонент формы + его правила видимости (T-067).
   const selectedElement = editorGraph.selectedElement;

@@ -2,7 +2,11 @@ import type { Connection, Edge, Node, XYPosition } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ListItem, WidgetCard } from '@domain/model/scenario';
 import type { FormComponent, FormComponentKind } from '@domain/model/form-components';
-import type { CanvasElement, CanvasElementKind } from '@domain/model/canvas-element';
+import {
+  DEFAULT_COMMENT_AUDIENCE,
+  type CanvasElement,
+  type CanvasElementKind,
+} from '@domain/model/canvas-element';
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
 import { toElementId, toPageEntityId, type ElementId, type PageEntityId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
@@ -112,6 +116,16 @@ export type CanvasElementData = {
    * рисуется — соединить его доменно невозможно, лишняя точка путает (N5).
    */
   logicTarget: boolean;
+  /**
+   * Комментарий-часть элемента (поле `comment`, US-05): показывается
+   * голубым блоком под карточкой с бейджем адресата [owner 2026-10-15].
+   */
+  note?: { text: string; audience: string };
+  /**
+   * Карточка — комментарий-элемент (kind 'comment'): голубая карточка с
+   * текстом (title) и бейджем адресата, без чипов, связей и логики.
+   */
+  commentAudience?: string;
   // Выделение, цель связи, нарушения и обработчики — не в data (ревью A4,
   // R2): карточка читает их из canvas-interaction (стор + контекст действий).
 };
@@ -192,6 +206,7 @@ export const FORM_COMPONENT_KIND_LABELS: Record<FormComponentKind, string> = {
 export const ELEMENT_KIND_LABELS: Record<CanvasElementKind, string> = {
   listItem: 'List item',
   widgetCard: 'Widget card',
+  comment: 'Комментарий',
   ...FORM_COMPONENT_KIND_LABELS,
 };
 
@@ -225,10 +240,23 @@ function elementToElementData(
   context: ElementMapContext,
   inStep: boolean,
 ): CanvasElementData {
+  if (element.kind === 'comment') {
+    // Комментарий-элемент — вне связей и «Сложной логики» в любом блоке.
+    return {
+      id: element.id,
+      title: element.text,
+      kindLabel: ELEMENT_KIND_LABELS.comment,
+      commentAudience: element.audience,
+      logicTarget: false,
+    };
+  }
   const data =
     element.kind === 'listItem' || element.kind === 'widgetCard'
       ? listItemToElementData(element)
       : formComponentToElementData(element, context.logicTargets, context.logicHidden);
+  if (element.comment) {
+    data.note = { text: element.comment, audience: DEFAULT_COMMENT_AUDIENCE };
+  }
   if (inStep) {
     data.logicTarget = true;
     data.hasIncomingLogic = context.logicTargets.has(element.id);

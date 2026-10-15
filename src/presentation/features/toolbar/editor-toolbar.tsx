@@ -6,9 +6,9 @@ import type { CanvasElementKind } from '@domain/model/canvas-element';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ELEMENT_KIND_LABELS, type CanvasNodeType } from '@presentation/features/canvas/graph-flow-adapter';
 
-// Панели-заглушки кнопок 3–4: назначение не подтверждено владельцем (Q-1),
-// поэтому панели только переключаются, содержимое не выдумываем.
-export type EditorSidePanel = 'json' | 'navigation';
+// Панель-заглушка кнопки 4: назначение не подтверждено владельцем (Q-1),
+// поэтому панель только переключается, содержимое не выдумываем.
+export type EditorSidePanel = 'navigation';
 
 // Узлы из меню кнопки 1 (макет «меню-добавления-и-заглушка-пустого-проекта»).
 export type AddableNodeKind = 'home' | 'subScenario' | 'applicationForm';
@@ -73,13 +73,17 @@ function elementMenuItems(
   if (!selectedNodeType) {
     return [];
   }
-  return elementSchemas.map((schema) => ({ kind: schema.kind, label: ELEMENT_KIND_LABELS[schema.kind] }));
+  // Комментарий-элемент — отдельная кнопка тулбара, в меню его нет.
+  return elementSchemas
+    .filter((schema) => schema.kind !== 'comment')
+    .map((schema) => ({ kind: schema.kind, label: ELEMENT_KIND_LABELS[schema.kind] }));
 }
 
 // Левый вертикальный тулбар (T-021): ровно 4 IconButton с active-состоянием
 // (пятая иконка AI-ассистента удалена решением владельца). Кнопки 1–2 открывают
-// меню добавления (узлы / элементы выбранного узла), кнопки 3–4 переключают
-// панели-заглушки. Иконки — только из flamingo-icons, самописных нет.
+// меню добавления (узлы / элементы выбранного узла), кнопка 3 («код») сразу
+// добавляет комментарий-элемент для разработчика [owner 2026-10-15], кнопка 4
+// переключает панель-заглушку. Иконки — только из flamingo-icons, самописных нет.
 export function EditorToolbar({
   elementSchemas,
   activePanel,
@@ -121,11 +125,11 @@ export function EditorToolbar({
         <NoteAdd fontSize="small" />
       </IconButton>
       <IconButton
-        className={buttonClass(activePanel === 'json')}
+        className={classes.button}
         size="small"
-        aria-label="JSON"
-        aria-pressed={activePanel === 'json'}
-        onClick={() => onPanelChange(activePanel === 'json' ? null : 'json')}
+        aria-label="Добавить комментарий"
+        disabled={selectedNodeType === null}
+        onClick={() => onAddElement?.('comment')}
       >
         <Code fontSize="small" />
       </IconButton>
