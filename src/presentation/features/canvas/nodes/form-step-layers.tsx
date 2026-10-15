@@ -49,6 +49,7 @@ const useStyles = makeStyles<EditorTheme>(() => ({
     flexShrink: 0,
   },
   tree: {
+    position: 'relative', // якорь полосы «после» дерева Select'а
     display: 'flex',
     flexDirection: 'column',
     gap: L.rowGap,
@@ -198,8 +199,22 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
       <div className={classes.cell} data-layer-depth={element.layerDepth ?? 0}>
         <DropIndicator anchor={anchor} elementId={element.id} placement="before" gap={L.rowGap} />
         <ElementCard element={element} />
-        <DropIndicator anchor={anchor} elementId={element.id} placement="after" gap={L.rowGap} />
+        {element.complexLogic ? null : (
+          <DropIndicator anchor={anchor} elementId={element.id} placement="after" gap={L.rowGap} />
+        )}
       </div>
+      {/* «После» Select'а — после всего его дерева (варианты и зависимые):
+          туда элемент и встанет; полоса между Select'ом и его вариантами
+          обещала место, которого нет (N2). */}
+      {element.complexLogic ? (
+        <DropIndicator
+          anchor={anchor}
+          elementId={element.id}
+          placement="after"
+          gap={L.rowGap}
+          width={L.elementWidth}
+        />
+      ) : null}
       {/* Варианты Select'а — карточки под ним всегда [owner 2026-10-14]: из
           варианта тянется переход на шаг, а при «Сложной логике» — и правило. */}
       {element.complexLogic

@@ -122,11 +122,14 @@ export function DropIndicator({
   elementId,
   placement,
   gap,
+  width,
 }: {
   anchor: DropAnchorPosition | null | undefined;
   elementId: string;
   placement: DropAnchorPosition['placement'];
   gap: number;
+  /** Ширина карточки, если обёртка шире её (дерево Select'а в шаге формы). */
+  width?: number;
 }) {
   return anchor?.elementId === elementId && anchor.placement === placement ? (
     <DropBar
@@ -134,7 +137,7 @@ export function DropIndicator({
       style={{
         position: 'absolute',
         left: DROP_BAR_INSET,
-        right: DROP_BAR_INSET,
+        ...(width === undefined ? { right: DROP_BAR_INSET } : { width: width - 2 * DROP_BAR_INSET }),
         [placement === 'before' ? 'top' : 'bottom']: -gap / 2 - 1,
       }}
     />
