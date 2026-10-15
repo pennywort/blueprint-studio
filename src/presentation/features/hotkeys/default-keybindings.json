@@ -5,5 +5,8 @@
   { "key": "ctrl+y", "command": "edit.redo", "mac": "" },
   { "key": "mod+c", "command": "edit.copy" },
   { "key": "mod+x", "command": "edit.cut" },
-  { "key": "mod+v", "command": "edit.paste" }
+  { "key": "mod+v", "command": "edit.paste" },
+  { "key": "delete", "command": "edit.delete" },
+  { "key": "backspace", "command": "edit.delete" },
+  { "key": "escape", "command": "canvas.cancelConnection" }
 ]

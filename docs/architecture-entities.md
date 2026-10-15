@@ -18,6 +18,7 @@
 | DnD                   | react-flow (узлы)                                         | HTML5, `canvas/step-dnd.ts`                        | HTML5, `canvas/element-dnd.ts`                  | ❌                                                                |
 | Выделение             | `selectedNodeId`                                          | `selectedStepId`                                   | `selectedElementId` (`canvas/use-selection.ts`) | ❌ три id вместо `{kind, id}`                                     |
 | Рамка состояния       | `.react-flow__node.selected` (theme), `dropTarget`        | `stepSelected`, `dropTarget`                       | `cardSelected`, `cardInvalid`                   | ❌ + цель связи — `outline` handle (`react-flow-theme-styles.ts`) |
+| Хоткеи                | `features/hotkeys` (`HotkeysScope` + `useHotkeyHandlers`) | то же                                              | то же                                           | ✅ один слушатель; react-flow `deleteKeyCode={null}`              |
 
 Целевое состояние для ❌: одно ядро с параметром-различием (scope / рёбра); для рамки —
 одно значение `'connect-target' | 'drop-target' | 'selected' | 'invalid' | null`

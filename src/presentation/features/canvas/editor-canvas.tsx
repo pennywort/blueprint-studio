@@ -4,7 +4,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import {
@@ -33,6 +32,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useEditorTheme } from '@presentation/theme/editor-theme';
+import { useHotkeyHandlers } from '@presentation/features/hotkeys/hotkeys-scope';
 import { useReactFlowThemeStyles } from './react-flow-theme-styles';
 import {
   buildLayerColumns,
@@ -258,7 +258,10 @@ function CanvasInner({
 
   // Центрирование на найденном узле (T-050). Задержка — react-flow мог ещё
   // не перемерить узел после смены выделения.
-  const { fitView, screenToFlowPosition } = useReactFlow();
+  const { fitView, screenToFlowPosition, deleteElements, getNodes, getEdges } = useReactFlow<
+    CanvasNode,
+    CanvasEdge
+  >();
   useEffect(() => {
     if (!focus) {
       return;
@@ -376,23 +379,23 @@ function CanvasInner({
     [onMoveNodeToDepth, onReorderNode, propsNodes, withMeasured],
   );
 
-  // Единое удаление проекта (F5): выделение + Delete/Backspace. Сначала шанс
-  // выделенному элементу внутри узла; если его нет — событие доходит до
-  // react-flow, который удаляет выделенные узлы (onNodesDelete) и связи
-  // (onEdgesDelete). Capture-фаза + stopPropagation: иначе react-flow удалил
-  // бы ещё и узел, в котором лежал элемент.
-  const handleKeyDownCapture = useCallback(
-    (event: ReactKeyboardEvent<HTMLDivElement>) => {
-      if (event.key !== 'Delete' && event.key !== 'Backspace') {
-        return;
-      }
-      if (onDeleteSelectedElement?.()) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-    },
-    [onDeleteSelectedElement],
-  );
+  // Единое удаление проекта (F5) — команда edit.delete системы хоткеев
+  // [owner 2026-10-15]. Сначала выделенный элемент или шаг внутри узла; иначе
+  // выделенные узлы и связи react-flow — через deleteElements: он зовёт те же
+  // onNodesDelete/onEdgesDelete, что и штатная клавиша react-flow (она
+  // отключена, deleteKeyCode={null}: клавиши читает только система хоткеев).
+  const deleteSelection = useCallback((): boolean => {
+    if (onDeleteSelectedElement?.()) {
+      return true;
+    }
+    const selectedNodes = getNodes().filter((node) => node.selected);
+    const selectedEdges = getEdges().filter((edge) => edge.selected);
+    if (selectedNodes.length === 0 && selectedEdges.length === 0) {
+      return false;
+    }
+    void deleteElements({ nodes: selectedNodes, edges: selectedEdges });
+    return true;
+  }, [deleteElements, getEdges, getNodes, onDeleteSelectedElement]);
 
   // Допустимость связи — доменное правило connectableTargets через хук
   // (isConnectionAllowed): один источник правды с подсветкой целей.
@@ -417,6 +420,19 @@ function CanvasInner({
       onConnectionEnd?.();
     }
   }, [clickLine, store, onConnectionEnd]);
+
+  // Клавиатурные команды канваса — только обработчики, комбинации задаёт
+  // система хоткеев. Escape без клик-связи не обрабатывается (false).
+  useHotkeyHandlers({
+    'edit.delete': deleteSelection,
+    'canvas.cancelConnection': () => {
+      if (!clickLine) {
+        return false;
+      }
+      cancelClickConnection();
+      return true;
+    },
+  });
   const handleClickConnectStart: OnConnectStart = useCallback(
     (event, params) => {
       onConnectionStart?.(params.handleId);
@@ -504,12 +520,6 @@ function CanvasInner({
     <div
       className={connecting ? `${styles.root} editor-connecting` : styles.root}
       data-testid="editor-canvas"
-      onKeyDownCapture={(event) => {
-        if (event.key === 'Escape') {
-          cancelClickConnection();
-        }
-        handleKeyDownCapture(event);
-      }}
       onPointerDownCapture={handlePointerDownCapture}
       onPointerDown={handlePointerDown}
       onPointerMove={(event) => {
@@ -548,7 +558,8 @@ function CanvasInner({
         // по умолчанию поднимает выделенный узел на z-index 1000 — выше слоя
         // рёбер. Узлы на канвасе не перекрываются, подъём не нужен.
         elevateNodesOnSelect={false}
-        deleteKeyCode={['Backspace', 'Delete']}
+        // Удаление — команда edit.delete системы хоткеев (deleteSelection выше).
+        deleteKeyCode={null}
         // Штатный порог drag react-flow: микросдвиг мыши при клике по блоку
         // не начинает перетаскивание (повторная приёмка, 1).
         nodeDragThreshold={5}
