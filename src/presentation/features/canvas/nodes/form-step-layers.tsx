@@ -12,16 +12,18 @@ import {
   type LayerDropDecision,
 } from '../layers/layer-columns';
 import { FORM_STEP_LAYER_POLICY } from '../layers/layer-policy';
-import { LayerDropHighlight } from '../layers/layer-drop-highlight';
 import { packLayerBands } from '../layers/layer-bands';
 import { ElementCard } from './element-card';
 import { OptionCard } from './option-card';
 import { useCanvasActions } from '../canvas-interaction';
-import { DropIndicator, useElementDropZone } from './use-element-drop-zone';
+import { useNodeStyles } from './node-styles';
+import { ColumnDropBar, DropIndicator, useElementDropZone } from './use-element-drop-zone';
 
 const L = FORM_STEP_LAYOUT;
 /** Шаг сетки колонок шага: колонка + зазор. */
 const COLUMN_PITCH = L.elementWidth + L.columnGap;
+/** Отступ полосы переноса в новую колонку от края карточек: середина поля шага. */
+const STEP_EDGE_INSET = 6;
 
 const useStyles = makeStyles<EditorTheme>(() => ({
   // Слой шага: деревья элементов друг под другом; шаг растёт по
@@ -94,6 +96,7 @@ export type FormStepLayersProps = {
 // шага/формы — перенос в колонку-кандидат.
 export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps) {
   const classes = useStyles();
+  const nodeClasses = useNodeStyles();
   const actions = useCanvasActions();
   const layersRef = useRef<HTMLDivElement>(null);
   // Лес правил: корни — элементы без варианта-источника в этом шаге,
@@ -181,6 +184,11 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
   });
 
   const anchor = drag?.anchor ?? null;
+  // Перенос в колонку без якоря-карточки (пустая колонка справа, зазор
+  // между карточками) — вертикальная полоса в зазоре слева от колонки;
+  // пустой шаг — горизонтальная полоса сверху. Подсветка колонки во всю
+  // ширину здесь не рисуется: выходила за границу шага [owner 2026-10-15].
+  const columnTarget = drag?.decision.kind === 'moveToLayer' && !anchor ? drag.column : null;
 
   const renderTree = (element: CanvasElementData): ReactNode => (
     <div key={element.id} className={classes.tree}>
@@ -227,12 +235,23 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
           }}
         />
       ) : null}
-      {drag?.decision.kind === 'moveToLayer' && drag.column ? (
-        <LayerDropHighlight
-          left={drag.column.x}
-          width={drag.column.width}
-          style={{ borderRadius: 12, zIndex: 0 }}
-        />
+      {columnTarget ? (
+        maxDepth < 0 ? (
+          <div
+            className={nodeClasses.dropIndicator}
+            style={{ position: 'absolute', top: 0, left: 0, width: L.elementWidth, margin: 0 }}
+            data-testid="drop-zone-bar"
+          />
+        ) : (
+          // Справа от последней колонки зазора нет — полоса в поле шага
+          // (середина padding 12px), не на линии handles карточек.
+          <ColumnDropBar
+            x={Math.min(
+              Math.max(columnTarget.x - L.columnGap / 2, 0),
+              (maxDepth + 1) * COLUMN_PITCH - L.columnGap + STEP_EDGE_INSET,
+            )}
+          />
+        )
       ) : null}
       {rows.map((row) => (
         <div key={row[0]!.item.id} className={classes.row}>

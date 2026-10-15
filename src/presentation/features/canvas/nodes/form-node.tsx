@@ -35,11 +35,10 @@ import {
   type LayerDropDecision,
 } from '../layers/layer-columns';
 import { FORM_STEPS_LAYER_POLICY } from '../layers/layer-policy';
-import { LayerDropHighlight } from '../layers/layer-drop-highlight';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { FormStepLayers } from './form-step-layers';
 import { useNodeStyles } from './node-styles';
-import { useDropZone } from './use-element-drop-zone';
+import { ColumnDropBar, useDropZone } from './use-element-drop-zone';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   // Карточка, рамки, заголовок и кнопки — общие стили узлов (ревью A8, R4).
@@ -113,16 +112,14 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     minWidth: 0,
     cursor: 'grab',
   },
-  // Индикатор вставки шага — горизонтальная линия посередине зазора между
-  // шагами уровня; абсолютный — раскладка формы при drag не меняется (как ADR-16).
+  // Индикатор вставки шага — горизонтальная полоса с точками (dropIndicator)
+  // посередине зазора между шагами уровня; абсолютный — раскладка формы
+  // при drag не меняется (как ADR-16).
   stepDropIndicator: {
     position: 'absolute',
     left: 0,
     right: 0,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: theme.editor.canvas.edge,
-    pointerEvents: 'none',
+    margin: 0,
   },
   stepDropBefore: {
     top: -CANVAS_LAYOUT.formStepGap / 2 - 1,
@@ -189,7 +186,8 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
   // Dnd шагов внутри формы [owner 2026-10-14] — как dnd узлов канваса, общим
   // ядром слоёв (layers/): колонка-кандидат — ближайшая по X (справа — пустой
   // слот нового уровня на месте «Добавить шаг»); своя колонка — порядок по Y,
-  // другая — перенос на уровень с подсветкой колонки (LayerDropHighlight).
+  // другая — перенос на уровень: без якоря — вертикальная полоса в зазоре
+  // слева от колонки (ColumnDropBar, [owner 2026-10-15]).
   // Индикатор вставки — только там, где порядок изменится.
   const stepsRowRef = useRef<HTMLDivElement>(null);
   // Координаты — локальные координаты ряда: узел внутри zoom react-flow,
@@ -298,12 +296,8 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
         </IconButton>
       </div>
       <div ref={stepsRowRef} className={classes.stepsRow} data-testid="form-steps-row" {...stepDropHandlers}>
-        {stepDrop?.decision.kind === 'moveToLayer' && stepDrop.column ? (
-          <LayerDropHighlight
-            left={stepDrop.column.x}
-            width={stepDrop.column.width}
-            style={{ borderRadius: 12, zIndex: 0 }}
-          />
+        {stepDrop?.decision.kind === 'moveToLayer' && stepDrop.column && !dropAnchor ? (
+          <ColumnDropBar x={Math.max(stepDrop.column.x - CANVAS_LAYOUT.formStepGap / 2, 0)} />
         ) : null}
         {stepLevels.map((level) => (
           <div
@@ -413,7 +407,7 @@ const FormStepColumn = memo(function FormStepColumn({
       />
       {dropPlacement ? (
         <div
-          className={`${classes.stepDropIndicator} ${
+          className={`${nodeClasses.dropIndicator} ${classes.stepDropIndicator} ${
             dropPlacement === 'before' ? classes.stepDropBefore : classes.stepDropAfter
           }`}
           data-testid="step-drop-indicator"

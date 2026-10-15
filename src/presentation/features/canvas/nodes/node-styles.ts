@@ -32,12 +32,50 @@ export const useNodeStyles = makeStyles<EditorTheme>((theme) => ({
     outline: `2px dashed ${theme.editor.canvas.nodeHoverBorder}`,
     outlineOffset: 2,
   },
-  // Линия-индикатор места вставки карточки (N2).
+  // Полоса-индикатор вставки внутри узла (N2, [owner 2026-10-15]): толщина
+  // как у связи, на концах серые точки как handle — не выходит за границы
+  // блока (в отличие от подсветки колонки на канвасе, LayerDropHighlight).
+  // Горизонтальная — место в колонке, вертикальная — перенос в колонку.
   dropIndicator: {
+    position: 'relative',
     height: 2,
-    borderRadius: 1,
-    backgroundColor: theme.editor.canvas.edge,
     margin: '-1px 0',
+    backgroundColor: theme.editor.canvas.edge,
+    pointerEvents: 'none',
+    '&::before, &::after': {
+      content: '""',
+      position: 'absolute',
+      top: -5,
+      width: 12,
+      height: 12,
+      borderRadius: '50%',
+      backgroundColor: theme.editor.canvas.handle,
+      boxShadow: `0 1px 3px ${theme.editor.canvas.handleShadow}`,
+    },
+    '&::before': { left: -6 },
+    '&::after': { right: -6 },
+  },
+  dropIndicatorVertical: {
+    position: 'absolute',
+    top: 6,
+    bottom: 6,
+    width: 2,
+    marginLeft: -1,
+    backgroundColor: theme.editor.canvas.edge,
+    pointerEvents: 'none',
+    zIndex: 1,
+    '&::before, &::after': {
+      content: '""',
+      position: 'absolute',
+      left: -5,
+      width: 12,
+      height: 12,
+      borderRadius: '50%',
+      backgroundColor: theme.editor.canvas.handle,
+      boxShadow: `0 1px 3px ${theme.editor.canvas.handleShadow}`,
+    },
+    '&::before': { top: -6 },
+    '&::after': { bottom: -6 },
   },
   header: {
     display: 'flex',

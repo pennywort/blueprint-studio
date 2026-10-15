@@ -110,3 +110,10 @@ export function DropIndicator({
     <div className={classes.dropIndicator} data-testid="drop-indicator" />
   ) : null;
 }
+
+// Вертикальная полоса переноса в колонку (N2, [owner 2026-10-15]): в зазоре
+// слева от колонки-цели (x — локальная координата слоя), по высоте зоны.
+export function ColumnDropBar({ x }: { x: number }) {
+  const classes = useNodeStyles();
+  return <div className={classes.dropIndicatorVertical} style={{ left: x }} data-testid="drop-zone-bar" />;
+}
