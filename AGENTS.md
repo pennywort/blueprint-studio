@@ -70,8 +70,8 @@ ESLint flat + eslint-plugin-boundaries, Prettier, Husky, commitlint, lint-staged
 
 | Команда                                | Зачем                                                                        |
 | -------------------------------------- | ---------------------------------------------------------------------------- |
-| `npm run verify`                       | lint + build. Успех — 2 строки; ошибка — только ошибки + путь к логу         |
-| `npm run rules`                        | правила §4, которые не ловит eslint (hex, `@material-ui`, `window`, тесты)   |
+| `npm run verify`                       | lint + build (сам — в pre-commit). Ошибка — только ошибки + путь к логу      |
+| `npm run rules`                        | правила §4, не ловимые eslint (hex, `@material-ui`, `window`; в pre-commit)  |
 | `npm run ui -- <шаги>`                 | ручная проверка UI текстом (сам поднимет dev-сервер); шаги — в шапке скрипта |
 | `node scripts/agent/lint-file.mjs <f>` | eslint одного файла сразу после правки                                       |
 | `npm run state:summary`                | что открыто в PROJECT_STATE и нужно ли его обновлять                         |
@@ -97,16 +97,16 @@ ESLint flat + eslint-plugin-boundaries, Prettier, Husky, commitlint, lint-staged
 - Код правь инструментом редактирования CLI, не shell-скриптами (python, `sed -i`,
   `>`): тогда сразу линтуется изменённый файл. В Claude Code shell-правки кода
   блокирует хук `bash-guard` [owner 2026-10-15].
-- `npm run verify` — один раз, перед коммитом (чек-лист §7). В процессе хватает
-  линта файла; повторный `verify` — только если после прошлого были правки.
+- `verify` + `rules` вручную не запускай: их гоняет pre-commit (Husky) на каждом
+  коммите с кодом [owner 2026-10-15]. В процессе хватает линта файла.
   Вывод команд не фильтруй повторным запуском — сразу `| tail`/`| grep`.
 
 ## 7. Чек-лист завершения задачи (выполни ВСЁ по порядку)
 
-1. `npm run verify` — зелёный.
-2. `npm run rules` — зелёный.
-3. Если менялся UI — `npm run ui -- …` по сценарию задачи, `✅ ui OK`.
-4. Коммит (conventional, по-русски), push рабочей ветки, merge в `master` и push `master`.
-5. `npm run state:summary` — если «⚠️ ОБНОВЛЕНИЕ: вероятно нужно», напиши владельцу,
+1. Если менялся UI — `npm run ui -- …` по сценарию задачи, `✅ ui OK`.
+2. Коммит (conventional, по-русски). Pre-commit сам прогонит lint-staged, `verify`
+   и `rules`; красное — коммит не пройдёт: исправь и закоммить снова.
+3. Push рабочей ветки, merge в `master` и push `master`.
+4. `npm run state:summary` — если «⚠️ ОБНОВЛЕНИЕ: вероятно нужно», напиши владельцу,
    что предлагаешь добавить в PROJECT_STATE (сам файл правит `/update-state`).
-6. Ответ владельцу: 1–2 строки — что сделано и чем проверено.
+5. Ответ владельцу: 1–2 строки — что сделано и чем проверено.

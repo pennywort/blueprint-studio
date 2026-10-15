@@ -1,1 +1,6 @@
 npx lint-staged --quiet
+# verify + rules — на каждом коммите с кодом [owner 2026-10-15]: красное не
+# закоммитится ни у какого агента; коммит только docs — без билда (быстро).
+if git diff --cached --name-only | grep -qE '^(src|vendor|scripts)/'; then
+  npm run -s verify && npm run -s rules
+fi

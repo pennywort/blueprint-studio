@@ -1,8 +1,8 @@
 /* global process, console */
-// Хук Stop Claude Code: перед завершением ответа, если есть незакоммиченные
-// правки кода, — npm run verify + npm run rules. Красное → код 2, агент
-// продолжает и чинит. Повторный вызов внутри того же Stop (stop_hook_active)
-// пропускается, чтобы не зациклиться. Другие агенты: то же = чек-лист AGENTS.md §7.
+// Хук Stop Claude Code — страховка: обычно verify + rules гоняет pre-commit
+// (.husky/pre-commit), здесь — только если правки кода забыли закоммитить.
+// Красное → код 2, агент продолжает и чинит. Повторный вызов внутри того же
+// Stop (stop_hook_active) пропускается, чтобы не зациклиться.
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
