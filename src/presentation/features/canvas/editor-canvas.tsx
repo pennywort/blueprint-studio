@@ -14,10 +14,8 @@ import {
   ReactFlowProvider,
   applyEdgeChanges,
   applyNodeChanges,
-  ConnectionLineType,
   Position,
   ViewportPortal,
-  getSmoothStepPath,
   useReactFlow,
   useStoreApi,
   useUpdateNodeInternals,
@@ -45,6 +43,7 @@ import { LayerDropHighlight } from './layers/layer-drop-highlight';
 import { isActionTarget } from './canvas-events';
 import { EditorCanvasControls } from './editor-canvas-controls';
 import { canvasNodeTypes } from './nodes/node-types';
+import { EditorConnectionLine, canvasEdgeTypes, editorEdgePath } from './canvas-edges';
 import {
   EDGE_ARROW_MARKER_ID,
   type CanvasEdge,
@@ -535,6 +534,7 @@ function CanvasInner({
         nodes={nodes}
         edges={edges}
         nodeTypes={canvasNodeTypes}
+        edgeTypes={canvasEdgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
@@ -543,8 +543,8 @@ function CanvasInner({
         onClickConnectStart={handleClickConnectStart}
         onClickConnectEnd={handleClickConnectEnd}
         // Линия протягивания — того же вида, что рёбра между блоками
-        // (smoothstep, стиль .react-flow__connection-path), повторная приёмка, 4.
-        connectionLineType={ConnectionLineType.SmoothStep}
+        // (общий путь canvas-edges, стиль .react-flow__connection-path), повторная приёмка, 4.
+        connectionLineComponent={EditorConnectionLine}
         onReconnect={handleReconnect}
         onEdgesDelete={handleEdgesDelete}
         onNodesDelete={handleNodesDelete}
@@ -600,11 +600,11 @@ function CanvasInner({
   );
 }
 
-// Линия связи в клик-режиме: тот же путь smoothstep и тот же класс, что у
-// штатной линии протягивания react-flow, — визуально режимы не отличаются.
+// Линия связи в клик-режиме: тот же путь и тот же класс, что у линии
+// протягивания (EditorConnectionLine), — визуально режимы не отличаются.
 // ViewportPortal — слой полотна: координаты flow, pan/zoom применяются сами.
 function ClickConnectionLine({ from, to }: { from: XYPosition; to: XYPosition }) {
-  const [path] = getSmoothStepPath({
+  const path = editorEdgePath({
     sourceX: from.x,
     sourceY: from.y,
     sourcePosition: Position.Right,

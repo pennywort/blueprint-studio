@@ -6,6 +6,7 @@ import {
   type DropAnchorPosition,
   type ElementDragPayload,
 } from '../element-dnd';
+import type { LayerColumn } from '../layers/layer-columns';
 import { useNodeStyles } from './node-styles';
 
 type DropZoneOptions<P, T> = {
@@ -144,8 +145,25 @@ export function DropIndicator({
   ) : null;
 }
 
+/**
+ * X вертикальной полосы переноса в колонку (N2, [owner 2026-10-15]) —
+ * середина промежутка слева от колонки, полоса не касается ни карточек, ни
+ * края контейнера: у первой колонки — поле контейнера (edge), у остальных —
+ * зазор колонок (gap), но не дальше правого края поля (right).
+ */
+export function columnBarX(
+  column: LayerColumn,
+  space: { gap: number; edge: number; right?: number },
+): number {
+  if (column.depth === 0) {
+    return -space.edge / 2;
+  }
+  const previousEnd = column.x - space.gap;
+  return previousEnd + Math.min(space.gap, (space.right ?? Infinity) - previousEnd) / 2;
+}
+
 // Вертикальная полоса переноса в колонку (N2, [owner 2026-10-15]): x —
-// локальная координата слоя, по высоте зоны (отступ — под точки на концах).
+// локальная координата слоя (columnBarX), по высоте зоны (отступ — под точки на концах).
 export function ColumnDropBar({ x }: { x: number }) {
   return (
     <DropBar

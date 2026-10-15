@@ -14,6 +14,7 @@ import { walkSubScenarios } from '@domain/graph-walk';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
 import { evaluateVisibility } from '@domain/logic-visibility';
+import { EDITOR_EDGE_TYPE } from './canvas-edges';
 
 // Адаптер graph ↔ flow (Epic 002, T-030) — граница domain ↔ react-flow
 // (архитектурный принцип 4 декомпозиции): домен не знает о react-flow,
@@ -479,8 +480,8 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
       sourceHandle: link.sourceElementId,
       target: link.targetId,
       // Ортогональные рёбра с закруглёнными углами (замечание владельца) —
-      // штатный тип react-flow smoothstep.
-      type: 'smoothstep',
+      // ребро редактора (canvas-edges, путь smoothstep).
+      type: EDITOR_EDGE_TYPE,
       markerEnd: EDGE_ARROW_MARKER_ID,
     });
   }
@@ -508,7 +509,7 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
       sourceHandle: logicSourceHandleId(rule.sourceElementId, rule.condition.optionId),
       target: ruleTargetNodeId,
       targetHandle: logicAnchorHandleId(rule.targetElementId),
-      type: 'smoothstep',
+      type: EDITOR_EDGE_TYPE,
       markerEnd: EDGE_ARROW_MARKER_ID,
       reconnectable: false,
       data: { kind: 'logic' },
@@ -540,7 +541,7 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
           : transition.sourceElementId,
       target: targetNodeId,
       targetHandle: stepTargetHandleId(transition.targetStepId),
-      type: 'smoothstep',
+      type: EDITOR_EDGE_TYPE,
       markerEnd: EDGE_ARROW_MARKER_ID,
       reconnectable: false,
       data: { kind: 'stepTransition' },

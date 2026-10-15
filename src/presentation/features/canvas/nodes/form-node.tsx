@@ -40,7 +40,7 @@ import { FORM_STEPS_LAYER_POLICY } from '../layers/layer-policy';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { FormStepLayers } from './form-step-layers';
 import { useNodeStyles } from './node-styles';
-import { ColumnDropBar, DROP_BAR_INSET, DropBar, useDropZone } from './use-element-drop-zone';
+import { ColumnDropBar, columnBarX, DROP_BAR_INSET, DropBar, useDropZone } from './use-element-drop-zone';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   // Карточка, рамки, заголовок и кнопки — общие стили узлов (ревью A8, R4).
@@ -83,7 +83,9 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     padding: FORM_STEP_LAYOUT.stepPadding,
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing(1.5),
+    // Зазор шапка → карточки = зазор между карточками: полоса вставки перед
+    // первой карточкой — посередине, не у шапки (DropBar, [owner 2026-10-15]).
+    gap: FORM_STEP_LAYOUT.rowGap,
     // Весь шаг — ручка dnd шага [owner 2026-10-15].
     cursor: 'grab',
   },
@@ -292,7 +294,12 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
       </div>
       <div ref={stepsRowRef} className={classes.stepsRow} data-testid="form-steps-row" {...stepDropHandlers}>
         {stepDrop?.decision.kind === 'moveToLayer' && stepDrop.column && !dropAnchor ? (
-          <ColumnDropBar x={Math.max(stepDrop.column.x - CANVAS_LAYOUT.formStepGap / 2, 0)} />
+          <ColumnDropBar
+            x={columnBarX(stepDrop.column, {
+              gap: CANVAS_LAYOUT.formStepGap,
+              edge: CANVAS_LAYOUT.nodePadding,
+            })}
+          />
         ) : null}
         {stepLevels.map((level) => (
           <div

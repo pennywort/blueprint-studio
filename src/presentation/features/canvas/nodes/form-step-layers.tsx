@@ -18,6 +18,7 @@ import { OptionCard } from './option-card';
 import { useCanvasActions } from '../canvas-interaction';
 import {
   ColumnDropBar,
+  columnBarX,
   DROP_BAR_INSET,
   DropBar,
   DropIndicator,
@@ -80,6 +81,8 @@ type DragState = {
   column: LayerColumn | null;
   decision: LayerDropDecision;
   anchor: DropAnchorPosition | null;
+  /** Ширина слоя без поля шага — правая граница для полосы переноса. */
+  layersWidth: number;
 };
 
 export type FormStepLayersProps = {
@@ -161,7 +164,7 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
       if (anchor && anchor.elementId === dragged.elementId) {
         anchor = null; // якорь на самой карточке — позиция не меняется
       }
-      return { column, decision, anchor };
+      return { column, decision, anchor, layersWidth: container.offsetWidth };
     },
     [elements, maxDepth],
   );
@@ -266,13 +269,13 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
             testId="drop-zone-bar"
           />
         ) : (
-          // Справа от последней колонки зазора нет — полоса в середине поля
-          // шага, не на линии handles карточек.
+          // Справа от последней колонки — посередине пути до границы шага.
           <ColumnDropBar
-            x={Math.min(
-              Math.max(columnTarget.x - L.columnGap / 2, 0),
-              (maxDepth + 1) * COLUMN_PITCH - L.columnGap + L.stepPadding / 2,
-            )}
+            x={columnBarX(columnTarget, {
+              gap: L.columnGap,
+              edge: L.stepPadding,
+              right: (drag?.layersWidth ?? 0) + L.stepPadding,
+            })}
           />
         )
       ) : null}
