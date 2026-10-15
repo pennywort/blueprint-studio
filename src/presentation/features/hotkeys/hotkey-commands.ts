@@ -2,19 +2,23 @@
 // то, что пишется в поле `command` keybindings.json; заголовок — для будущей
 // панели настроек. Команда хоткея — не команда CommandBus: это действие UI,
 // которое само решает, какую команду графа запустить.
+// - allowInInput: срабатывает и в поле ввода (иначе там работает поле);
+// - repeat: повторяется при удержании клавиш (как в VS Code).
+
+type HotkeyCommandMeta = { title: string; allowInInput: boolean; repeat: boolean };
 
 export const HOTKEY_COMMANDS = {
-  'project.save': {
-    title: 'Сохранить проект',
-    // Сохранение работает и из полей ввода: иначе браузер откроет «Сохранить страницу».
-    allowInInput: true,
-  },
-  'edit.undo': { title: 'Отменить', allowInInput: false },
-  'edit.redo': { title: 'Повторить', allowInInput: false },
-  'edit.copy': { title: 'Копировать элемент', allowInInput: false },
-  'edit.cut': { title: 'Вырезать элемент', allowInInput: false },
-  'edit.paste': { title: 'Вставить элемент', allowInInput: false },
-} as const satisfies Record<string, { title: string; allowInInput: boolean }>;
+  // Сохранение и из полей ввода: иначе браузер откроет «Сохранить страницу».
+  'project.save': { title: 'Сохранить проект', allowInInput: true, repeat: false },
+  'edit.undo': { title: 'Отменить', allowInInput: false, repeat: true },
+  'edit.redo': { title: 'Повторить', allowInInput: false, repeat: true },
+  'edit.copy': { title: 'Копировать элемент', allowInInput: false, repeat: false },
+  'edit.cut': { title: 'Вырезать элемент', allowInInput: false, repeat: false },
+  'edit.paste': { title: 'Вставить элемент', allowInInput: false, repeat: false },
+  // Единое удаление (F5): элемент или шаг, иначе выделенные блоки и связи.
+  'edit.delete': { title: 'Удалить выделенное', allowInInput: false, repeat: false },
+  'canvas.cancelConnection': { title: 'Отменить протягивание связи', allowInInput: false, repeat: false },
+} as const satisfies Record<string, HotkeyCommandMeta>;
 
 export type HotkeyCommandId = keyof typeof HOTKEY_COMMANDS;
 
