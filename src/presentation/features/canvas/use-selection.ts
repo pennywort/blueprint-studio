@@ -15,8 +15,12 @@ export type SelectedElementInfo = {
 
 // Кнопка мыши зажата на канвасе: пока ЛКМ удержана, подразумевается попытка
 // переноса, и панель атрибутов не должна открываться — она сужает канвас и
-// срывает drag. Открытие — по отпусканию (pointerup; у нативного dnd карточки
-// — pointercancel/dragend). Нажатия вне .react-flow (сама панель) не считаются.
+// срывает drag. Жест кончается на pointerup (клик, drag узла react-flow) либо
+// на dragend/drop (нативный dnd карточек: на его старте браузер шлёт
+// pointercancel и pointerup уже не будет — поэтому pointercancel жест НЕ
+// завершает, иначе панель открывалась бы посреди переноса; drop нужен на
+// случай, когда перенесённая карточка перемонтирована и dragend не дойдёт).
+// Нажатия вне .react-flow (сама панель) не считаются.
 export function useCanvasPointerHeld(): boolean {
   const [held, setHeld] = useState(false);
   useEffect(() => {
@@ -28,13 +32,11 @@ export function useCanvasPointerHeld(): boolean {
     const onRelease = () => setHeld(false);
     window.addEventListener('pointerdown', onDown, true);
     window.addEventListener('pointerup', onRelease, true);
-    window.addEventListener('pointercancel', onRelease, true);
     window.addEventListener('dragend', onRelease, true);
     window.addEventListener('drop', onRelease, true);
     return () => {
       window.removeEventListener('pointerdown', onDown, true);
       window.removeEventListener('pointerup', onRelease, true);
-      window.removeEventListener('pointercancel', onRelease, true);
       window.removeEventListener('dragend', onRelease, true);
       window.removeEventListener('drop', onRelease, true);
     };
