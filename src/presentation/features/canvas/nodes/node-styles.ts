@@ -36,44 +36,30 @@ export const useNodeStyles = makeStyles<EditorTheme>((theme) => ({
   // как у связи, на концах серые точки как handle — не выходит за границы
   // блока (в отличие от подсветки колонки на канвасе, LayerDropHighlight).
   // Горизонтальная — место в колонке, вертикальная — перенос в колонку.
-  dropIndicator: {
-    position: 'relative',
-    height: 2,
-    margin: '-1px 0',
-    backgroundColor: theme.editor.canvas.edge,
-    pointerEvents: 'none',
-    '&::before, &::after': {
-      content: '""',
-      position: 'absolute',
-      top: -5,
-      width: 12,
-      height: 12,
-      borderRadius: '50%',
-      backgroundColor: theme.editor.canvas.handle,
-      boxShadow: `0 1px 3px ${theme.editor.canvas.handleShadow}`,
-    },
-    '&::before': { left: -6 },
-    '&::after': { right: -6 },
-  },
-  dropIndicatorVertical: {
-    position: 'absolute',
-    top: 6,
-    bottom: 6,
-    width: 2,
-    marginLeft: -1,
+  // Позицию (в потоке или абсолютно) задаёт место использования (DropBar).
+  dropBar: {
     backgroundColor: theme.editor.canvas.edge,
     pointerEvents: 'none',
     zIndex: 1,
     '&::before, &::after': {
       content: '""',
       position: 'absolute',
-      left: -5,
       width: 12,
       height: 12,
       borderRadius: '50%',
       backgroundColor: theme.editor.canvas.handle,
       boxShadow: `0 1px 3px ${theme.editor.canvas.handleShadow}`,
     },
+  },
+  dropBarHorizontal: {
+    height: 2,
+    '&::before, &::after': { top: -5 },
+    '&::before': { left: -6 },
+    '&::after': { right: -6 },
+  },
+  dropBarVertical: {
+    width: 2,
+    '&::before, &::after': { left: -5 },
     '&::before': { top: -6 },
     '&::after': { bottom: -6 },
   },

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type DragEvent } from 'react';
+import { useCallback, useEffect, useState, type CSSProperties, type DragEvent } from 'react';
 import {
   draggedElement,
   isDragLeavingZone,
@@ -95,7 +95,23 @@ export function useDropZone<P, T>({ dragged, read, locate, onDrop, isolate = fal
   return { state, handlers: { onDragOver, onDragLeave, onDrop: handleDrop } };
 }
 
-// Линия-индикатор вставки у карточки-якоря (N2).
+// Полоса-индикатор вставки (N2, [owner 2026-10-15]) — единая для узлов:
+// карточки в шаге, шаги в форме. style — положение в месте использования.
+export function DropBar({
+  orientation,
+  style,
+  testId = 'drop-indicator',
+}: {
+  orientation: 'horizontal' | 'vertical';
+  style: CSSProperties;
+  testId?: string;
+}) {
+  const classes = useNodeStyles();
+  const modifier = orientation === 'horizontal' ? classes.dropBarHorizontal : classes.dropBarVertical;
+  return <div className={`${classes.dropBar} ${modifier}`} style={style} data-testid={testId} />;
+}
+
+// Полоса у карточки-якоря (N2): в потоке колонки, посередине зазора.
 export function DropIndicator({
   anchor,
   elementId,
@@ -105,15 +121,19 @@ export function DropIndicator({
   elementId: string;
   placement: DropAnchorPosition['placement'];
 }) {
-  const classes = useNodeStyles();
   return anchor?.elementId === elementId && anchor.placement === placement ? (
-    <div className={classes.dropIndicator} data-testid="drop-indicator" />
+    <DropBar orientation="horizontal" style={{ position: 'relative', margin: '-1px 0' }} />
   ) : null;
 }
 
-// Вертикальная полоса переноса в колонку (N2, [owner 2026-10-15]): в зазоре
-// слева от колонки-цели (x — локальная координата слоя), по высоте зоны.
+// Вертикальная полоса переноса в колонку (N2, [owner 2026-10-15]): x —
+// локальная координата слоя, по высоте зоны (отступ — под точки на концах).
 export function ColumnDropBar({ x }: { x: number }) {
-  const classes = useNodeStyles();
-  return <div className={classes.dropIndicatorVertical} style={{ left: x }} data-testid="drop-zone-bar" />;
+  return (
+    <DropBar
+      orientation="vertical"
+      style={{ position: 'absolute', top: 6, bottom: 6, left: x - 1 }}
+      testId="drop-zone-bar"
+    />
+  );
 }

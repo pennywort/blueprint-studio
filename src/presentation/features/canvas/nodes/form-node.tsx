@@ -13,7 +13,7 @@ import { Add, Delete } from '@blueprint-vendor/flamingo-icons';
 import type { CanvasElementKind } from '@domain/model/canvas-element';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
-import { CANVAS_LAYOUT } from '../canvas-layout';
+import { CANVAS_LAYOUT, FORM_STEP_LAYOUT } from '../canvas-layout';
 import { stepTargetHandleId, type CanvasFormStepData, type CanvasNode } from '../graph-flow-adapter';
 import { setScaledDragPreview } from '../drag-preview';
 import { type DropAnchorPosition, type ElementDragPayload } from '../element-dnd';
@@ -38,7 +38,7 @@ import { FORM_STEPS_LAYER_POLICY } from '../layers/layer-policy';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { FormStepLayers } from './form-step-layers';
 import { useNodeStyles } from './node-styles';
-import { ColumnDropBar, useDropZone } from './use-element-drop-zone';
+import { ColumnDropBar, DropBar, useDropZone } from './use-element-drop-zone';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   // Карточка, рамки, заголовок и кнопки — общие стили узлов (ревью A8, R4).
@@ -78,7 +78,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     flexShrink: 0,
     borderRadius: 12,
     backgroundColor: theme.palette.background.default,
-    padding: theme.spacing(1.5),
+    padding: FORM_STEP_LAYOUT.stepPadding,
     display: 'flex',
     flexDirection: 'column',
     gap: theme.spacing(1.5),
@@ -111,21 +111,6 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     flex: 1,
     minWidth: 0,
     cursor: 'grab',
-  },
-  // Индикатор вставки шага — горизонтальная полоса с точками (dropIndicator)
-  // посередине зазора между шагами уровня; абсолютный — раскладка формы
-  // при drag не меняется (как ADR-16).
-  stepDropIndicator: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    margin: 0,
-  },
-  stepDropBefore: {
-    top: -CANVAS_LAYOUT.formStepGap / 2 - 1,
-  },
-  stepDropAfter: {
-    bottom: -CANVAS_LAYOUT.formStepGap / 2 - 1,
   },
   stepHeader: {
     display: 'flex',
@@ -405,12 +390,18 @@ const FormStepColumn = memo(function FormStepColumn({
         id={stepTargetHandleId(step.id)}
         className={connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
       />
+      {/* Индикатор вставки шага — посередине зазора между шагами уровня;
+          абсолютный — раскладка формы при drag не меняется (как ADR-16). */}
       {dropPlacement ? (
-        <div
-          className={`${nodeClasses.dropIndicator} ${classes.stepDropIndicator} ${
-            dropPlacement === 'before' ? classes.stepDropBefore : classes.stepDropAfter
-          }`}
-          data-testid="step-drop-indicator"
+        <DropBar
+          orientation="horizontal"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            [dropPlacement === 'before' ? 'top' : 'bottom']: -CANVAS_LAYOUT.formStepGap / 2 - 1,
+          }}
+          testId="step-drop-indicator"
         />
       ) : null}
       <div className={classes.stepHeader}>

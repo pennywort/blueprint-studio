@@ -16,14 +16,11 @@ import { packLayerBands } from '../layers/layer-bands';
 import { ElementCard } from './element-card';
 import { OptionCard } from './option-card';
 import { useCanvasActions } from '../canvas-interaction';
-import { useNodeStyles } from './node-styles';
-import { ColumnDropBar, DropIndicator, useElementDropZone } from './use-element-drop-zone';
+import { ColumnDropBar, DropBar, DropIndicator, useElementDropZone } from './use-element-drop-zone';
 
 const L = FORM_STEP_LAYOUT;
 /** Шаг сетки колонок шага: колонка + зазор. */
 const COLUMN_PITCH = L.elementWidth + L.columnGap;
-/** Отступ полосы переноса в новую колонку от края карточек: середина поля шага. */
-const STEP_EDGE_INSET = 6;
 
 const useStyles = makeStyles<EditorTheme>(() => ({
   // Слой шага: деревья элементов друг под другом; шаг растёт по
@@ -96,7 +93,6 @@ export type FormStepLayersProps = {
 // шага/формы — перенос в колонку-кандидат.
 export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps) {
   const classes = useStyles();
-  const nodeClasses = useNodeStyles();
   const actions = useCanvasActions();
   const layersRef = useRef<HTMLDivElement>(null);
   // Лес правил: корни — элементы без варианта-источника в этом шаге,
@@ -237,18 +233,18 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
       ) : null}
       {columnTarget ? (
         maxDepth < 0 ? (
-          <div
-            className={nodeClasses.dropIndicator}
-            style={{ position: 'absolute', top: 0, left: 0, width: L.elementWidth, margin: 0 }}
-            data-testid="drop-zone-bar"
+          <DropBar
+            orientation="horizontal"
+            style={{ position: 'absolute', top: 0, left: 0, width: L.elementWidth }}
+            testId="drop-zone-bar"
           />
         ) : (
-          // Справа от последней колонки зазора нет — полоса в поле шага
-          // (середина padding 12px), не на линии handles карточек.
+          // Справа от последней колонки зазора нет — полоса в середине поля
+          // шага, не на линии handles карточек.
           <ColumnDropBar
             x={Math.min(
               Math.max(columnTarget.x - L.columnGap / 2, 0),
-              (maxDepth + 1) * COLUMN_PITCH - L.columnGap + STEP_EDGE_INSET,
+              (maxDepth + 1) * COLUMN_PITCH - L.columnGap + L.stepPadding / 2,
             )}
           />
         )
