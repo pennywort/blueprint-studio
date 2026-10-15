@@ -4,6 +4,7 @@ import type { IElementSchemaProvider } from '@application/ports/element-schema-p
 import type { IIdGenerator } from '@application/ports/id-generator';
 import type { IClock } from '@application/ports/clock';
 import type { IGraphRepository } from '@application/ports/graph-repository';
+import type { IGraphFileCodec } from '@application/ports/graph-file-codec';
 import { CommandBus } from '@application/commands/command-bus';
 import { ManifestSchemaProvider } from './element-schemas/manifest-schema-provider';
 import manifestJson from './element-schemas/element-manifest.json';
@@ -11,6 +12,7 @@ import pageElementManifestJson from './element-schemas/page-element-manifest.jso
 import { UuidIdGenerator } from './misc/uuid-id-generator';
 import { SystemClock } from './misc/system-clock';
 import { IndexedDbGraphRepository } from './persistence/indexed-db-graph-repository';
+import { JsonGraphFileCodec } from './persistence/json-graph-file-codec';
 
 // Composition root (конституция, железные правила 6–7):
 // единственный контейнер, создаётся явно вызовом buildContainer() в bootstrap.tsx.
@@ -23,10 +25,12 @@ export interface Cradle {
   elementSchemaProvider: IElementSchemaProvider;
   commandBus: CommandBus;
   graphRepository: IGraphRepository;
-  // Начальный граф редактора, пока карты нет в хранилище (TEMPORARY, до
-  // списка проектов): по projectId из роута выбирается демо-граф или
-  // нагрузочный граф (проект «Стенд производительности»); search — query
-  // роута с параметрами размера графа.
+  // Экспорт/импорт файла проекта JSON [owner 2026-10-15].
+  graphFileCodec: IGraphFileCodec;
+  // Начальный граф редактора, пока карта не загружена из хранилища: по
+  // projectId из роута — демо-граф, нагрузочный граф (проект «Стенд
+  // производительности») или пустой граф сохранённого проекта; search —
+  // query роута с параметрами размера графа.
   graphSeed: GraphSeed;
 }
 
@@ -50,6 +54,7 @@ export function buildContainer(options: ContainerOptions): AwilixContainer<Cradl
       .singleton(),
     commandBus: asClass(CommandBus).singleton(),
     graphRepository: asClass(IndexedDbGraphRepository).singleton(),
+    graphFileCodec: asClass(JsonGraphFileCodec).singleton(),
     graphSeed: asValue(options.graphSeed),
   });
 

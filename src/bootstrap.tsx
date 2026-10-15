@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { StrictMode } from 'react';
 import { buildContainer } from '@infrastructure/container';
+import { createEmptyServiceGraph } from '@domain/model/service-graph';
 import { App } from '@presentation/app/App';
 import { createSampleGraph } from '@presentation/features/canvas/sample-graph';
 import { createStressGraph, stressOptionsFromQuery } from '@presentation/features/canvas/stress-graph';
@@ -9,9 +10,18 @@ import { createStressGraph, stressOptionsFromQuery } from '@presentation/feature
 // один контейнер на приложение, никаких импортируемых синглтонов.
 // Проект «Стенд производительности» (project=stress): размеры графа — из query
 // (?project=stress&levels=4&pagesPerLevel=25&elementsPerPage=6&forms=20&stepsPerForm=3&fieldsPerStep=8).
+// Любой другой project — id сохранённой карты [owner 2026-10-15]: до загрузки
+// из хранилища редактор показывает пустой граф с этим id.
 const container = buildContainer({
-  graphSeed: (projectId, search) =>
-    projectId === 'stress' ? createStressGraph(stressOptionsFromQuery(search)) : createSampleGraph(),
+  graphSeed: (projectId, search) => {
+    if (projectId === 'stress') {
+      return createStressGraph(stressOptionsFromQuery(search));
+    }
+    const sample = createSampleGraph();
+    return projectId === null || projectId === sample.id
+      ? sample
+      : createEmptyServiceGraph(projectId, 'Новый проект');
+  },
 });
 
 const rootElement = document.getElementById('root');
