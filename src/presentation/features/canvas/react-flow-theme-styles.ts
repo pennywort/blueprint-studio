@@ -107,10 +107,13 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
         backgroundColor: theme.palette.background.paper,
         transform: 'translate(-50%, -50%)',
       },
-      // Рамка цели — поверх рамки карточки, окружность по её центру.
+      // Рамка цели — внутри сущности, ровно на месте рамки выделения (F7/S10:
+      // inset 2px; handle шире карточки на 1px → −3px): у выделенной цели
+      // рамка выделения заменяется рамкой цели, а не стоит рядом второй
+      // [owner 2026-10-15]. Поверх рамки карточки.
       '& .react-flow__handle.editor-target.editor-target-available:hover': {
         outline: `2px solid ${canvas.edgeActive}`,
-        outlineOffset: -1,
+        outlineOffset: -3,
       },
       // Курсор над целью во время протягивания: исходящие handles той же
       // сущности (у блока — и его элементов) — в цвет рамки цели, подсветка
