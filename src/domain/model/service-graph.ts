@@ -49,3 +49,17 @@ const ServiceGraphObjectSchema = z.object({
 // только текущую модель.
 export const ServiceGraphSchema = ServiceGraphObjectSchema;
 export type ServiceGraph = z.infer<typeof ServiceGraphObjectSchema>;
+
+// Пустая карта нового проекта [owner 2026-10-15]: без Главной (D8 — она не
+// обязательна), канвас показывает пустое состояние.
+export function createEmptyServiceGraph(id: string, title: string): ServiceGraph {
+  return ServiceGraphSchema.parse({
+    id,
+    title,
+    subScenarios: [],
+    applicationForms: [],
+    links: [],
+    logicRules: [],
+    stepTransitions: [],
+  });
+}

@@ -67,6 +67,7 @@ function EditorPageLayout() {
     <Box display="flex" flexDirection="column" height="100vh" bgcolor="background.default">
       <EditorTopBar
         onSave={editorGraph.save}
+        onExport={editorGraph.exportJson}
         searchCanvas={editorGraph.searchCanvas}
         onSelectSearchResult={editorGraph.selectSearchResult}
       />

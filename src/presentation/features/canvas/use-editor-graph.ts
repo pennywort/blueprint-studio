@@ -71,7 +71,7 @@ export function useEditorGraph() {
   const notifications = useEditorNotifications();
   const idGenerator = container.cradle.idGenerator;
 
-  const { graph, graphRef, runCommand, undo, redo, save, canUndo, canRedo } = useEditorStore();
+  const { graph, graphRef, runCommand, undo, redo, save, exportJson, canUndo, canRedo } = useEditorStore();
   const {
     selectedNodeId,
     selectedElementId,
@@ -433,6 +433,7 @@ export function useEditorGraph() {
     undo,
     redo,
     save,
+    exportJson,
     startConnection,
     endConnection,
     isConnectionAllowed,

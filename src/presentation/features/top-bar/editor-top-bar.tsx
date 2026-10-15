@@ -85,6 +85,8 @@ export type CanvasSearchResult = {
 export type EditorTopBarProps = {
   /** «Сохранить» → IGraphRepository (T-053). */
   onSave?: () => void;
+  /** «Экспорт JSON» — текущий граф в файл проекта [owner 2026-10-15]. */
+  onExport?: () => void;
   /** Маршрут предпросмотра подключается в T-051; сейчас — заглушка-обработчик. */
   onPreview?: () => void;
   /** Поиск по канвасу (T-050): совпадения по названиям узлов и элементов. */
@@ -98,7 +100,13 @@ export type EditorTopBarProps = {
 // «На согласование» (primary dark). Действия пока заглушки, разметка и
 // состояния реальные. Цвета — только из темы (D6). «На согласование» —
 // неактивна до workflow FSM (T-052, эпик 004).
-export function EditorTopBar({ onSave, onPreview, searchCanvas, onSelectSearchResult }: EditorTopBarProps) {
+export function EditorTopBar({
+  onSave,
+  onExport,
+  onPreview,
+  searchCanvas,
+  onSelectSearchResult,
+}: EditorTopBarProps) {
   const classes = useStyles();
   const [searchValue, setSearchValue] = useState('');
   const [resultsOpen, setResultsOpen] = useState(false);
@@ -186,6 +194,9 @@ export function EditorTopBar({ onSave, onPreview, searchCanvas, onSelectSearchRe
       <Box display="flex" alignItems="center" gridGap={16}>
         <Button className={classes.saveButton} onClick={onSave}>
           Сохранить
+        </Button>
+        <Button className={classes.saveButton} onClick={onExport} data-testid="export-json">
+          Экспорт JSON
         </Button>
         <Button className={classes.previewButton} variant="contained" disableElevation onClick={onPreview}>
           Предпросмотр
