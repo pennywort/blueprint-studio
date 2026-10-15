@@ -104,9 +104,10 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     backgroundColor: theme.editor.canvas.commentBadgeBackground,
     color: theme.editor.canvas.commentBadgeForeground,
   },
-  // Комментарий-часть элемента [макет «комментарий-часть элемента»]: голубой
-  // блок под карточкой, её нижние углы перекрывают его верх (карточка —
-  // position: relative, рисуется поверх).
+  // Комментарий-часть элемента [макет «комментарий-часть элемента»]: подложка
+  // под карточкой — верхние края прямые и скрыты за карточкой (она
+  // position: relative и рисуется поверх), в скруглениях её нижних углов
+  // виден голубой фон; скруглены только нижние углы подложки.
   note: {
     display: 'flex',
     flexDirection: 'column',
@@ -114,7 +115,8 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     marginTop: -12,
     padding: theme.spacing(3, 2, 2),
     border: `1px solid ${theme.editor.canvas.commentBorder}`,
-    borderRadius: 12,
+    borderTop: 'none',
+    borderRadius: '0 0 12px 12px',
     backgroundColor: theme.editor.canvas.commentBackground,
   },
 }));
