@@ -179,15 +179,31 @@ export function useEditorGraph() {
   // Удаление выделенного элемента по Delete/Backspace (единое правило
   // проекта: выделение + Delete). Возвращает true, если нажатие обработано,
   // — канвас тогда гасит событие, чтобы react-flow не удалил узел.
+  // Выделенный шаг формы (S10) удаляется сам, а не вся форма (T-035).
   const deleteSelectedElement = useCallback((): boolean => {
-    if (!selectedElementId) {
-      return false;
+    if (selectedElementId) {
+      const elementId = selectedElementId;
+      selectElement(null);
+      runCommand(new RemoveElement(toElementId(elementId)));
+      return true;
     }
-    const elementId = selectedElementId;
-    selectElement(null);
-    runCommand(new RemoveElement(toElementId(elementId)));
-    return true;
-  }, [runCommand, selectElement, selectedElementId]);
+    if (selectedNodeType === 'form' && selectedNodeId && selectedStepId) {
+      const formId = selectedNodeId;
+      const stepId = selectedStepId;
+      selectNode(formId);
+      runCommand(new RemoveFormStep(toApplicationFormId(formId), toFormStepId(stepId)));
+      return true;
+    }
+    return false;
+  }, [
+    runCommand,
+    selectElement,
+    selectNode,
+    selectedElementId,
+    selectedNodeId,
+    selectedNodeType,
+    selectedStepId,
+  ]);
 
   // Панель атрибутов (T-041): любое изменение поля — команда UpdateElementProps
   // (undo/redo из коробки, валидация — внутри команды).
