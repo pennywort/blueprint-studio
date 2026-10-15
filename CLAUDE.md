@@ -26,6 +26,8 @@
 ## Хуки (`.claude/settings.json`) — работают сами
 
 - **SessionStart:** `npm ci`, если нет `node_modules` (вывод сжат).
+- **PreToolUse (Bash):** `bash-guard` блокирует правку кода через shell
+  (python, `sed -i`, `>` в `src/`, `scripts/`, `vendor/`) — правь через Edit/Write.
 - **PostToolUse (Edit/Write):** eslint изменённого файла; ошибки придут сразу.
 - **Stop:** если есть незакоммиченные правки в `src/vendor/scripts` — `verify` + `rules`;
   красное не даст завершить ответ.
