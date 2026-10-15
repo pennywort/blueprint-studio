@@ -1,10 +1,10 @@
 # PR-20 `attributes-panel`
 
-| Поле                                  | Значение                             |
-| ------------------------------------- | ------------------------------------ |
-| Режим                                 | **SLICE** (см. INSTRUCTIONS §5)      |
-| Размер                                | L (2 сессии: CODE, затем DOCS+CLOSE) |
-| Реальные коммиты в `legacy/pre-graft` | —                                    |
+| Поле                        | Значение                             |
+| --------------------------- | ------------------------------------ |
+| Change id (папка)           | `openspec/changes/attributes-panel/` |
+| Capability (подсказка)      | `attributes-panel`                   |
+| Номера для commit-сообщения | T-040, T-041, T-067, T-042, D4, D10  |
 
 ## Карточка из плана
 
@@ -14,6 +14,10 @@
 - **Источники:** `2cdd042`, `6926e8c`, `f1d4e77`; `docs/пример-схемы-элемента.json`.
 - **Не входит:** T-042 (IconPicker, AttachmentField, DeviceUrlMapEditor) и полные схемы List item/Widget card/FAQ — отложено владельцем до появления схем.
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`PropertyEditorRegistry`, `IElementSchemaProvider`, `page-element-manifest.json`, `docs/пример-схемы-элемента.json`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.

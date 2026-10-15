@@ -1,10 +1,10 @@
 # PR-13 `canvas-links-and-connection-rules`
 
-| Поле                                  | Значение                             |
-| ------------------------------------- | ------------------------------------ |
-| Режим                                 | **SLICE** (см. INSTRUCTIONS §5)      |
-| Размер                                | L (2 сессии: CODE, затем DOCS+CLOSE) |
-| Реальные коммиты в `legacy/pre-graft` | —                                    |
+| Поле                        | Значение                                              |
+| --------------------------- | ----------------------------------------------------- |
+| Change id (папка)           | `openspec/changes/canvas-links-and-connection-rules/` |
+| Capability (подсказка)      | `canvas-links`                                        |
+| Номера для commit-сообщения | T-032, ADR-14, ADR-13, R1                             |
 
 ## Карточка из плана
 
@@ -23,6 +23,10 @@
 - **Мелочи внутри PR:** ширина стрелки, нулевой уровень без target-handle, `nodeDragThreshold`, прицел на всём полотне,
   отмена клик-связи (TEMPORARY №7).
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`connectableTargets`, `domain/connection-rules.ts`, `removeNonAdjacentLinks`, `src/domain/connection-rules.ts`, `use-connection.ts`, `connect-elements.ts`, `reconnect-elements.ts`, `disconnect-elements.ts`, `graph-flow-adapter.ts`, `nodeDragThreshold`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.

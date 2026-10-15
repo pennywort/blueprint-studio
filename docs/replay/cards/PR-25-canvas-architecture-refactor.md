@@ -1,10 +1,10 @@
 # PR-25 `canvas-architecture-refactor`
 
-| Поле                                  | Значение                        |
-| ------------------------------------- | ------------------------------- |
-| Режим                                 | **SLICE** (см. INSTRUCTIONS §5) |
-| Размер                                | S (1 сессия: CODE+DOCS+CLOSE)   |
-| Реальные коммиты в `legacy/pre-graft` | —                               |
+| Поле                        | Значение                                         |
+| --------------------------- | ------------------------------------------------ |
+| Change id (папка)           | `openspec/changes/canvas-architecture-refactor/` |
+| Capability (подсказка)      | `canvas-performance`                             |
+| Номера для commit-сообщения | R3, R4                                           |
 
 ## Карточка из плана
 
@@ -15,6 +15,10 @@
 - **Замечание:** если PR 12–24 строятся срезом из финала, большая часть этой структуры уже есть. Тогда PR-25 уменьшается до
   «обоснование разбиения + документы» — либо вообще сливается с PR-24. Решение за тобой.
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`use-editor-graph`, `editor-store`, `use-selection`, `use-connection`, `use-canvas-search`, `use-canvas-nodes`, `ReorderInLayer`, `graph-walk`, `PageEntry`, `findFormElement`, `useElementDropZone`, `node-styles`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.

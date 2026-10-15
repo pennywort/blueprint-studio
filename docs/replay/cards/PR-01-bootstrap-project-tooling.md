@@ -1,10 +1,10 @@
 # PR-01 `bootstrap-project-tooling`
 
-| Поле                                  | Значение                                                              |
-| ------------------------------------- | --------------------------------------------------------------------- |
-| Режим                                 | **LEGACY** (см. INSTRUCTIONS §5)                                      |
-| Размер                                | M (2 сессии: CODE, затем DOCS+CLOSE)                                  |
-| Реальные коммиты в `legacy/pre-graft` | af8ba3e (конфиги, bootstrap, роутер, eslint, husky), 3529985 (README) |
+| Поле                        | Значение                                      |
+| --------------------------- | --------------------------------------------- |
+| Change id (папка)           | `openspec/changes/bootstrap-project-tooling/` |
+| Capability (подсказка)      | `bootstrap-tooling`                           |
+| Номера для commit-сообщения | T-001, T-002, ADR-08, ADR-10                  |
 
 ## Карточка из плана
 
@@ -18,6 +18,10 @@
 - **Критерии:** `npm run dev` показывает 3 роута; `lint`+`build` зелёные; демо-импорт React в `domain` ловится линтером.
 - **Не входит:** Module Federation (не настроен до сих пор — §4.2 NOT DONE).
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`createHashRouter`, `/`, `/editor`, `/preview`, `index.tsx`, `eslint-plugin-boundaries`, `.npmrc`, `specs/001-foundation`, `package.json`, `rsbuild.config.ts`, `tsconfig.json`, `eslint.config.js`, `.husky/`, `commitlint.config.js`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.

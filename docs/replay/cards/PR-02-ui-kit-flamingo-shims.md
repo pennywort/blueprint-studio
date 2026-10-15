@@ -1,10 +1,10 @@
 # PR-02 `ui-kit-flamingo-shims`
 
-| Поле                                  | Значение                         |
-| ------------------------------------- | -------------------------------- |
-| Режим                                 | **LEGACY** (см. INSTRUCTIONS §5) |
-| Размер                                | S (1 сессия: CODE+DOCS+CLOSE)    |
-| Реальные коммиты в `legacy/pre-graft` | 3feb1ce                          |
+| Поле                        | Значение                                  |
+| --------------------------- | ----------------------------------------- |
+| Change id (папка)           | `openspec/changes/ui-kit-flamingo-shims/` |
+| Capability (подсказка)      | `ui-kit-shims`                            |
+| Номера для commit-сообщения | T-003                                     |
 
 ## Карточка из плана
 
@@ -17,6 +17,10 @@
 - **Критерии:** страница рендерит Flamingo-компонент со стилями; `grep @material-ui src` пуст.
 - **Замечание:** шимы дополняются реэкспортами и дальше — по мере нужд PR-08, 20 (добавляй недостающее в тот PR, где понадобилось).
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`@blueprint-vendor/*`, `vendor/flamingo/*`, `findDOMNode`, `legacy-peer-deps`, `@material-ui/*`, `docs/temporary-registry.md`, `vendor/`, `package.json`, `.npmrc`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.

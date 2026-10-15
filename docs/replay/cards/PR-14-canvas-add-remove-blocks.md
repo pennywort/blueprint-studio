@@ -1,10 +1,10 @@
 # PR-14 `canvas-add-remove-blocks`
 
-| Поле                                  | Значение                             |
-| ------------------------------------- | ------------------------------------ |
-| Режим                                 | **SLICE** (см. INSTRUCTIONS §5)      |
-| Размер                                | M (2 сессии: CODE, затем DOCS+CLOSE) |
-| Реальные коммиты в `legacy/pre-graft` | —                                    |
+| Поле                        | Значение                                     |
+| --------------------------- | -------------------------------------------- |
+| Change id (папка)           | `openspec/changes/canvas-add-remove-blocks/` |
+| Capability (подсказка)      | `canvas-layout`                              |
+| Номера для commit-сообщения | T-034, T-033, ADR-15                         |
 
 ## Карточка из плана
 
@@ -15,6 +15,10 @@
 - **Источники:** `30fcae6`, `a0c14f8`, `5b367e7` (N3/N5), `cc65a1f`, `5bffe11`, `6e782f4`.
 - **Не входит:** автосжатие узлов T-033 — оно позже выключено и удалено, в плане его нет (см. §5).
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`layerDepth`, `AddScenario/AddForm`, `SetPageLayerDepth`, `single-root-level`, `preservePageDepths`, `RemoveForm`, `applicationFormId`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.

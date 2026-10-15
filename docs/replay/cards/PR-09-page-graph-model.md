@@ -1,10 +1,10 @@
 # PR-09 `page-graph-model`
 
-| Поле                                  | Значение                                                     |
-| ------------------------------------- | ------------------------------------------------------------ |
-| Режим                                 | **SLICE** (см. INSTRUCTIONS §5)                              |
-| Размер                                | S (1 сессия: CODE+DOCS+CLOSE)                                |
-| Реальные коммиты в `legacy/pre-graft` | a3deb1a — только как справка: модель позже изменена (ADR-17) |
+| Поле                        | Значение                             |
+| --------------------------- | ------------------------------------ |
+| Change id (папка)           | `openspec/changes/page-graph-model/` |
+| Capability (подсказка)      | `service-graph-model`                |
+| Номера для commit-сообщения | T-004, D13, D2                       |
 
 ## Карточка из плана
 
@@ -14,6 +14,10 @@
 - **Источники:** `a3deb1a`, `54579b7` (часть про `ApplicationForm.orderIndex`).
 - **Пути:** `src/domain/model/{scenario,page-link,service-graph}.ts`, `graph-walk.ts`.
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`orderIndex`, `ApplicationForm`, `PageLink {sourceElementId → targetId}`, `PageEntityId`, `ApplicationForm.orderIndex`, `src/domain/model/{scenario,page-link,service-graph}.ts`, `graph-walk.ts`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.

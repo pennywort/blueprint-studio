@@ -1,10 +1,10 @@
 # PR-03 `domain-service-graph-model`
 
-| Поле                                  | Значение                             |
-| ------------------------------------- | ------------------------------------ |
-| Режим                                 | **SLICE** (см. INSTRUCTIONS §5)      |
-| Размер                                | M (2 сессии: CODE, затем DOCS+CLOSE) |
-| Реальные коммиты в `legacy/pre-graft` | —                                    |
+| Поле                        | Значение                                       |
+| --------------------------- | ---------------------------------------------- |
+| Change id (папка)           | `openspec/changes/domain-service-graph-model/` |
+| Capability (подсказка)      | `service-graph-model`                          |
+| Номера для commit-сообщения | T-005, T-010, ADR-10, ADR-17                   |
 
 ## Карточка из плана
 
@@ -17,6 +17,10 @@
 - **Критерии:** `tsc` strict зелёный; в `domain` нет react/zod-запрещённого по ADR-10 (zod разрешён только в model — следуй конституции §3).
 - **Модель сразу финальная:** единый `CanvasElement` (ADR-17) вводится в PR-16, но ID-типы и `PageEntityId` — здесь.
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`ServiceGraph`, `specs/001-foundation/spec.md`, `docs/business-requirements.md`, `src/domain/model/*`, `CanvasElement`, `PageEntityId`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.

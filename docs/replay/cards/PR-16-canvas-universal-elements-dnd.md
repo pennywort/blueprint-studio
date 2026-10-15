@@ -1,10 +1,10 @@
 # PR-16 `canvas-universal-elements-dnd`
 
-| Поле                                  | Значение                             |
-| ------------------------------------- | ------------------------------------ |
-| Режим                                 | **SLICE** (см. INSTRUCTIONS §5)      |
-| Размер                                | L (2 сессии: CODE, затем DOCS+CLOSE) |
-| Реальные коммиты в `legacy/pre-graft` | —                                    |
+| Поле                        | Значение                                          |
+| --------------------------- | ------------------------------------------------- |
+| Change id (папка)           | `openspec/changes/canvas-universal-elements-dnd/` |
+| Capability (подсказка)      | `canvas-dnd`                                      |
+| Номера для commit-сообщения | ADR-17                                            |
 
 ## Карточка из плана
 
@@ -15,6 +15,10 @@
 - **Источники:** `5b367e7` (N2), `aee4437`, `9377f85`, `412b0e0`, `5bffe11`, `2a57ce3`.
 - **Не воспроизводить:** миграцию старых графов (`preprocess` legacy) — в «предстоящем» мире старых графов нет.
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`CanvasElement`, `AddElement`, `createDefaultElement`, `MoveElement`, `layerDepth`, `layers/`, `LayerPolicy.movableKinds`, `useElementDropZone`, `element-dnd`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.

@@ -1,10 +1,10 @@
 # PR-07 `editor-theme-system`
 
-| Поле                                  | Значение                         |
-| ------------------------------------- | -------------------------------- |
-| Режим                                 | **LEGACY** (см. INSTRUCTIONS §5) |
-| Размер                                | S (1 сессия: CODE+DOCS+CLOSE)    |
-| Реальные коммиты в `legacy/pre-graft` | b2dfd1e (xyflow), cd920b6 (тема) |
+| Поле                        | Значение                                |
+| --------------------------- | --------------------------------------- |
+| Change id (папка)           | `openspec/changes/editor-theme-system/` |
+| Capability (подсказка)      | `editor-theme`                          |
+| Номера для commit-сообщения | T-010, T-011, ADR-03, D6                |
 
 ## Карточка из плана
 
@@ -16,6 +16,10 @@
 - **Критерии:** цвета только из темы; `npm run rules` не находит hex.
 - **Потом внутри этого PR сворачиваются:** добавления токенов (рамка выделения, цвет ошибки, стрелка) — они вводятся тут сразу итоговыми.
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`EditorThemeProvider`, `useEditorTheme`, `theme.editor.canvas`, `@xyflow/react`, `src/presentation/theme/*`, `react-flow-theme-styles.ts`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.

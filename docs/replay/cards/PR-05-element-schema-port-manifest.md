@@ -1,10 +1,10 @@
 # PR-05 `element-schema-port-manifest`
 
-| Поле                                  | Значение                              |
-| ------------------------------------- | ------------------------------------- |
-| Режим                                 | **LEGACY** (см. INSTRUCTIONS §5)      |
-| Размер                                | S (1 сессия: CODE+DOCS+CLOSE)         |
-| Реальные коммиты в `legacy/pre-graft` | af8ba3e (порты, манифест, uuid/clock) |
+| Поле                        | Значение                                         |
+| --------------------------- | ------------------------------------------------ |
+| Change id (папка)           | `openspec/changes/element-schema-port-manifest/` |
+| Capability (подсказка)      | `element-schemas`                                |
+| Номера для commit-сообщения | T-007, ADR-07, D3                                |
 
 ## Карточка из плана
 
@@ -13,6 +13,10 @@
 - **Пути:** `src/application/ports/*`, `src/infrastructure/element-schemas/element-manifest.json`, `src/infrastructure/misc/*`.
 - **Критерии:** сломанный манифест → понятная ошибка при старте; граница application→infrastructure только через порты.
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`IElementSchemaProvider`, `IIdGenerator`, `ManifestSchemaProvider`, `SchemaNotFoundError`, `UuidIdGenerator`, `SystemClock`, `src/application/ports/*`, `src/infrastructure/element-schemas/element-manifest.json`, `src/infrastructure/misc/*`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.

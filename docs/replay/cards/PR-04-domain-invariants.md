@@ -1,10 +1,10 @@
 # PR-04 `domain-invariants`
 
-| Поле                                  | Значение                        |
-| ------------------------------------- | ------------------------------- |
-| Режим                                 | **SLICE** (см. INSTRUCTIONS §5) |
-| Размер                                | S (1 сессия: CODE+DOCS+CLOSE)   |
-| Реальные коммиты в `legacy/pre-graft` | —                               |
+| Поле                        | Значение                              |
+| --------------------------- | ------------------------------------- |
+| Change id (папка)           | `openspec/changes/domain-invariants/` |
+| Capability (подсказка)      | `invariants`                          |
+| Номера для commit-сообщения | T-006                                 |
 
 ## Карточка из плана
 
@@ -15,6 +15,10 @@
 - **Критерии:** каждое правило конституции §4 имеет чистую функцию; `validateGraph` агрегирует.
 - **Не входит:** `single-root-level` (PR-14), `logic-rules` (PR-17), `step-transitions` (PR-19) — добавляются своими PR.
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`scenario-type-fields`, `validateGraph(graph) → InvariantViolation[]`, `src/domain/invariants/*`, `validateGraph`, `single-root-level`, `logic-rules`, `step-transitions`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.

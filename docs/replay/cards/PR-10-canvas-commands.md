@@ -1,10 +1,10 @@
 # PR-10 `canvas-commands`
 
-| Поле                                  | Значение                             |
-| ------------------------------------- | ------------------------------------ |
-| Режим                                 | **SLICE** (см. INSTRUCTIONS §5)      |
-| Размер                                | M (2 сессии: CODE, затем DOCS+CLOSE) |
-| Реальные коммиты в `legacy/pre-graft` | 54579b7 — справка                    |
+| Поле                        | Значение                            |
+| --------------------------- | ----------------------------------- |
+| Change id (папка)           | `openspec/changes/canvas-commands/` |
+| Capability (подсказка)      | `command-bus`                       |
+| Номера для commit-сообщения | T-035                               |
 
 ## Карточка из плана
 
@@ -14,6 +14,10 @@
 - **Источники:** `54579b7`.
 - **Критерии:** каждая команда обратима (undo/redo); удаление узла рвёт входящие/исходящие связи.
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`Add/RemoveScenario`, `Add/RemoveForm`, `Add/RemoveFormStep`, `Add/RemoveElement`, `UpdateElementProps`, `Connect/Disconnect/ReconnectElements`, `ReorderInLayer`, `graph-lookup.ts`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.

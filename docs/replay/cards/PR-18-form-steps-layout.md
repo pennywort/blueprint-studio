@@ -1,10 +1,10 @@
 # PR-18 `form-steps-layout`
 
-| Поле                                  | Значение                             |
-| ------------------------------------- | ------------------------------------ |
-| Режим                                 | **SLICE** (см. INSTRUCTIONS §5)      |
-| Размер                                | L (2 сессии: CODE, затем DOCS+CLOSE) |
-| Реальные коммиты в `legacy/pre-graft` | —                                    |
+| Поле                        | Значение                              |
+| --------------------------- | ------------------------------------- |
+| Change id (папка)           | `openspec/changes/form-steps-layout/` |
+| Capability (подсказка)      | `form-steps`                          |
+| Номера для commit-сообщения | ADR-16, D1                            |
 
 ## Карточка из плана
 
@@ -15,6 +15,10 @@
 - **Источники:** `5b367e7` (N3), `2a57ce3`, `853ec4c`, `029d9d2`, `5bffe11`.
 - **Пути:** `src/domain/step-element-depths.ts`, `nodes/form-node.tsx`, `nodes/form-step-layers.tsx`, `nodes/option-card.tsx`.
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`option-card`, `step-element-depths`, `form-step-layers`, `AddFormStep`, `RemoveFormStep`, `src/domain/step-element-depths.ts`, `nodes/form-node.tsx`, `nodes/form-step-layers.tsx`, `nodes/option-card.tsx`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.

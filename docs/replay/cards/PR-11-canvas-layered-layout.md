@@ -1,10 +1,10 @@
 # PR-11 `canvas-layered-layout`
 
-| Поле                                  | Значение                             |
-| ------------------------------------- | ------------------------------------ |
-| Режим                                 | **SLICE** (см. INSTRUCTIONS §5)      |
-| Размер                                | M (2 сессии: CODE, затем DOCS+CLOSE) |
-| Реальные коммиты в `legacy/pre-graft` | 54579b7, c1f312f — справка           |
+| Поле                        | Значение                                  |
+| --------------------------- | ----------------------------------------- |
+| Change id (папка)           | `openspec/changes/canvas-layered-layout/` |
+| Capability (подсказка)      | `canvas-layout`                           |
+| Номера для commit-сообщения | T-030, T-036, ADR-11, D7, D13, R3         |
 
 ## Карточка из плана
 
@@ -14,6 +14,10 @@
 - **Источники:** `54579b7`, `c1f312f`; ADR-11; R3 (измеренные размеры → `computeLayout(graph, measured)`).
 - **Критерии:** раскладка детерминирована и не хранит координаты; зазоры колонок считаются по измеренным размерам (без «огромных вертикальных зазоров»).
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`graphToFlow`, `flowConnectionToLink`, `flowNodesToLayerOrder`, `computeLayout`, `orderIndex`, `computeLayerDepths`, `layer-depths.ts`, `layerDepth`, `computeLayout(graph, measured)`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.

@@ -1,10 +1,10 @@
 # PR-19 `form-step-transitions`
 
-| Поле                                  | Значение                             |
-| ------------------------------------- | ------------------------------------ |
-| Режим                                 | **SLICE** (см. INSTRUCTIONS §5)      |
-| Размер                                | M (2 сессии: CODE, затем DOCS+CLOSE) |
-| Реальные коммиты в `legacy/pre-graft` | —                                    |
+| Поле                        | Значение                                  |
+| --------------------------- | ----------------------------------------- |
+| Change id (папка)           | `openspec/changes/form-step-transitions/` |
+| Capability (подсказка)      | `form-steps`                              |
+| Номера для commit-сообщения | ADR-18                                    |
 
 ## Карточка из плана
 
@@ -15,6 +15,10 @@
 - **Источники:** `90b6fdc`, `194aebc`, `6ac3950`, `a5a1b14`, `de44405`, `cfe25f2`.
 - **Критерии:** несмежные переходы рвутся (N4); цель — на уровне «источник + 1».
 
+## Где проверять по коду (grep в репозитории; спека описывает то, что реально есть)
+
+`StepTransition`, `Add/RemoveStepTransition`, `MoveFormStep`, `moveByAnchor`, `form-step-depths`, `FormStep.layerDepth`, `formStepLabel`
+
 ---
 
-Готово, только когда выполнено всё из INSTRUCTIONS §7 (Definition of Done).
+Шаг закрыт, когда выполнено всё из INSTRUCTIONS §6.
