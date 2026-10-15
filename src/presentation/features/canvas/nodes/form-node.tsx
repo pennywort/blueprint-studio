@@ -23,6 +23,7 @@ import {
   endStepDrag,
   readStepDrag,
   stepAnchorFromPoint,
+  stepSwapFromPoint,
   writeStepDrag,
   type StepAnchorPosition,
   type StepDragPayload,
@@ -202,6 +203,11 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
         ),
         (event.clientX - zoneRect.left) / scale,
       );
+      // Середина другого шага — обмен местами [owner 2026-10-15], без вставки.
+      const swapStepId = stepSwapFromPoint(zone, draggedId, event.clientX, event.clientY);
+      if (swapStepId) {
+        return { column, decision: { kind: 'reorder' }, anchor: null, swapStepId };
+      }
       const own = data.steps.find((step) => step.id === draggedId);
       const decision = resolveLayerDrop(own ? own.depth : null, column, true);
       const level = column ? stepLevels.find((candidate) => candidate.depth === column.depth) : undefined;
@@ -213,13 +219,15 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
           event.clientY,
         ),
       );
-      return { column, decision, anchor };
+      return { column, decision, anchor, swapStepId: null };
     },
     [data.steps, id, stepLevels],
   );
   const dropStep = useCallback(
     (dragged: StepDragPayload, state: StepDropState) => {
-      if (state.decision.kind === 'moveToLayer') {
+      if (state.swapStepId) {
+        actions?.swapSteps(id, dragged.stepId, state.swapStepId);
+      } else if (state.decision.kind === 'moveToLayer') {
         actions?.moveStep(id, dragged.stepId, state.anchor, state.decision.depth);
       } else if (state.anchor) {
         actions?.moveStep(id, dragged.stepId, state.anchor);
@@ -297,6 +305,7 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
                 formId={id}
                 step={step}
                 dropPlacement={dropAnchor?.stepId === step.id ? dropAnchor.placement : null}
+                swapTarget={stepDrop?.swapStepId === step.id}
                 onOpenAddMenu={openAddMenu}
               />
             ))}
@@ -339,6 +348,8 @@ type StepDropState = {
   column: LayerColumn | null;
   decision: LayerDropDecision;
   anchor: StepAnchorPosition | null;
+  /** Шаг, с которым перетаскиваемый поменяется местами; null — вставка. */
+  swapStepId: string | null;
 };
 
 type FormStepColumnProps = {
@@ -346,6 +357,8 @@ type FormStepColumnProps = {
   step: CanvasFormStepData;
   /** Индикатор вставки перетаскиваемого шага у этого шага (dnd шагов). */
   dropPlacement: 'before' | 'after' | null;
+  /** Шаг — цель обмена местами при dnd шага [owner 2026-10-15]. */
+  swapTarget: boolean;
   onOpenAddMenu: (anchor: HTMLElement, stepId: string) => void;
 };
 
@@ -356,6 +369,7 @@ const FormStepColumn = memo(function FormStepColumn({
   formId,
   step,
   dropPlacement,
+  swapTarget,
   onOpenAddMenu,
 }: FormStepColumnProps) {
   const nodeClasses = useNodeStyles();
@@ -376,10 +390,15 @@ const FormStepColumn = memo(function FormStepColumn({
 
   return (
     <div
-      className={selected ? `${classes.stepColumn} ${classes.stepSelected}` : classes.stepColumn}
+      className={[
+        classes.stepColumn,
+        selected ? classes.stepSelected : '',
+        swapTarget ? nodeClasses.dropTarget : '',
+      ].join(' ')}
       data-testid={`form-step-${step.id}`}
       data-form-step-id={step.id}
       data-step-selected={selected || undefined}
+      data-step-swap-target={swapTarget || undefined}
     >
       {/* Цель перехода между шагами [owner 2026-10-14]: невидимый handle во весь
           шаг, принимает связь, только пока шаг — допустимая цель (шаг следующих

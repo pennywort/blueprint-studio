@@ -25,6 +25,7 @@ import { RemoveElement } from '@application/commands/remove-element';
 import { MoveElement, type MoveElementTarget } from '@application/commands/move-element';
 import { AddFormStep } from '@application/commands/add-form-step';
 import { MoveFormStep } from '@application/commands/move-form-step';
+import { SwapFormSteps } from '@application/commands/swap-form-steps';
 import { SetPageLayerDepth } from '@application/commands/set-page-layer-depth';
 import { UpdateElementProps, type ElementPropsPatch } from '@application/commands/update-element-props';
 import { EnableComplexLogic } from '@application/commands/enable-complex-logic';
@@ -296,6 +297,16 @@ export function useEditorGraph() {
     [runCommand],
   );
 
+  // Обмен шагов формы местами [owner 2026-10-15]: dnd шага на середину другого.
+  const swapSteps = useCallback(
+    (formId: string, stepId: string, otherStepId: string) => {
+      runCommand(
+        new SwapFormSteps(toApplicationFormId(formId), toFormStepId(stepId), toFormStepId(otherStepId)),
+      );
+    },
+    [runCommand],
+  );
+
   // Drop карточки элемента (N2): приёмник — блок узла (у формы — шаг);
   // вид элемента блок не ограничивает [owner 2026-10-13]. Якорь — позиция вставки.
   const moveElement = useCallback(
@@ -378,6 +389,7 @@ export function useEditorGraph() {
       removeStep,
       addFormStep,
       moveStep,
+      swapSteps,
       moveElement,
       elementKindOptions: ELEMENT_KIND_OPTIONS,
     }),
@@ -389,6 +401,7 @@ export function useEditorGraph() {
       removeStep,
       addFormStep,
       moveStep,
+      swapSteps,
       moveElement,
     ],
   );

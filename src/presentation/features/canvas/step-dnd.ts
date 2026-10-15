@@ -62,6 +62,28 @@ export function stepAnchorFromPoint(column: HTMLElement | null, clientY: number)
   return last ? { stepId: last.dataset.formStepId!, placement: 'after' } : null;
 }
 
+// Шаг для обмена местами [owner 2026-10-15]: курсор над средней третью
+// другого шага (любой колонки) — шаги меняются местами (SwapFormSteps);
+// верхняя и нижняя трети — прежняя вставка до/после. null — обмена нет.
+export function stepSwapFromPoint(
+  zone: HTMLElement | null,
+  draggedId: string,
+  clientX: number,
+  clientY: number,
+): string | null {
+  const steps = zone ? Array.from(zone.querySelectorAll<HTMLElement>('[data-form-step-id]')) : [];
+  for (const step of steps) {
+    const rect = step.getBoundingClientRect();
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+      continue;
+    }
+    const third = rect.height / 3;
+    const inMiddle = clientY >= rect.top + third && clientY <= rect.bottom - third;
+    return inMiddle && step.dataset.formStepId !== draggedId ? step.dataset.formStepId! : null;
+  }
+  return null;
+}
+
 // Якорь, который действительно меняет порядок в колонке stepIds; null — шаг
 // останется на месте (якорь — сам шаг или его сосед с «внутренней»
 // стороны). Шаг из другой колонки встаёт к якорю как есть.

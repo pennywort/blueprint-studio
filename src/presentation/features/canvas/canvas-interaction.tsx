@@ -77,6 +77,8 @@ export type CanvasActions = {
    * в своём уровне или на другой уровень (layerDepth; якорь — место в колонке).
    */
   moveStep: (formId: string, stepId: string, anchor: StepAnchorPosition | null, layerDepth?: number) => void;
+  /** Dnd шага на середину другого шага [owner 2026-10-15]: шаги меняются местами. */
+  swapSteps: (formId: string, stepId: string, otherStepId: string) => void;
   /**
    * Dnd карточек (N2): drop в списке узла или колонке шага. targetStepId —
    * шаг-цель у форм; null — общий список узла страницы. Якорь — позиция
