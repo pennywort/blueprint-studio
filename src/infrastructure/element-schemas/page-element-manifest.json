@@ -14,5 +14,13 @@
       { "key": "title", "type": "text", "required": true },
       { "key": "secondaryText", "type": "text", "required": false }
     ]
+  },
+  {
+    "kind": "comment",
+    "version": 1,
+    "attributes": [
+      { "key": "text", "type": "text", "required": true },
+      { "key": "audience", "type": "text", "required": false }
+    ]
   }
 ]

@@ -54,10 +54,13 @@ export type { SelectedElementInfo } from './use-selection';
 
 // Варианты меню «+» шага формы: все виды элементов (List item, Widget card,
 // 12 форм-компонентов) — любой элемент в любой блок [owner 2026-10-13, ADR-17].
-const ELEMENT_KIND_OPTIONS = Object.entries(ELEMENT_KIND_LABELS).map(([kind, label]) => ({
-  kind: kind as CanvasElementKind,
-  label,
-}));
+// Комментарий-элемент добавляется отдельной кнопкой тулбара [owner 2026-10-15].
+const ELEMENT_KIND_OPTIONS = Object.entries(ELEMENT_KIND_LABELS)
+  .filter(([kind]) => kind !== 'comment')
+  .map(([kind, label]) => ({
+    kind: kind as CanvasElementKind,
+    label,
+  }));
 
 // Хук страницы редактора — композиция (ревью A3, R3): хранилище графа
 // (editor-store), выделение, связи, поиск и узлы канваса — отдельные хуки;

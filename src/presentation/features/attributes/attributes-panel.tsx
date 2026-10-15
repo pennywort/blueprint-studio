@@ -212,20 +212,24 @@ export function AttributesPanel({
         </Box>
       ) : null}
 
-      <Divider />
-
-      <Box className={classes.field}>
-        <TextField
-          fullWidth
-          size="small"
-          variant="outlined"
-          multiline
-          rows={2}
-          label="Комментарий для разработки"
-          value={view.comment ?? ''}
-          onChange={(event) => buffer.change({ comment: event.target.value })}
-        />
-      </Box>
+      {/* Комментарий-часть элемента (US-05); у комментария-элемента его нет. */}
+      {component.kind !== 'comment' ? (
+        <>
+          <Divider />
+          <Box className={classes.field}>
+            <TextField
+              fullWidth
+              size="small"
+              variant="outlined"
+              multiline
+              rows={2}
+              label="Комментарий для разработки"
+              value={('comment' in view ? view.comment : undefined) ?? ''}
+              onChange={(event) => buffer.change({ comment: event.target.value })}
+            />
+          </Box>
+        </>
+      ) : null}
     </Box>
   );
 }
