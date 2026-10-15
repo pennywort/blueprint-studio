@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { CanvasElement } from '@domain/model/canvas-element';
 import type { LogicRuleId } from '@domain/model/ids';
@@ -12,6 +12,35 @@ export type SelectedElementInfo = {
   inFormStep: boolean;
   incomingRules: { ruleId: LogicRuleId; sourceLabel: string; optionLabel: string | null }[];
 };
+
+// Кнопка мыши зажата на канвасе: пока ЛКМ удержана, подразумевается попытка
+// переноса, и панель атрибутов не должна открываться — она сужает канвас и
+// срывает drag. Открытие — по отпусканию (pointerup; у нативного dnd карточки
+// — pointercancel/dragend). Нажатия вне .react-flow (сама панель) не считаются.
+export function useCanvasPointerHeld(): boolean {
+  const [held, setHeld] = useState(false);
+  useEffect(() => {
+    const onDown = (event: PointerEvent) => {
+      if (event.target instanceof Element && event.target.closest('.react-flow')) {
+        setHeld(true);
+      }
+    };
+    const onRelease = () => setHeld(false);
+    window.addEventListener('pointerdown', onDown, true);
+    window.addEventListener('pointerup', onRelease, true);
+    window.addEventListener('pointercancel', onRelease, true);
+    window.addEventListener('dragend', onRelease, true);
+    window.addEventListener('drop', onRelease, true);
+    return () => {
+      window.removeEventListener('pointerdown', onDown, true);
+      window.removeEventListener('pointerup', onRelease, true);
+      window.removeEventListener('pointercancel', onRelease, true);
+      window.removeEventListener('dragend', onRelease, true);
+      window.removeEventListener('drop', onRelease, true);
+    };
+  }, []);
+  return held;
+}
 
 // Выделение на канвасе (ревью A3, R3): узел, шаг формы и элемент.
 // Выделение узла и элемента взаимоисключающи — последний клик побеждает

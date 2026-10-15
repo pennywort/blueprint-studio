@@ -6,6 +6,7 @@ import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { EditorCanvas } from '@presentation/features/canvas/editor-canvas';
 import { EmptyCanvasState } from '@presentation/features/canvas/empty-canvas-state';
 import { useEditorGraph } from '@presentation/features/canvas/use-editor-graph';
+import { useCanvasPointerHeld } from '@presentation/features/canvas/use-selection';
 import { AttributesPanel } from '@presentation/features/attributes/attributes-panel';
 import { EditorNotificationsProvider } from '@presentation/features/notifications/editor-notifications';
 import { EditorTopBar } from '@presentation/features/top-bar/editor-top-bar';
@@ -62,6 +63,9 @@ function EditorPageLayout() {
   const [sidePanel, setSidePanel] = useState<EditorSidePanel | null>(null);
   // Инспектор: выделенный компонент формы + его правила видимости (T-067).
   const selectedElement = editorGraph.selectedElement;
+  // Панель открывается по отпусканию ЛКМ, а не по нажатию: пока кнопка
+  // удержана, это попытка переноса, и сужение канваса её срывает (баг drag).
+  const pointerHeld = useCanvasPointerHeld();
 
   return (
     <Box display="flex" flexDirection="column" height="100vh" bgcolor="background.default">
@@ -141,7 +145,7 @@ function EditorPageLayout() {
             </Box>
           </Box>
         </Box>
-        {selectedElement !== null ? (
+        {selectedElement !== null && !pointerHeld ? (
           <>
             <Divider orientation="vertical" flexItem />
             <Box className={classes.attributesPanel} data-testid="attributes-panel">
