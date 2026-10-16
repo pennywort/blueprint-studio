@@ -296,3 +296,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-10-16 | agent:claude | R-CFG-1: реестр видов элементов (domain/element-kinds.ts), проверено владельцем
 - 2026-10-16 | agent:claude | Конституция §4a: правило — данные, а не if; ADR-20; §7 — шаги плана R-CFG
 - 2026-10-16 | agent:claude | R-CFG-2: возможности блоков таблицей (domain/container-capabilities.ts)
+- 2026-10-16 | agent:claude | R-CFG-2 доводка: page.logic включает логику на страницах целиком
