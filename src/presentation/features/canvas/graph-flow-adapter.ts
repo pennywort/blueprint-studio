@@ -11,6 +11,7 @@ import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
 import { evaluateVisibility } from '@domain/logic-visibility';
 import { canBeLogicSource, isCommentElement, isPageElement, kindRules } from '@domain/element-kinds';
+import { containerCapabilities, type ContainerCapabilities } from '@domain/container-capabilities';
 import {
   ELEMENT_KIND_LABELS,
   NODE_KIND_LABELS,
@@ -202,19 +203,19 @@ export type FlowGraph = {
   edges: CanvasEdge[];
 };
 
-// Контекст маппинга элементов: связи и правила графа; inStep — элемент
-// лежит в шаге формы (логика возможна только там, L-I5/ADR-14).
+// Контекст маппинга элементов: связи и правила графа.
 type ElementMapContext = {
   logicTargets: ReadonlySet<string>;
   logicHidden: ReadonlySet<string>;
 };
 
 // Любой элемент — в любом блоке [owner 2026-10-13]: вид карточки задаёт
-// kind элемента, а возможности «Сложной логики» — блок (только шаг формы).
+// kind элемента, а логику и переходы — возможности блока (R-CFG-2,
+// container-capabilities; сейчас обе — только у шага формы).
 function elementToElementData(
   element: CanvasElement,
   context: ElementMapContext,
-  inStep: boolean,
+  capabilities: ContainerCapabilities,
 ): CanvasElementData {
   if (isCommentElement(element)) {
     // Комментарий-элемент — вне связей и «Сложной логики» в любом блоке.
@@ -232,17 +233,21 @@ function elementToElementData(
   if (element.comment) {
     data.note = { text: element.comment, audience: DEFAULT_COMMENT_AUDIENCE };
   }
-  if (inStep) {
+  if (capabilities.logic) {
     data.logicTarget = kindRules(element.kind).logicTarget;
     data.hasIncomingLogic = context.logicTargets.has(element.id);
     data.hiddenByLogic = context.logicHidden.has(element.id);
     return data;
   }
-  // На странице правил нет: ни цели, ни переключателя режима у Select'а.
+  // В блоке без логики правил нет: ни цели, ни отметок видимости.
   data.logicTarget = false;
-  delete data.complexLogic;
   delete data.hasIncomingLogic;
   delete data.hiddenByLogic;
+  if (!capabilities.stepTransitions) {
+    // Варианты Select'а — источники и правил, и переходов: без обеих
+    // возможностей у него нет ни option-handle'ов, ни переключателя режима.
+    delete data.complexLogic;
+  }
   return data;
 }
 
@@ -319,7 +324,7 @@ function buildFlow(graph: ServiceGraph, layout?: CanvasLayout): FlowGraph {
   const positionOf = (id: string): XYPosition => layout?.positions[id] ?? { x: 0, y: 0 };
   // Карточка элемента страницы с отступом строки (цель напротив якоря).
   const pageElementData = (element: CanvasElement, context: ElementMapContext): CanvasElementData => {
-    const data = elementToElementData(element, context, false);
+    const data = elementToElementData(element, context, containerCapabilities('page'));
     const rowOffset = layout?.rowOffsets[element.id];
     return rowOffset ? { ...data, rowOffset } : data;
   };
@@ -415,7 +420,7 @@ function buildFlow(graph: ServiceGraph, layout?: CanvasLayout): FlowGraph {
             title: step.title ?? formStepLabel(stepLevels.indexOf(depth) + 1),
             depth,
             elements: step.elements.map((component) => ({
-              ...elementToElementData(component, elementContext, true),
+              ...elementToElementData(component, elementContext, containerCapabilities('formStep')),
               layerDepth: stepDepths.get(component.id) ?? 0,
               ...(logicParents.has(component.id)
                 ? { logicParentHandleId: logicParents.get(component.id)! }

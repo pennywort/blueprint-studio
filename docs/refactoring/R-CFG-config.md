@@ -182,6 +182,11 @@ export const EditorRulesSchema = z.object({
 
 ### R-CFG-2. Возможности блоков (A) — F03
 
+✅ 2026-10-16: `domain/container-capabilities.ts` — `CONTAINER_CAPABILITIES` (logic, stepTransitions),
+`containerCapabilities`, `supportsLogic` / `supportsStepTransitions`. Проверки F03 читают таблицу;
+`inFormStep` в `use-selection` заменён производным `logicAvailable`. Команды логики по-прежнему ищут
+элемент через `findFormElement` (только шаги) — свести с таблицей при R-CFG-9.
+
 - `domain/container-capabilities.ts`: `{ page: { logic: false, stepTransitions: false }, formStep: { logic: true, stepTransitions: true } }`.
 - Заменить `container.kind === 'formStep'` в 6 местах F03; `inFormStep` в `use-selection` — производное.
 - **Проверка:** Select на странице — без логики и переходов; в шаге — с ними.

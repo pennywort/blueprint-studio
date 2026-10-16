@@ -1,6 +1,7 @@
 import type { ServiceGraph } from './model/service-graph';
 import type { StepTransition } from './model/step-transition';
 import { findElementInGraph } from './element-containers';
+import { supportsStepTransitions } from './container-capabilities';
 import { computeFormStepDepths } from './form-step-depths';
 
 // Правила переходов между шагами формы [owner 2026-10-14] — единый источник
@@ -23,8 +24,9 @@ export function stepTransitionTargets(
   elementId: string,
   optionId?: string,
 ): Set<string> {
+  // Переходы — только из блоков с этой возможностью (R-CFG-2: шаг формы).
   const found = findElementInGraph(graph, elementId);
-  if (!found || found.container.kind !== 'formStep') {
+  if (!found || !supportsStepTransitions(found.container)) {
     return new Set();
   }
   if (optionId !== undefined) {
@@ -48,7 +50,7 @@ export function stepTransitionTargets(
 /** Почему переход недопустим; null — допустим. */
 export function stepTransitionProblem(graph: ServiceGraph, transition: StepTransition): string | null {
   const found = findElementInGraph(graph, transition.sourceElementId);
-  if (!found || found.container.kind !== 'formStep') {
+  if (!found || !supportsStepTransitions(found.container)) {
     return 'Переход между шагами начинается только от элемента шага формы';
   }
   if (
@@ -76,5 +78,5 @@ export function validStepTransitions(graph: ServiceGraph): StepTransition[] {
 /** Шаг-владелец элемента-источника перехода; null — источник не в шаге формы. */
 export function stepTransitionSourceStepId(graph: ServiceGraph, transition: StepTransition): string | null {
   const found = findElementInGraph(graph, transition.sourceElementId);
-  return found && found.container.kind === 'formStep' ? found.container.stepId : null;
+  return found && supportsStepTransitions(found.container) ? found.container.stepId : null;
 }
