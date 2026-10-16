@@ -19,6 +19,8 @@ import {
   navigationLevelLabel,
 } from '@presentation/labels/editor-labels';
 import { EDITOR_EDGE_TYPE } from './canvas-edges';
+import { buildAnchorForest, type AnchorLink } from './layers/anchored-rows';
+import type { CanvasLayout } from './canvas-layout';
 
 // Адаптер graph ↔ flow (Epic 002, T-030) — граница domain ↔ react-flow
 // (архитектурный принцип 4 декомпозиции): домен не знает о react-flow,
@@ -41,6 +43,20 @@ export const LOGIC_ANCHOR_HANDLE_PREFIX = 'logic-anchor:';
 
 export const logicSourceHandleId = (elementId: string, optionId: string): string =>
   `${LOGIC_SOURCE_HANDLE_PREFIX}${elementId}:${optionId}`;
+
+// Правила «Сложной логики» как связи «якорь-вариант → цель» для раскладки
+// «цель напротив варианта» (layers/anchored-rows, ADR-16).
+export const logicRulesToAnchorLinks = (logicRules: ServiceGraph['logicRules']): AnchorLink[] =>
+  logicRules.flatMap((rule) =>
+    rule.condition.kind === 'optionSelected'
+      ? [
+          {
+            anchorId: logicSourceHandleId(rule.sourceElementId, rule.condition.optionId),
+            targetId: rule.targetElementId,
+          },
+        ]
+      : [],
+  );
 
 export const logicTargetHandleId = (elementId: string): string => `${LOGIC_TARGET_HANDLE_PREFIX}${elementId}`;
 
@@ -121,6 +137,11 @@ export type CanvasElementData = {
    * рисуется — соединить его доменно невозможно, лишняя точка путает (N5).
    */
   logicTarget: boolean;
+  /**
+   * Отступ над карточкой элемента страницы: блоки-цели его связей стоят
+   * напротив, и строка растёт до их стопки (computeLayout, [owner 2026-10-16]).
+   */
+  rowOffset?: number;
   /**
    * Комментарий-часть элемента (поле `comment`, US-05): показывается
    * голубым блоком под карточкой с бейджем адресата [owner 2026-10-15].
@@ -280,25 +301,28 @@ function formComponentToElementData(
 // элемента); target — узел страницы-цели.
 //
 // Координаты не персистентны (D2) и здесь НЕ вычисляются: позиции даёт
-// computeLayout (T-036) и передаёт параметром positions; без него узлы
-// встают в (0, 0). Глубины для подписей уровня и drag-группировки
-// вычисляются здесь же (computeGraphDepths — чистая доменная функция).
+// computeLayout (T-036) и передаёт параметром layout (позиции узлов и
+// отступы строк элементов); без него узлы встают в (0, 0). Глубины для
+// подписей уровня и drag-группировки вычисляются здесь же
+// (computeGraphDepths — чистая доменная функция).
 //
 // previous — результат прошлого вызова (ревью P1, R2): неизменённые узлы,
 // их data, карточки элементов и рёбра сохраняют идентичность объектов, а
 // смена позиции не пересоздаёт data. Так react-flow и memo-компоненты
 // перерисовывают только то, что действительно изменилось.
-export function graphToFlow(
-  graph: ServiceGraph,
-  positions?: Readonly<Record<string, XYPosition>>,
-  previous?: FlowGraph,
-): FlowGraph {
-  const next = buildFlow(graph, positions);
+export function graphToFlow(graph: ServiceGraph, layout?: CanvasLayout, previous?: FlowGraph): FlowGraph {
+  const next = buildFlow(graph, layout);
   return previous ? shareFlow(next, previous) : next;
 }
 
-function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPosition>>): FlowGraph {
-  const positionOf = (id: string): XYPosition => positions?.[id] ?? { x: 0, y: 0 };
+function buildFlow(graph: ServiceGraph, layout?: CanvasLayout): FlowGraph {
+  const positionOf = (id: string): XYPosition => layout?.positions[id] ?? { x: 0, y: 0 };
+  // Карточка элемента страницы с отступом строки (цель напротив якоря).
+  const pageElementData = (element: CanvasElement, context: ElementMapContext): CanvasElementData => {
+    const data = elementToElementData(element, context, false);
+    const rowOffset = layout?.rowOffsets[element.id];
+    return rowOffset ? { ...data, rowOffset } : data;
+  };
   const depths = computeGraphDepths(graph);
   // Цели правил видимости — индикатор зависимости на карточке (T-037, L-Q1).
   const logicTargets = new Set<string>(graph.logicRules.map((rule) => rule.targetElementId));
@@ -310,16 +334,8 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
   );
 
   // Цель правила → option-handle варианта-источника (L-I7: источник один;
-  // при битых данных берётся первое правило).
-  const logicParents = new Map<string, string>();
-  for (const rule of graph.logicRules) {
-    if (rule.condition.kind === 'optionSelected' && !logicParents.has(rule.targetElementId)) {
-      logicParents.set(
-        rule.targetElementId,
-        logicSourceHandleId(rule.sourceElementId, rule.condition.optionId),
-      );
-    }
-  }
+  // при битых данных берётся первое правило) — общий лес якорей.
+  const logicParents = buildAnchorForest(logicRulesToAnchorLinks(graph.logicRules)).parentOf;
 
   const elementContext: ElementMapContext = { logicTargets, logicHidden };
 
@@ -339,7 +355,7 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
         orderIndex: homePage.orderIndex,
         depth: depths.get(homePage.id) ?? 0,
         subtitle: NODE_SUBTITLES.home,
-        elements: homePage.elements.map((element) => elementToElementData(element, elementContext, false)),
+        elements: homePage.elements.map((element) => pageElementData(element, elementContext)),
         steps: [],
         formKindLabel: null,
       },
@@ -364,7 +380,7 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
         orderIndex: scenario.orderIndex,
         depth,
         subtitle: navigationLevelLabel(depth + levelOffset || 1),
-        elements: scenario.elements.map((element) => elementToElementData(element, elementContext, false)),
+        elements: scenario.elements.map((element) => pageElementData(element, elementContext)),
         steps: [],
         formKindLabel: null,
       },

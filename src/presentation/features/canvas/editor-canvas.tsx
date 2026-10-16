@@ -630,6 +630,7 @@ const NO_ACTIONS: CanvasActions = {
   addElementToStep: () => undefined,
   removeStep: () => undefined,
   addFormStep: () => undefined,
+  reportElementRows: () => undefined,
   moveStep: () => undefined,
   swapSteps: () => undefined,
   moveElement: () => undefined,

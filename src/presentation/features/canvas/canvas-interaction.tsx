@@ -5,6 +5,7 @@ import type { CanvasNodeType } from './graph-flow-adapter';
 import type { DropAnchorPosition, ElementDragPayload } from './element-dnd';
 import type { StepAnchorPosition } from './step-dnd';
 import type { ViolationMarkers } from './violation-markers';
+import type { MeasuredElementRows } from './canvas-layout';
 
 // Состояние взаимодействия канваса — НЕ в data узлов (ревью A4/P3, R2):
 // выделение, цель протягиваемой связи и нарушения живут
@@ -92,6 +93,11 @@ export type CanvasActions = {
     anchor: DropAnchorPosition | null,
     layerDepth?: number,
   ) => void;
+  /**
+   * Замер строк элементов узла страницы (верх от узла и высота, без отступов
+   * rowOffset): якоря выравнивания блоков-целей связей ([owner 2026-10-16]).
+   */
+  reportElementRows: (rows: MeasuredElementRows) => void;
   /** Варианты меню «+» шага формы — все виды элементов (ADR-17). */
   elementKindOptions: ReadonlyArray<{ kind: CanvasElementKind; label: string }>;
 };

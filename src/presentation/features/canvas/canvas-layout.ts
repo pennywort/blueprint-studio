@@ -6,6 +6,13 @@ import { walkSubScenarios } from '@domain/graph-walk';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
 import { groupByLayer } from '@domain/layer-depths';
+import { logicRulesToAnchorLinks, logicSourceHandleId } from './graph-flow-adapter';
+import {
+  buildAnchorForest,
+  layoutAnchoredRows,
+  type AnchorRow,
+  type AnchoredRowsLayout,
+} from './layers/anchored-rows';
 
 // Слоистый layout-движок (Epic 002, T-036; D2/D7/D12/D13): координаты не
 // персистентны, колонка узла = глубина от корня (computeGraphDepths),
@@ -92,23 +99,14 @@ function estimateScenarioNodeHeight(elementCount: number): number {
 
 // Высота шага по раскладке FormStepLayers [owner 2026-10-13]: деревья
 // корней друг под другом; строка варианта — по большему из карточки
-// варианта и стопки зависящих от него элементов (цель напротив варианта).
+// варианта и стопки зависящих от него элементов — общее ядро «цель напротив
+// якоря» (layers/anchored-rows, якорь — вариант).
 function estimateStepHeight(step: FormStep, logicRules: ServiceGraph['logicRules']): number {
   const S = FORM_STEP_LAYOUT;
   const ids = new Set<string>(step.elements.map((component) => component.id));
-  const dependents = new Map<string, string[]>();
-  const hasParent = new Set<string>();
-  for (const rule of logicRules) {
-    if (rule.condition.kind !== 'optionSelected' || hasParent.has(rule.targetElementId)) {
-      continue;
-    }
-    if (!ids.has(rule.sourceElementId) || !ids.has(rule.targetElementId)) {
-      continue;
-    }
-    const key = `${rule.sourceElementId}:${rule.condition.optionId}`;
-    dependents.set(key, [...(dependents.get(key) ?? []), rule.targetElementId]);
-    hasParent.add(rule.targetElementId);
-  }
+  const { childrenOf, parentOf } = buildAnchorForest(logicRulesToAnchorLinks(logicRules), (link) =>
+    ids.has(link.targetId),
+  );
   const byId = new Map(step.elements.map((component) => [component.id as string, component]));
   const stack = (list: readonly string[], seen: ReadonlySet<string>): number =>
     list.reduce((sum, id, index) => sum + (index > 0 ? S.rowGap : 0) + tree(id, seen), 0);
@@ -118,18 +116,23 @@ function estimateStepHeight(step: FormStep, logicRules: ServiceGraph['logicRules
       return 0;
     }
     const inner = new Set(seen).add(id);
-    let height = S.elementHeight;
-    // Варианты Select'а в шаге — карточки всегда (переходы на шаги, [owner 2026-10-14]).
-    if (component.kind === 'selectList') {
-      for (const option of component.options) {
-        const children = dependents.get(`${id}:${option.value}`) ?? [];
-        height += S.rowGap + Math.max(S.optionHeight, stack(children, inner));
-      }
+    // Строки элемента: карточка, затем варианты Select'а — карточки всегда
+    // (переходы на шаги, [owner 2026-10-14]).
+    const options = component.kind === 'selectList' ? component.options : [];
+    const rows: AnchorRow<string>[] = [{ top: 0, height: S.elementHeight, children: [] }];
+    for (const option of options) {
+      const previous = rows.at(-1)!;
+      rows.push({
+        top: previous.top + previous.height + S.rowGap,
+        height: S.optionHeight,
+        children: childrenOf.get(logicSourceHandleId(id, option.value)) ?? [],
+      });
     }
-    return height;
+    const last = rows.at(-1)!;
+    return layoutAnchoredRows(rows, last.top + last.height, (child) => tree(child, inner), S.rowGap).extent;
   };
   return stack(
-    step.elements.map((component) => component.id as string).filter((id) => !hasParent.has(id)),
+    step.elements.map((component) => component.id as string).filter((id) => !parentOf.has(id)),
     new Set(),
   );
 }
@@ -177,46 +180,71 @@ function estimateFormSize(
 type LayoutNode = {
   id: string;
   orderIndex: number;
+  depth: number;
   width: number;
+  /** Высота без отступов строк (естественная). */
   height: number;
+  /** Элементы-якоря связей (у форм — нет: строк шагов канвас не знает). */
+  elementIds: readonly string[];
 };
 
 /** Фактические размеры узлов, измеренные react-flow после рендера. */
 export type MeasuredNodeSizes = Readonly<Record<string, { width: number; height: number }>>;
 
-// Позиции узлов для graphToFlow (параметр positions): колонка = глубина,
-// Y внутри колонки — стек по orderIndex (D13). Каждый несвязанный подграф
-// раскладывается от своего корня (глубина 0, D8) — подграфы встают в одну
-// колонку друг под другом, отдельного «островного» раскладщика нет.
-// measured — фактические размеры узлов (N12): оценка не учитывает реальную
-// высоту строк, из-за чего зазоры в колонке «плыли»;
-// оценка остаётся только для ещё не измеренных узлов (первый рендер).
-export function computeLayout(graph: ServiceGraph, measured?: MeasuredNodeSizes): Record<string, XYPosition> {
+/**
+ * Строки элементов в узлах страниц, измеренные после рендера: верх (от верха
+ * узла) и высота — без отступов строк (rowOffset).
+ */
+export type MeasuredElementRows = Readonly<Record<string, { top: number; height: number }>>;
+
+/** Результат раскладки канваса: позиции узлов и отступы над строками элементов. */
+export type CanvasLayout = {
+  positions: Record<string, XYPosition>;
+  rowOffsets: Record<string, number>;
+};
+
+// Раскладка канваса для graphToFlow: колонка = глубина (D7/D12); блок-цель
+// связи стоит верхом вровень со своим элементом-источником, строка элемента
+// растёт до стопки его целей — общее ядро с шагом формы (layers/anchored-rows,
+// [owner 2026-10-16], макет «логика связей и выравнивание элемента при
+// нескольких блоках в соседнем уровне»). Родитель блока — первая связь по
+// порядку элементов, только на соседний уровень (дерево без циклов).
+// Корни (Главная, несвязанные блоки и подграфы, D8) — по глубине и
+// orderIndex (D13), каждый ниже уже занятых колонок своего дерева.
+// measured / rows — фактические размеры (N12) без отступов строк;
+// оценка — только для ещё не измеренного (первый рендер).
+export function computeLayout(
+  graph: ServiceGraph,
+  measured?: MeasuredNodeSizes,
+  rows?: MeasuredElementRows,
+): CanvasLayout {
+  const L = CANVAS_LAYOUT;
   const depths = computeGraphDepths(graph);
+  const depthOf = (id: string): number => depths.get(id) ?? 0;
 
   const nodes: LayoutNode[] = [];
-  if (graph.homePage) {
-    const home = graph.homePage;
+  const pages = [...(graph.homePage ? [graph.homePage] : []), ...walkSubScenarios(graph.subScenarios)];
+  for (const page of pages) {
     nodes.push({
-      id: home.id,
-      orderIndex: home.orderIndex,
-      width: CANVAS_LAYOUT.nodeWidth,
-      height: estimateScenarioNodeHeight(home.elements.length),
-    });
-  }
-  for (const scenario of walkSubScenarios(graph.subScenarios)) {
-    nodes.push({
-      id: scenario.id,
-      orderIndex: scenario.orderIndex,
-      width: CANVAS_LAYOUT.nodeWidth,
-      height: estimateScenarioNodeHeight(scenario.elements.length),
+      id: page.id,
+      orderIndex: page.orderIndex,
+      depth: depthOf(page.id),
+      width: L.nodeWidth,
+      height: estimateScenarioNodeHeight(page.elements.length),
+      elementIds: page.elements.map((element) => element.id),
     });
   }
   for (const form of graph.applicationForms) {
     const size = estimateFormSize(form, graph);
-    nodes.push({ id: form.id, orderIndex: form.orderIndex, width: size.width, height: size.height });
+    nodes.push({
+      id: form.id,
+      orderIndex: form.orderIndex,
+      depth: depthOf(form.id),
+      width: size.width,
+      height: size.height,
+      elementIds: [],
+    });
   }
-
   for (const node of nodes) {
     const size = measured?.[node.id];
     if (size) {
@@ -224,22 +252,93 @@ export function computeLayout(graph: ServiceGraph, measured?: MeasuredNodeSizes)
       node.height = size.height;
     }
   }
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const sorted = [...nodes].sort(
+    (left, right) => left.depth - right.depth || left.orderIndex - right.orderIndex,
+  );
 
-  // Колонки — уровни 0..max без пропусков (пустой уровень держит место,
-  // groupByLayer), порядок внутри — по orderIndex.
-  const sorted = [...nodes].sort((left, right) => left.orderIndex - right.orderIndex);
-  const positions: Record<string, XYPosition> = {};
-  let x = 0;
-  for (const column of groupByLayer(sorted, (node) => depths.get(node.id) ?? 0)) {
-    let y = 0;
-    for (const node of column) {
-      positions[node.id] = { x, y };
-      y += node.height + CANVAS_LAYOUT.rowGap;
+  // Лес «элемент → блоки-цели»: связи по порядку блоков и их элементов.
+  const ownerOf = new Map<string, LayoutNode>();
+  for (const node of sorted) {
+    for (const elementId of node.elementIds) {
+      ownerOf.set(elementId, node);
     }
-    const columnWidth =
-      column.length > 0 ? Math.max(...column.map((node) => node.width)) : CANVAS_LAYOUT.nodeWidth;
-    x += columnWidth + CANVAS_LAYOUT.columnGap;
+  }
+  const linksByElement = new Map<string, ServiceGraph['links'][number][]>();
+  for (const link of graph.links) {
+    linksByElement.set(link.sourceElementId, [...(linksByElement.get(link.sourceElementId) ?? []), link]);
+  }
+  const { childrenOf, parentOf } = buildAnchorForest(
+    sorted.flatMap((node) =>
+      node.elementIds.flatMap((elementId) =>
+        (linksByElement.get(elementId) ?? []).map((link) => ({
+          anchorId: elementId,
+          targetId: link.targetId,
+        })),
+      ),
+    ),
+    (link) => {
+      const target = byId.get(link.targetId);
+      return target !== undefined && target.depth === ownerOf.get(link.anchorId)!.depth + 1;
+    },
+  );
+
+  // Строки элементов узла: замер или оценка по константам строки.
+  const rowsOf = (node: LayoutNode): AnchorRow<string>[] =>
+    node.elementIds.map((elementId, index) => ({
+      top: rows?.[elementId]?.top ?? L.nodePadding + L.nodeHeaderHeight + index * L.elementRowHeight,
+      height: rows?.[elementId]?.height ?? L.elementRowHeight,
+      children: childrenOf.get(elementId) ?? [],
+    }));
+  const layouts = new Map<string, AnchoredRowsLayout<string>>();
+  const layoutOf = (id: string): AnchoredRowsLayout<string> => {
+    let result = layouts.get(id);
+    if (!result) {
+      const node = byId.get(id)!;
+      result = layoutAnchoredRows(rowsOf(node), node.height, (child) => layoutOf(child).extent, L.rowGap);
+      layouts.set(id, result);
+    }
+    return result;
+  };
+
+  // X колонок — по самой широкой карточке уровня (пустой уровень держит место).
+  const columnX: number[] = [];
+  let x = 0;
+  for (const column of groupByLayer(sorted, (node) => node.depth)) {
+    columnX.push(x);
+    x += (column.length > 0 ? Math.max(...column.map((node) => node.width)) : L.nodeWidth) + L.columnGap;
   }
 
-  return positions;
+  const positions: Record<string, XYPosition> = {};
+  const rowOffsets: Record<string, number> = {};
+  // Низ занятой части каждой колонки — следующий корень встаёт ниже.
+  const columnBottom: number[] = [];
+  const place = (id: string, y: number): void => {
+    const node = byId.get(id)!;
+    const layout = layoutOf(id);
+    positions[id] = { x: columnX[node.depth] ?? 0, y };
+    columnBottom[node.depth] = Math.max(columnBottom[node.depth] ?? 0, y + layout.height + L.rowGap);
+    node.elementIds.forEach((elementId, index) => {
+      const offset = layout.shifts[index]! - (layout.shifts[index - 1] ?? 0);
+      if (offset > 0) {
+        rowOffsets[elementId] = offset;
+      }
+    });
+    for (const [child, top] of layout.childTops) {
+      place(child, y + top);
+    }
+  };
+  const subtreeDepths = (id: string): number[] => [
+    byId.get(id)!.depth,
+    ...byId
+      .get(id)!
+      .elementIds.flatMap((elementId) => (childrenOf.get(elementId) ?? []).flatMap(subtreeDepths)),
+  ];
+  for (const root of sorted) {
+    if (!parentOf.has(root.id)) {
+      place(root.id, Math.max(0, ...subtreeDepths(root.id).map((depth) => columnBottom[depth] ?? 0)));
+    }
+  }
+
+  return { positions, rowOffsets };
 }

@@ -1,10 +1,10 @@
-import { memo, useCallback, type DragEvent } from 'react';
+import { memo, useCallback, useLayoutEffect, useRef, type DragEvent } from 'react';
 import { Handle, Position, useConnection, type NodeProps } from '@xyflow/react';
 import { Card, IconButton, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import { Delete } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
-import { CANVAS_LAYOUT } from '../canvas-layout';
+import { CANVAS_LAYOUT, type MeasuredElementRows } from '../canvas-layout';
 import type { CanvasNode } from '../graph-flow-adapter';
 import { anchorFromPoint, type DropAnchorPosition, type ElementDragPayload } from '../element-dnd';
 import { ElementCard } from './element-card';
@@ -76,6 +76,7 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
     onDrop: dropElement,
   });
   const anchor = drop?.anchor ?? null;
+  const elementsRef = useElementRowsReport(data.elements, actions?.reportElementRows);
 
   return (
     <Card
@@ -117,9 +118,14 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
         </IconButton>
       </div>
       {data.elements.length > 0 ? (
-        <div className={classes.elements}>
+        <div ref={elementsRef} className={classes.elements}>
           {data.elements.map((element) => (
-            <div key={element.id} className={classes.elementSlot}>
+            <div
+              key={element.id}
+              className={classes.elementSlot}
+              // Отступ строки: блоки-цели связей напротив карточки (computeLayout).
+              style={element.rowOffset ? { marginTop: element.rowOffset } : undefined}
+            >
               <DropIndicator anchor={anchor} elementId={element.id} placement="before" gap={ELEMENTS_GAP} />
               <ElementCard element={element} />
               <DropIndicator anchor={anchor} elementId={element.id} placement="after" gap={ELEMENTS_GAP} />
@@ -129,6 +135,48 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
       ) : null}
     </Card>
   );
+}
+
+// Замер строк элементов для раскладки «блок-цель напротив элемента»
+// ([owner 2026-10-16], N12): верх строки от верха узла и высота — без
+// отступа rowOffset, который дала сама раскладка. Перемер — при изменении
+// размера списка (карточка выросла, сменились отступы).
+function useElementRowsReport(
+  elements: CanvasNode['data']['elements'],
+  report: ((rows: MeasuredElementRows) => void) | undefined,
+) {
+  const elementsRef = useRef<HTMLDivElement>(null);
+  const elementsNow = useRef(elements);
+  elementsNow.current = elements;
+  useLayoutEffect(() => {
+    const list = elementsRef.current;
+    const node = list?.closest<HTMLElement>('.react-flow__node');
+    if (!list || !node || !report) {
+      return;
+    }
+    const measure = () => {
+      const nodeRect = node.getBoundingClientRect();
+      // Масштаб вьюпорта: замер в координатах канваса, не экрана.
+      const zoom = node.offsetHeight > 0 ? nodeRect.height / node.offsetHeight : 1;
+      const rows: Record<string, { top: number; height: number }> = {};
+      let offsets = 0;
+      Array.from(list.children).forEach((slot, index) => {
+        const element = elementsNow.current[index];
+        if (!element || !(slot instanceof HTMLElement)) {
+          return;
+        }
+        offsets += element.rowOffset ?? 0;
+        const top = (slot.getBoundingClientRect().top - nodeRect.top) / zoom;
+        rows[element.id] = { top: top - offsets, height: slot.offsetHeight };
+      });
+      report(rows);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [report, elements]);
+  return elementsRef;
 }
 
 // Перерисовка только при смене своих данных (data сохраняет идентичность,

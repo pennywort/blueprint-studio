@@ -26,55 +26,42 @@ export function useCanvasNodes(
   // Измерения копятся за кадр и применяются одним проходом раскладки
   // (ревью P2, R2): react-flow присылает размеры пачками, и каждая пачка
   // раньше давала полную раскладку (44 раскладки на загрузке стенда).
-  const [measuredSizes, setMeasuredSizes] = useState<MeasuredNodeSizes>({});
-  const pendingSizesRef = useRef<Record<string, { width: number; height: number }>>({});
-  const sizesFrameRef = useRef<number | null>(null);
-  const reportNodeSizes = useCallback((sizes: MeasuredNodeSizes) => {
-    Object.assign(pendingSizesRef.current, sizes);
-    if (sizesFrameRef.current !== null) {
-      return;
-    }
-    sizesFrameRef.current = requestAnimationFrame(() => {
-      sizesFrameRef.current = null;
-      const pending = pendingSizesRef.current;
-      pendingSizesRef.current = {};
-      setMeasuredSizes((current) => {
-        let changed = false;
-        const next = { ...current };
-        for (const [id, size] of Object.entries(pending)) {
-          const previous = current[id];
-          if (
-            !previous ||
-            Math.abs(previous.width - size.width) > 1 ||
-            Math.abs(previous.height - size.height) > 1
-          ) {
-            next[id] = size;
-            changed = true;
-          }
-        }
-        return changed ? next : current;
-      });
-    });
-  }, []);
-  useEffect(
-    () => () => {
-      if (sizesFrameRef.current !== null) {
-        cancelAnimationFrame(sizesFrameRef.current);
+  const [measuredSizes, reportSizes] = useMeasuredBatch<{ width: number; height: number }>(
+    (left, right) => Math.abs(left.width - right.width) <= 1 && Math.abs(left.height - right.height) <= 1,
+  );
+  // Строки элементов узлов страниц (верх и высота без отступов) — якоря
+  // выравнивания блоков-целей ([owner 2026-10-16]); копятся так же.
+  const [measuredRows, reportElementRows] = useMeasuredBatch<{ top: number; height: number }>(
+    (left, right) => Math.abs(left.top - right.top) <= 1 && Math.abs(left.height - right.height) <= 1,
+  );
+  // Высота узла в раскладке — без отступов строк, которые раскладка же и
+  // дала: иначе отступы вошли бы в размер и раскладка «раскачивалась».
+  const previousFlowRef = useRef<FlowGraph | undefined>(undefined);
+  const reportNodeSizes = useCallback(
+    (sizes: MeasuredNodeSizes) => {
+      const natural: Record<string, { width: number; height: number }> = {};
+      for (const [id, size] of Object.entries(sizes)) {
+        const node = previousFlowRef.current?.nodes.find((candidate) => candidate.id === id);
+        const offsets = node?.data.elements.reduce((sum, element) => sum + (element.rowOffset ?? 0), 0) ?? 0;
+        natural[id] = { width: size.width, height: size.height - offsets };
       }
+      reportSizes(natural);
     },
-    [],
+    [reportSizes],
   );
 
-  const positions = useMemo(() => computeLayout(graph, measuredSizes), [graph, measuredSizes]);
+  const layout = useMemo(
+    () => computeLayout(graph, measuredSizes, measuredRows),
+    [graph, measuredSizes, measuredRows],
+  );
   // Структурное разделение (ревью P1, R2): прошлый результат передаётся в
   // адаптер — неизменённые узлы, data, карточки и рёбра сохраняют
   // идентичность, смена позиции не пересоздаёт data.
-  const previousFlowRef = useRef<FlowGraph | undefined>(undefined);
   const flow = useMemo(() => {
-    const next = graphToFlow(graph, positions, previousFlowRef.current);
+    const next = graphToFlow(graph, layout, previousFlowRef.current);
     previousFlowRef.current = next;
     return next;
-  }, [graph, positions]);
+  }, [graph, layout]);
   // Нарушения инвариантов после каждой команды (T-043): подсветка узлов и
   // карточек. Команды отклоняют невалидные изменения, поэтому в обычной
   // работе список пуст; подсветка нужна для графов извне (загрузка, T-053).
@@ -111,5 +98,57 @@ export function useCanvasNodes(
     return flow.nodes.map((node) => (node.id === selectedId ? { ...node, selected: true } : node));
   }, [flow.nodes, selectedNodeId, selectedElementId]);
 
-  return { nodes, edges: flow.edges, flowNodes: flow.nodes, reportNodeSizes, interactionStore };
+  return {
+    nodes,
+    edges: flow.edges,
+    flowNodes: flow.nodes,
+    reportNodeSizes,
+    reportElementRows,
+    interactionStore,
+  };
+}
+
+// Замеры после рендера, накопленные за кадр (ревью P2, R2): react-flow и
+// узлы присылают их пачками, а каждая пачка раньше давала полную раскладку
+// (44 раскладки на загрузке стенда). Состояние меняется только при реальном
+// изменении (same — допуск 1px), иначе пересчёт раскладки зациклился бы.
+function useMeasuredBatch<T>(
+  same: (left: T, right: T) => boolean,
+): [Readonly<Record<string, T>>, (values: Readonly<Record<string, T>>) => void] {
+  const [measured, setMeasured] = useState<Readonly<Record<string, T>>>({});
+  const pendingRef = useRef<Record<string, T>>({});
+  const frameRef = useRef<number | null>(null);
+  const sameRef = useRef(same);
+  const report = useCallback((values: Readonly<Record<string, T>>) => {
+    Object.assign(pendingRef.current, values);
+    if (frameRef.current !== null) {
+      return;
+    }
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      const pending = pendingRef.current;
+      pendingRef.current = {};
+      setMeasured((current) => {
+        let changed = false;
+        const next = { ...current };
+        for (const [id, value] of Object.entries(pending)) {
+          const previous = current[id];
+          if (previous === undefined || !sameRef.current(previous, value)) {
+            next[id] = value;
+            changed = true;
+          }
+        }
+        return changed ? next : current;
+      });
+    });
+  }, []);
+  useEffect(
+    () => () => {
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current);
+      }
+    },
+    [],
+  );
+  return [measured, report];
 }

@@ -96,12 +96,15 @@ export function useEditorGraph() {
   } = useConnection(graphRef, runCommand, idGenerator);
 
   const { focus, selectSearchResult } = useCanvasSearch(selectNode, selectElement);
-  const { nodes, edges, flowNodes, reportNodeSizes, interactionStore } = useCanvasNodes(graph, {
-    selectedNodeId,
-    selectedElementId,
-    selectedStepId,
-    connectionTargets,
-  });
+  const { nodes, edges, flowNodes, reportNodeSizes, reportElementRows, interactionStore } = useCanvasNodes(
+    graph,
+    {
+      selectedNodeId,
+      selectedElementId,
+      selectedStepId,
+      connectionTargets,
+    },
+  );
   const searchCanvas = useCallback((query: string) => searchCanvasNodes(flowNodes, query), [flowNodes]);
 
   const selectedNodeType: CanvasNodeType | null = useMemo(
@@ -470,9 +473,11 @@ export function useEditorGraph() {
       moveStep,
       swapSteps,
       moveElement,
+      reportElementRows,
       elementKindOptions: ELEMENT_KIND_OPTIONS,
     }),
     [
+      reportElementRows,
       selectElement,
       toggleComplexLogic,
       removeNode,
