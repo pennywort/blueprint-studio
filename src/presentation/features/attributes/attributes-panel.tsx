@@ -14,7 +14,7 @@ import type { ElementPropsPatch } from '@application/commands/update-element-pro
 import { hasElementField, type CanvasElement } from '@domain/model/canvas-element';
 import type { LogicRuleId } from '@domain/model/ids';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
-import { ELEMENT_KIND_LABELS } from '@presentation/features/canvas/graph-flow-adapter';
+import { ELEMENT_KIND_LABELS } from '@presentation/labels/editor-labels';
 import { getElementAttributeMeta, type AttributeMeta } from './element-attribute-meta';
 import { resolvePropertyEditor } from './property-editor-registry';
 import './builtin-property-editors';

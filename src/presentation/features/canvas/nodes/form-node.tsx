@@ -12,6 +12,7 @@ import {
 import { Add, Delete } from '@blueprint-vendor/flamingo-icons';
 import type { CanvasElementKind } from '@domain/model/canvas-element';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
+import { NODE_KIND_LABELS } from '@presentation/labels/editor-labels';
 import { ViolationBadge } from './violation-badge';
 import { groupByLayer } from '@domain/layer-depths';
 import { CANVAS_LAYOUT, FORM_STEP_LAYOUT } from '../canvas-layout';
@@ -292,8 +293,9 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
       <div className={nodeClasses.header}>
         <div>
           <div className={classes.titleRow}>
-            <Typography variant="subtitle1">Форма заявки</Typography>
-            {data.title !== 'Форма заявки' ? (
+            <Typography variant="subtitle1">{NODE_KIND_LABELS.form}</Typography>
+            {/* Название формы, совпадающее с видом узла, не повторяем (R-CFG-6). */}
+            {data.title !== NODE_KIND_LABELS.form ? (
               <Typography variant="subtitle1" color="textSecondary">
                 · {data.title}
               </Typography>

@@ -4,7 +4,8 @@ import { AccountTree, Code, NoteAdd, ViewColumn } from '@blueprint-vendor/flamin
 import type { ElementSchema } from '@application/ports/element-schema-provider';
 import type { CanvasElementKind } from '@domain/model/canvas-element';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
-import { ELEMENT_KIND_LABELS, type CanvasNodeType } from '@presentation/features/canvas/graph-flow-adapter';
+import type { CanvasNodeType } from '@presentation/features/canvas/graph-flow-adapter';
+import { ELEMENT_KIND_LABELS, NODE_KIND_LABELS } from '@presentation/labels/editor-labels';
 
 // Панель-заглушка кнопки 4: назначение не подтверждено владельцем (Q-1),
 // поэтому панель только переключается, содержимое не выдумываем.
@@ -58,9 +59,9 @@ const useStyles = makeStyles<EditorTheme>((theme) => {
 });
 
 const NODE_MENU_ITEMS: ReadonlyArray<{ kind: AddableNodeKind; label: string }> = [
-  { kind: 'home', label: 'Главная' },
-  { kind: 'subScenario', label: 'Подсценарий' },
-  { kind: 'applicationForm', label: 'Форма заявки' },
+  { kind: 'home', label: NODE_KIND_LABELS.home },
+  { kind: 'subScenario', label: NODE_KIND_LABELS.subScenario },
+  { kind: 'applicationForm', label: NODE_KIND_LABELS.form },
 ];
 
 // Меню элементов (T-034): одинаково для любого выделенного узла — вид блока
