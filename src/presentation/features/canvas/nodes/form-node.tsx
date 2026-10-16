@@ -39,6 +39,7 @@ import {
 import { FORM_STEPS_LAYER_POLICY } from '../layers/layer-policy';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { FormStepLayers } from './form-step-layers';
+import { useHandlesSync } from './use-handles-sync';
 import { useNodeStyles } from './node-styles';
 import { ColumnDropBar, columnBarX, DROP_BAR_INSET, DropBar, useDropZone } from './use-element-drop-zone';
 
@@ -57,11 +58,16 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   // «добавление-шагов-формы-и-элементов-в-шаги»); шаги одного уровня —
   // друг под другом, как узлы колонки канваса [owner 2026-10-14].
   // position — для подсветки колонки-цели dnd.
+  // Поле до шапки и краёв узла добирается до formStepsEdge — полоса вставки
+  // у крайнего шага помещается внутри узла ([owner 2026-10-16]).
   stepsRow: {
     position: 'relative',
     display: 'flex',
     alignItems: 'flex-start',
     gap: CANVAS_LAYOUT.formStepGap,
+    paddingTop: CANVAS_LAYOUT.formStepsEdge - CANVAS_LAYOUT.nodeContentGap,
+    paddingBottom: CANVAS_LAYOUT.formStepsEdge - CANVAS_LAYOUT.nodePadding,
+    paddingLeft: CANVAS_LAYOUT.formStepsEdge - CANVAS_LAYOUT.nodePadding,
   },
   // Колонка уровня: ширина — по самому широкому шагу уровня.
   stepLevel: {
@@ -136,6 +142,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
 // (T-034) и dnd (N2) — из контекста действий канваса, выделение, цель
 // связи и нарушения — подпиской на стор (ревью A4, R2), не из data.
 function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
+  useHandlesSync(id, data);
   const nodeClasses = useNodeStyles();
   const classes = useStyles();
   const actions = useCanvasActions();
@@ -297,7 +304,7 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
           <ColumnDropBar
             x={columnBarX(stepDrop.column, {
               gap: CANVAS_LAYOUT.formStepGap,
-              edge: CANVAS_LAYOUT.nodePadding,
+              edge: CANVAS_LAYOUT.formStepsEdge,
             })}
           />
         ) : null}
@@ -308,12 +315,16 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
             data-step-level={level.depth}
             data-testid={`form-step-level-${level.depth}`}
           >
-            {level.steps.map((step) => (
+            {level.steps.map((step, index) => (
               <FormStepColumn
                 key={step.id}
                 formId={id}
                 step={step}
                 dropPlacement={dropAnchor?.stepId === step.id ? dropAnchor.placement : null}
+                dropAtEdge={
+                  dropAnchor?.stepId === step.id &&
+                  (dropAnchor.placement === 'before' ? index === 0 : index === level.steps.length - 1)
+                }
                 swapTarget={stepDrop?.swapStepId === step.id}
                 onOpenAddMenu={openAddMenu}
               />
@@ -366,6 +377,8 @@ type FormStepColumnProps = {
   step: CanvasFormStepData;
   /** Индикатор вставки перетаскиваемого шага у этого шага (dnd шагов). */
   dropPlacement: 'before' | 'after' | null;
+  /** Индикатор — у края уровня (до первого / после последнего шага): в поле узла. */
+  dropAtEdge: boolean;
   /** Шаг — цель обмена местами при dnd шага [owner 2026-10-15]. */
   swapTarget: boolean;
   onOpenAddMenu: (anchor: HTMLElement, stepId: string) => void;
@@ -378,6 +391,7 @@ const FormStepColumn = memo(function FormStepColumn({
   formId,
   step,
   dropPlacement,
+  dropAtEdge,
   swapTarget,
   onOpenAddMenu,
 }: FormStepColumnProps) {
@@ -440,7 +454,8 @@ const FormStepColumn = memo(function FormStepColumn({
         id={stepTargetHandleId(step.id)}
         className={connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
       />
-      {/* Индикатор вставки шага — посередине зазора между шагами уровня;
+      {/* Индикатор вставки шага — посередине зазора между шагами уровня, у
+          края уровня — посередине поля узла (formStepsEdge);
           абсолютный — раскладка формы при drag не меняется (как ADR-16). */}
       {dropPlacement ? (
         <DropBar
@@ -449,7 +464,8 @@ const FormStepColumn = memo(function FormStepColumn({
             position: 'absolute',
             left: DROP_BAR_INSET,
             right: DROP_BAR_INSET,
-            [dropPlacement === 'before' ? 'top' : 'bottom']: -CANVAS_LAYOUT.formStepGap / 2 - 1,
+            [dropPlacement === 'before' ? 'top' : 'bottom']:
+              -(dropAtEdge ? CANVAS_LAYOUT.formStepsEdge : CANVAS_LAYOUT.formStepGap) / 2 - 1,
           }}
           testId="step-drop-indicator"
         />

@@ -35,6 +35,13 @@ export const CANVAS_LAYOUT = {
   rowGap: 56,
   /** Внутренние отступы узла. */
   nodePadding: 16,
+  /** Зазор между шапкой узла и содержимым. */
+  nodeContentGap: 12,
+  /**
+   * Поле вокруг шагов формы (от шапки и краёв узла): полоса вставки у
+   * крайнего шага — посередине поля, внутри узла (DropBar, [owner 2026-10-16]).
+   */
+  formStepsEdge: 24,
   /** Высота шапки узла (заголовок + подпись). */
   nodeHeaderHeight: 88,
   /** Высота строки-элемента с зазором под ней. */
@@ -154,7 +161,8 @@ function estimateFormSize(
         : { width: stepWidth, height: stepHeight },
     );
   }
-  let width = L.nodePadding * 2;
+  // Поле ряда шагов (formStepsEdge) слева, сверху и снизу — как в FormNode.
+  let width = L.nodePadding + L.formStepsEdge;
   let height = 0;
   for (const column of columns.values()) {
     width += column.width + L.formStepGap;
@@ -162,7 +170,7 @@ function estimateFormSize(
   }
   return {
     width,
-    height: L.formHeaderHeight + height + L.nodePadding * 2,
+    height: L.formHeaderHeight + height + L.formStepsEdge * 2 - L.nodeContentGap + L.nodePadding,
   };
 }
 

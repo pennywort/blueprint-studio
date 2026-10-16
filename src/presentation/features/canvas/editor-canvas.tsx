@@ -18,7 +18,6 @@ import {
   ViewportPortal,
   useReactFlow,
   useStoreApi,
-  useUpdateNodeInternals,
   useViewport,
   type Connection,
   type EdgeChange,
@@ -44,12 +43,7 @@ import { isActionTarget } from './canvas-events';
 import { EditorCanvasControls } from './editor-canvas-controls';
 import { canvasNodeTypes } from './nodes/node-types';
 import { EditorConnectionLine, canvasEdgeTypes, editorEdgePath } from './canvas-edges';
-import {
-  EDGE_ARROW_MARKER_ID,
-  type CanvasEdge,
-  type CanvasNode,
-  type CanvasNodeData,
-} from './graph-flow-adapter';
+import { EDGE_ARROW_MARKER_ID, type CanvasEdge, type CanvasNode } from './graph-flow-adapter';
 import {
   CanvasInteractionProvider,
   createCanvasInteractionStore,
@@ -234,26 +228,7 @@ function CanvasInner({
   const nodesRef = useRef(nodes);
   nodesRef.current = nodes;
 
-  // Handles пересчитываются только у узлов с новыми данными (ревью P4, R2):
-  // их карточки могли сдвинуться при том же размере узла; остальные узлы
-  // сохраняют measured и handleBounds.
-  const updateNodeInternals = useUpdateNodeInternals();
-  const nodeDataRef = useRef(new Map<string, CanvasNodeData>());
-  useEffect(() => {
-    const changed: string[] = [];
-    const next = new Map<string, CanvasNodeData>();
-    for (const node of propsNodes) {
-      const previous = nodeDataRef.current.get(node.id);
-      if (previous !== undefined && previous !== node.data) {
-        changed.push(node.id);
-      }
-      next.set(node.id, node.data);
-    }
-    nodeDataRef.current = next;
-    if (changed.length > 0) {
-      updateNodeInternals(changed);
-    }
-  }, [propsNodes, updateNodeInternals]);
+  // Handles узла с новыми данными пересчитывает сам узел (useHandlesSync).
 
   // Центрирование на найденном узле (T-050). Задержка — react-flow мог ещё
   // не перемерить узел после смены выделения.

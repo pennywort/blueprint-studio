@@ -156,7 +156,7 @@ export function columnBarX(
   space: { gap: number; edge: number; right?: number },
 ): number {
   if (column.depth === 0) {
-    return -space.edge / 2;
+    return column.x - space.edge / 2;
   }
   const previousEnd = column.x - space.gap;
   return previousEnd + Math.min(space.gap, (space.right ?? Infinity) - previousEnd) / 2;

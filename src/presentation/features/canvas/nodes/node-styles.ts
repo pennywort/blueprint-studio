@@ -1,5 +1,6 @@
 import { makeStyles } from '@blueprint-vendor/flamingo-core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
+import { CANVAS_LAYOUT } from '../canvas-layout';
 
 // Общие стили узлов канваса (ревью A8, R4): карточка узла, рамки нарушения,
 // цели связи и зоны приёма dnd, заголовок, кнопки и индикатор вставки —
@@ -10,10 +11,10 @@ export const useNodeStyles = makeStyles<EditorTheme>((theme) => ({
     overflow: 'visible',
     borderRadius: 16,
     backgroundColor: theme.palette.background.paper,
-    padding: theme.spacing(2),
+    padding: CANVAS_LAYOUT.nodePadding,
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing(1.5),
+    gap: CANVAS_LAYOUT.nodeContentGap,
   },
   // Нарушение инвариантов узла или его элементов (T-043).
   invalid: {

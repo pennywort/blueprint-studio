@@ -10,6 +10,7 @@ import { anchorFromPoint, type DropAnchorPosition, type ElementDragPayload } fro
 import { ElementCard } from './element-card';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { useNodeStyles } from './node-styles';
+import { useHandlesSync } from './use-handles-sync';
 import { DropIndicator, useElementDropZone } from './use-element-drop-zone';
 
 /** Зазор между карточками элементов страницы. */
@@ -45,6 +46,7 @@ const useStyles = makeStyles<EditorTheme>(() => ({
 // Dnd (N2): весь узел — зона приёма карточек любого вида (ADR-17); позиция
 // — по якорю-карточке под курсором, без якоря — в конец списка.
 function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
+  useHandlesSync(id, data);
   const nodeClasses = useNodeStyles();
   const classes = useStyles();
   const actions = useCanvasActions();
