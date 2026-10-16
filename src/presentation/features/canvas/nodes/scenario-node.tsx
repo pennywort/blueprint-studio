@@ -35,13 +35,12 @@ const useStyles = makeStyles<EditorTheme>(() => ({
   elementSlot: {
     position: 'relative', // якорь полосы вставки (DropIndicator)
   },
-  // Варианты Select'а под карточкой: с отступом слева — видно, чьи они.
+  // Варианты Select'а под карточкой (отступ слева — у самой карточки варианта).
   options: {
     display: 'flex',
     flexDirection: 'column',
     gap: 8,
     marginTop: 8,
-    marginLeft: 24,
   },
 }));
 

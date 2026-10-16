@@ -28,8 +28,14 @@ import {
 export const CANVAS_LAYOUT = {
   /** Ширина узла Главной/Подсценария. */
   nodeWidth: 320,
-  /** Ширина колонки шагов внутри узла формы (колонка — уровень шагов, [owner 2026-10-14]). */
-  formStepWidth: 280,
+  /**
+   * Ширина колонки шагов внутри узла формы (колонка — уровень шагов, [owner 2026-10-14]) —
+   * внешняя ширина шага в одну колонку: карточка 240 + поле шага 24 с обеих
+   * сторон (FORM_STEP_LAYOUT), отступы у краёв равные, как на странице [owner 2026-10-16].
+   */
+  formStepWidth: 288,
+  /** Отступ карточек вариантов Select'а слева — видно, чьи они (страница и шаг формы, [owner 2026-10-16]). */
+  optionIndent: 24,
   /**
    * Зазор между колонками шагов и между шагами одного уровня в узле формы;
    * вмещает полосу вставки с точками и отступом (DropBar, [owner 2026-10-15])
@@ -159,7 +165,10 @@ function estimateFormSize(
     for (const step of level) {
       const depths = computeStepElementDepths(step, graph.logicRules);
       const elementColumns = Math.max(1, ...[...depths.values()].map((depth) => depth + 1));
-      width = Math.max(width, elementColumns * (S.elementWidth + S.columnGap));
+      width = Math.max(
+        width,
+        elementColumns * (S.elementWidth + S.columnGap) - S.columnGap + 2 * S.stepPadding,
+      );
       height += L.formStepGap + L.formStepHeaderHeight + estimateStepHeight(step, graph.logicRules);
     }
     return { width, height };

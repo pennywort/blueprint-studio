@@ -85,6 +85,8 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     // Target-handle перехода позиционируется относительно шага ([owner 2026-10-14]).
     position: 'relative',
     minWidth: CANVAS_LAYOUT.formStepWidth,
+    // formStepWidth — внешняя ширина с полем шага ([owner 2026-10-16]).
+    boxSizing: 'border-box',
     flexShrink: 0,
     borderRadius: 12,
     backgroundColor: theme.palette.background.default,
@@ -107,6 +109,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   // туда переносится шаг; рамка — как у «Добавить шаг», без действия.
   emptyLevel: {
     width: CANVAS_LAYOUT.formStepWidth,
+    boxSizing: 'border-box', // ширина — как у шага, с рамкой
     minHeight: CANVAS_LAYOUT.formEmptyLevelHeight,
     borderRadius: 12,
     border: `2px dashed ${theme.editor.canvas.elementBorder}`,
@@ -117,6 +120,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   },
   addStepColumn: {
     width: CANVAS_LAYOUT.formStepWidth,
+    boxSizing: 'border-box', // ширина — как у шага, с рамкой
     flexShrink: 0,
     minHeight: 96,
     borderRadius: 12,

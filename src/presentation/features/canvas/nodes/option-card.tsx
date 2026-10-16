@@ -2,7 +2,7 @@ import { Handle, Position } from '@xyflow/react';
 import { Card, Chip, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { isActionTarget } from '../canvas-events';
-import { FORM_STEP_LAYOUT } from '../canvas-layout';
+import { CANVAS_LAYOUT, FORM_STEP_LAYOUT } from '../canvas-layout';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
@@ -13,6 +13,9 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     position: 'relative',
     overflow: 'visible',
     transition: 'none',
+    // Отступ слева — вариант виден частью Select'а; один на странице и в шаге
+    // формы [owner 2026-10-16]. Правый край — вровень с Select'ом.
+    marginLeft: CANVAS_LAYOUT.optionIndent,
     padding: theme.spacing(1.5, 2),
     display: 'flex',
     flexDirection: 'column',
@@ -48,6 +51,8 @@ export function OptionCard({ option, onSelect }: OptionCardProps) {
       className={`${classes.card} nodrag`}
       variant="outlined"
       data-testid={`option-card-${option.handleId}`}
+      // Метка для полотна: нажатие выделяет Select, а не узел/шаг [owner 2026-10-16].
+      data-option-card={option.handleId}
       onPointerDown={(event) => {
         if (!isActionTarget(event.target)) {
           onSelect?.();

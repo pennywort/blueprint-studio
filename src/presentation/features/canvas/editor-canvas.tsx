@@ -460,7 +460,9 @@ function CanvasInner({
     (event: ReactPointerEvent<HTMLDivElement>) => {
       const target = event.target instanceof Element ? event.target : null;
       pointerDownOnNodeRef.current = target?.closest('.react-flow__node') != null;
-      if (!target || isActionTarget(target) || target.closest('[data-element-card]')) {
+      // Карточка элемента и вариант Select'а выделяют элемент сами — узел и
+      // шаг не перевыделяем [owner 2026-10-16].
+      if (!target || isActionTarget(target) || target.closest('[data-element-card], [data-option-card]')) {
         return;
       }
       const nodeId = target.closest('.react-flow__node')?.getAttribute('data-id');
