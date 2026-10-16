@@ -53,7 +53,8 @@ const useStyles = makeStyles<EditorTheme>(() => ({
     position: 'relative', // якорь полосы «после» дерева Select'а
     display: 'flex',
     flexDirection: 'column',
-    gap: L.rowGap,
+    // Внутри дерева — Select и его варианты: плотный зазор [owner 2026-10-16].
+    gap: L.optionGap,
   },
   // Ячейка колонки: ширина фиксирована — колонки всех деревьев шага
   // выровнены по одной сетке (gridLayerColumns).

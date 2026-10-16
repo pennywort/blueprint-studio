@@ -4,7 +4,7 @@ import { Card, IconButton, Typography, makeStyles } from '@blueprint-vendor/flam
 import { Delete } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
-import { CANVAS_LAYOUT, type MeasuredElementRows } from '../canvas-layout';
+import { CANVAS_LAYOUT, FORM_STEP_LAYOUT, type MeasuredElementRows } from '../canvas-layout';
 import type { CanvasNode } from '../graph-flow-adapter';
 import { anchorFromPoint, type DropAnchorPosition, type ElementDragPayload } from '../element-dnd';
 import { ElementCard } from './element-card';
@@ -39,8 +39,8 @@ const useStyles = makeStyles<EditorTheme>(() => ({
   options: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 8,
-    marginTop: 8,
+    gap: FORM_STEP_LAYOUT.optionGap,
+    marginTop: FORM_STEP_LAYOUT.optionGap,
   },
 }));
 

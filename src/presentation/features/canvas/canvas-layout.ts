@@ -84,6 +84,8 @@ export const FORM_STEP_LAYOUT = {
    * (DropBar, [owner 2026-10-15]).
    */
   rowGap: 24,
+  /** Зазор Select → первый вариант и между вариантами (общий для страницы и шага, [owner 2026-10-16]). */
+  optionGap: 8,
   stepPadding: 24,
   /** Оценка высоты карточки элемента — только для первого рендера (N12). */
   elementHeight: 104,
@@ -129,7 +131,7 @@ function estimateStepHeight(step: FormStep, logicRules: ServiceGraph['logicRules
     for (const option of options) {
       const previous = rows.at(-1)!;
       rows.push({
-        top: previous.top + previous.height + S.rowGap,
+        top: previous.top + previous.height + S.optionGap,
         height: S.optionHeight,
         children: childrenOf.get(logicSourceHandleId(id, option.value)) ?? [],
       });
