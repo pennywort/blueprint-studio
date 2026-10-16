@@ -3,6 +3,7 @@ import { Box, IconButton, Menu, MenuItem, makeStyles } from '@blueprint-vendor/f
 import { AccountTree, Code, NoteAdd, ViewColumn } from '@blueprint-vendor/flamingo-icons';
 import type { ElementSchema } from '@application/ports/element-schema-provider';
 import type { CanvasElementKind } from '@domain/model/canvas-element';
+import { kindRules } from '@domain/element-kinds';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import type { CanvasNodeType } from '@presentation/features/canvas/graph-flow-adapter';
 import { ELEMENT_KIND_LABELS, NODE_KIND_LABELS } from '@presentation/labels/editor-labels';
@@ -76,7 +77,7 @@ function elementMenuItems(
   }
   // Комментарий-элемент — отдельная кнопка тулбара, в меню его нет.
   return elementSchemas
-    .filter((schema) => schema.kind !== 'comment')
+    .filter((schema) => kindRules(schema.kind).inAddMenu)
     .map((schema) => ({ kind: schema.kind, label: ELEMENT_KIND_LABELS[schema.kind] }));
 }
 

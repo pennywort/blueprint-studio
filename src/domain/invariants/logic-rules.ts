@@ -1,5 +1,5 @@
 import type { ServiceGraph } from '../model/service-graph';
-import type { SelectList } from '../model/form-components';
+import { canBeLogicSource } from '../element-kinds';
 import type { CanvasElement } from '../model/canvas-element';
 import type { InvariantViolation } from './index';
 
@@ -58,7 +58,7 @@ export function checkLogicRules(graph: ServiceGraph): InvariantViolation[] {
     }
 
     // L-I1: источник — Select с включённой «Сложной логикой».
-    if (source.component.kind !== 'selectList' || !source.component.hasComplexLogic) {
+    if (!canBeLogicSource(source.component) || !source.component.hasComplexLogic) {
       violations.push({
         rule: RULE_ID,
         path,
@@ -67,8 +67,8 @@ export function checkLogicRules(graph: ServiceGraph): InvariantViolation[] {
     }
 
     // L-I2: condition.optionId существует среди option'ов источника.
-    if (rule.condition.kind === 'optionSelected' && source.component.kind === 'selectList') {
-      const optionExists = (source.component as SelectList).options.some(
+    if (rule.condition.kind === 'optionSelected' && canBeLogicSource(source.component)) {
+      const optionExists = source.component.options.some(
         (option) => option.value === rule.condition.optionId,
       );
       if (!optionExists) {

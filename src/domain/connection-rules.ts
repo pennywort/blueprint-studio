@@ -3,6 +3,7 @@ import { computeGraphDepths } from './graph-depths';
 import { findElementInGraph, findOwnerPageId } from './element-containers';
 import { walkSubScenarios } from './graph-walk';
 import { stepTransitionTargets } from './step-transitions';
+import { canBeLogicSource, kindRules } from './element-kinds';
 
 // Правила «с чем можно соединиться» (повторная приёмка Epic 002, [owner
 // 2026-10-13]) — единый источник для подсветки допустимых целей во время
@@ -84,7 +85,7 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
   }
   const steps = stepTransitionTargets(graph, elementId, optionId);
   const source = found.element;
-  if (source.kind !== 'selectList' || !source.hasComplexLogic) {
+  if (!canBeLogicSource(source) || !source.hasComplexLogic) {
     return { pages: new Set(), elements: new Set(), steps };
   }
   // У цели — не больше одного правила видимости (L-I7, временно [owner
@@ -92,7 +93,7 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
   const ruleTargets = new Set<string>(graph.logicRules.map((rule) => rule.targetElementId));
   const elements = new Set<string>();
   for (const element of found.container.elements) {
-    if (ruleTargets.has(element.id) || element.kind === 'comment') {
+    if (ruleTargets.has(element.id) || !kindRules(element.kind).logicTarget) {
       continue;
     }
     const duplicate = graph.logicRules.some(
@@ -111,7 +112,8 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
 
 export function connectableTargets(graph: ServiceGraph, source: ConnectionSource): ConnectableTargets {
   // Комментарий-элемент не источник и не цель связей [owner 2026-10-15].
-  if (findElementInGraph(graph, source.elementId)?.element.kind === 'comment') {
+  const element = findElementInGraph(graph, source.elementId)?.element;
+  if (element && !kindRules(element.kind).connectable) {
     return NONE;
   }
   return source.kind === 'navigation'
