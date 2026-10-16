@@ -197,7 +197,7 @@ function EditorPageLayout() {
                 schema={schemaByKind.get(selectedElement.component.kind) ?? null}
                 onUpdateProps={editorGraph.updateElementProps}
                 onToggleComplexLogic={
-                  canBeLogicSource(selectedElement.component) && selectedElement.inFormStep
+                  canBeLogicSource(selectedElement.component) && selectedElement.logicAvailable
                     ? () => editorGraph.toggleComplexLogic(selectedElement.component.id)
                     : undefined
                 }

@@ -3,6 +3,7 @@ import { computeGraphDepths } from './graph-depths';
 import { findElementInGraph, findOwnerPageId } from './element-containers';
 import { walkSubScenarios } from './graph-walk';
 import { stepTransitionTargets } from './step-transitions';
+import { supportsLogic } from './container-capabilities';
 import { canBeLogicSource, kindRules } from './element-kinds';
 
 // Правила «с чем можно соединиться» (повторная приёмка Epic 002, [owner
@@ -77,15 +78,17 @@ function wouldCreateCycle(graph: ServiceGraph, sourceId: string, targetId: strin
 }
 
 function logicTargets(graph: ServiceGraph, elementId: string, optionId: string): ConnectableTargets {
-  // Логика — только внутри шага формы (L-I5/ADR-14): Select на странице
-  // источником правила не бывает; цель — любой элемент шага [owner 2026-10-13].
+  // Логика — только внутри блока с этой возможностью (R-CFG-2: шаг формы,
+  // L-I5/ADR-14): Select на странице источником правила не бывает; цель —
+  // любой элемент того же блока [owner 2026-10-13]. Шаги-цели переходов
+  // проверяют свою возможность сами (step-transitions).
   const found = findElementInGraph(graph, elementId);
-  if (!found || found.container.kind !== 'formStep') {
+  if (!found) {
     return NONE;
   }
   const steps = stepTransitionTargets(graph, elementId, optionId);
   const source = found.element;
-  if (!canBeLogicSource(source) || !source.hasComplexLogic) {
+  if (!supportsLogic(found.container) || !canBeLogicSource(source) || !source.hasComplexLogic) {
     return { pages: new Set(), elements: new Set(), steps };
   }
   // У цели — не больше одного правила видимости (L-I7, временно [owner

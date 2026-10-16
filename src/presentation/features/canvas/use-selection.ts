@@ -2,14 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { CanvasElement } from '@domain/model/canvas-element';
 import type { LogicRuleId } from '@domain/model/ids';
+import { supportsLogic } from '@domain/container-capabilities';
 import { findElementLocation, findFormElement } from '@application/commands/graph-lookup';
 
 // Данные инспектора для выделенного элемента: сам компонент формы + его
 // правила видимости, где он — цель (T-067).
 export type SelectedElementInfo = {
   component: CanvasElement;
-  /** Элемент лежит в шаге формы — только там возможна «Сложная логика» (L-I5). */
-  inFormStep: boolean;
+  /** Блок элемента умеет «Сложную логику» (R-CFG-2: шаг формы, L-I5). */
+  logicAvailable: boolean;
   incomingRules: { ruleId: LogicRuleId; sourceLabel: string; optionLabel: string | null }[];
 };
 
@@ -107,7 +108,7 @@ export function useSelection(graph: ServiceGraph) {
       });
     return {
       component,
-      inFormStep: location.container.kind === 'formStep',
+      logicAvailable: supportsLogic(location.container),
       incomingRules,
     };
   }, [graph, selectedElementId]);
