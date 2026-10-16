@@ -6,7 +6,7 @@ import { computeFormElementDepths } from '@domain/step-element-depths';
 import type { Command } from './command';
 import { preserveFormElementDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
-import { findFormElement } from './graph-lookup';
+import { findElementInGraph } from '@domain/element-containers';
 
 // Выключение режима «Сложная логика» (T-037/T-064, L4): при наличии правил —
 // каскадное удаление всех рёбер этого источника (UI заранее спрашивает
@@ -20,7 +20,8 @@ export class DisableComplexLogic implements Command {
   apply(draft: ServiceGraph): void {
     // Колонки элементов шагов до мутации: цель, потерявшая правило, остаётся на месте (ADR-15).
     const elementDepthsBefore = computeFormElementDepths(draft);
-    const found = findFormElement(draft, this.componentId);
+    // Выключить можно в любом блоке (R-CFG-2): снятие флага только убирает правила.
+    const found = findElementInGraph(draft, this.componentId);
     if (!found) {
       throw new Error(`Элемент не найден: ${this.componentId}`);
     }

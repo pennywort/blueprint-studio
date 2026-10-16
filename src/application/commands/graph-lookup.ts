@@ -85,25 +85,6 @@ export function findFormById(
   return graph.applicationForms.find((form) => form.id === formId) ?? null;
 }
 
-// Элемент шага формы по id вместе с формой-владельцем — командам «Сложной
-// логики» (T-037/T-064) нужны и сам элемент (флаг, option'ы), и форма
-// (правило «внутри одного шага», L-I5). Элемент шага — любой элемент
-// канваса [owner 2026-10-13]; элементы страниц сюда не попадают.
-export function findFormElement(
-  graph: ServiceGraph,
-  elementId: string,
-): { form: ServiceGraph['applicationForms'][number]; element: CanvasElement } | null {
-  for (const form of graph.applicationForms) {
-    for (const step of form.steps) {
-      const element = step.elements.find((candidate) => candidate.id === elementId);
-      if (element) {
-        return { form, element };
-      }
-    }
-  }
-  return null;
-}
-
 // Цель связи — страница МИПа: подсценарий (D13) или форма заявки (D12).
 // Главная целью быть не может (PageLinkTargetId — только ScenarioId | ApplicationFormId).
 export function isLinkTargetPresent(graph: ServiceGraph, targetId: string): boolean {

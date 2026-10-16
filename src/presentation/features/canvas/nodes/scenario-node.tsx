@@ -8,6 +8,7 @@ import { CANVAS_LAYOUT, type MeasuredElementRows } from '../canvas-layout';
 import type { CanvasNode } from '../graph-flow-adapter';
 import { anchorFromPoint, type DropAnchorPosition, type ElementDragPayload } from '../element-dnd';
 import { ElementCard } from './element-card';
+import { OptionCard } from './option-card';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { useNodeStyles } from './node-styles';
 import { useHandlesSync } from './use-handles-sync';
@@ -33,6 +34,14 @@ const useStyles = makeStyles<EditorTheme>(() => ({
   },
   elementSlot: {
     position: 'relative', // якорь полосы вставки (DropIndicator)
+  },
+  // Варианты Select'а под карточкой: с отступом слева — видно, чьи они.
+  options: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    marginTop: 8,
+    marginLeft: 24,
   },
 }));
 
@@ -128,6 +137,20 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
             >
               <DropIndicator anchor={anchor} elementId={element.id} placement="before" gap={ELEMENTS_GAP} />
               <ElementCard element={element} />
+              {/* Варианты Select'а с включённой «Сложной логикой» — карточки под
+                  ним, как в шаге формы: из варианта тянется правило видимости.
+                  Появляются, только если блок умеет логику (container-capabilities, R-CFG-2). */}
+              {element.complexLogic?.enabled ? (
+                <div className={classes.options}>
+                  {element.complexLogic.options.map((option) => (
+                    <OptionCard
+                      key={option.handleId}
+                      option={option}
+                      onSelect={() => actions?.selectElement(element.id)}
+                    />
+                  ))}
+                </div>
+              ) : null}
               <DropIndicator anchor={anchor} elementId={element.id} placement="after" gap={ELEMENTS_GAP} />
             </div>
           ))}

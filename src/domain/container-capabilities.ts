@@ -27,11 +27,11 @@ export function containerCapabilities(kind: ElementContainerKind): ContainerCapa
   return CONTAINER_CAPABILITIES[kind];
 }
 
-// Тонкие обёртки над таблицей. Сужение до шага формы держится на том, что
-// обе возможности сейчас включены только у шага: логика сравнивает шаги
-// (L-I5), переходы считают уровни шагов формы (form-step-depths).
+// Тонкие обёртки над таблицей. Логика не зависит от вида блока: «внутри
+// одного блока» (L-I5) сравнивается по containerKey. Переходы сужают блок до
+// шага формы: они по смыслу между шагами и считают уровни шагов (form-step-depths).
 
-export function supportsLogic(container: ElementContainer): container is FormStepContainer {
+export function supportsLogic(container: ElementContainer): boolean {
   return containerCapabilities(container.kind).logic;
 }
 
