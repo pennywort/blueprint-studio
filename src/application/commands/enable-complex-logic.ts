@@ -2,9 +2,10 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import type { FormComponentId } from '@domain/model/ids';
 import { validateGraph } from '@domain/invariants';
 import { canBeLogicSource } from '@domain/element-kinds';
+import { findElementInGraph } from '@domain/element-containers';
+import { supportsLogic } from '@domain/container-capabilities';
 import type { Command } from './command';
 import { InvariantViolationError } from './errors';
-import { findFormElement } from './graph-lookup';
 
 // Включение режима «Сложная логика» на элементе-источнике (T-037/T-064, L4):
 // само по себе не создаёт правил — только открывает возможность протягивать
@@ -15,9 +16,13 @@ export class EnableComplexLogic implements Command {
   constructor(private readonly componentId: FormComponentId) {}
 
   apply(draft: ServiceGraph): void {
-    const found = findFormElement(draft, this.componentId);
+    const found = findElementInGraph(draft, this.componentId);
     if (!found) {
       throw new Error(`Элемент не найден: ${this.componentId}`);
+    }
+    // Где логика возможна — таблица возможностей блоков (R-CFG-2).
+    if (!supportsLogic(found.container)) {
+      throw new Error(`Сложная логика недоступна в блоке элемента ${this.componentId}`);
     }
     if (!canBeLogicSource(found.element)) {
       throw new Error(

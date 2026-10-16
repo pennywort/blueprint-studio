@@ -32,7 +32,9 @@ import { UpdateElementProps, type ElementPropsPatch } from '@application/command
 import { EnableComplexLogic } from '@application/commands/enable-complex-logic';
 import { DisableComplexLogic } from '@application/commands/disable-complex-logic';
 import { RemoveLogicRule } from '@application/commands/remove-logic-rule';
-import { findElementLocation, findFormById, findFormElement } from '@application/commands/graph-lookup';
+import { findElementLocation, findFormById } from '@application/commands/graph-lookup';
+import { findElementInGraph } from '@domain/element-containers';
+import { supportsLogic } from '@domain/container-capabilities';
 import { useContainer } from '@presentation/app/App';
 import { useEditorNotifications } from '@presentation/features/notifications/editor-notifications';
 import type { AddableElementKind, AddableNodeKind } from '@presentation/features/toolbar/editor-toolbar';
@@ -436,9 +438,14 @@ export function useEditorGraph() {
   // нативный confirm до появления диалогов дизайн-системы.
   const toggleComplexLogic = useCallback(
     (elementId: string) => {
-      // Режим логики — только у Select'а в шаге формы (L-I5).
-      const component = findFormElement(graphRef.current, elementId)?.element;
-      if (!component || !canBeLogicSource(component)) {
+      // Режим логики — у источника логики (element-kinds) в блоке с логикой
+      // (container-capabilities, R-CFG-2); выключить можно в любом блоке.
+      const found = findElementInGraph(graphRef.current, elementId);
+      const component = found?.element;
+      if (!found || !component || !canBeLogicSource(component)) {
+        return;
+      }
+      if (!component.hasComplexLogic && !supportsLogic(found.container)) {
         return;
       }
       const componentId = toFormComponentId(component.id);

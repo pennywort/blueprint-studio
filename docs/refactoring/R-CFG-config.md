@@ -184,8 +184,10 @@ export const EditorRulesSchema = z.object({
 
 ✅ 2026-10-16: `domain/container-capabilities.ts` — `CONTAINER_CAPABILITIES` (logic, stepTransitions),
 `containerCapabilities`, `supportsLogic` / `supportsStepTransitions`. Проверки F03 читают таблицу;
-`inFormStep` в `use-selection` заменён производным `logicAvailable`. Команды логики по-прежнему ищут
-элемент через `findFormElement` (только шаги) — свести с таблицей при R-CFG-9.
+`inFormStep` в `use-selection` заменён производным `logicAvailable`. Доводка [owner 2026-10-16: «включил
+для страниц — заработала полноценно»]: команды и переключатель логики, инвариант L-I5 (`containerKey`),
+маркеры нарушений читают таблицу; `findFormElement` удалён; на странице у Select'а с логикой —
+карточки вариантов (`scenario-node.tsx`). `page.logic: true` включает логику на страницах целиком.
 
 - `domain/container-capabilities.ts`: `{ page: { logic: false, stepTransitions: false }, formStep: { logic: true, stepTransitions: true } }`.
 - Заменить `container.kind === 'formStep'` в 6 местах F03; `inFormStep` в `use-selection` — производное.

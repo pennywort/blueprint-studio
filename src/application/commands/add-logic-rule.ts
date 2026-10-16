@@ -3,7 +3,7 @@ import type { LogicRule } from '@domain/model/logic-rule';
 import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
 import { InvariantViolationError } from './errors';
-import { findFormElement } from './graph-lookup';
+import { findElementInGraph } from '@domain/element-containers';
 
 // Добавление правила условной видимости (T-037/T-064): готовое правило
 // приходит в конструктор (id — от IIdGenerator вызывающей стороны, как
@@ -22,7 +22,7 @@ export class AddLogicRule implements Command {
     // Цель встаёт на колонку правее источника [owner 2026-10-13]: явная
     // колонка цели (перенос dnd, закрепление ADR-15) снимается — уровень
     // снова производный правила, как у страниц при новой связи (D7).
-    const target = findFormElement(draft, this.rule.targetElementId);
+    const target = findElementInGraph(draft, this.rule.targetElementId);
     if (target) {
       delete target.element.layerDepth;
     }

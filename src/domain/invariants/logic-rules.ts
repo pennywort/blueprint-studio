@@ -1,6 +1,6 @@
 import type { ServiceGraph } from '../model/service-graph';
 import { canBeLogicSource } from '../element-kinds';
-import { walkElementContainers } from '../element-containers';
+import { containerKey, walkElementContainers } from '../element-containers';
 import { supportsLogic } from '../container-capabilities';
 import type { CanvasElement } from '../model/canvas-element';
 import type { InvariantViolation } from './index';
@@ -12,15 +12,13 @@ import type { InvariantViolation } from './index';
 
 const RULE_ID = 'complex-logic';
 
-// Элемент блока с «Сложной логикой» (R-CFG-2: шаг формы) с контекстом:
-// шаг-владелец нужен правилу «внутри одного шага» (L-I5), option'ы — правилу
-// «существующее значение списка» (L-I2). Элементы блоков без логики сюда не
-// попадают: правило на них — ссылка на элемент вне шага, отклоняется как L-I3
-// [owner 2026-10-13: элемент шага — любой элемент канваса, логика — по-прежнему
-// только в шагах].
+// Элемент блока с «Сложной логикой» (R-CFG-2, сейчас — шаг формы) с
+// контекстом: ключ блока-владельца нужен правилу «внутри одного блока» (L-I5),
+// option'ы — правилу «существующее значение списка» (L-I2). Элементы блоков
+// без логики сюда не попадают: правило на них — ссылка на элемент вне блока
+// с логикой, отклоняется как L-I3 [owner 2026-10-13].
 type ComponentContext = {
-  formId: string;
-  stepId: string;
+  containerKey: string;
   component: CanvasElement;
 };
 
@@ -31,7 +29,7 @@ function collectComponents(graph: ServiceGraph): Map<string, ComponentContext> {
       continue;
     }
     for (const component of container.elements) {
-      components.set(component.id, { formId: container.formId, stepId: container.stepId, component });
+      components.set(component.id, { containerKey: containerKey(container), component });
     }
   }
   return components;
@@ -87,9 +85,9 @@ export function checkLogicRules(graph: ServiceGraph): InvariantViolation[] {
     }
     seen.add(key);
 
-    // L-I5: источник и цель — в пределах одного шага формы (ADR-14,
-    // [owner 2026-10-13]; ранее — одной формы).
-    if (source.formId !== target.formId || source.stepId !== target.stepId) {
+    // L-I5: источник и цель — в пределах одного блока с логикой (ADR-14,
+    // [owner 2026-10-13]; сейчас — шаг формы, ранее — одна форма).
+    if (source.containerKey !== target.containerKey) {
       violations.push({
         rule: RULE_ID,
         path,

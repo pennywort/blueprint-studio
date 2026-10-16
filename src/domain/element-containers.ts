@@ -47,6 +47,12 @@ export function findOwnerPageId(graph: ServiceGraph, elementId: string): string 
   return findElementInGraph(graph, elementId)?.container.pageId ?? null;
 }
 
+// Ключ блока: два элемента в одном блоке ⇔ ключи равны (L-I5 «внутри
+// одного блока», R-CFG-2). У шага — id шага, у страницы — id страницы.
+export function containerKey(container: ElementContainer): string {
+  return container.kind === 'formStep' ? `step:${container.stepId}` : `page:${container.pageId}`;
+}
+
 // Путь элемента для нарушений инвариантов (формат violation-markers).
 export function elementViolationPath(container: ElementContainer, elementId: string): string {
   return container.kind === 'formStep'
