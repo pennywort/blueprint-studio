@@ -1,5 +1,7 @@
 import type { ServiceGraph } from '../model/service-graph';
 import { canBeLogicSource } from '../element-kinds';
+import { walkElementContainers } from '../element-containers';
+import { supportsLogic } from '../container-capabilities';
 import type { CanvasElement } from '../model/canvas-element';
 import type { InvariantViolation } from './index';
 
@@ -10,11 +12,12 @@ import type { InvariantViolation } from './index';
 
 const RULE_ID = 'complex-logic';
 
-// Элемент шага формы с контекстом: шаг-владелец нужен правилу «внутри
-// одного шага» (L-I5), option'ы — правилу «существующее значение списка»
-// (L-I2). Элементы страниц сюда не попадают: правило на них — ссылка на
-// элемент вне шага, отклоняется как L-I3 [owner 2026-10-13: элемент шага —
-// любой элемент канваса, логика — по-прежнему только в шагах].
+// Элемент блока с «Сложной логикой» (R-CFG-2: шаг формы) с контекстом:
+// шаг-владелец нужен правилу «внутри одного шага» (L-I5), option'ы — правилу
+// «существующее значение списка» (L-I2). Элементы блоков без логики сюда не
+// попадают: правило на них — ссылка на элемент вне шага, отклоняется как L-I3
+// [owner 2026-10-13: элемент шага — любой элемент канваса, логика — по-прежнему
+// только в шагах].
 type ComponentContext = {
   formId: string;
   stepId: string;
@@ -23,11 +26,12 @@ type ComponentContext = {
 
 function collectComponents(graph: ServiceGraph): Map<string, ComponentContext> {
   const components = new Map<string, ComponentContext>();
-  for (const form of graph.applicationForms) {
-    for (const step of form.steps) {
-      for (const component of step.elements) {
-        components.set(component.id, { formId: form.id, stepId: step.id, component });
-      }
+  for (const container of walkElementContainers(graph)) {
+    if (!supportsLogic(container)) {
+      continue;
+    }
+    for (const component of container.elements) {
+      components.set(component.id, { formId: container.formId, stepId: container.stepId, component });
     }
   }
   return components;

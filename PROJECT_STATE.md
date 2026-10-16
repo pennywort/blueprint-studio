@@ -235,7 +235,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 2. [ ] NEW: определить контракт микрофронтенда (exposes, shared, роутинг) — блокирует адаптацию bootstrap под remote
 3. [ ] NEW: установить и настроить Module Federation plugin для Rsbuild, проверить интеграцию с host
 4. [ ] /preview — отдельная большая задача [owner 2026-10-13]; после пакета preview lib-app-core (T-051) и персистентности (T-053)
-5. [ ] План R-CFG (docs/refactoring/R-CFG-config.md, принцип — конституция §4a): готовы R-CFG-1, частично R-CFG-5 и R-CFG-6; дальше — по одному шагу плана на сессию [owner 2026-10-16]
+5. [ ] План R-CFG (docs/refactoring/R-CFG-config.md, принцип — конституция §4a): готовы R-CFG-1, R-CFG-2, частично R-CFG-5 и R-CFG-6; дальше — по одному шагу плана на сессию [owner 2026-10-16]
 
 ---
 
@@ -295,3 +295,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-10-16 | agent:claude | ADR-19 ёмкость уровней (ADR-15 superseded); §4.1 доводки N2, ёмкость уровней, принципы; §7 аудит A-CFG
 - 2026-10-16 | agent:claude | R-CFG-1: реестр видов элементов (domain/element-kinds.ts), проверено владельцем
 - 2026-10-16 | agent:claude | Конституция §4a: правило — данные, а не if; ADR-20; §7 — шаги плана R-CFG
+- 2026-10-16 | agent:claude | R-CFG-2: возможности блоков таблицей (domain/container-capabilities.ts)
