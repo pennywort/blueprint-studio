@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ConnectableTargets } from '@domain/connection-rules';
-import { validateGraph } from '@domain/invariants';
+import { collectViolations } from '@domain/invariants';
 import { computeLayout, type MeasuredNodeSizes } from './canvas-layout';
 import { graphToFlow, type CanvasNode, type FlowGraph } from './graph-flow-adapter';
 import { mapViolationsToCanvas } from './violation-markers';
@@ -78,7 +78,7 @@ export function useCanvasNodes(
   // Нарушения инвариантов после каждой команды (T-043): подсветка узлов и
   // карточек. Команды отклоняют невалидные изменения, поэтому в обычной
   // работе список пуст; подсветка нужна для графов извне (загрузка, T-053).
-  const violationMarkers = useMemo(() => mapViolationsToCanvas(graph, validateGraph(graph)), [graph]);
+  const violationMarkers = useMemo(() => mapViolationsToCanvas(graph, collectViolations(graph)), [graph]);
 
   // Состояние взаимодействия — во внешний стор канваса, не в data узлов
   // (ревью A4/P3, R2): узлы и карточки подписаны селектором и перерисовываются
