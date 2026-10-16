@@ -37,12 +37,8 @@ import { useEditorNotifications } from '@presentation/features/notifications/edi
 import type { AddableElementKind, AddableNodeKind } from '@presentation/features/toolbar/editor-toolbar';
 import type { DropAnchorPosition, ElementDragPayload } from './element-dnd';
 import type { StepAnchorPosition } from './step-dnd';
-import {
-  ELEMENT_KIND_LABELS,
-  flowNodesToLayerOrder,
-  type CanvasNode,
-  type CanvasNodeType,
-} from './graph-flow-adapter';
+import { ELEMENT_KIND_LABELS } from '@presentation/labels/editor-labels';
+import { flowNodesToLayerOrder, type CanvasNode, type CanvasNodeType } from './graph-flow-adapter';
 import {
   NEW_FORM_TITLE,
   NEW_SCENARIO_TITLE,

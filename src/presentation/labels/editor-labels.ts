@@ -1,0 +1,55 @@
+import type { CanvasElementKind } from '@domain/model/canvas-element';
+
+// Единый словарь подписей редактора (R-CFG-6, [owner 2026-10-16]): названия
+// видов элементов и узлов, «Шаг N», уровни навигации — один источник для
+// канваса, меню и панели атрибутов. Формат словаря пока не утверждён — это
+// stub: при переходе на конфиг (R-CFG-10) меняется только этот модуль.
+
+// Подписи видов элементов (макеты: «List item», «Text field»…): чипы карточек,
+// меню добавления, заголовок панели атрибутов, поиск.
+export const ELEMENT_KIND_LABELS: Readonly<Record<CanvasElementKind, string>> = {
+  listItem: 'List item',
+  widgetCard: 'Widget card',
+  comment: 'Комментарий',
+  textField: 'Text field',
+  infoBlock: 'Info block',
+  datePeriod: 'Date period',
+  attachment: 'Attachment',
+  checkbox: 'Checkbox',
+  configurationItemPicker: 'CI picker',
+  employeeSearch: 'Search user',
+  selectList: 'Select list',
+  typography: 'Typography',
+  button: 'Button',
+  addressPicker: 'Address',
+  employeeLoginField: 'Login',
+};
+
+// Названия видов узлов канваса: шапки узлов и меню добавления узлов (T-034).
+// У Главной нет собственного заголовка в доменной модели — имя из макетов.
+export const NODE_KIND_LABELS = {
+  home: 'Главная',
+  subScenario: 'Подсценарий',
+  form: 'Форма заявки',
+} as const;
+
+// Подзаголовки узлов (макеты редактора).
+export const NODE_SUBTITLES = {
+  home: 'Стартовая страница сервиса',
+  form: 'Поля для заполнения пользователем',
+} as const;
+
+// Порядковые номера уровней навигации для подписи подсценария (макеты:
+// «Первый уровень навигации», «Второй уровень навигации»).
+const NAVIGATION_LEVEL_ORDINALS = ['Первый', 'Второй', 'Третий', 'Четвёртый', 'Пятый'];
+
+export function navigationLevelLabel(level: number): string {
+  const ordinal = NAVIGATION_LEVEL_ORDINALS[level - 1];
+  return ordinal ? `${ordinal} уровень навигации` : `Уровень навигации ${level}`;
+}
+
+// Подпись шага формы без своего названия [owner 2026-10-14]: номер — номер
+// колонки (уровня) шага в форме, у шагов одного уровня (ветвление) номер общий.
+export function formStepLabel(level: number): string {
+  return `Шаг ${level}`;
+}

@@ -1,12 +1,8 @@
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ListItem, WidgetCard } from '@domain/model/scenario';
-import type { FormComponent, FormComponentKind } from '@domain/model/form-components';
-import {
-  DEFAULT_COMMENT_AUDIENCE,
-  type CanvasElement,
-  type CanvasElementKind,
-} from '@domain/model/canvas-element';
+import type { FormComponent } from '@domain/model/form-components';
+import { DEFAULT_COMMENT_AUDIENCE, type CanvasElement } from '@domain/model/canvas-element';
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
 import { toElementId, toPageEntityId, type ElementId, type PageEntityId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
@@ -14,6 +10,13 @@ import { walkSubScenarios } from '@domain/graph-walk';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
 import { evaluateVisibility } from '@domain/logic-visibility';
+import {
+  ELEMENT_KIND_LABELS,
+  NODE_KIND_LABELS,
+  NODE_SUBTITLES,
+  formStepLabel,
+  navigationLevelLabel,
+} from '@presentation/labels/editor-labels';
 import { EDITOR_EDGE_TYPE } from './canvas-edges';
 
 // Адаптер graph ↔ flow (Epic 002, T-030) — граница domain ↔ react-flow
@@ -177,56 +180,6 @@ export type FlowGraph = {
   edges: CanvasEdge[];
 };
 
-// У Главной нет собственного заголовка в доменной модели — имя фиксировано
-// макетами редактора.
-const HOME_NODE_TITLE = 'Главная';
-const HOME_NODE_SUBTITLE = 'Стартовая страница сервиса';
-const FORM_NODE_SUBTITLE = 'Поля для заполнения пользователем';
-
-// Подписи чипов типов элементов (макеты: «List item», «Text field», «FAQ»…).
-// Манифест схем хранит только machine-kind; человекочитаемые названия
-// появятся, когда их начнёт отдавать провайдер схем (T-034+).
-// Экспортируется: те же подписи нужны меню добавления элементов (T-034).
-export const FORM_COMPONENT_KIND_LABELS: Record<FormComponentKind, string> = {
-  textField: 'Text field',
-  infoBlock: 'Info block',
-  datePeriod: 'Date period',
-  attachment: 'Attachment',
-  checkbox: 'Checkbox',
-  configurationItemPicker: 'CI picker',
-  employeeSearch: 'Search user',
-  selectList: 'Select list',
-  typography: 'Typography',
-  button: 'Button',
-  addressPicker: 'Address',
-  employeeLoginField: 'Login',
-};
-
-// Подписи всех видов элементов — меню добавления: любой элемент в любой
-// блок [owner 2026-10-13, ADR-17].
-export const ELEMENT_KIND_LABELS: Record<CanvasElementKind, string> = {
-  listItem: 'List item',
-  widgetCard: 'Widget card',
-  comment: 'Комментарий',
-  ...FORM_COMPONENT_KIND_LABELS,
-};
-
-// Порядковые номера уровней навигации для подписи подсценария (макеты:
-// «Первый уровень навигации», «Второй уровень навигации»).
-const NAVIGATION_LEVEL_ORDINALS = ['Первый', 'Второй', 'Третий', 'Четвёртый', 'Пятый'];
-
-function navigationLevelLabel(level: number): string {
-  const ordinal = NAVIGATION_LEVEL_ORDINALS[level - 1];
-  return ordinal ? `${ordinal} уровень навигации` : `Уровень навигации ${level}`;
-}
-
-// Подпись шага формы без своего названия — единый источник [owner
-// 2026-10-14]: номер — номер колонки (уровня) шага в форме, у шагов одного
-// уровня (ветвление) номер общий. Текст сменится при переходе к настройке.
-export function formStepLabel(level: number): string {
-  return `Шаг ${level}`;
-}
-
 // Контекст маппинга элементов: связи и правила графа; inStep — элемент
 // лежит в шаге формы (логика возможна только там, L-I5/ADR-14).
 type ElementMapContext = {
@@ -276,7 +229,7 @@ function listItemToElementData(item: ListItem | WidgetCard): CanvasElementData {
   const element: CanvasElementData = {
     id: item.id,
     title: item.title,
-    kindLabel: item.kind === 'widgetCard' ? 'Widget card' : 'List item',
+    kindLabel: ELEMENT_KIND_LABELS[item.kind],
     logicTarget: false,
   };
   if (item.secondaryText) {
@@ -293,7 +246,7 @@ function formComponentToElementData(
   const element: CanvasElementData = {
     id: component.id,
     title: 'label' in component ? component.label : component.kind,
-    kindLabel: FORM_COMPONENT_KIND_LABELS[component.kind],
+    kindLabel: ELEMENT_KIND_LABELS[component.kind],
     hasIncomingLogic: logicTargets.has(component.id),
     hiddenByLogic: logicHidden.has(component.id),
     logicTarget: true,
@@ -382,10 +335,10 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
       type: 'home',
       position: positionOf(homePage.id),
       data: {
-        title: HOME_NODE_TITLE,
+        title: NODE_KIND_LABELS.home,
         orderIndex: homePage.orderIndex,
         depth: depths.get(homePage.id) ?? 0,
-        subtitle: HOME_NODE_SUBTITLE,
+        subtitle: NODE_SUBTITLES.home,
         elements: homePage.elements.map((element) => elementToElementData(element, elementContext, false)),
         steps: [],
         formKindLabel: null,
@@ -434,7 +387,7 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
         title: form.title,
         orderIndex: form.orderIndex,
         depth: depths.get(form.id) ?? 0,
-        subtitle: FORM_NODE_SUBTITLE,
+        subtitle: NODE_SUBTITLES.form,
         elements: [],
         steps: form.steps.map((step) => {
           const depth = formStepDepths.get(step.id) ?? 0;
