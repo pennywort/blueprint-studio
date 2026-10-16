@@ -1,0 +1,244 @@
+# Правила редактора — данные, а не ветвления (план R-CFG)
+
+> [owner 2026-10-16] Результат аудита `A-CFG-config-audit.md`. Принципы — AGENTS.md §4a
+> (policy as data, обратимость, Open/Closed, одно понятие — один механизм, одно правило —
+> один источник). Эталон — `domain/layer-capacity.ts`. Дубли сущностей × возможностей —
+> в `R-ENT-entities.md`; здесь на них только ссылки.
+> Классы: **A** — доменная таблица (TS), **B** — конфиг редактора (JSON + zod, через порт),
+> **C** — тема/токены (`editor-theme.ts`), **D** — оставить в коде.
+
+## 1. Сводка
+
+1. «Что умеет вид элемента» (источник логики, участие в связях, место в меню) — ветвления
+   `kind === 'selectList' / 'comment'` в 8 + 6 местах. Главный кандидат: **реестр видов** (A).
+2. «Что умеет блок» (логика и переходы только в шаге формы) — 6 мест → **возможности контейнеров** (A).
+3. «Главная закреплена на уровне 0» — 6 мест → поле `pinned` политики уровней (A).
+4. Правила связей (L-I7 «одно правило на цель» — помечено «временно», область логики «шаг»,
+   «один переход на источник») — по 2 копии: инвариант + подсветка UI → **таблица связей** (A).
+5. Лимиты конституции §4 (radio ≤ 5, вложение — одно) — число в одном месте, но UI их не читает:
+   ошибка видна только после команды → таблица лимитов (A) + подсказки UI (решение владельца).
+6. Подписи видов — 3 параллельных словаря; `form-node.tsx` сравнивает заголовок с литералом
+   `'Форма заявки'` → единый словарь (A), затем JSON (B).
+7. Внешний конфиг (B) — только после шагов 1–7: иначе конфиг ляжет поверх копий логики.
+   Нужна передача правил в команды (`CommandBus` → контекст команды) — самый дорогой шаг.
+
+Эффект: смена/отмена правила заказчика = правка одного значения; ~30 ветвлений уходят в таблицы.
+
+## 2. Карта находок
+
+Копий — сколько мест реализуют одно правило. Польза/стоимость: В — высокая, С — средняя, Н — низкая.
+
+| ID  | Область          | Где                                                                                                                                                                                                                                                                                                                            | Что захардкожено                                                                                        | Копий                                                   | Класс                                                                        | Польза / стоимость                                 |
+| --- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------- |
+| F01 | Связи / сущности | `domain/connection-rules.ts:87`, `domain/invariants/logic-rules.ts:61`, `commands/enable-complex-logic.ts:21`, `commands/disable-complex-logic.ts:26`, `canvas/use-editor-graph.ts:441`, `canvas/graph-flow-adapter.ts:301`, `attributes/attributes-panel.tsx:129`, `pages/editor/EditorPage.tsx:199`                          | источник «Сложной логики» — только `selectList`                                                         | 8                                                       | A                                                                            | В / С (8 файлов, механически)                      |
+| F02 | Связи / меню     | `domain/connection-rules.ts:95,114`, `canvas/graph-flow-adapter.ts:244`, `toolbar/editor-toolbar.tsx:78`, `canvas/use-editor-graph.ts:65`, `model/canvas-element.ts:105`                                                                                                                                                       | комментарий не участвует в связях и не в меню                                                           | 6                                                       | A                                                                            | В / Н                                              |
+| F03 | Сущности (блоки) | `domain/connection-rules.ts:82`, `domain/step-transitions.ts:27`, `canvas/graph-flow-adapter.ts:261` (`inStep`), `canvas/use-selection.ts:110`, `EditorPage.tsx:199`, `invariants/logic-rules.ts:88`                                                                                                                           | логика и переходы — только у элементов шага формы                                                       | 6                                                       | A                                                                            | В / С                                              |
+| F04 | Связи            | `invariants/logic-rules.ts:99`, `domain/connection-rules.ts:92`; раскладка рассчитывает на ≤1 родителя: `canvas/canvas-layout.ts:102`, `canvas/graph-flow-adapter.ts:363`                                                                                                                                                      | L-I7: у цели ≤ 1 правила видимости («временно, до уточнения с заказчиком»)                              | 2 + 2                                                   | A                                                                            | В / Н (число); снять лимит >1 — нужна раскладка, С |
+| F05 | Связи            | `invariants/logic-rules.ts:88` + `connection-rules.ts:94` (цели = элементы своего шага)                                                                                                                                                                                                                                        | область логики — шаг (L-I5; уже менялась «форма → шаг»)                                                 | 2                                                       | A                                                                            | С / С                                              |
+| F06 | Связи            | `invariants/step-transitions.ts:24` + `commands/add-step-transition.ts:28`                                                                                                                                                                                                                                                     | у источника — один переход на шаг                                                                       | 2                                                       | A                                                                            | Н / Н                                              |
+| F07 | Связи / уровни   | `connection-rules.ts:49` (страницы) и `step-transitions.ts:44` (шаги)                                                                                                                                                                                                                                                          | цель связи — «любой следующий уровень»; размещение — «источник + 1»; каскад N4 — рвать несмежные        | 2 (+ `layer-placement` / `step-placement`, см. R-ENT-3) | A                                                                            | С / С                                              |
+| F08 | Уровни           | `domain/graph-walk.ts:63`, `domain/graph-depths.ts:28`, `commands/set-page-layer-depth.ts:36`, `commands/layer-placement.ts:62`, `commands/depth-preservation.ts:22`, `layers/layer-policy.ts:43` (`movableKinds`)                                                                                                             | Главная закреплена на уровне 0 (ADR-15)                                                                 | 6                                                       | A                                                                            | В / С                                              |
+| F09 | Уровни           | `layers/layer-policy.ts:20`                                                                                                                                                                                                                                                                                                    | политика уровней в presentation смешивает домен (ёмкость, `movableKinds`) и геометрию                   | 1                                                       | A + C                                                                        | С / Н                                              |
+| F10 | Уровни           | `commands/move-element.ts:76`                                                                                                                                                                                                                                                                                                  | смена колонки элемента рвёт все его правила [owner 2026-10-13]                                          | 1                                                       | A                                                                            | Н / Н                                              |
+| F11 | Ограничения      | `model/form-components.ts:10–12`, `invariants/single-attachment-per-form.ts:18` (литерал `> 1`), `invariants/radio-max-five-options.ts:20`                                                                                                                                                                                     | лимиты §4; `ATTACHMENT_MAX_*` объявлены, но нигде не читаются; меню и панель атрибутов лимитов не знают | 1 + 0 в UI                                              | A (B — решение владельца)                                                    | В / Н                                              |
+| F12 | Ограничения      | `invariants/routing-excludes-dynamic-content.ts:15`, `invariants/scenario-type-fields.ts:11–38`                                                                                                                                                                                                                                | вид → id правила; тип сценария → допустимые поля (4 `if`)                                               | 1                                                       | A                                                                            | Н / Н                                              |
+| F13 | Сущности         | `model/canvas-element.ts:93`, `graph-flow-adapter.ts:255,279`, `canvas/default-elements.ts:41`                                                                                                                                                                                                                                 | семейство вида (страница / форма / комментарий) — функция + литералы                                    | 4                                                       | A                                                                            | С / Н                                              |
+| F14 | Сущности         | `canvas/default-elements.ts:47` (`switch` на 12 видов), `:16–19`                                                                                                                                                                                                                                                               | значения нового элемента/узла по умолчанию                                                              | 1                                                       | B                                                                            | С / С                                              |
+| F15 | Меню             | `toolbar/editor-toolbar.tsx:69` (порядок — манифест схем) и `canvas/use-editor-graph.ts:64` (порядок — словарь подписей)                                                                                                                                                                                                       | два списка «что можно добавить» с разным источником порядка                                             | 2                                                       | A → B                                                                        | С / Н                                              |
+| F16 | Меню             | `toolbar/editor-toolbar.tsx:60`, `use-editor-graph.ts:147–171`                                                                                                                                                                                                                                                                 | меню узлов и ветвление по виду узла                                                                     | 2                                                       | A                                                                            | Н / Н                                              |
+| F17 | Визуальные       | см. R-ENT-1 (6 механизмов рамки); ещё: рамка элемента 1px (`nodes/element-card.tsx:38`) против 2px у блока и шага                                                                                                                                                                                                              | приоритет и геометрия рамки состояния                                                                   | 6                                                       | C (+ порядок приоритета — константа)                                         | В / С — делает R-ENT-1                             |
+| F18 | Визуальные       | `react-flow-theme-styles.ts:21,29` и `nodes/node-styles.ts:61,67` (толщина 2 «как у связи»); handle 12px — `react-flow-theme-styles.ts:55`, `node-styles.ts:48`; радиусы 8/12/16/24 — 10 файлов                                                                                                                                | толщины, размеры handle, радиусы                                                                        | 2–10                                                    | C                                                                            | С / Н                                              |
+| F19 | Раскладка        | `canvas/canvas-edges.tsx:13,29`                                                                                                                                                                                                                                                                                                | радиус рёбер 10, тип пути smoothstep                                                                    | 1                                                       | C                                                                            | Н / Н                                              |
+| F20 | Раскладка        | `canvas/canvas-layout.ts:21–85`                                                                                                                                                                                                                                                                                                | ширины, зазоры (уже таблица; 15 правок за октябрь)                                                      | 1                                                       | C — видимые размеры; D — оценки высот (`elementHeight`, `nodeHeaderHeight`…) | С / С                                              |
+| F21 | Меню / dnd       | `canvas/step-dnd.ts:57,80`, `canvas/element-dnd.ts:80`                                                                                                                                                                                                                                                                         | пороги dnd: половина — до/после, средняя треть — обмен                                                  | 2                                                       | D                                                                            | — (меняется редко, внутренняя механика)            |
+| F22 | Тексты           | `graph-flow-adapter.ts:182–228` (`ELEMENT_KIND_LABELS`, литералы `'List item'` в `:279`, «Главная», «Шаг N», уровни навигации), `toolbar/editor-toolbar.tsx:61`, `attributes/element-attribute-meta.ts:45`, `nodes/form-node.tsx:296` (сравнение с литералом `'Форма заявки'` при `NEW_FORM_TITLE` в `default-elements.ts:19`) | подписи видов, узлов, шагов                                                                             | 3 словаря + литералы                                    | A → B                                                                        | С / Н                                              |
+| F23 | Тексты           | 7 файлов `domain/invariants/*`                                                                                                                                                                                                                                                                                                 | тексты нарушений внутри проверок                                                                        | 7                                                       | A (B — позже)                                                                | Н / Н                                              |
+| F24 | Тексты / панель  | `attributes/element-attribute-meta.ts:45–233`                                                                                                                                                                                                                                                                                  | мета атрибутов (D4) — TS; `options` повторяют `z.enum` из `form-components.ts`                          | 1 + дубль enum                                          | B                                                                            | С / С                                              |
+
+**Частота правок** (комментарии `[owner …]` в `src`: 13.10 — 51, 14.10 — 54, 15.10 — 52, 16.10 — 18;
+коммиты с 01.10): чаще всего менялись `form-node.tsx` (33), `use-editor-graph.ts` (31),
+`editor-canvas.tsx` (26), `graph-flow-adapter.ts` (24), `canvas-layout.ts` (15). Уже отменённые
+решения: «List item только на страницах» → любой блок; L-I5 «форма» → «шаг»; L-I7 помечено «временно».
+Это первые кандидаты: F01–F05, F13, F22.
+
+## 3. Целевая модель конфигурации
+
+### 3.1. Структура
+
+Две части: **правила** (домен, читают инварианты, команды и UI) и **представление** (только UI).
+
+```ts
+// domain/editor-rules.ts — значения по умолчанию = сегодняшнее поведение
+EditorRules = {
+  elementKinds: Record<CanvasElementKind, {
+    family: 'page' | 'form' | 'comment';     // F13; заменяет isPageElementKind/isCommentKind
+    connectable: boolean;                    // F02: источник/цель связей
+    logicSource: boolean;                    // F01: может включить «Сложную логику»
+    logicTarget: boolean;                    // F02: цель правила
+  }>;
+  containers: Record<'page' | 'formStep', { // F03
+    logic: boolean; stepTransitions: boolean;
+  }>;
+  connections: {
+    navigation: { targetLevels: 'following' | 'next'; onMove: 'drop-non-adjacent' };  // F07
+    logic: { scope: 'step' | 'form'; maxRulesPerTarget: number };                       // F04, F05
+    stepTransitions: { targetLevels: 'following' | 'next'; maxPerSource: number };      // F06, F07
+  };
+  layers: Record<'pages' | 'formSteps' | 'stepElements', {
+    capacity: LayerCapacity;                 // как сейчас (layer-capacity.ts)
+    movableKinds?: string[];
+    pinned?: Record<string, number>;         // F08: { home: 0 }
+    onColumnChange?: 'drop-rules' | 'keep';  // F10
+  }>;
+  limits: {                                  // F11
+    radioMaxOptions: number; attachmentsPerForm: number;
+    attachmentMaxFileBytes: number; attachmentMaxTotalBytes: number;
+  };
+};
+
+// presentation/config/editor-ui.ts — только UI
+EditorUi = {
+  addMenu: { elements: CanvasElementKind[]; nodes: AddableNodeKind[] };   // F15, F16 (порядок = порядок массива)
+  defaults: Record<CanvasElementKind, object>;                            // F14
+  labels: { kinds; nodes; stepLabel: 'Шаг {n}'; navigationLevels; violations: Record<ruleId, string> };  // F22, F23
+  attributeMeta: Record<CanvasElementKind, ElementAttributeMeta>;          // F24
+};
+// геометрия и цвета рамок, толщины, радиусы — в editor-theme.ts (C): F17–F20
+```
+
+### 3.2. zod-схема (эскиз)
+
+```ts
+const KindRulesSchema = z.object({ family: z.enum(['page','form','comment']), connectable: z.boolean(),
+  logicSource: z.boolean(), logicTarget: z.boolean() });
+const LayerRulesSchema = z.object({ capacity: z.record(z.coerce.number().int().nonnegative(), z.number().int().positive()),
+  movableKinds: z.array(z.string()).optional(), pinned: z.record(z.string(), z.number().int().nonnegative()).optional(),
+  onColumnChange: z.enum(['drop-rules','keep']).optional() });
+export const EditorRulesSchema = z.object({
+  version: z.literal(1),
+  elementKinds: z.record(z.string(), KindRulesSchema.partial()),   // частичная запись поверх умолчаний
+  containers: ..., connections: ..., layers: z.record(z.enum(['pages','formSteps','stepElements']), LayerRulesSchema.partial()),
+  limits: z.object({ radioMaxOptions: z.number().int().positive(), ... }).partial(),
+}).partial().strict();
+```
+
+Проверки сверх типов (`superRefine`): каждый `kind` — из `CanvasElementSchema`; `logicSource` — только у
+вида с `options` (сегодня `selectList`); `maxRulesPerTarget > 1` отклоняется, пока раскладка шага
+строит дерево с одним родителем (F04); `options` в `attributeMeta` ⊆ значений `z.enum` поля.
+
+### 3.3. Загрузка
+
+- Схема и умолчания — в `domain` (zod уже используется доменом); слияние «умолчания ← конфиг» — чистая функция `resolveEditorRules(raw)`.
+- Порт `application/ports/editor-config-source.ts`: `IEditorConfigSource { load(): unknown }` (как `IKeybindingsStorage`).
+- Адаптер `infrastructure/editor-config/bundled-editor-config.ts` импортирует `editor-config.json`
+  (как `element-manifest.json`): без `fetch`, без `window` — совместимо с Module Federation.
+- DI: `editorRules` в cradle (`container.ts`), значение — результат `resolveEditorRules(source.load())`.
+- Команды: `CommandBus` получает `editorRules` в deps и передаёт `apply(draft, ctx)`; `validateGraph(graph, rules)`.
+  Конфиг граф не мутирует — только параметризует проверки и каскады (immer и undo не меняются).
+- UI читает правила через хук `useEditorRules()` (контекст из cradle) — те же значения, что у инвариантов.
+
+### 3.4. Невалидный конфиг
+
+- Встроенный файл (часть сборки) — **падает на старте** с понятной ошибкой zod, как манифест схем
+  (`manifest-schema-provider.ts:41`): ошибка видна разработчику сразу.
+- Будущий пользовательский слой (импорт / UI, если владелец решит) — как хоткеи: битая секция
+  отбрасывается, остаются умолчания, показывается уведомление.
+- Граф, ставший невалидным при новых правилах (например, лимит radio 5 → 3), не чинится и не
+  блокируется: нарушения видны маркерами (`violation-markers.ts`). Откат правила = откат значения.
+
+## 4. Шаги
+
+Порядок: объединение дублей → доменные таблицы → внешний конфиг. Поведение для пользователя
+не меняется, если шаг не говорит иное. Один шаг = один коммит `refactor(<область>): R-CFG-N — …`.
+Откат любого шага — `git revert <коммит>` (данные графа и формат файла проекта не меняются, кроме R-CFG-9 — там тоже нет).
+
+### R-CFG-1. Реестр видов элементов (A) — F01, F02, F13
+
+- Новый `domain/element-kinds.ts`: таблица `ELEMENT_KIND_RULES` (family, connectable, logicSource, logicTarget)
+  - функции `kindRules(kind)`, `canBeLogicSource(element)`.
+- Заменить проверки: 8 мест F01, 6 мест F02, `isPageElementKind`/`isCommentKind`/литералы F13 (функции
+  оставить тонкими обёртками над таблицей, чтобы diff был меньше).
+- **Проверка `npm run ui`:** у Select в шаге есть чип/переключатель «Сложная логика», у других видов нет;
+  комментарий не тянет и не принимает связь; меню тулбара и «+» шага без комментария.
+
+### R-CFG-2. Возможности блоков (A) — F03
+
+- `domain/container-capabilities.ts`: `{ page: { logic: false, stepTransitions: false }, formStep: { logic: true, stepTransitions: true } }`.
+- Заменить `container.kind === 'formStep'` в 6 местах F03; `inFormStep` в `use-selection` — производное.
+- **Проверка:** Select на странице — без логики и переходов; в шаге — с ними.
+
+### R-CFG-3. Правила связей таблицей (A) — F04, F05, F06, F07
+
+- `domain/connection-policy.ts`: `logic.scope`, `logic.maxRulesPerTarget = 1`, `stepTransitions.maxPerSource = 1`,
+  `targetLevels: 'following'`. Инварианты (`logic-rules.ts`, `step-transitions.ts`) и `connection-rules.ts`
+  читают одно значение. Общая функция «цели следующих уровней» для страниц и шагов.
+- `maxRulesPerTarget > 1` не поддерживается раскладкой (F04) — в коде явная проверка с комментарием.
+- **Проверка:** элемент, у которого уже есть правило, не подсвечивается целью; второй переход с того же
+  варианта заменяет первый; связь на блок «через уровень» по-прежнему ставит цель на «источник + 1».
+
+### R-CFG-4. Политика уровней в домене (A) — F08, F09, F10
+
+- `domain/layer-rules.ts`: `PAGE / FORM_STEP / STEP_ELEMENT` — `capacity` (из `layer-capacity.ts`),
+  `movableKinds`, `pinned: { home: 0 }`, `onColumnChange: 'drop-rules'`.
+- 6 мест F08 читают `pinned`; `layers/layer-policy.ts` оставляет только геометрию и ссылается на доменную запись.
+- Лучше после R-ENT-3 (общее ядро каскада): тогда `pinned` и каскад — параметры одного адаптера.
+- **Проверка:** Главная не переносится на другой уровень dnd; перенос подсценария между уровнями,
+  несмежные связи рвутся; элемент в другую колонку шага теряет правила.
+
+### R-CFG-5. Лимиты одной таблицей (A) — F11, F12
+
+- `domain/limits.ts`: `radioMaxOptions`, `attachmentsPerForm`, байтовые лимиты; инварианты читают таблицу,
+  литерал `> 1` уходит. Таблицы «вид → id правила» и «тип сценария → поля» (F12).
+- Подсказки UI (пункт «Вложение» неактивен, если в форме оно уже есть; нельзя добавить 6-й вариант radio)
+  меняют поведение — **только по решению владельца** (вопрос 4).
+- **Проверка:** 6 вариантов radio → маркер нарушения как раньше; второе вложение → уведомление как раньше.
+
+### R-CFG-6. Единый словарь подписей (A) — F22, F23
+
+- `presentation/config/labels.ts`: виды, узлы («Главная», «Подсценарий», «Форма заявки»), «Шаг {n}»,
+  уровни навигации. `ELEMENT_KIND_LABELS`, литералы `'List item'`, `NODE_MENU_ITEMS`, `HOME_NODE_TITLE`,
+  `NEW_*_TITLE` читают его. В `form-node.tsx:296` сравнение — с константой, не с литералом.
+- Тексты нарушений — `VIOLATION_MESSAGES[ruleId]` (шаблоны с параметрами) в домене.
+- **Проверка:** подписи чипов, меню, шапок узлов, «Шаг N», тексты маркеров нарушений — без изменений.
+
+### R-CFG-7. Одно меню добавления (A) — F15, F16
+
+- `addMenu.elements` — один упорядоченный список (порядок — как в тулбаре сейчас, по манифесту), его читают
+  тулбар и «+» шага. Если порядок в «+» шага сейчас другой — **спросить владельца**, какой оставить.
+- **Проверка:** состав и порядок пунктов в обоих меню совпадают.
+
+### R-CFG-8. Токены геометрии (C) — F17, F18, F19, F20
+
+- После R-ENT-1. В `editor-theme.ts` — `shape`: `frameWidth`, `edgeWidth`, `edgeRadius`, `handleSize`,
+  `radius: { icon: 8, card: 12, node: 16, pill: 24 }`; путь рёбер (`smoothstep`) — поле темы.
+- Видимые размеры `canvas-layout.ts` (ширины, зазоры) — в тему; оценки высот остаются в коде (D).
+  Рамка элемента 1px против 2px у блока — **вопрос владельцу** перед выравниванием.
+- **Проверка:** скриншоты блока, шага, элемента, ребра до/после (`--shot`) совпадают.
+
+### R-CFG-9. Внешний конфиг правил (B) — всё из R-CFG-1…5
+
+- zod-схема и `resolveEditorRules` (§3.2–3.3), порт `IEditorConfigSource`, адаптер с `editor-config.json`,
+  `editorRules` в DI, `CommandBus` → `apply(draft, ctx)`, `validateGraph(graph, rules)`, хук `useEditorRules()`.
+- Самый дорогой шаг: сигнатура ~25 команд. JSON-файл с умолчаниями = сегодняшние таблицы.
+- **Проверка:** без файла и с пустым `{}` — поведение как раньше; `radioMaxOptions: 3` → 4 варианта дают маркер;
+  `logic.maxRulesPerTarget: 0` → старт падает с ошибкой схемы.
+- Откат: удалить файл (работают умолчания) или `git revert`.
+
+### R-CFG-10. Мета атрибутов, умолчания и подписи в JSON (B) — F14, F22, F24
+
+- `infrastructure/element-schemas/element-meta.json` (рядом с манифестом, D4), `element-defaults.json`
+  (каждое значение проверяется `CanvasElementSchema` при старте), `labels.json`.
+- **Проверка:** панель атрибутов каждого вида, новый элемент каждого вида — как раньше.
+
+## 5. Вопросы владельцу
+
+1. Лимиты конституции §4 (radio ≤ 5, одно вложение) — менять из внешнего конфига (B) или только в
+   доменной таблице (A)? **Рекомендую A сейчас**: §4 — «дословно из ТЗ», вынос в B меняет конституцию.
+2. Кто правит конфиг: файл в репозитории (сборка) или пользователь (импорт/UI, как хоткеи)?
+   **Рекомендую файл в репозитории**, ошибка — падение на старте.
+3. Хранить ли в файле проекта версию правил, с которыми он создан? **Рекомендую нет**: при смене правил
+   старая карта показывает нарушения маркерами, данные не трогаем.
+4. Подсказки UI по лимитам (неактивный пункт «Вложение», запрет 6-го варианта radio) — включать?
+   **Рекомендую да**: одно правило — один источник для инварианта и UI, как у ёмкости уровней.
+5. Вложение на странице (ADR-17 разрешает) инвариант «одно на форму» не считает; байтовые лимиты
+   вложения нигде не проверяются. **Рекомендую уточнить у заказчика**; пока оставить как есть.
