@@ -1,9 +1,8 @@
 import type { ServiceGraph } from './model/service-graph';
 import type { StepTransition } from './model/step-transition';
 import { findElementInGraph } from './element-containers';
-import { supportsStepTransitions } from './container-capabilities';
+import { canConnect, connectionSourceRole, supportsStepTransitions } from './connection-matrix';
 import { computeFormStepDepths } from './form-step-depths';
-import { canReach, connectionSourceRole } from './connection-reach';
 
 // Правила переходов между шагами формы [owner 2026-10-14] — единый источник
 // для подсветки шагов-целей при протягивании связи (connection-rules),
@@ -25,7 +24,7 @@ export function stepTransitionTargets(
   elementId: string,
   optionId?: string,
 ): Set<string> {
-  // Переходы — только из блоков с этой возможностью (R-CFG-2: шаг формы).
+  // Переходы — только из блоков с этой возможностью (матрица связей, R-CFG-2).
   const found = findElementInGraph(graph, elementId);
   if (!found || !supportsStepTransitions(found.container)) {
     return new Set();
@@ -36,9 +35,9 @@ export function stepTransitionTargets(
       return new Set();
     }
   }
-  // Может ли источник вести на шаг — таблица охвата связей (connection-reach):
+  // Может ли источник этой роли вести на шаг — матрица связей (connection-matrix):
   // вариант с «Сложной логикой» — только внутри шага [owner 2026-10-16].
-  if (!canReach(connectionSourceRole(source, optionId), 'step')) {
+  if (!canConnect(connectionSourceRole(source, optionId), 'step', found.container.kind)) {
     return new Set();
   }
   const { formId, stepId } = found.container;
@@ -59,7 +58,7 @@ export function stepTransitionProblem(graph: ServiceGraph, transition: StepTrans
   if (!found || !supportsStepTransitions(found.container)) {
     return 'Переход между шагами начинается только от элемента шага формы';
   }
-  if (!canReach(connectionSourceRole(found.element, transition.optionId), 'step')) {
+  if (!canConnect(connectionSourceRole(found.element, transition.optionId), 'step', found.container.kind)) {
     return 'Вариант со «Сложной логикой» связывается только с элементами своего шага';
   }
   if (

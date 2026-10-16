@@ -1,7 +1,7 @@
 import type { ServiceGraph } from '../model/service-graph';
 import { canBeLogicSource } from '../element-kinds';
 import { containerKey, walkElementContainers } from '../element-containers';
-import { supportsLogic } from '../container-capabilities';
+import { supportsLogic } from '../connection-matrix';
 import type { CanvasElement } from '../model/canvas-element';
 import type { InvariantViolation } from './index';
 

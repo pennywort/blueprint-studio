@@ -227,7 +227,7 @@ export function createSampleGraph(): ServiceGraph {
     ],
     // Переходы между шагами [owner 2026-10-14]: «Сумма» → следующий шаг.
     // Варианты Select'ов здесь с «Сложной логикой» — на шаги не ведут
-    // (connection-reach, [owner 2026-10-16]).
+    // (connection-matrix, [owner 2026-10-16]).
     stepTransitions: [
       {
         id: toStepTransitionId('demo-transition-amount'),

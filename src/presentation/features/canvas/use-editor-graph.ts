@@ -34,7 +34,7 @@ import { DisableComplexLogic } from '@application/commands/disable-complex-logic
 import { RemoveLogicRule } from '@application/commands/remove-logic-rule';
 import { findElementLocation, findFormById } from '@application/commands/graph-lookup';
 import { findElementInGraph } from '@domain/element-containers';
-import { supportsLogic } from '@domain/container-capabilities';
+import { supportsLogic } from '@domain/connection-matrix';
 import { useContainer } from '@presentation/app/App';
 import { useEditorNotifications } from '@presentation/features/notifications/editor-notifications';
 import type { AddableElementKind, AddableNodeKind } from '@presentation/features/toolbar/editor-toolbar';
@@ -439,7 +439,7 @@ export function useEditorGraph() {
   const toggleComplexLogic = useCallback(
     (elementId: string) => {
       // Режим логики — у источника логики (element-kinds) в блоке с логикой
-      // (container-capabilities, R-CFG-2); выключить можно в любом блоке.
+      // (connection-matrix, R-CFG-2); выключить можно в любом блоке.
       const found = findElementInGraph(graphRef.current, elementId);
       const component = found?.element;
       if (!found || !component || !canBeLogicSource(component)) {
@@ -461,7 +461,7 @@ export function useEditorGraph() {
         }
         runCommand(new DisableComplexLogic(componentId));
       } else {
-        // Вариант с логикой не ведёт на шаг (connection-reach, [owner 2026-10-16]):
+        // Вариант с логикой не ведёт на шаг (connection-matrix, [owner 2026-10-16]):
         // его переходы команда удалит каскадом — спрашиваем, как при выключении.
         const transitionsCount = graphRef.current.stepTransitions.filter(
           (transition) => transition.sourceElementId === elementId && transition.optionId !== undefined,

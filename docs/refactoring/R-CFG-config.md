@@ -189,7 +189,15 @@ export const EditorRulesSchema = z.object({
 маркеры нарушений читают таблицу; `findFormElement` удалён; на странице у Select'а с логикой —
 карточки вариантов (`scenario-node.tsx`). `page.logic: true` включает логику на страницах целиком.
 
-- `domain/container-capabilities.ts`: `{ page: { logic: false, stepTransitions: false }, formStep: { logic: true, stepTransitions: true } }`.
+✅ 2026-10-16 (объединение): `container-capabilities.ts` слит в единую матрицу связей
+`domain/connection-matrix.ts` — `CONNECTION_MATRIX`: роль источника (`element` / `option` /
+`logicOption`) × цель (`page` / `step` / `element`) → виды блоков, из которых связь разрешена.
+Возможности блока (`containerCapabilities`, `supportsLogic`, `supportsStepTransitions`) — производные
+матрицы. Включить логику на страницах теперь = `logicOption.element: ['page', 'formStep']`.
+[owner 2026-10-16]: вариант Select'а со «Сложной логикой» — только внутри своего шага (переходы на
+шаг запрещены; при включении логики они удаляются каскадом с подтверждением).
+
+- ~~`domain/container-capabilities.ts`~~ → `domain/connection-matrix.ts` (см. объединение выше).
 - Заменить `container.kind === 'formStep'` в 6 местах F03; `inFormStep` в `use-selection` — производное.
 - **Проверка:** Select на странице — без логики и переходов; в шаге — с ними.
 

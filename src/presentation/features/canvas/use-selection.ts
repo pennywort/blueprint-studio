@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { CanvasElement } from '@domain/model/canvas-element';
 import type { LogicRuleId } from '@domain/model/ids';
-import { supportsLogic } from '@domain/container-capabilities';
+import { supportsLogic } from '@domain/connection-matrix';
 import { findElementInGraph } from '@domain/element-containers';
 import { findElementLocation } from '@application/commands/graph-lookup';
 
