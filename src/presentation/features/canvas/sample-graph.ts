@@ -225,19 +225,14 @@ export function createSampleGraph(): ServiceGraph {
         targetElementId: toElementId('demo-field-notify'),
       },
     ],
-    // Переходы между шагами [owner 2026-10-14]: «Сумма» → следующий шаг;
-    // вариант «В конце срока» — сразу на подтверждение, через шаг.
+    // Переходы между шагами [owner 2026-10-14]: «Сумма» → следующий шаг.
+    // Варианты Select'ов здесь с «Сложной логикой» — на шаги не ведут
+    // (connection-reach, [owner 2026-10-16]).
     stepTransitions: [
       {
         id: toStepTransitionId('demo-transition-amount'),
         sourceElementId: toElementId('demo-field-amount'),
         targetStepId: toFormStepId('demo-form-deposit-step-2'),
-      },
-      {
-        id: toStepTransitionId('demo-transition-payout-end'),
-        sourceElementId: toElementId('demo-field-payout'),
-        optionId: toOptionId('end'),
-        targetStepId: toFormStepId('demo-form-deposit-step-3'),
       },
     ],
   });

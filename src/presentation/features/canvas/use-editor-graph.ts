@@ -461,6 +461,19 @@ export function useEditorGraph() {
         }
         runCommand(new DisableComplexLogic(componentId));
       } else {
+        // Вариант с логикой не ведёт на шаг (connection-reach, [owner 2026-10-16]):
+        // его переходы команда удалит каскадом — спрашиваем, как при выключении.
+        const transitionsCount = graphRef.current.stepTransitions.filter(
+          (transition) => transition.sourceElementId === elementId && transition.optionId !== undefined,
+        ).length;
+        if (
+          transitionsCount > 0 &&
+          !window.confirm(
+            `Включить сложную логику? Переходы вариантов на шаги будут удалены: ${transitionsCount}.`,
+          )
+        ) {
+          return;
+        }
         runCommand(new EnableComplexLogic(componentId));
       }
     },

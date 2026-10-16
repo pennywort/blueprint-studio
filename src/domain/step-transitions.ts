@@ -3,6 +3,7 @@ import type { StepTransition } from './model/step-transition';
 import { findElementInGraph } from './element-containers';
 import { supportsStepTransitions } from './container-capabilities';
 import { computeFormStepDepths } from './form-step-depths';
+import { canReach, connectionSourceRole } from './connection-reach';
 
 // Правила переходов между шагами формы [owner 2026-10-14] — единый источник
 // для подсветки шагов-целей при протягивании связи (connection-rules),
@@ -29,11 +30,16 @@ export function stepTransitionTargets(
   if (!found || !supportsStepTransitions(found.container)) {
     return new Set();
   }
+  const source = found.element;
   if (optionId !== undefined) {
-    const source = found.element;
     if (source.kind !== 'selectList' || !source.options.some((option) => option.value === optionId)) {
       return new Set();
     }
+  }
+  // Может ли источник вести на шаг — таблица охвата связей (connection-reach):
+  // вариант с «Сложной логикой» — только внутри шага [owner 2026-10-16].
+  if (!canReach(connectionSourceRole(source, optionId), 'step')) {
+    return new Set();
   }
   const { formId, stepId } = found.container;
   const form = graph.applicationForms.find((candidate) => candidate.id === formId);
@@ -52,6 +58,9 @@ export function stepTransitionProblem(graph: ServiceGraph, transition: StepTrans
   const found = findElementInGraph(graph, transition.sourceElementId);
   if (!found || !supportsStepTransitions(found.container)) {
     return 'Переход между шагами начинается только от элемента шага формы';
+  }
+  if (!canReach(connectionSourceRole(found.element, transition.optionId), 'step')) {
+    return 'Вариант со «Сложной логикой» связывается только с элементами своего шага';
   }
   if (
     !stepTransitionTargets(graph, transition.sourceElementId, transition.optionId).has(
