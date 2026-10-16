@@ -10,6 +10,7 @@ import { walkSubScenarios } from '@domain/graph-walk';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
 import { evaluateVisibility } from '@domain/logic-visibility';
+import { canBeLogicSource, isCommentElement, isPageElement, kindRules } from '@domain/element-kinds';
 import {
   ELEMENT_KIND_LABELS,
   NODE_KIND_LABELS,
@@ -194,7 +195,7 @@ function elementToElementData(
   context: ElementMapContext,
   inStep: boolean,
 ): CanvasElementData {
-  if (element.kind === 'comment') {
+  if (isCommentElement(element)) {
     // Комментарий-элемент — вне связей и «Сложной логики» в любом блоке.
     return {
       id: element.id,
@@ -204,15 +205,14 @@ function elementToElementData(
       logicTarget: false,
     };
   }
-  const data =
-    element.kind === 'listItem' || element.kind === 'widgetCard'
-      ? listItemToElementData(element)
-      : formComponentToElementData(element, context.logicTargets, context.logicHidden);
+  const data = isPageElement(element)
+    ? listItemToElementData(element)
+    : formComponentToElementData(element, context.logicTargets, context.logicHidden);
   if (element.comment) {
     data.note = { text: element.comment, audience: DEFAULT_COMMENT_AUDIENCE };
   }
   if (inStep) {
-    data.logicTarget = true;
+    data.logicTarget = kindRules(element.kind).logicTarget;
     data.hasIncomingLogic = context.logicTargets.has(element.id);
     data.hiddenByLogic = context.logicHidden.has(element.id);
     return data;
@@ -251,7 +251,7 @@ function formComponentToElementData(
     hiddenByLogic: logicHidden.has(component.id),
     logicTarget: true,
   };
-  if (component.kind === 'selectList') {
+  if (canBeLogicSource(component)) {
     // Select — потенциальный источник «Сложной логики» (L5) и, вариантами,
     // переходов между шагами [owner 2026-10-14]: option-handle'ы есть всегда,
     // правило видимости из них — только при включённом режиме (L4).

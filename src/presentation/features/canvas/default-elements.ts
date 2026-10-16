@@ -2,11 +2,10 @@ import type { FormComponent, FormComponentKind } from '@domain/model/form-compon
 import { toElementId, toFormComponentId, type FormComponentId } from '@domain/model/ids';
 import {
   DEFAULT_COMMENT_AUDIENCE,
-  isCommentKind,
-  isPageElementKind,
   type CanvasElement,
   type CanvasElementKind,
 } from '@domain/model/canvas-element';
+import { isCommentKind, isPageElementKind, kindRules } from '@domain/element-kinds';
 
 // Фабрики элементов по умолчанию для меню добавления (Epic 002, T-034):
 // новый элемент создаётся с минимально валидными значениями полей
@@ -37,8 +36,7 @@ export function createDefaultElement(kind: CanvasElementKind, rawId: string): Ca
 export function cloneElementWithId(element: CanvasElement, rawId: string): CanvasElement {
   const copy = structuredClone(element);
   delete copy.layerDepth;
-  copy.id =
-    isPageElementKind(copy.kind) || isCommentKind(copy.kind) ? toElementId(rawId) : toFormComponentId(rawId);
+  copy.id = kindRules(copy.kind).family === 'form' ? toFormComponentId(rawId) : toElementId(rawId);
   return copy;
 }
 

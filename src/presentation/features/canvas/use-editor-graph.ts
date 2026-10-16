@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef } from 'react';
 import type { CanvasElement, CanvasElementKind } from '@domain/model/canvas-element';
+import { canBeLogicSource, kindRules } from '@domain/element-kinds';
 import {
   toApplicationFormId,
   toElementId,
@@ -58,7 +59,7 @@ export type { SelectedElementInfo } from './use-selection';
 // 12 форм-компонентов) — любой элемент в любой блок [owner 2026-10-13, ADR-17].
 // Комментарий-элемент добавляется отдельной кнопкой тулбара [owner 2026-10-15].
 const ELEMENT_KIND_OPTIONS = Object.entries(ELEMENT_KIND_LABELS)
-  .filter(([kind]) => kind !== 'comment')
+  .filter(([kind]) => kindRules(kind as CanvasElementKind).inAddMenu)
   .map(([kind, label]) => ({
     kind: kind as CanvasElementKind,
     label,
@@ -434,7 +435,7 @@ export function useEditorGraph() {
     (elementId: string) => {
       // Режим логики — только у Select'а в шаге формы (L-I5).
       const component = findFormElement(graphRef.current, elementId)?.element;
-      if (!component || component.kind !== 'selectList') {
+      if (!component || !canBeLogicSource(component)) {
         return;
       }
       const componentId = toFormComponentId(component.id);

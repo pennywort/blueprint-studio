@@ -12,6 +12,7 @@ import { Delete } from '@blueprint-vendor/flamingo-icons';
 import type { ElementAttributeType, ElementSchema } from '@application/ports/element-schema-provider';
 import type { ElementPropsPatch } from '@application/commands/update-element-props';
 import { hasElementField, type CanvasElement } from '@domain/model/canvas-element';
+import { canBeLogicSource } from '@domain/element-kinds';
 import type { LogicRuleId } from '@domain/model/ids';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ELEMENT_KIND_LABELS } from '@presentation/labels/editor-labels';
@@ -126,7 +127,7 @@ export function AttributesPanel({
         </Typography>
       </Box>
 
-      {component.kind === 'selectList' && onToggleComplexLogic ? (
+      {canBeLogicSource(component) && onToggleComplexLogic ? (
         <Box className={classes.field} data-testid="complex-logic-section">
           <FormControlLabel
             control={<Switch checked={component.hasComplexLogic === true} onChange={onToggleComplexLogic} />}

@@ -1,6 +1,7 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { FormComponentId } from '@domain/model/ids';
 import { validateGraph } from '@domain/invariants';
+import { canBeLogicSource } from '@domain/element-kinds';
 import type { Command } from './command';
 import { InvariantViolationError } from './errors';
 import { findFormElement } from './graph-lookup';
@@ -18,7 +19,7 @@ export class EnableComplexLogic implements Command {
     if (!found) {
       throw new Error(`Элемент не найден: ${this.componentId}`);
     }
-    if (found.element.kind !== 'selectList') {
+    if (!canBeLogicSource(found.element)) {
       throw new Error(
         `Сложная логика v1 поддерживает только Select (элемент ${this.componentId}: ${found.element.kind})`,
       );

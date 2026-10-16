@@ -169,6 +169,10 @@ export const EditorRulesSchema = z.object({
 
 ### R-CFG-1. Реестр видов элементов (A) — F01, F02, F13
 
+✅ 2026-10-16: `domain/element-kinds.ts` — `ELEMENT_KIND_RULES` (family, connectable, logicSource, logicTarget
+и `inAddMenu` — до R-CFG-7), `kindRules`, `canBeLogicSource` и тонкие обёртки `isPageElementKind` / `isCommentKind` /
+`isFormComponentKind` (перенесены из `model/canvas-element.ts`). Проверки F01, F02, F13 читают таблицу.
+
 - Новый `domain/element-kinds.ts`: таблица `ELEMENT_KIND_RULES` (family, connectable, logicSource, logicTarget)
   и функции `kindRules(kind)`, `canBeLogicSource(element)`.
 - Заменить проверки: 8 мест F01, 6 мест F02, `isPageElementKind`/`isCommentKind`/литералы F13 (функции

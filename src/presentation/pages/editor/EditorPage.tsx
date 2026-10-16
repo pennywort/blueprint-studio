@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Divider, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { canBeLogicSource } from '@domain/element-kinds';
 import { useContainer } from '@presentation/app/App';
 import { EditorThemeProvider } from '@presentation/theme/editor-theme-provider';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
@@ -196,7 +197,7 @@ function EditorPageLayout() {
                 schema={schemaByKind.get(selectedElement.component.kind) ?? null}
                 onUpdateProps={editorGraph.updateElementProps}
                 onToggleComplexLogic={
-                  selectedElement.component.kind === 'selectList' && selectedElement.inFormStep
+                  canBeLogicSource(selectedElement.component) && selectedElement.inFormStep
                     ? () => editorGraph.toggleComplexLogic(selectedElement.component.id)
                     : undefined
                 }

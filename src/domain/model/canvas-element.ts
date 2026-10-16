@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ElementIdSchema } from './ids';
-import { FormComponentSchema, type FormComponentKind } from './form-components';
+import { FormComponentSchema } from './form-components';
 
 // Универсальный элемент канваса [owner 2026-10-13: «элемент может быть в
 // любом блоке»]: List item, Widget card и 12 форм-компонентов — один
@@ -90,18 +90,5 @@ export function hasElementField(kind: CanvasElementKind, key: string): boolean {
 
 export type PageElementKind = 'listItem' | 'widgetCard';
 
-export function isPageElementKind(kind: CanvasElementKind): kind is PageElementKind {
-  return kind === 'listItem' || kind === 'widgetCard';
-}
-
-// Kind'ы форм-компонентов — для мест, которым нужен именно компонент формы
-// (провайдер схем ADR-07, меню «+» шага).
-export function isFormComponentKind(kind: CanvasElementKind): kind is FormComponentKind {
-  return !isPageElementKind(kind) && !isCommentKind(kind);
-}
-
-// Комментарий-элемент: добавляется отдельной кнопкой тулбара, а не из меню
-// элементов, и не участвует в связях.
-export function isCommentKind(kind: CanvasElementKind): kind is 'comment' {
-  return kind === 'comment';
-}
+// Семейство вида и его возможности (isPageElementKind, isCommentKind, …) —
+// реестр видов domain/element-kinds.ts (R-CFG-1).
