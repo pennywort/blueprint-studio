@@ -138,7 +138,7 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
               <ElementCard element={element} />
               {/* Варианты Select'а с включённой «Сложной логикой» — карточки под
                   ним, как в шаге формы: из варианта тянется правило видимости.
-                  Появляются, только если блок умеет логику (container-capabilities, R-CFG-2). */}
+                  Появляются, только если блок умеет логику (connection-matrix, R-CFG-2). */}
               {element.complexLogic?.enabled ? (
                 <div className={classes.options}>
                   {element.complexLogic.options.map((option) => (

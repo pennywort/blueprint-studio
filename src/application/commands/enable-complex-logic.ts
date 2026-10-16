@@ -3,7 +3,7 @@ import type { FormComponentId } from '@domain/model/ids';
 import { validateGraph } from '@domain/invariants';
 import { canBeLogicSource } from '@domain/element-kinds';
 import { findElementInGraph } from '@domain/element-containers';
-import { supportsLogic } from '@domain/container-capabilities';
+import { supportsLogic } from '@domain/connection-matrix';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
 import type { Command } from './command';
@@ -37,7 +37,7 @@ export class EnableComplexLogic implements Command {
     found.element.hasComplexLogic = true;
 
     // Каскад [owner 2026-10-16]: вариант с логикой не ведёт на шаг
-    // (connection-reach) — его переходы уходят атомарно с флагом, undo вернёт.
+    // (connection-matrix) — его переходы уходят атомарно с флагом, undo вернёт.
     preserveFormStepDepths(draft, stepDepthsBefore);
     draft.stepTransitions = validStepTransitions(draft);
 

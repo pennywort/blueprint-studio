@@ -11,7 +11,7 @@ import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
 import { evaluateVisibility } from '@domain/logic-visibility';
 import { canBeLogicSource, isCommentElement, isPageElement, kindRules } from '@domain/element-kinds';
-import { containerCapabilities, type ContainerCapabilities } from '@domain/container-capabilities';
+import { containerCapabilities, type ContainerCapabilities } from '@domain/connection-matrix';
 import {
   ELEMENT_KIND_LABELS,
   NODE_KIND_LABELS,
@@ -211,7 +211,7 @@ type ElementMapContext = {
 
 // Любой элемент — в любом блоке [owner 2026-10-13]: вид карточки задаёт
 // kind элемента, а логику и переходы — возможности блока (R-CFG-2,
-// container-capabilities; сейчас обе — только у шага формы).
+// производные матрицы связей connection-matrix; сейчас обе — только у шага формы).
 function elementToElementData(
   element: CanvasElement,
   context: ElementMapContext,

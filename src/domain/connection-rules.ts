@@ -1,11 +1,10 @@
 import type { ServiceGraph } from './model/service-graph';
 import { computeGraphDepths } from './graph-depths';
-import { findElementInGraph, findOwnerPageId } from './element-containers';
+import { findElementInGraph } from './element-containers';
 import { walkSubScenarios } from './graph-walk';
 import { stepTransitionTargets } from './step-transitions';
-import { supportsLogic } from './container-capabilities';
-import { canBeLogicSource, kindRules } from './element-kinds';
-import { canReach, connectionSourceRole } from './connection-reach';
+import { kindRules } from './element-kinds';
+import { canConnect, connectionSourceRole } from './connection-matrix';
 
 // Правила «с чем можно соединиться» (повторная приёмка Epic 002, [owner
 // 2026-10-13]) — единый источник для подсветки допустимых целей во время
@@ -21,7 +20,8 @@ import { canReach, connectionSourceRole } from './connection-reach';
 //   или вариант его Select'а, цель — шаг следующих уровней той же формы
 //   (step-transitions, уровни — form-step-depths).
 // Какой источник до каких целей дотягивается (элемент / вариант / вариант с
-// логикой → страница / шаг / элемент) — таблица connection-reach [owner 2026-10-16].
+// логикой → страница / шаг / элемент, из каких блоков) — единая матрица
+// connection-matrix [owner 2026-10-16].
 
 export type ConnectionSource =
   { kind: 'navigation'; elementId: string } | { kind: 'logic'; elementId: string; optionId: string };
@@ -38,12 +38,13 @@ export type ConnectableTargets = {
 const NONE: ConnectableTargets = { pages: new Set(), elements: new Set(), steps: new Set() };
 
 function navigationTargets(graph: ServiceGraph, elementId: string): ConnectableTargets {
-  const sourcePageId = findOwnerPageId(graph, elementId);
-  if (sourcePageId === null) {
+  const found = findElementInGraph(graph, elementId);
+  if (!found) {
     return NONE;
   }
+  const sourcePageId = found.container.pageId;
   const steps = stepTransitionTargets(graph, elementId);
-  if (!canReach('element', 'page')) {
+  if (!canConnect('element', 'page', found.container.kind)) {
     return { pages: new Set(), elements: new Set(), steps };
   }
   const depths = computeGraphDepths(graph);
@@ -92,15 +93,11 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
   if (!found) {
     return NONE;
   }
-  // Шаги — если роль варианта до них дотягивается (connection-reach): с
-  // «Сложной логикой» вариант связывается только внутри шага [owner 2026-10-16].
+  // Шаги и элементы — если роль варианта до них дотягивается из этого блока
+  // (connection-matrix): с «Сложной логикой» вариант связывается только
+  // внутри шага [owner 2026-10-16].
   const steps = stepTransitionTargets(graph, elementId, optionId);
-  const source = found.element;
-  if (
-    !supportsLogic(found.container) ||
-    !canBeLogicSource(source) ||
-    !canReach(connectionSourceRole(source, optionId), 'element')
-  ) {
+  if (!canConnect(connectionSourceRole(found.element, optionId), 'element', found.container.kind)) {
     return { pages: new Set(), elements: new Set(), steps };
   }
   // У цели — не больше одного правила видимости (L-I7, временно [owner
