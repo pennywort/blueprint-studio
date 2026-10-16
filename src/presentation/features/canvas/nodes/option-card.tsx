@@ -61,10 +61,13 @@ export function OptionCard({ option, onSelect }: OptionCardProps) {
       onClick={(event) => event.stopPropagation()}
     >
       <Typography variant="body2">{option.label}</Typography>
-      <div className={classes.chips}>
-        <Chip size="small" color="secondary" label={option.value} />
-        {option.isDefault ? <Chip size="small" label="Предвыбор" /> : null}
-      </div>
+      {/* value варианта — служебный id (генерируется панелью, на него ссылаются
+          правила L5 и переходы), на карточке не показываем [owner 2026-10-16]. */}
+      {option.isDefault ? (
+        <div className={classes.chips}>
+          <Chip size="small" label="Предвыбор" />
+        </div>
+      ) : null}
       {/* Выход ребра — на высоте якоря цели (logicHandleTop), не по центру карточки. */}
       <Handle
         type="source"
