@@ -292,3 +292,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-10-15 | agent:claude | DONE: шаги формы по уровням (ветвление, dnd, formStepLabel); ADR-18
 - 2026-10-15 | agent:claude | Сверка коммитов 206610a…b51f468: проекты на главной (импорт/экспорт JSON), комментарии, доводка dnd, SwapFormSteps, Delete шага; §4.2 хранилище; §6 T-033 закрыт (код удалён, A13)
 - 2026-10-16 | agent:claude | ADR-19 ёмкость уровней (ADR-15 superseded); §4.1 доводки N2, ёмкость уровней, принципы; §7 аудит A-CFG
+- 2026-10-16 | agent:claude | R-CFG-1: реестр видов элементов (domain/element-kinds.ts), проверено владельцем
