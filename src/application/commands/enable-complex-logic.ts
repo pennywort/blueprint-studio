@@ -4,7 +4,10 @@ import { validateGraph } from '@domain/invariants';
 import { canBeLogicSource } from '@domain/element-kinds';
 import { findElementInGraph } from '@domain/element-containers';
 import { supportsLogic } from '@domain/container-capabilities';
+import { computeAllFormStepDepths } from '@domain/form-step-depths';
+import { validStepTransitions } from '@domain/step-transitions';
 import type { Command } from './command';
+import { preserveFormStepDepths } from './depth-preservation';
 import { InvariantViolationError } from './errors';
 
 // Включение режима «Сложная логика» на элементе-источнике (T-037/T-064, L4):
@@ -16,6 +19,8 @@ export class EnableComplexLogic implements Command {
   constructor(private readonly componentId: FormComponentId) {}
 
   apply(draft: ServiceGraph): void {
+    // Уровни шагов до мутации: шаг, потерявший переход варианта, остаётся на месте.
+    const stepDepthsBefore = computeAllFormStepDepths(draft);
     const found = findElementInGraph(draft, this.componentId);
     if (!found) {
       throw new Error(`Элемент не найден: ${this.componentId}`);
@@ -30,6 +35,11 @@ export class EnableComplexLogic implements Command {
       );
     }
     found.element.hasComplexLogic = true;
+
+    // Каскад [owner 2026-10-16]: вариант с логикой не ведёт на шаг
+    // (connection-reach) — его переходы уходят атомарно с флагом, undo вернёт.
+    preserveFormStepDepths(draft, stepDepthsBefore);
+    draft.stepTransitions = validStepTransitions(draft);
 
     const violations = validateGraph(draft);
     if (violations.length > 0) {

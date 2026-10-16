@@ -5,6 +5,7 @@ import { walkSubScenarios } from './graph-walk';
 import { stepTransitionTargets } from './step-transitions';
 import { supportsLogic } from './container-capabilities';
 import { canBeLogicSource, kindRules } from './element-kinds';
+import { canReach, connectionSourceRole } from './connection-reach';
 
 // Правила «с чем можно соединиться» (повторная приёмка Epic 002, [owner
 // 2026-10-13]) — единый источник для подсветки допустимых целей во время
@@ -18,7 +19,9 @@ import { canBeLogicSource, kindRules } from './element-kinds';
 //   видимости и элемент, у которого уже есть правило (L-I7), — не цели.
 // — Переход между шагами [owner 2026-10-14]: источник — элемент шага формы
 //   или вариант его Select'а, цель — шаг следующих уровней той же формы
-//   (step-transitions, уровни — form-step-depths). Вариант — источник перехода и без «Сложной логики».
+//   (step-transitions, уровни — form-step-depths).
+// Какой источник до каких целей дотягивается (элемент / вариант / вариант с
+// логикой → страница / шаг / элемент) — таблица connection-reach [owner 2026-10-16].
 
 export type ConnectionSource =
   { kind: 'navigation'; elementId: string } | { kind: 'logic'; elementId: string; optionId: string };
@@ -40,6 +43,9 @@ function navigationTargets(graph: ServiceGraph, elementId: string): ConnectableT
     return NONE;
   }
   const steps = stepTransitionTargets(graph, elementId);
+  if (!canReach('element', 'page')) {
+    return { pages: new Set(), elements: new Set(), steps };
+  }
   const depths = computeGraphDepths(graph);
   const sourceDepth = depths.get(sourcePageId) ?? 0;
   const linked = new Set(
@@ -86,9 +92,15 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
   if (!found) {
     return NONE;
   }
+  // Шаги — если роль варианта до них дотягивается (connection-reach): с
+  // «Сложной логикой» вариант связывается только внутри шага [owner 2026-10-16].
   const steps = stepTransitionTargets(graph, elementId, optionId);
   const source = found.element;
-  if (!supportsLogic(found.container) || !canBeLogicSource(source) || !source.hasComplexLogic) {
+  if (
+    !supportsLogic(found.container) ||
+    !canBeLogicSource(source) ||
+    !canReach(connectionSourceRole(source, optionId), 'element')
+  ) {
     return { pages: new Set(), elements: new Set(), steps };
   }
   // У цели — не больше одного правила видимости (L-I7, временно [owner
