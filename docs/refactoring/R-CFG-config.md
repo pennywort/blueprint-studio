@@ -202,6 +202,12 @@ export const EditorRulesSchema = z.object({
 
 ### R-CFG-5. Лимиты одной таблицей (A) — F11, F12
 
+✅ 2026-10-16, частично: `domain/rule-policy.ts` — `ELEMENT_COUNT_LIMITS` (вид × вид блока × max; вложение —
+одно **на шаг формы**, а не на форму, [owner 2026-10-16]) и `RULE_SEVERITY` (`error` — блокирует, `warning` —
+только подсветка, `off` — правило выключено) для любого правила по его id. `collectViolations` — все включённые
+нарушения для канваса, `validateGraph` — только блокирующие (команды не менялись). Осталось: radio в таблице,
+подсказки UI, мёртвые `ATTACHMENT_MAX_*`.
+
 - `domain/limits.ts`: `elementCount` по видам блоков и `selectOptions` (§3.1), значения = сегодняшние.
   Два инварианта (`single-attachment-per-form`, `radio-max-five-options`) заменяются одним общим
   `element-limits`: считает элементы каждого вида в каждом блоке по таблице. Тексты нарушений — с видом
