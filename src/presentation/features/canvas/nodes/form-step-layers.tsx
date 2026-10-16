@@ -108,7 +108,7 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
   const layersRef = useRef<HTMLDivElement>(null);
   // Лес правил: корни — элементы без варианта-источника в этом шаге,
   // дети — по option-handle варианта (порядок — порядок элементов шага).
-  const { rows, children, maxDepth } = useMemo(() => {
+  const { rows, children, maxDepth, elementDepths } = useMemo(() => {
     const optionHandles = new Set(
       elements.flatMap((element) => element.complexLogic?.options.map((option) => option.handleId) ?? []),
     );
@@ -136,6 +136,7 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
       ),
       children: byHandle,
       maxDepth: Math.max(-1, ...elements.map((element) => element.layerDepth ?? 0)),
+      elementDepths: new Map(elements.map((element) => [element.id, element.layerDepth ?? 0])),
     };
   }, [elements]);
 
@@ -153,7 +154,13 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
       const localX = (event.clientX - rect.left) / scale;
       const column = nearestLayerColumn(gridLayerColumns(maxDepth, FORM_STEP_LAYER_POLICY), localX);
       const own = elements.find((element) => element.id === dragged.elementId);
-      const decision = resolveLayerDrop(own ? (own.layerDepth ?? 0) : null, column, true);
+      const decision = resolveLayerDrop(
+        FORM_STEP_LAYER_POLICY,
+        // Вид не важен: политика шага переносит любой элемент (ADR-17).
+        { id: dragged.elementId, kind: 'element', depth: own ? (own.layerDepth ?? 0) : null },
+        column,
+        elementDepths,
+      );
       let anchor = column
         ? anchorFromPoint(
             container,
@@ -166,7 +173,7 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
       }
       return { column, decision, anchor, layersWidth: container.offsetWidth };
     },
-    [elements, maxDepth],
+    [elementDepths, elements, maxDepth],
   );
 
   const dropElement = useCallback(

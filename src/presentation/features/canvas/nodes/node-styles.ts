@@ -52,6 +52,11 @@ export const useNodeStyles = makeStyles<EditorTheme>((theme) => ({
       boxShadow: `0 1px 3px ${theme.editor.canvas.handleShadow}`,
     },
   },
+  // Уровень заполнен — бросить нельзя (ёмкость уровня, [owner 2026-10-16]).
+  dropBarBlocked: {
+    backgroundColor: theme.palette.error.main,
+    '&::before, &::after': { backgroundColor: theme.palette.error.main },
+  },
   dropBarHorizontal: {
     height: 2,
     '&::before, &::after': { top: -5 },

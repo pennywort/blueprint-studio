@@ -2,6 +2,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -36,8 +37,9 @@ import {
   nearestLayerColumn,
   resolveLayerDrop,
   type LayerColumn,
+  type LayerDropDecision,
 } from './layers/layer-columns';
-import { PAGE_LAYER_POLICY, canMoveToLayer } from './layers/layer-policy';
+import { PAGE_LAYER_POLICY } from './layers/layer-policy';
 import { LayerDropHighlight } from './layers/layer-drop-highlight';
 import { isActionTarget } from './canvas-events';
 import { EditorCanvasControls } from './editor-canvas-controls';
@@ -310,39 +312,50 @@ function CanvasInner({
     [propsNodes],
   );
 
-  // Подсветка целевой колонки во время drag (F6) и запомненная глубина
-  // кандидата — в drop решение принимается по последнему кандидату.
-  const [dropZone, setDropZone] = useState<{ x: number; width: number } | null>(null);
-  const candidateDepthRef = useRef<number | null>(null);
+  // Подсветка целевой колонки во время drag (F6) и запомненное решение —
+  // в drop решение принимается по последнему кандидату.
+  const [dropZone, setDropZone] = useState<{ x: number; width: number; blocked: boolean } | null>(null);
+  const decisionRef = useRef<LayerDropDecision | null>(null);
+  const nodeDepths = useMemo(
+    () => new Map(propsNodes.map((node) => [node.id, node.data.depth])),
+    [propsNodes],
+  );
 
   const handleNodeDrag: OnNodeDrag<CanvasNode> = useCallback(
     (_event, draggedNode) => {
       const width = draggedNode.measured?.width ?? PAGE_LAYER_POLICY.columnWidth;
       const candidate = findColumnCandidate(draggedNode.position.x + width / 2);
       const decision = resolveLayerDrop(
-        draggedNode.data.depth,
+        PAGE_LAYER_POLICY,
+        { id: draggedNode.id, kind: draggedNode.type ?? '', depth: draggedNode.data.depth },
         candidate,
-        canMoveToLayer(PAGE_LAYER_POLICY, draggedNode.type ?? ''),
+        nodeDepths,
       );
-      candidateDepthRef.current = decision.kind === 'moveToLayer' ? decision.depth : null;
-      // Своя колонка не подсвечивается — переноса нет, будет reorder по Y.
+      decisionRef.current = decision;
+      // Своя колонка не подсвечивается — переноса нет, будет reorder по Y;
+      // заполненная — подсвечивается запретом сразу, до броска ([owner 2026-10-16]).
       setDropZone(
-        decision.kind === 'moveToLayer' && candidate ? { x: candidate.x, width: candidate.width } : null,
+        decision.kind !== 'reorder' && candidate
+          ? { x: candidate.x, width: candidate.width, blocked: decision.kind === 'blocked' }
+          : null,
       );
     },
-    [findColumnCandidate],
+    [findColumnCandidate, nodeDepths],
   );
 
   const handleNodeDragStop: OnNodeDrag<CanvasNode> = useCallback(
     (_event, draggedNode) => {
       setDropZone(null);
-      const candidateDepth = candidateDepthRef.current;
-      candidateDepthRef.current = null;
+      const decision = decisionRef.current;
+      decisionRef.current = null;
       // Возврат к раскладке: результат drag'а фиксирует команда, пересчитанные
       // узлы придут сверху; отклонённый drag не оставляет узел в брошенной позиции.
       setNodes(withMeasured(propsNodes));
-      if (candidateDepth !== null) {
-        onMoveNodeToDepth?.(draggedNode.id, candidateDepth);
+      if (decision?.kind === 'blocked') {
+        return;
+      }
+      if (decision?.kind === 'moveToLayer') {
+        onMoveNodeToDepth?.(draggedNode.id, decision.depth);
         return;
       }
       // Порядок после drag определяется по Y среди узлов той же колонки
@@ -601,9 +614,11 @@ function ClickConnectionLine({ from, to }: { from: XYPosition; to: XYPosition })
 
 // Полоса-подсветка целевой колонки dnd (F6): координаты flow переводятся
 // в экранные через useViewport (pan/zoom); сама полоса — общая для слоёв.
-function DropZoneHighlight({ zone }: { zone: { x: number; width: number } }) {
+function DropZoneHighlight({ zone }: { zone: { x: number; width: number; blocked: boolean } }) {
   const { x: viewportX, zoom } = useViewport();
-  return <LayerDropHighlight left={zone.x * zoom + viewportX} width={zone.width * zoom} />;
+  return (
+    <LayerDropHighlight left={zone.x * zoom + viewportX} width={zone.width * zoom} blocked={zone.blocked} />
+  );
 }
 
 // Без внешнего стора (изолированный рендер канваса) — свой пустой.

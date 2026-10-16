@@ -36,6 +36,8 @@ export interface EditorCanvasPalette {
   nodeHoverBackground: string;
   /** Рамка узла при hover-подсветке цели связи. */
   nodeHoverBorder: string;
+  /** Фон колонки, куда бросить нельзя (уровень заполнен); линии — palette.error.main. */
+  dropBlockedBackground: string;
   /** Рамка карточки элемента внутри узла. */
   elementBorder: string;
   /** Фон комментария (элемент-комментарий и комментарий-часть элемента). */
@@ -115,6 +117,7 @@ const lightTheme: EditorThemeDefinition = {
     minimapBorder: '#d7d9df',
     nodeHoverBackground: '#e8e9ee',
     nodeHoverBorder: '#d6d7db',
+    dropBlockedBackground: 'rgba(244, 67, 54, 0.08)',
     elementBorder: '#d6d7db',
     commentBackground: '#ebf5fc',
     commentBorder: '#d9eaf7',

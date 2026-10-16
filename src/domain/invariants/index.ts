@@ -4,7 +4,7 @@ import { checkRadioMaxFiveOptions } from './radio-max-five-options';
 import { checkScenarioTypeFields } from './scenario-type-fields';
 import { checkRoutingExcludesDynamicContent } from './routing-excludes-dynamic-content';
 import { checkLogicRules } from './logic-rules';
-import { checkSingleRootLevel } from './single-root-level';
+import { checkLayerCapacity } from './layer-capacity';
 import { checkStepTransitions } from './step-transitions';
 
 // Единая точка проверки доменных инвариантов (конституция, раздел 4).
@@ -24,7 +24,7 @@ export function validateGraph(graph: ServiceGraph): InvariantViolation[] {
     ...checkScenarioTypeFields(graph),
     ...checkRoutingExcludesDynamicContent(graph),
     ...checkLogicRules(graph),
-    ...checkSingleRootLevel(graph),
+    ...checkLayerCapacity(graph),
     ...checkStepTransitions(graph),
   ];
 }

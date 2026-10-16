@@ -5,6 +5,7 @@ import { computeGraphDepths } from '@domain/graph-depths';
 import { walkSubScenarios } from '@domain/graph-walk';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
+import { groupByLayer } from '@domain/layer-depths';
 
 // Слоистый layout-движок (Epic 002, T-036; D2/D7/D12/D13): координаты не
 // персистентны, колонка узла = глубина от корня (computeGraphDepths),
@@ -42,6 +43,8 @@ export const CANVAS_LAYOUT = {
    * крайнего шага — посередине поля, внутри узла (DropBar, [owner 2026-10-16]).
    */
   formStepsEdge: 24,
+  /** Высота пустого уровня шагов — места, куда можно перенести шаг ([owner 2026-10-16]). */
+  formEmptyLevelHeight: 96,
   /** Высота шапки узла (заголовок + подпись). */
   nodeHeaderHeight: 88,
   /** Высота строки-элемента с зазором под ней. */
@@ -146,25 +149,22 @@ function estimateFormSize(
   // раскладка берёт измеренные размеры (N12).
   const steps: FormStep[] = form.steps.length > 0 ? form.steps : [{ id: '' as FormStep['id'], elements: [] }];
   const stepDepths = computeFormStepDepths({ steps }, graph.stepTransitions);
-  const columns = new Map<number, { width: number; height: number }>();
-  for (const step of steps) {
-    const depths = computeStepElementDepths(step, graph.logicRules);
-    const elementColumns = Math.max(1, ...[...depths.values()].map((depth) => depth + 1));
-    const stepWidth = Math.max(L.formStepWidth, elementColumns * (S.elementWidth + S.columnGap));
-    const stepHeight = L.formStepHeaderHeight + estimateStepHeight(step, graph.logicRules);
-    const depth = stepDepths.get(step.id) ?? 0;
-    const column = columns.get(depth);
-    columns.set(
-      depth,
-      column
-        ? { width: Math.max(column.width, stepWidth), height: column.height + L.formStepGap + stepHeight }
-        : { width: stepWidth, height: stepHeight },
-    );
-  }
+  // Уровни 0..max без пропусков — пустой уровень держит место (как в FormNode).
+  const columns = groupByLayer(steps, (step) => stepDepths.get(step.id) ?? 0).map((level) => {
+    let width: number = L.formStepWidth;
+    let height: number = level.length > 0 ? -L.formStepGap : L.formEmptyLevelHeight;
+    for (const step of level) {
+      const depths = computeStepElementDepths(step, graph.logicRules);
+      const elementColumns = Math.max(1, ...[...depths.values()].map((depth) => depth + 1));
+      width = Math.max(width, elementColumns * (S.elementWidth + S.columnGap));
+      height += L.formStepGap + L.formStepHeaderHeight + estimateStepHeight(step, graph.logicRules);
+    }
+    return { width, height };
+  });
   // Поле ряда шагов (formStepsEdge) слева, сверху и снизу — как в FormNode.
   let width = L.nodePadding + L.formStepsEdge;
   let height = 0;
-  for (const column of columns.values()) {
+  for (const column of columns) {
     width += column.width + L.formStepGap;
     height = Math.max(height, column.height);
   }
@@ -225,27 +225,19 @@ export function computeLayout(graph: ServiceGraph, measured?: MeasuredNodeSizes)
     }
   }
 
-  // Группировка по колонкам (глубинам), порядок внутри — по orderIndex.
-  const columns = new Map<number, LayoutNode[]>();
-  for (const node of nodes) {
-    const depth = depths.get(node.id) ?? 0;
-    const column = columns.get(depth) ?? [];
-    column.push(node);
-    columns.set(depth, column);
-  }
-
+  // Колонки — уровни 0..max без пропусков (пустой уровень держит место,
+  // groupByLayer), порядок внутри — по orderIndex.
+  const sorted = [...nodes].sort((left, right) => left.orderIndex - right.orderIndex);
   const positions: Record<string, XYPosition> = {};
   let x = 0;
-  const sortedDepths = [...columns.keys()].sort((left, right) => left - right);
-  for (const depth of sortedDepths) {
-    const column = columns.get(depth)!;
-    column.sort((left, right) => left.orderIndex - right.orderIndex);
+  for (const column of groupByLayer(sorted, (node) => depths.get(node.id) ?? 0)) {
     let y = 0;
     for (const node of column) {
       positions[node.id] = { x, y };
       y += node.height + CANVAS_LAYOUT.rowGap;
     }
-    const columnWidth = Math.max(...column.map((node) => node.width));
+    const columnWidth =
+      column.length > 0 ? Math.max(...column.map((node) => node.width)) : CANVAS_LAYOUT.nodeWidth;
     x += columnWidth + CANVAS_LAYOUT.columnGap;
   }
 

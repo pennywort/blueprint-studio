@@ -67,3 +67,19 @@ export function computeLayerDepths(
   }
   return depths;
 }
+
+// Узлы по уровням 0..max без пропусков [owner 2026-10-16]: пустой уровень
+// (например, после удаления первого шага или Главной) — пустой список, его
+// место в раскладке сохраняется, и туда можно перенести узел dnd. Порядок
+// внутри уровня — порядок items. Пустой вход — пустой результат.
+export function groupByLayer<T>(items: readonly T[], depthOf: (item: T) => number): T[][] {
+  const levels: T[][] = [];
+  for (const item of items) {
+    const depth = depthOf(item);
+    while (levels.length <= depth) {
+      levels.push([]);
+    }
+    levels[depth]!.push(item);
+  }
+  return levels;
+}

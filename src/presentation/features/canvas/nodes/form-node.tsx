@@ -13,6 +13,7 @@ import { Add, Delete } from '@blueprint-vendor/flamingo-icons';
 import type { CanvasElementKind } from '@domain/model/canvas-element';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
+import { groupByLayer } from '@domain/layer-depths';
 import { CANVAS_LAYOUT, FORM_STEP_LAYOUT } from '../canvas-layout';
 import { stepTargetHandleId, type CanvasFormStepData, type CanvasNode } from '../graph-flow-adapter';
 import { setScaledDragPreview } from '../drag-preview';
@@ -101,6 +102,18 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     boxShadow: `inset 0 0 0 2px ${theme.editor.canvas.edge}`,
   },
   // «+ Добавить шаг» (N3): новый шаг на следующий уровень — колонкой справа.
+  // Пустой уровень шагов [owner 2026-10-16]: место сохраняется (groupByLayer),
+  // туда переносится шаг; рамка — как у «Добавить шаг», без действия.
+  emptyLevel: {
+    width: CANVAS_LAYOUT.formStepWidth,
+    minHeight: CANVAS_LAYOUT.formEmptyLevelHeight,
+    borderRadius: 12,
+    border: `2px dashed ${theme.editor.canvas.elementBorder}`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: theme.palette.text.secondary,
+  },
   addStepColumn: {
     width: CANVAS_LAYOUT.formStepWidth,
     flexShrink: 0,
@@ -168,17 +181,13 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
     [],
   );
 
-  // Колонки уровней шагов: шаги уровня — в порядке массива (как orderIndex
-  // узлов колонки канваса).
-  const stepLevels = useMemo(() => {
-    const byDepth = new Map<number, CanvasFormStepData[]>();
-    for (const step of data.steps) {
-      byDepth.set(step.depth, [...(byDepth.get(step.depth) ?? []), step]);
-    }
-    return [...byDepth.entries()]
-      .sort(([left], [right]) => left - right)
-      .map(([depth, steps]) => ({ depth, steps }));
-  }, [data.steps]);
+  // Колонки уровней шагов 0..max без пропусков (groupByLayer): шаги уровня —
+  // в порядке массива (как orderIndex узлов колонки канваса); пустой уровень
+  // держит место — туда можно перенести шаг [owner 2026-10-16].
+  const stepLevels = useMemo(
+    () => groupByLayer(data.steps, (step) => step.depth).map((steps, depth) => ({ depth, steps })),
+    [data.steps],
+  );
 
   // Dnd шагов внутри формы [owner 2026-10-14] — как dnd узлов канваса, общим
   // ядром слоёв (layers/): колонка-кандидат — ближайшая по X (справа — пустой
@@ -219,8 +228,14 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
       if (swapStepId) {
         return { column, decision: { kind: 'reorder' }, anchor: null, swapStepId };
       }
+      // Обмен ёмкость уровней не меняет; перенос — по политике (ёмкость уровня).
       const own = data.steps.find((step) => step.id === draggedId);
-      const decision = resolveLayerDrop(own ? own.depth : null, column, true);
+      const decision = resolveLayerDrop(
+        FORM_STEPS_LAYER_POLICY,
+        { id: draggedId, kind: 'formStep', depth: own ? own.depth : null },
+        column,
+        new Map(data.steps.map((step) => [step.id, step.depth])),
+      );
       const level = column ? stepLevels.find((candidate) => candidate.depth === column.depth) : undefined;
       const anchor = effectiveStepAnchor(
         level?.steps.map((step) => step.id) ?? [],
@@ -253,7 +268,9 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
     locate: locateStepDrop,
     onDrop: dropStep,
     isolate: true,
+    accepts: acceptsStepDrop,
   });
+  const dropBlocked = stepDrop?.decision.kind === 'blocked';
   const dropAnchor = stepDrop?.anchor ?? null;
 
   return (
@@ -300,12 +317,13 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
         </IconButton>
       </div>
       <div ref={stepsRowRef} className={classes.stepsRow} data-testid="form-steps-row" {...stepDropHandlers}>
-        {stepDrop?.decision.kind === 'moveToLayer' && stepDrop.column && !dropAnchor ? (
+        {stepDrop && stepDrop.decision.kind !== 'reorder' && stepDrop.column && !dropAnchor ? (
           <ColumnDropBar
             x={columnBarX(stepDrop.column, {
               gap: CANVAS_LAYOUT.formStepGap,
               edge: CANVAS_LAYOUT.formStepsEdge,
             })}
+            blocked={dropBlocked}
           />
         ) : null}
         {stepLevels.map((level) => (
@@ -320,15 +338,25 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
                 key={step.id}
                 formId={id}
                 step={step}
-                dropPlacement={dropAnchor?.stepId === step.id ? dropAnchor.placement : null}
-                dropAtEdge={
-                  dropAnchor?.stepId === step.id &&
-                  (dropAnchor.placement === 'before' ? index === 0 : index === level.steps.length - 1)
+                dropBar={
+                  dropAnchor?.stepId === step.id
+                    ? {
+                        placement: dropAnchor.placement,
+                        atEdge:
+                          dropAnchor.placement === 'before' ? index === 0 : index === level.steps.length - 1,
+                        blocked: dropBlocked,
+                      }
+                    : null
                 }
                 swapTarget={stepDrop?.swapStepId === step.id}
                 onOpenAddMenu={openAddMenu}
               />
             ))}
+            {level.steps.length === 0 ? (
+              <div className={classes.emptyLevel} data-testid={`form-step-level-empty-${level.depth}`}>
+                <Typography variant="body2">Пустой уровень</Typography>
+              </div>
+            ) : null}
           </div>
         ))}
         {/* «+ Добавить шаг» (N3): новый шаг на следующий уровень; при dnd
@@ -364,6 +392,9 @@ export const FormNode = memo(
 );
 
 // Состояние dnd шага: колонка-кандидат, решение и якорь в колонке.
+// Заполненный уровень (ёмкость) показывается запретом, бросить нельзя.
+const acceptsStepDrop = (state: StepDropState) => state.decision.kind !== 'blocked';
+
 type StepDropState = {
   column: LayerColumn | null;
   decision: LayerDropDecision;
@@ -375,10 +406,12 @@ type StepDropState = {
 type FormStepColumnProps = {
   formId: string;
   step: CanvasFormStepData;
-  /** Индикатор вставки перетаскиваемого шага у этого шага (dnd шагов). */
-  dropPlacement: 'before' | 'after' | null;
-  /** Индикатор — у края уровня (до первого / после последнего шага): в поле узла. */
-  dropAtEdge: boolean;
+  /**
+   * Индикатор вставки перетаскиваемого шага у этого шага (dnd шагов): atEdge —
+   * у края уровня (до первого / после последнего шага), в поле узла;
+   * blocked — уровень заполнен, бросить нельзя. null — индикатора нет.
+   */
+  dropBar: { placement: 'before' | 'after'; atEdge: boolean; blocked: boolean } | null;
   /** Шаг — цель обмена местами при dnd шага [owner 2026-10-15]. */
   swapTarget: boolean;
   onOpenAddMenu: (anchor: HTMLElement, stepId: string) => void;
@@ -390,8 +423,7 @@ type FormStepColumnProps = {
 const FormStepColumn = memo(function FormStepColumn({
   formId,
   step,
-  dropPlacement,
-  dropAtEdge,
+  dropBar,
   swapTarget,
   onOpenAddMenu,
 }: FormStepColumnProps) {
@@ -457,17 +489,18 @@ const FormStepColumn = memo(function FormStepColumn({
       {/* Индикатор вставки шага — посередине зазора между шагами уровня, у
           края уровня — посередине поля узла (formStepsEdge);
           абсолютный — раскладка формы при drag не меняется (как ADR-16). */}
-      {dropPlacement ? (
+      {dropBar ? (
         <DropBar
           orientation="horizontal"
           style={{
             position: 'absolute',
             left: DROP_BAR_INSET,
             right: DROP_BAR_INSET,
-            [dropPlacement === 'before' ? 'top' : 'bottom']:
-              -(dropAtEdge ? CANVAS_LAYOUT.formStepsEdge : CANVAS_LAYOUT.formStepGap) / 2 - 1,
+            [dropBar.placement === 'before' ? 'top' : 'bottom']:
+              -(dropBar.atEdge ? CANVAS_LAYOUT.formStepsEdge : CANVAS_LAYOUT.formStepGap) / 2 - 1,
           }}
           testId="step-drop-indicator"
+          blocked={dropBar.blocked}
         />
       ) : null}
       <div className={classes.stepHeader}>

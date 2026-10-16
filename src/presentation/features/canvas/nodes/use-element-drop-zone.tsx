@@ -19,6 +19,11 @@ type DropZoneOptions<P, T> = {
   onDrop: (dragged: P, state: T) => void;
   /** Не пускать dragover/drop к внешней зоне (шаг формы внутри узла). */
   isolate?: boolean;
+  /**
+   * Можно ли бросить при этом решении; false — решение показывается
+   * (запрет виден сразу), курсор «нельзя», drop не случится ([owner 2026-10-16]).
+   */
+  accepts?: (state: T) => boolean;
 };
 
 type ElementDropZoneOptions<T> = Omit<DropZoneOptions<ElementDragPayload, T>, 'dragged' | 'read'>;
@@ -29,10 +34,19 @@ export function useElementDropZone<T>(options: ElementDropZoneOptions<T>) {
   return useDropZone({ ...options, dragged: draggedElement, read: readElementDrag });
 }
 
+const acceptAll = () => true;
+
 // Зона приёма нативного dnd (ревью A8, R4): подсветка во время drag, сброс
 // по окончании жеста и drop с решением, посчитанным в момент отпускания.
 // Общая для карточек элементов и шагов формы (dnd шагов, [owner 2026-10-14]).
-export function useDropZone<P, T>({ dragged, read, locate, onDrop, isolate = false }: DropZoneOptions<P, T>) {
+export function useDropZone<P, T>({
+  dragged,
+  read,
+  locate,
+  onDrop,
+  isolate = false,
+  accepts = acceptAll,
+}: DropZoneOptions<P, T>) {
   const [state, setState] = useState<T | null>(null);
 
   // Жест закончился вне зоны или отменён (Esc) — dragleave мог не дойти:
@@ -59,14 +73,16 @@ export function useDropZone<P, T>({ dragged, read, locate, onDrop, isolate = fal
         setState(null);
         return; // не preventDefault — курсор «нельзя», drop не случится
       }
-      event.preventDefault();
       if (isolate) {
         event.stopPropagation();
       }
-      event.dataTransfer.dropEffect = 'move';
       setState(next);
+      if (accepts(next)) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+      }
     },
-    [dragged, isolate, locate],
+    [accepts, dragged, isolate, locate],
   );
 
   const onDragLeave = useCallback((event: DragEvent<HTMLElement>) => {
@@ -81,7 +97,7 @@ export function useDropZone<P, T>({ dragged, read, locate, onDrop, isolate = fal
       const payload = read(event.dataTransfer);
       const decided = payload ? locate(event, payload) : null;
       setState(null);
-      if (!payload || decided === null) {
+      if (!payload || decided === null || !accepts(decided)) {
         return;
       }
       event.preventDefault();
@@ -90,7 +106,7 @@ export function useDropZone<P, T>({ dragged, read, locate, onDrop, isolate = fal
       }
       onDrop(payload, decided);
     },
-    [isolate, locate, onDrop, read],
+    [accepts, isolate, locate, onDrop, read],
   );
 
   return { state, handlers: { onDragOver, onDragLeave, onDrop: handleDrop } };
@@ -101,18 +117,28 @@ export const DROP_BAR_INSET = 16;
 
 // Полоса-индикатор вставки (N2, [owner 2026-10-15]) — единая для узлов:
 // карточки в шаге, шаги в форме. style — положение в месте использования.
+// blocked — уровень заполнен, бросить нельзя (ёмкость уровня, [owner 2026-10-16]).
 export function DropBar({
   orientation,
   style,
   testId = 'drop-indicator',
+  blocked = false,
 }: {
   orientation: 'horizontal' | 'vertical';
   style: CSSProperties;
   testId?: string;
+  blocked?: boolean;
 }) {
   const classes = useNodeStyles();
   const modifier = orientation === 'horizontal' ? classes.dropBarHorizontal : classes.dropBarVertical;
-  return <div className={`${classes.dropBar} ${modifier}`} style={style} data-testid={testId} />;
+  return (
+    <div
+      className={[classes.dropBar, modifier, blocked ? classes.dropBarBlocked : ''].join(' ')}
+      style={style}
+      data-testid={testId}
+      data-drop-blocked={blocked || undefined}
+    />
+  );
 }
 
 // Полоса у карточки-якоря (N2): в потоке колонки, посередине зазора.
@@ -164,12 +190,13 @@ export function columnBarX(
 
 // Вертикальная полоса переноса в колонку (N2, [owner 2026-10-15]): x —
 // локальная координата слоя (columnBarX), по высоте зоны (отступ — под точки на концах).
-export function ColumnDropBar({ x }: { x: number }) {
+export function ColumnDropBar({ x, blocked = false }: { x: number; blocked?: boolean }) {
   return (
     <DropBar
       orientation="vertical"
       style={{ position: 'absolute', top: DROP_BAR_INSET, bottom: DROP_BAR_INSET, left: x - 1 }}
       testId="drop-zone-bar"
+      blocked={blocked}
     />
   );
 }

@@ -5,7 +5,8 @@
 // адаптера слоя; геометрия и решение «перенос / порядок» — здесь.
 // Различия слоёв задаёт LayerPolicy (layer-policy.ts), а не ветвления.
 
-import type { LayerPolicy } from './layer-policy';
+import { layerHasRoom } from '@domain/layer-capacity';
+import { canMoveToLayer, type LayerPolicy } from './layer-policy';
 
 /** Колонка слоя: уровень и её горизонтальная полоса в координатах слоя. */
 export type LayerColumn = { depth: number; x: number; width: number };
@@ -27,9 +28,23 @@ export function buildLayerColumns(items: readonly LayerItemBox[], policy: LayerP
       byDepth.set(item.depth, { x: item.x, width: item.width });
     }
   }
-  const columns = [...byDepth.entries()]
+  const occupied = [...byDepth.entries()]
     .sort(([left], [right]) => left - right)
     .map(([depth, column]) => ({ depth, ...column }));
+  // Пустые уровни между 0 и последним занятым держат место в раскладке
+  // (groupByLayer, [owner 2026-10-16]) — это тоже колонки-кандидаты.
+  const pitch = policy.columnWidth + policy.columnGap;
+  const columns: LayerColumn[] = [];
+  for (const column of occupied) {
+    const previous = columns[columns.length - 1];
+    for (let depth = previous ? previous.depth + 1 : 0; depth < column.depth; depth += 1) {
+      const x = previous
+        ? columns[columns.length - 1]!.x + columns[columns.length - 1]!.width + policy.columnGap
+        : column.x - (column.depth - depth) * pitch;
+      columns.push({ depth, x, width: policy.columnWidth });
+    }
+    columns.push(column);
+  }
   const last = columns[columns.length - 1];
   if (policy.allowNewLayer) {
     columns.push(
@@ -69,18 +84,29 @@ export function nearestLayerColumn(columns: readonly LayerColumn[], x: number): 
   return best;
 }
 
-/** Решение по drop: перенос на другой уровень или порядок внутри своего. */
-export type LayerDropDecision = { kind: 'moveToLayer'; depth: number } | { kind: 'reorder' };
+/**
+ * Решение по drop: перенос на другой уровень, порядок внутри своего или
+ * запрет — уровень-кандидат заполнен (ёмкость, [owner 2026-10-16]).
+ */
+export type LayerDropDecision =
+  { kind: 'moveToLayer'; depth: number } | { kind: 'reorder' } | { kind: 'blocked' };
 
-// currentDepth — уровень перетаскиваемого в ЭТОМ слое; null — пришёл извне
-// (другой шаг/узел): тогда это всегда перенос в колонку-кандидат.
+/** Перетаскиваемое: id, вид и уровень в ЭТОМ слое (null — пришло извне, другой шаг/узел). */
+export type LayerDragSubject = { id: string; kind: string; depth: number | null };
+
+// Решение по жесту — целиком по политике слоя: что переносится между
+// уровнями (movableKinds) и сколько узлов вмещает уровень (capacity —
+// то же доменное правило, что проверяет граф). depths — текущие уровни слоя.
 export function resolveLayerDrop(
-  currentDepth: number | null,
+  policy: LayerPolicy,
+  subject: LayerDragSubject,
   candidate: LayerColumn | null,
-  canMoveToLayer: boolean,
+  depths: ReadonlyMap<string, number>,
 ): LayerDropDecision {
-  if (candidate && canMoveToLayer && candidate.depth !== currentDepth) {
-    return { kind: 'moveToLayer', depth: candidate.depth };
+  if (!candidate || candidate.depth === subject.depth || !canMoveToLayer(policy, subject.kind)) {
+    return { kind: 'reorder' };
   }
-  return { kind: 'reorder' };
+  return layerHasRoom(policy.capacity, depths, candidate.depth, subject.id)
+    ? { kind: 'moveToLayer', depth: candidate.depth }
+    : { kind: 'blocked' };
 }
