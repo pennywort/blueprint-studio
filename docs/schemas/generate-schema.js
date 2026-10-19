@@ -299,6 +299,10 @@ function typeToSchema(type, ctx, path5, seen = /* @__PURE__ */ new Set()) {
   if (type.isNumber()) return { type: "number" };
   if (type.isBoolean()) return { type: "boolean" };
   if (type.isNull()) return { type: "null" };
+  if (type.getFlags() & import_ts_morph.TypeFlags.NonPrimitive) {
+    ctx.diag.report("loose-object", path5, "object \u0431\u0435\u0437 \u043E\u043F\u0438\u0441\u0430\u043D\u0438\u044F \u043F\u043E\u043B\u0435\u0439");
+    return { type: "object" };
+  }
   if (type.isObject()) return objectToSchema(type, ctx, path5, seen);
   if (type.isIntersection() && type.getIntersectionTypes().every((t) => t.isObject())) {
     return objectToSchema(type, ctx, path5, seen);

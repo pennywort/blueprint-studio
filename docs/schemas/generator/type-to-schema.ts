@@ -5,7 +5,7 @@
  * получает x-ts-type + диагностику — пустой схемы («что угодно») генератор не выпускает.
  */
 
-import { Node, SyntaxKind, type Symbol as TsSymbol, type Type } from 'ts-morph';
+import { Node, SyntaxKind, TypeFlags, type Symbol as TsSymbol, type Type } from 'ts-morph';
 
 import { ELEMENT_REF_TYPES, ELEMENT_TYPE_ENUMS, KNOWN_EXTERNAL_TYPES } from './config';
 import type { Diagnostics } from './diagnostics';
@@ -193,6 +193,11 @@ export function typeToSchema(
   if (type.isBoolean()) return { type: 'boolean' };
   if (type.isNull()) return { type: 'null' };
 
+  // Ключевое слово object — любой объект без описания полей
+  if (type.getFlags() & TypeFlags.NonPrimitive) {
+    ctx.diag.report('loose-object', path, 'object без описания полей');
+    return { type: 'object' };
+  }
   if (type.isObject()) return objectToSchema(type, ctx, path, seen);
   // Пересечение объектов (A & { x }) — один объект со свойствами всех частей (план 2.3)
   if (type.isIntersection() && type.getIntersectionTypes().every((t) => t.isObject())) {
