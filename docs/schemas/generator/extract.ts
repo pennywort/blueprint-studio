@@ -17,7 +17,13 @@ import {
   type TypeAliasDeclaration,
 } from 'ts-morph';
 
-import { CHILDREN_GETTERS, CONTAINER_BASE_CLASSES, PATHS, PUBLIC_METHOD_DECORATORS } from './config';
+import {
+  CHILDREN_GETTERS,
+  CONTAINER_BASE_CLASSES,
+  ELEMENT_REF_TYPES,
+  PATHS,
+  PUBLIC_METHOD_DECORATORS,
+} from './config';
 import type { Diagnostics } from './diagnostics';
 import type { JsonValue, MethodSchema } from './format';
 import { typeText } from './type-to-schema';
@@ -367,6 +373,16 @@ export function findPropsDecl(
       ?.getDeclarations()
       .find((d): d is PropsDecl => Node.isInterfaceDeclaration(d) || Node.isTypeAliasDeclaration(d));
     if (decl) return decl;
+  }
+
+  // Тип свойства props класса (наследуется от базового класса с generic)
+  const propsSym = cls.getType().getProperty('props');
+  if (propsSym) {
+    const t = propsSym.getTypeAtLocation(cls);
+    const decl = (t.getAliasSymbol() ?? t.getSymbol())
+      ?.getDeclarations()
+      .find((d): d is PropsDecl => Node.isInterfaceDeclaration(d) || Node.isTypeAliasDeclaration(d));
+    if (decl && !ELEMENT_REF_TYPES.includes(decl.getName())) return decl;
   }
 
   const name = `${entry.className.replace(/Element$/, '')}Props`;

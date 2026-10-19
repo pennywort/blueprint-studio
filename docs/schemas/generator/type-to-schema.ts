@@ -157,7 +157,7 @@ export function typeToSchema(
   if (type.isUnion()) return unionToSchema(type, ctx, path, seen);
 
   // Вложенный элемент: тип и допустимые дети — у самого элемента (x-container)
-  if (type.isObject() && isElementRef(type)) return { 'x-kind': 'element' };
+  if ((type.isObject() || type.isIntersection()) && isElementRef(type)) return { 'x-kind': 'element' };
 
   if (type.isEnumLiteral() || type.isStringLiteral()) {
     return { type: 'string', const: String(type.getLiteralValue() ?? type.getText()) };

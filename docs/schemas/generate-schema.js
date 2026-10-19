@@ -266,7 +266,7 @@ function typeToSchema(type, ctx, path5, seen = /* @__PURE__ */ new Set()) {
   if (type.isAny() || type.isUnknown()) return unresolved(ctx, type, path5, "any-type", "any/unknown");
   if (type.getCallSignatures().length > 0) return { "x-kind": "handler" };
   if (type.isUnion()) return unionToSchema(type, ctx, path5, seen);
-  if (type.isObject() && isElementRef(type)) return { "x-kind": "element" };
+  if ((type.isObject() || type.isIntersection()) && isElementRef(type)) return { "x-kind": "element" };
   if (type.isEnumLiteral() || type.isStringLiteral()) {
     return { type: "string", const: String(type.getLiteralValue() ?? type.getText()) };
   }
@@ -648,6 +648,12 @@ function findPropsDecl(project, cls, entry) {
     const decl = (t.getAliasSymbol() ?? t.getSymbol())?.getDeclarations().find((d) => import_ts_morph2.Node.isInterfaceDeclaration(d) || import_ts_morph2.Node.isTypeAliasDeclaration(d));
     if (decl) return decl;
   }
+  const propsSym = cls.getType().getProperty("props");
+  if (propsSym) {
+    const t = propsSym.getTypeAtLocation(cls);
+    const decl = (t.getAliasSymbol() ?? t.getSymbol())?.getDeclarations().find((d) => import_ts_morph2.Node.isInterfaceDeclaration(d) || import_ts_morph2.Node.isTypeAliasDeclaration(d));
+    if (decl && !ELEMENT_REF_TYPES.includes(decl.getName())) return decl;
+  }
   const name = `${entry.className.replace(/Element$/, "")}Props`;
   const isPropsFile = (p) => /Props\.ts$/.test(path.basename(p)) && !/ModelProps/.test(path.basename(p));
   for (const imp of cls.getSourceFile().getImportDeclarations()) {
@@ -818,7 +824,11 @@ function propsToSchemas(decl, ctx, skip) {
     const name = prop.name;
     if (name.startsWith("_") || EXCLUDED_PROPS.includes(name)) continue;
     if (skip(name, prop.symbol.getDeclarations()[0])) continue;
-    const schema = typeToSchema(prop.symbol.getTypeAtLocation(decl), { ...ctx, printNode: decl }, `properties.${name}`);
+    const schema = typeToSchema(
+      prop.symbol.getTypeAtLocation(decl),
+      { ...ctx, printNode: decl },
+      `properties.${name}`
+    );
     const description = jsDocDescription(prop.symbol);
     out.push({
       name,
@@ -888,7 +898,7 @@ function buildElementSchema(input, diag) {
   const baseDefaults = {};
   const decl = findPropsDecl(project, cls, entry);
   if (!decl) {
-    diag.report("props-missing", "properties", `\u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D ${entry.className.replace(/Element$/, "")}Props`);
+    diag.report("props-missing", "properties", `\u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D ${entry.className.replace(/Element$/, "")}Props (extends ${cls.getExtends()?.getText() ?? "\u2014"})`);
   } else {
     for (const prop of readProps(decl)) {
       if (prop.name.startsWith("_") || EXCLUDED_PROPS.includes(prop.name)) continue;
@@ -901,7 +911,11 @@ function buildElementSchema(input, diag) {
       if (p.name in defaults) {
         const value = defaults[p.name];
         if (value === null && !allowsNull(schema2, shared)) {
-          diag.report("default-null-widened", `properties.${p.name}`, "default: null, \u0430 \u0442\u0438\u043F \u0431\u0435\u0437 null \u2014 \u0442\u0438\u043F \u0440\u0430\u0441\u0448\u0438\u0440\u0435\u043D");
+          diag.report(
+            "default-null-widened",
+            `properties.${p.name}`,
+            "default: null, \u0430 \u0442\u0438\u043F \u0431\u0435\u0437 null \u2014 \u0442\u0438\u043F \u0440\u0430\u0441\u0448\u0438\u0440\u0435\u043D"
+          );
           schema2 = nullable(schema2);
         }
         schema2.default = value;
@@ -951,12 +965,8 @@ function enumMemberValues(decl) {
   });
 }
 var SharedRegistry = class {
-  loaded = [];
-  /** Какие shared-файлы реально понадобились в этом прогоне. */
-  used = /* @__PURE__ */ new Set();
-  /** Именованные типы → элементы, где встретились (кандидаты в shared). */
-  usage = /* @__PURE__ */ new Map();
   constructor(rootDir, warn) {
+    this.rootDir = rootDir;
     for (const config of SHARED_ENUMS) {
       const file = path3.resolve(rootDir, config.sourceFile);
       if (!fs2.existsSync(file)) {
@@ -973,6 +983,12 @@ var SharedRegistry = class {
       this.loaded.push({ config, values, valueSet: new Set(values) });
     }
   }
+  rootDir;
+  loaded = [];
+  /** Какие shared-файлы реально понадобились в этом прогоне. */
+  used = /* @__PURE__ */ new Set();
+  /** Именованные типы → элементы, где встретились (кандидаты в shared). */
+  usage = /* @__PURE__ */ new Map();
   ref(entry) {
     this.used.add(entry.config.fileName);
     return { $ref: `../shared/${entry.config.fileName}#`, nullable: entry.config.nullable };
@@ -999,6 +1015,7 @@ var SharedRegistry = class {
     return this.loaded.some((e) => e.config.nullable && ref === `../shared/${e.config.fileName}#`);
   }
   trackUsage(typeName, file, elementType) {
+    file = path3.relative(this.rootDir, file).replace(/\\/g, "/");
     const key = `${file}#${typeName}`;
     const rec = this.usage.get(key) ?? { type: typeName, file, usedIn: /* @__PURE__ */ new Set() };
     rec.usedIn.add(elementType);

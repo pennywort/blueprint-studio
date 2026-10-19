@@ -182,7 +182,11 @@ export function buildElementSchema(input: BuildInput, diag: Diagnostics): Elemen
 
   const decl = findPropsDecl(project, cls, entry);
   if (!decl) {
-    diag.report('props-missing', 'properties', `не найден ${entry.className.replace(/Element$/, '')}Props`);
+    diag.report(
+      'props-missing',
+      'properties',
+      `не найден ${entry.className.replace(/Element$/, '')}Props (extends ${cls.getExtends()?.getText() ?? '—'})`,
+    );
   } else {
     for (const prop of readProps(decl)) {
       if (prop.name.startsWith('_') || EXCLUDED_PROPS.includes(prop.name)) continue;

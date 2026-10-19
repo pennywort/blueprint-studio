@@ -33,7 +33,10 @@ export class SharedRegistry {
   /** Именованные типы → элементы, где встретились (кандидаты в shared). */
   private readonly usage = new Map<string, { type: string; file: string; usedIn: Set<string> }>();
 
-  constructor(rootDir: string, warn: (msg: string) => void) {
+  constructor(
+    private readonly rootDir: string,
+    warn: (msg: string) => void,
+  ) {
     for (const config of SHARED_ENUMS) {
       const file = path.resolve(rootDir, config.sourceFile);
       if (!fs.existsSync(file)) {
@@ -81,6 +84,8 @@ export class SharedRegistry {
   }
 
   trackUsage(typeName: string, file: string, elementType: string): void {
+    // Путь от корня монорепозитория: отчёт не зависит от машины
+    file = path.relative(this.rootDir, file).replace(/\\/g, '/');
     const key = `${file}#${typeName}`;
     const rec = this.usage.get(key) ?? { type: typeName, file, usedIn: new Set<string>() };
     rec.usedIn.add(elementType);
