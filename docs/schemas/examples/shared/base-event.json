@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://framework.internal/schemas/base-events.schema.json",
+  "title": "BaseEvents",
+  "description": "Общие события всех UI-элементов, наследуемые от BaseElementImpl",
+  "x-events": {
+    "onChangeValue": {
+      "description": "Событие изменения значения элемента",
+      "parameters": {
+        "value": {
+          "description": "Новое значение",
+          "type": "any"
+        },
+        "options": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Необязательный идентификатор"
+            }
+          }
+        }
+      }
+    },
+    "onClick": {
+      "description": "Событие клика по элементу",
+      "parameters": {
+        "event": {
+          "description": "Объект события",
+          "type": "object"
+        }
+      }
+    }
+  }
+}

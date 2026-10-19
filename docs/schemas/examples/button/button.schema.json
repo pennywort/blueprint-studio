@@ -1,0 +1,231 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://framework.internal/schemas/button.schema.json",
+  "title": "Button",
+  "description": "JSON-схема для UI-элемента \"button\"",
+  "type": "object",
+  "elementType": "button",
+  "x-category": "basic",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Уникальный идентификатор элемента"
+    },
+    "visible": {
+      "type": "boolean",
+      "description": "Видимость элемента",
+      "default": true
+    },
+    "cursor": {
+      "type": "string",
+      "enum": ["default", "pointer"],
+      "description": "Тип курсора",
+      "default": "default"
+    },
+    "gravity": {
+      "type": "string",
+      "enum": ["left", "right", "center"],
+      "description": "Выравнивание внутри родителя",
+      "default": "left"
+    },
+    "margin": {
+      "description": "Внешние отступы",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        {
+          "enum": ["none", "normal"]
+        }
+      ],
+      "default": 0
+    },
+    "width": {
+      "description": "Ширина элемента",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "enum": ["match_parent", "wrap_content"]
+        }
+      ],
+      "default": "match_parent"
+    },
+    "flex": {
+      "type": "string",
+      "description": "Flex-свойство"
+    },
+    "alignSelf": {
+      "type": "string",
+      "description": "Выравнивание по собственной оси"
+    },
+    "overflow": {
+      "type": "string",
+      "description": "Поведение при переполнении"
+    },
+    "minHeight": {
+      "description": "Минимальная высота",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "maxHeight": {
+      "description": "Максимальная высота",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "label": {
+      "type": "string",
+      "default": ""
+    },
+    "disabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "variant": {
+      "type": "string",
+      "enum": ["text", "contained"],
+      "default": "contained"
+    },
+    "color": {
+      "type": "string",
+      "enum": ["default", "primary", "inversePrimary", "inverseDefault", "white", "secondary"],
+      "default": "primary"
+    },
+    "icon": {
+      "$ref": "../shared/icon.schema.json#",
+      "default": null
+    },
+    "isProgress": {
+      "type": "boolean",
+      "default": false
+    },
+    "size": {
+      "type": "string",
+      "enum": ["small", "medium", "large"],
+      "default": "medium"
+    },
+    "iconPosition": {
+      "type": "string",
+      "enum": ["left", "right"],
+      "default": "left"
+    },
+    "badge": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "color": {
+          "type": "string",
+          "enum": ["default", "primary", "secondary", "error"]
+        },
+        "expandedColor": {
+          "type": "string",
+          "enum": [
+            "warning",
+            "error",
+            "success",
+            "green",
+            "blue",
+            "orange",
+            "yellow",
+            "purple",
+            "pink",
+            "red",
+            "infoSecondary",
+            "infoTertiary",
+            "purple2",
+            "pink2",
+            "grey",
+            "lime",
+            "yellow2",
+            "defaultOutline",
+            "secondary"
+          ]
+        },
+        "white": {
+          "type": "boolean"
+        }
+      },
+      "default": null
+    }
+  },
+  "x-events": {
+    "onChangeValue": {
+      "description": "Событие изменения значения элемента",
+      "parameters": {
+        "value": {
+          "description": "Новое значение",
+          "type": "any"
+        },
+        "options": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Необязательный идентификатор"
+            }
+          }
+        }
+      }
+    },
+    "onClick": {
+      "description": "Событие клика по элементу",
+      "parameters": {
+        "event": {
+          "description": "Объект события",
+          "type": "object"
+        }
+      }
+    }
+  },
+  "x-methods": [
+    {
+      "name": "setProgress",
+      "returnType": "void",
+      "parameters": [
+        {
+          "type": "boolean",
+          "description": "value"
+        }
+      ]
+    },
+    {
+      "name": "isProgress",
+      "returnType": "boolean",
+      "parameters": []
+    }
+  ],
+  "x-defaults": {
+    "label": "",
+    "disabled": false,
+    "variant": "contained",
+    "color": "primary",
+    "icon": null,
+    "isProgress": false,
+    "size": "medium",
+    "iconPosition": "left",
+    "badge": null
+  },
+  "required": [],
+  "deprecatedAliases": []
+}
