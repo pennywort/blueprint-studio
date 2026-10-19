@@ -21,6 +21,7 @@ import {
   CHILDREN_GETTERS,
   CONTAINER_BASE_CLASSES,
   ELEMENT_REF_TYPES,
+  KNOWN_CONSTANTS,
   PATHS,
   PUBLIC_METHOD_DECORATORS,
 } from './config';
@@ -176,6 +177,8 @@ function valueOf(node: Node, depth = 0): Extracted {
   }
   if (Node.isIdentifier(node) || Node.isPropertyAccessExpression(node)) {
     if (node.getText() === 'undefined') return undefined;
+    const known = KNOWN_CONSTANTS[node.getText()];
+    if (known !== undefined) return known;
     const sym = node.getSymbol();
     for (const decl of (sym?.getAliasedSymbol() ?? sym)?.getDeclarations() ?? []) {
       if (Node.isEnumMember(decl)) {

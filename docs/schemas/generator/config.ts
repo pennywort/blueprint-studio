@@ -3,7 +3,7 @@
  * а не кода (одно правило — одно значение).
  */
 
-import type { Category, PropSchema } from './format';
+import type { Category, JsonValue, PropSchema } from './format';
 
 /**
  * Признак корня монорепозитория: корень ищется вверх от каталога генератора
@@ -117,6 +117,14 @@ export const ELEMENT_REF_TYPES: readonly string[] = ['BaseProps', 'BaseElement',
  */
 export const KNOWN_EXTERNAL_TYPES: Readonly<Record<string, PropSchema>> = {
   Date: { type: 'string', format: 'date-time' },
+};
+
+/** Глобальные константы в defaultProps → значение (план 2.2; только конечные числа — JSON). */
+export const KNOWN_CONSTANTS: Readonly<Record<string, JsonValue>> = {
+  'Number.MAX_VALUE': Number.MAX_VALUE,
+  'Number.MIN_VALUE': Number.MIN_VALUE,
+  'Number.MAX_SAFE_INTEGER': Number.MAX_SAFE_INTEGER,
+  'Number.MIN_SAFE_INTEGER': Number.MIN_SAFE_INTEGER,
 };
 
 /** Базовый класс-контейнер: наследники (на любой глубине) — контейнеры. */

@@ -198,6 +198,11 @@ export function typeToSchema(
   if (type.isIntersection() && type.getIntersectionTypes().every((t) => t.isObject())) {
     return objectToSchema(type, ctx, path, seen);
   }
+  // Брендированный примитив (X & string) — значение остаётся примитивом
+  if (type.isIntersection()) {
+    const prim = type.getIntersectionTypes().find((t) => t.isString() || t.isNumber() || t.isBoolean());
+    if (prim) return typeToSchema(prim, ctx, path, seen);
+  }
 
   return unresolved(ctx, type, path, 'unresolved-type', 'не распознан');
 }
@@ -268,7 +273,9 @@ function objectToSchema(type: Type, ctx: TypeContext, path: string, seen: Set<st
   const decl = sym?.getDeclarations()[0];
   const sf = decl?.getSourceFile();
 
-  if (sf && (sf.isDeclarationFile() || sf.getFilePath().includes('/typescript/lib/'))) {
+  // Record<string, X> из lib — словарь, раскрывается по индексу ниже
+  const isRecord = type.getAliasSymbol()?.getName() === 'Record' && !!type.getStringIndexType();
+  if (!isRecord && sf && (sf.isDeclarationFile() || sf.getFilePath().includes('/typescript/lib/'))) {
     const known = sym ? KNOWN_EXTERNAL_TYPES[sym.getName()] : undefined;
     if (known) return { ...known };
     return unresolved(ctx, type, path, 'external-type', 'внешний тип не раскрывается');

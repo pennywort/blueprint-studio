@@ -103,6 +103,12 @@ var ELEMENT_REF_TYPES = ["BaseProps", "BaseElement", "BaseElementImpl"];
 var KNOWN_EXTERNAL_TYPES = {
   Date: { type: "string", format: "date-time" }
 };
+var KNOWN_CONSTANTS = {
+  "Number.MAX_VALUE": Number.MAX_VALUE,
+  "Number.MIN_VALUE": Number.MIN_VALUE,
+  "Number.MAX_SAFE_INTEGER": Number.MAX_SAFE_INTEGER,
+  "Number.MIN_SAFE_INTEGER": Number.MIN_SAFE_INTEGER
+};
 var CONTAINER_BASE_CLASSES = ["ContainerImpl"];
 var CHILDREN_GETTERS = ["allowedTypes", "childrenTypes"];
 var PUBLIC_METHOD_DECORATORS = ["PublicApiMethod", "PublicApiField"];
@@ -297,6 +303,10 @@ function typeToSchema(type, ctx, path5, seen = /* @__PURE__ */ new Set()) {
   if (type.isIntersection() && type.getIntersectionTypes().every((t) => t.isObject())) {
     return objectToSchema(type, ctx, path5, seen);
   }
+  if (type.isIntersection()) {
+    const prim = type.getIntersectionTypes().find((t) => t.isString() || t.isNumber() || t.isBoolean());
+    if (prim) return typeToSchema(prim, ctx, path5, seen);
+  }
   return unresolved(ctx, type, path5, "unresolved-type", "\u043D\u0435 \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u043D");
 }
 function unionToSchema(type, ctx, path5, seen) {
@@ -355,7 +365,8 @@ function objectToSchema(type, ctx, path5, seen) {
   const sym = type.getAliasSymbol() ?? type.getSymbol();
   const decl = sym?.getDeclarations()[0];
   const sf = decl?.getSourceFile();
-  if (sf && (sf.isDeclarationFile() || sf.getFilePath().includes("/typescript/lib/"))) {
+  const isRecord = type.getAliasSymbol()?.getName() === "Record" && !!type.getStringIndexType();
+  if (!isRecord && sf && (sf.isDeclarationFile() || sf.getFilePath().includes("/typescript/lib/"))) {
     const known = sym ? KNOWN_EXTERNAL_TYPES[sym.getName()] : void 0;
     if (known) return { ...known };
     return unresolved(ctx, type, path5, "external-type", "\u0432\u043D\u0435\u0448\u043D\u0438\u0439 \u0442\u0438\u043F \u043D\u0435 \u0440\u0430\u0441\u043A\u0440\u044B\u0432\u0430\u0435\u0442\u0441\u044F");
@@ -507,6 +518,8 @@ function valueOf(node, depth = 0) {
   }
   if (import_ts_morph2.Node.isIdentifier(node) || import_ts_morph2.Node.isPropertyAccessExpression(node)) {
     if (node.getText() === "undefined") return void 0;
+    const known = KNOWN_CONSTANTS[node.getText()];
+    if (known !== void 0) return known;
     const sym = node.getSymbol();
     for (const decl of (sym?.getAliasedSymbol() ?? sym)?.getDeclarations() ?? []) {
       if (import_ts_morph2.Node.isEnumMember(decl)) {
