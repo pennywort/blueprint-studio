@@ -107,6 +107,8 @@
 
 Связано: R-CFG-10 (`docs/refactoring/R-CFG-config.md`) — мета атрибутов в JSON.
 
+**Разбор и шаги:** [R-SCH-element-schemas.md](R-SCH-element-schemas.md) §1–6, вопросы В1–В3.
+
 ---
 
 ## R-ARC-4. Один механизм перехода между экранами [решение владельца] (§4b ↓, риск высокий)
@@ -129,6 +131,9 @@
    (`infrastructure/persistence/graph-record-migration.ts`) — рекомендуется.
 2. Оставить поля, но вычислять их из `links` (производные, не хранимые).
 3. Оставить как есть, задокументировать роль каждого.
+
+**Разбор и шаги:** [R-SCH-element-schemas.md](R-SCH-element-schemas.md) §7 — механизмов шесть
+(ещё `Scenario.link`/`ListItem.redirectUrl` и `FormComponent.routing`), вопрос В4.
 
 ---
 
