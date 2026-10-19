@@ -27,6 +27,13 @@ npx ts-node cli.ts --all --check                              # сверить �
 
 ajv необязателен: `npm i -D -E ajv@8.17.1` в пакете схем включает проверку схем и дефолтов.
 
+## Что пишется
+
+- `src/schemas/<элемент>.schema.json` — свои props элемента + `allOf: [$ref base]`;
+- `src/shared/base-element.schema.json` — общие props (`BaseProps`) и события (`BaseElement.on*`), из кода при каждом прогоне;
+- `src/shared/icon.schema.json` — список иконок;
+- `src/index.json` — манифест.
+
 ## Правила стабильности
 
 - Выход собирается только из типов `format.ts`; порядок ключей задаёт `canonical*`.

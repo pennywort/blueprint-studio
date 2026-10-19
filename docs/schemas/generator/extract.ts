@@ -333,7 +333,19 @@ export function readAllowedChildren(
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
-type PropsDecl = InterfaceDeclaration | TypeAliasDeclaration;
+export type PropsDecl = InterfaceDeclaration | TypeAliasDeclaration;
+
+/** interface/type alias по имени: сначала в ожидаемом файле, затем во всей программе. */
+export function findTypeDecl(project: Project, filePath: string, name: string): PropsDecl | null {
+  const hinted = project.getSourceFile(filePath);
+  const own = hinted?.getInterface(name) ?? hinted?.getTypeAlias(name);
+  if (own) return own;
+  for (const sf of project.getSourceFiles()) {
+    const decl = sf.getInterface(name) ?? sf.getTypeAlias(name);
+    if (decl) return decl;
+  }
+  return null;
+}
 
 function propsDeclIn(sf: SourceFile, name: string): PropsDecl | undefined {
   return sf.getInterface(name) ?? sf.getTypeAlias(name);

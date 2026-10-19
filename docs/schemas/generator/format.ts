@@ -9,9 +9,12 @@
  * CHANGELOG
  * 1 — первая зафиксированная версия: x-element-type, x-deprecated-aliases, x-container,
  *     x-ts-type вместо пустой схемы, anyOf вместо oneOf, без x-defaults (дефолт — в свойстве).
+ * 2 — общая часть в shared/base-element.schema.json (генерируется из кода): элемент
+ *     подключает её через allOf + $ref, в properties — только свои props, дефолты общих
+ *     props элемента — x-base-defaults; общие события — x-events базы (из BaseElement.on*).
  */
 
-export const FORMAT_VERSION = 1;
+export const FORMAT_VERSION = 2;
 
 export const JSON_SCHEMA_DRAFT = 'http://json-schema.org/draft-07/schema#';
 
@@ -58,8 +61,11 @@ export interface MethodSchema {
   parameters: MethodParam[];
 }
 
-/** События пока берутся из ручной базы (base-events) как есть. */
-export type EventSchema = { [key: string]: JsonValue };
+/** Событие: параметры обработчика по именам (из сигнатуры on*-свойства). */
+export interface EventSchema {
+  description?: string;
+  parameters: Record<string, PropSchema>;
+}
 
 export interface ContainerInfo {
   /**
@@ -80,8 +86,14 @@ export interface ElementSchema {
   'x-category': Category;
   'x-deprecated-aliases': string[];
   'x-container'?: ContainerInfo;
+  /** Общая часть: [{ $ref: '../shared/base-element.schema.json#' }]. */
+  allOf: Array<{ $ref: string }>;
+  /** Только props элемента; общие — в базе. */
   properties: Record<string, PropSchema>;
   required: string[];
+  /** Значения по умолчанию, которые элемент задаёт общим props. */
+  'x-base-defaults': Record<string, JsonValue>;
+  /** События элемента сверх общих (x-events базы). */
   'x-events': Record<string, EventSchema>;
   'x-methods': MethodSchema[];
 }
@@ -90,6 +102,19 @@ export interface SharedSchema extends PropSchema {
   $schema: typeof JSON_SCHEMA_DRAFT;
   $id: string;
   title: string;
+}
+
+/** shared/base-element.schema.json — общие props и события всех элементов. */
+export interface BaseSchema {
+  $schema: typeof JSON_SCHEMA_DRAFT;
+  $id: string;
+  title: string;
+  description: string;
+  type: 'object';
+  'x-format-version': number;
+  properties: Record<string, PropSchema>;
+  required: string[];
+  'x-events': Record<string, EventSchema>;
 }
 
 export interface ManifestEntry {
@@ -128,7 +153,7 @@ export interface Report {
 /** Один файл со всем результатом прогона --all --bundle. */
 export interface Bundle {
   'x-format-version': number;
-  shared: Record<string, SharedSchema>;
+  shared: Record<string, SharedSchema | BaseSchema>;
   elements: Record<string, ElementSchema>;
   report: Report;
 }
@@ -146,8 +171,10 @@ const ELEMENT_KEY_ORDER = [
   'x-category',
   'x-deprecated-aliases',
   'x-container',
+  'allOf',
   'properties',
   'required',
+  'x-base-defaults',
   'x-events',
   'x-methods',
 ];
@@ -203,11 +230,40 @@ export function canonicalProp(schema: PropSchema): PropSchema {
   return orderKeys(s, PROP_KEY_ORDER);
 }
 
+function canonicalProps(props: Record<string, PropSchema>): Record<string, PropSchema> {
+  const out: Record<string, PropSchema> = {};
+  for (const [k, v] of Object.entries(props)) out[k] = canonicalProp(v);
+  return out;
+}
+
+function canonicalEvents(events: Record<string, EventSchema>): Record<string, EventSchema> {
+  const out: Record<string, EventSchema> = {};
+  for (const [k, v] of Object.entries(events)) {
+    out[k] = orderKeys({ ...v, parameters: canonicalProps(v.parameters) }, ['description', 'parameters']);
+  }
+  return out;
+}
+
 export function canonicalElement(schema: ElementSchema): ElementSchema {
-  const props: Record<string, PropSchema> = {};
-  for (const [k, v] of Object.entries(schema.properties)) props[k] = canonicalProp(v);
   return orderKeys(
-    { ...schema, properties: props, required: [...schema.required].sort() },
+    {
+      ...schema,
+      properties: canonicalProps(schema.properties),
+      required: [...schema.required].sort(),
+      'x-events': canonicalEvents(schema['x-events']),
+    },
+    ELEMENT_KEY_ORDER,
+  );
+}
+
+export function canonicalBase(schema: BaseSchema): BaseSchema {
+  return orderKeys(
+    {
+      ...schema,
+      properties: canonicalProps(schema.properties),
+      required: [...schema.required].sort(),
+      'x-events': canonicalEvents(schema['x-events']),
+    },
     ELEMENT_KEY_ORDER,
   );
 }

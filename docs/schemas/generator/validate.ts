@@ -5,7 +5,7 @@
  */
 
 import type { Diagnostics } from './diagnostics';
-import type { ElementSchema, JsonValue, SharedSchema } from './format';
+import type { Bundle, ElementSchema, JsonValue } from './format';
 
 /** Ключи-расширения формата: валидатор их знает и не считает опечатками. */
 const EXTENSION_KEYWORDS = [
@@ -14,6 +14,7 @@ const EXTENSION_KEYWORDS = [
   'x-category',
   'x-deprecated-aliases',
   'x-container',
+  'x-base-defaults',
   'x-events',
   'x-methods',
   'x-declared-in',
@@ -40,7 +41,7 @@ function loadAjv(): (new (opts: object) => AjvLike) | null {
   }
 }
 
-export function createValidator(shared: Record<string, SharedSchema>, warn: (msg: string) => void) {
+export function createValidator(shared: Bundle['shared'], warn: (msg: string) => void) {
   const Ajv = loadAjv();
   if (!Ajv) {
     warn('[WARN] ajv не установлен — проверка схем пропущена');
@@ -56,11 +57,12 @@ export function createValidator(shared: Record<string, SharedSchema>, warn: (msg
     validateFormats: false,
   });
   ajv.addVocabulary(EXTENSION_KEYWORDS);
-  for (const s of Object.values(shared)) ajv.addSchema(s);
+  // required снимаем и у базы: проверяется объект «только дефолты», а не полный элемент
+  for (const s of Object.values(shared)) ajv.addSchema('required' in s ? { ...s, required: [] } : s);
 
   return (schema: ElementSchema, diag: Diagnostics): void => {
     // Дефолты проверяются схемой элемента без required: объект «все дефолты сразу»
-    const defaults: { [key: string]: JsonValue } = {};
+    const defaults: { [key: string]: JsonValue } = { ...schema['x-base-defaults'] };
     for (const [name, prop] of Object.entries(schema.properties)) {
       if (prop.default !== undefined) defaults[name] = prop.default;
     }

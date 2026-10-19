@@ -12,9 +12,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { CLI_NAME_ALIASES, PATHS, ROOT_MARKER } from './config';
+import { BASE, CLI_NAME_ALIASES, PATHS, ROOT_MARKER } from './config';
 import { Diagnostics } from './diagnostics';
-import { buildElementSchema, readBaseSchemas } from './emit';
+import { buildBase, buildElementSchema } from './emit';
 import { createProgram, findClass, readCatalog } from './extract';
 import {
   FORMAT_VERSION,
@@ -28,6 +28,9 @@ import { SharedRegistry } from './shared';
 import { createValidator } from './validate';
 
 type Args = Record<string, string | true>;
+
+/** Ключ отчёта для диагностик общей базы. */
+const BASE_KEY = '$base';
 
 function parseArgs(argv: string[]): Args {
   const args: Args = {};
@@ -94,14 +97,10 @@ function main(): number {
   console.log(`Загрузка программы типов (${targets.length} эл.)...`);
   const project = createProgram(rootDir);
   const shared = new SharedRegistry(rootDir, warn);
-  const base = readBaseSchemas(
-    path.resolve(pkgDir, PATHS.baseElementSchema),
-    path.resolve(pkgDir, PATHS.baseEventsSchema),
-    warn,
-  );
+  const diagnostics: Record<string, Diagnostics> = { [BASE_KEY]: new Diagnostics() };
+  const base = buildBase(project, rootDir, shared, diagnostics[BASE_KEY]!);
 
   const schemas: Record<string, ElementSchema> = {};
-  const diagnostics: Record<string, Diagnostics> = {};
   for (const elementType of targets) {
     const entry = catalog.elements[elementType]!;
     const diag = new Diagnostics();
@@ -115,14 +114,15 @@ function main(): number {
     }
   }
 
-  const sharedSchemas = shared.schemas();
+  const sharedSchemas: Bundle['shared'] = { ...shared.schemas() };
+  if (base) sharedSchemas[BASE.fileName] = base.schema;
   const validate = createValidator(sharedSchemas, warn);
   if (validate) {
     for (const [t, s] of Object.entries(schemas)) validate(s, diagnostics[t]!);
   }
 
   const report: Report = { summary: {}, elements: {}, sharedCandidates: shared.candidates() };
-  for (const t of targets) {
+  for (const t of [BASE_KEY, ...targets]) {
     const items = diagnostics[t]!.items;
     if (items.length > 0) report.elements[t] = items;
     for (const d of items) report.summary[d.code] = (report.summary[d.code] ?? 0) + 1;

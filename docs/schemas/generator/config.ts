@@ -24,8 +24,23 @@ export const PATHS = {
   schemasDir: 'src/schemas',
   sharedDir: 'src/shared',
   manifest: 'src/index.json',
-  baseElementSchema: 'src/shared/base-element.schema.json',
-  baseEventsSchema: 'src/shared/base-events.schema.json',
+} as const;
+
+/**
+ * Общая часть всех элементов: генерируется из кода при каждом прогоне в shared/<fileName>,
+ * схемы элементов подключают её через allOf + $ref. Файлы — подсказка, при промахе тип
+ * ищется по имени во всей программе.
+ */
+export const BASE = {
+  /** Тип общих props. */
+  propsType: 'BaseProps',
+  propsFile: 'packages/lib/src/dom/BaseElement/BaseProps.ts',
+  /** Интерфейс элемента: его свойства-функции on* — общие события. */
+  elementInterface: 'BaseElement',
+  elementFile: 'packages/lib/src/dom/BaseElement/BaseElement.ts',
+  eventNamePattern: /^on[A-Z]/,
+  fileName: 'base-element.schema.json',
+  title: 'BaseElement',
 } as const;
 
 export const SCHEMA_ID_BASE = 'https://framework.internal';

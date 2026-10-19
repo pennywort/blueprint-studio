@@ -1,15 +1,17 @@
 /**
- * Сборка схемы элемента из сведений, извлечённых из кода.
+ * Сборка схем: общая база (shared/base-element.schema.json) и схема элемента.
+ * Всё — из кода; база генерируется при каждом прогоне.
  */
 
-import * as fs from 'fs';
+import * as path from 'path';
 
-import type { ClassDeclaration, Project } from 'ts-morph';
+import { Node, type ClassDeclaration, type Project } from 'ts-morph';
 
-import { CATEGORY_BY_ELEMENT, EXCLUDED_PROPS, SCHEMA_ID_BASE } from './config';
-import { Diagnostics } from './diagnostics';
+import { BASE, CATEGORY_BY_ELEMENT, EXCLUDED_PROPS, SCHEMA_ID_BASE } from './config';
+import type { Diagnostics } from './diagnostics';
 import {
   findPropsDecl,
+  findTypeDecl,
   isContainer,
   readAllowedChildren,
   readDefaults,
@@ -17,55 +19,21 @@ import {
   readProps,
   type ElementCatalog,
   type ElementEntry,
+  type PropsDecl,
 } from './extract';
 import {
   JSON_SCHEMA_DRAFT,
   FORMAT_VERSION,
+  canonicalBase,
   canonicalElement,
+  type BaseSchema,
   type ElementSchema,
   type EventSchema,
   type JsonValue,
   type PropSchema,
 } from './format';
 import type { SharedRegistry } from './shared';
-import { jsDocDescription, typeToSchema } from './type-to-schema';
-
-export interface BaseSchemas {
-  properties: Record<string, PropSchema>;
-  events: Record<string, EventSchema>;
-}
-
-/** Убирает невалидный для draft-07 "type": "any" из ручной базы событий. */
-function stripAnyType(value: JsonValue, onFound: () => void): JsonValue {
-  if (Array.isArray(value)) return value.map((v) => stripAnyType(v, onFound));
-  if (value && typeof value === 'object') {
-    const out: { [key: string]: JsonValue } = {};
-    for (const [k, v] of Object.entries(value)) {
-      if (k === 'type' && v === 'any') {
-        onFound();
-        continue;
-      }
-      out[k] = stripAnyType(v, onFound);
-    }
-    return out;
-  }
-  return value;
-}
-
-export function readBaseSchemas(
-  baseElementPath: string,
-  baseEventsPath: string,
-  warn: (msg: string) => void,
-): BaseSchemas {
-  const read = (p: string): { [key: string]: JsonValue } => {
-    if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf-8')) as { [key: string]: JsonValue };
-    warn(`[WARN] ручная база не найдена: ${p}`);
-    return {};
-  };
-  const properties = (read(baseElementPath).properties ?? {}) as unknown as Record<string, PropSchema>;
-  const events = (read(baseEventsPath)['x-events'] ?? {}) as Record<string, EventSchema>;
-  return { properties, events };
-}
+import { jsDocDescription, typeToSchema, type TypeContext } from './type-to-schema';
 
 function title(className: string): string {
   return className
@@ -94,12 +62,108 @@ function nullable(schema: PropSchema): PropSchema {
   return { ...head, anyOf: [rest, { type: 'null' }] };
 }
 
+/** Свойства props-типа → схемы (с описанием и источником), в порядке компилятора. */
+function propsToSchemas(
+  decl: PropsDecl,
+  ctx: Omit<TypeContext, 'printNode'>,
+  skip: (name: string, declNode: Node | undefined) => boolean,
+): Array<{ name: string; schema: PropSchema; optional: boolean }> {
+  const out: Array<{ name: string; schema: PropSchema; optional: boolean }> = [];
+  for (const prop of readProps(decl)) {
+    const name = prop.name;
+    if (name.startsWith('_') || EXCLUDED_PROPS.includes(name)) continue;
+    if (skip(name, prop.symbol.getDeclarations()[0])) continue;
+    const schema = typeToSchema(
+      prop.symbol.getTypeAtLocation(decl),
+      { ...ctx, printNode: decl },
+      `properties.${name}`,
+    );
+    const description = jsDocDescription(prop.symbol);
+    out.push({
+      name,
+      schema: { ...(description ? { description } : {}), 'x-declared-in': prop.declaredIn, ...schema },
+      optional: prop.optional,
+    });
+  }
+  return out;
+}
+
+// ─── База ────────────────────────────────────────────────────────────────────
+
+export interface BaseInfo {
+  schema: BaseSchema;
+  ref: string;
+  /** Имя общего prop → узел объявления: совпадение узла = prop унаследован, а не переобъявлен. */
+  declNodes: Map<string, Node | undefined>;
+}
+
+export function buildBase(
+  project: Project,
+  rootDir: string,
+  shared: SharedRegistry,
+  diag: Diagnostics,
+): BaseInfo | null {
+  const propsDecl = findTypeDecl(project, path.resolve(rootDir, BASE.propsFile), BASE.propsType);
+  if (!propsDecl) {
+    diag.report('base-missing', 'properties', `тип ${BASE.propsType} не найден`);
+    return null;
+  }
+  const ctx = { elementType: '$base', diag, shared };
+  const properties: Record<string, PropSchema> = {};
+  const required: string[] = [];
+  const declNodes = new Map<string, Node | undefined>();
+  for (const p of propsToSchemas(propsDecl, ctx, () => false)) {
+    properties[p.name] = p.schema;
+    if (!p.optional) required.push(p.name);
+  }
+  for (const prop of readProps(propsDecl)) declNodes.set(prop.name, prop.symbol.getDeclarations()[0]);
+
+  // События: свойства-функции on* интерфейса элемента
+  const events: Record<string, EventSchema> = {};
+  const elementDecl = findTypeDecl(project, path.resolve(rootDir, BASE.elementFile), BASE.elementInterface);
+  if (!elementDecl) {
+    diag.report('base-missing', 'x-events', `интерфейс ${BASE.elementInterface} не найден`);
+  } else {
+    for (const prop of elementDecl.getType().getProperties()) {
+      const name = prop.getName();
+      if (!BASE.eventNamePattern.test(name)) continue;
+      const signature = prop.getTypeAtLocation(elementDecl).getCallSignatures()[0];
+      if (!signature) continue;
+      const parameters: Record<string, PropSchema> = {};
+      for (const param of signature.getParameters()) {
+        parameters[param.getName()] = typeToSchema(
+          param.getTypeAtLocation(elementDecl),
+          { ...ctx, printNode: elementDecl },
+          `x-events.${name}.${param.getName()}`,
+        );
+      }
+      const description = jsDocDescription(prop);
+      events[name] = { ...(description ? { description } : {}), parameters };
+    }
+  }
+
+  const schema = canonicalBase({
+    $schema: JSON_SCHEMA_DRAFT,
+    $id: `${SCHEMA_ID_BASE}/shared/${BASE.fileName}`,
+    title: BASE.title,
+    description: `Общие свойства и события всех UI-элементов (из ${BASE.propsType} и ${BASE.elementInterface})`,
+    type: 'object',
+    'x-format-version': FORMAT_VERSION,
+    properties,
+    required,
+    'x-events': events,
+  });
+  return { schema, ref: `../shared/${BASE.fileName}#`, declNodes };
+}
+
+// ─── Элемент ─────────────────────────────────────────────────────────────────
+
 export interface BuildInput {
   project: Project;
   cls: ClassDeclaration;
   entry: ElementEntry;
   catalog: ElementCatalog;
-  base: BaseSchemas;
+  base: BaseInfo | null;
   shared: SharedRegistry;
 }
 
@@ -108,58 +172,47 @@ export function buildElementSchema(input: BuildInput, diag: Diagnostics): Elemen
   const elementType = entry.elementType;
   const defaults = readDefaults(cls, diag);
 
+  // Общий prop, унаследованный без переобъявления, описан базой
+  const isBaseProp = (name: string, declNode: Node | undefined): boolean =>
+    !!base && base.declNodes.has(name) && base.declNodes.get(name) === declNode;
+
   const properties: Record<string, PropSchema> = {};
   const required: string[] = [];
+  const baseDefaults: Record<string, JsonValue> = {};
 
-  // Props элемента (собственные и унаследованные) — источник правды о типе.
-  // Ручная база даёт только описание, если в коде нет JSDoc.
   const decl = findPropsDecl(project, cls, entry);
   if (!decl) {
     diag.report('props-missing', 'properties', `не найден ${entry.className.replace(/Element$/, '')}Props`);
   } else {
     for (const prop of readProps(decl)) {
-      const name = prop.name;
-      if (name.startsWith('_') || EXCLUDED_PROPS.includes(name)) continue;
-      const ctx = { elementType, diag, shared, printNode: decl };
-      let schema: PropSchema = typeToSchema(prop.symbol.getTypeAtLocation(decl), ctx, `properties.${name}`);
-      const description = jsDocDescription(prop.symbol) ?? base.properties[name]?.description;
-      schema = { ...(description ? { description } : {}), 'x-declared-in': prop.declaredIn, ...schema };
-
-      if (name in defaults) {
-        const value = defaults[name]!;
+      if (prop.name.startsWith('_') || EXCLUDED_PROPS.includes(prop.name)) continue;
+      if (prop.name in defaults && isBaseProp(prop.name, prop.symbol.getDeclarations()[0])) {
+        baseDefaults[prop.name] = defaults[prop.name]!;
+      }
+    }
+    for (const p of propsToSchemas(decl, { elementType, diag, shared }, isBaseProp)) {
+      let schema = p.schema;
+      if (p.name in defaults) {
+        const value = defaults[p.name]!;
         if (value === null && !allowsNull(schema, shared)) {
           diag.report(
             'default-null-widened',
-            `properties.${name}`,
+            `properties.${p.name}`,
             'default: null, а тип без null — тип расширен',
           );
           schema = nullable(schema);
         }
         schema.default = value;
       }
-      properties[name] = schema;
-      if (!prop.optional) required.push(name);
+      properties[p.name] = schema;
+      if (!p.optional) required.push(p.name);
     }
   }
 
   for (const name of Object.keys(defaults)) {
-    if (!(name in properties) && !EXCLUDED_PROPS.includes(name)) {
+    if (!(name in properties) && !(name in baseDefaults) && !EXCLUDED_PROPS.includes(name)) {
       diag.report('default-without-prop', `defaults.${name}`, 'ключ defaultProps без свойства в props');
     }
-  }
-  if (decl) {
-    for (const name of Object.keys(base.properties)) {
-      if (!(name in properties))
-        diag.report('base-only-prop', `properties.${name}`, 'есть в ручной базе, нет в коде');
-    }
-  }
-
-  // События — ручная база
-  const events: Record<string, EventSchema> = {};
-  for (const [name, ev] of Object.entries(base.events)) {
-    events[name] = stripAnyType(ev, () =>
-      diag.report('base-event-any', `x-events.${name}`, '"type": "any" убран'),
-    ) as EventSchema;
   }
 
   const schema: ElementSchema = {
@@ -172,9 +225,11 @@ export function buildElementSchema(input: BuildInput, diag: Diagnostics): Elemen
     'x-element-type': elementType,
     'x-category': CATEGORY_BY_ELEMENT[elementType] ?? 'basic',
     'x-deprecated-aliases': entry.deprecatedAliases,
+    allOf: base ? [{ $ref: base.ref }] : [],
     properties,
     required,
-    'x-events': events,
+    'x-base-defaults': baseDefaults,
+    'x-events': {},
     'x-methods': readMethods(cls),
   };
   if (isContainer(cls)) {

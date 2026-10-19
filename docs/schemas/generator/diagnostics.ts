@@ -31,14 +31,12 @@ export const DIAGNOSTIC_CODES = {
   'schema-invalid': 'error',
   /** Props-файл или тип <X>Props не найден. */
   'props-missing': 'error',
-  /** Свойство есть в ручной базе, но не в props-типе элемента — в схему не попадает. */
-  'base-only-prop': 'info',
+  /** Не найден тип общих props или интерфейс элемента (config BASE). */
+  'base-missing': 'error',
   /** Контейнер, но список дочерних типов не извлечён. */
   'children-unresolved': 'warn',
   /** Список дочерних типов извлечён по тексту, а не по типу. */
   'children-by-text': 'info',
-  /** Ручная база событий содержит невалидный "type": "any" — убран. */
-  'base-event-any': 'info',
   /** Генерация элемента упала. */
   'element-failed': 'error',
 } as const satisfies Record<string, Severity>;
