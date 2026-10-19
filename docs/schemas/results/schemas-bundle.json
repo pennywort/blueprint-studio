@@ -5397,7 +5397,62 @@
           "$ref": "../shared/base-element.schema.json#"
         }
       ],
-      "properties": {},
+      "properties": {
+        "draggableColumns": {
+          "x-declared-in": "FuiTableProps",
+          "type": "boolean"
+        },
+        "paginationOptions": {
+          "x-declared-in": "FuiTableProps",
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "headerSize": {
+          "x-declared-in": "FuiTableProps",
+          "type": "string",
+          "enum": ["default", "small"],
+          "default": "default"
+        },
+        "checkboxSelection": {
+          "x-declared-in": "FuiTableProps",
+          "type": "boolean"
+        },
+        "wrap": {
+          "x-declared-in": "FuiTableProps",
+          "type": "boolean"
+        },
+        "width": {
+          "x-declared-in": "FuiTableProps",
+          "type": "number"
+        },
+        "padding": {
+          "x-declared-in": "ContainerProps",
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          ]
+        },
+        "noWrap": {
+          "x-declared-in": "ContainerProps",
+          "type": "boolean"
+        },
+        "elements": {
+          "x-declared-in": "ContainerTemplateProps",
+          "type": "array",
+          "items": {
+            "x-kind": "element"
+          }
+        }
+      },
       "required": [],
       "x-base-defaults": {},
       "x-events": {},
@@ -5421,7 +5476,45 @@
           "$ref": "../shared/base-element.schema.json#"
         }
       ],
-      "properties": {},
+      "properties": {
+        "cellType": {
+          "x-declared-in": "FuiTableCellProps",
+          "type": "string"
+        },
+        "columnId": {
+          "x-declared-in": "FuiTableCellProps",
+          "type": "string"
+        },
+        "value": {
+          "x-declared-in": "FuiTableCellProps",
+          "type": "string"
+        },
+        "padding": {
+          "x-declared-in": "ContainerProps",
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          ]
+        },
+        "noWrap": {
+          "x-declared-in": "ContainerProps",
+          "type": "boolean"
+        },
+        "elements": {
+          "x-declared-in": "ContainerTemplateProps",
+          "type": "array",
+          "items": {
+            "x-kind": "element"
+          }
+        }
+      },
       "required": [],
       "x-base-defaults": {},
       "x-events": {},
@@ -5445,7 +5538,61 @@
           "$ref": "../shared/base-element.schema.json#"
         }
       ],
-      "properties": {},
+      "properties": {
+        "field": {
+          "x-declared-in": "FuiTableColumnProps",
+          "type": "string"
+        },
+        "headerName": {
+          "x-declared-in": "FuiTableColumnProps",
+          "type": "string"
+        },
+        "width": {
+          "x-declared-in": "FuiTableColumnProps",
+          "type": "number"
+        },
+        "maxWidth": {
+          "x-declared-in": "FuiTableColumnProps",
+          "type": "number"
+        },
+        "minWidth": {
+          "x-declared-in": "FuiTableColumnProps",
+          "type": "number"
+        },
+        "visibleIcon": {
+          "x-declared-in": "FuiTableColumnProps",
+          "type": "boolean"
+        },
+        "visibleIcon2": {
+          "x-declared-in": "FuiTableColumnProps",
+          "type": "boolean"
+        },
+        "padding": {
+          "x-declared-in": "ContainerProps",
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          ]
+        },
+        "noWrap": {
+          "x-declared-in": "ContainerProps",
+          "type": "boolean"
+        },
+        "elements": {
+          "x-declared-in": "ContainerTemplateProps",
+          "type": "array",
+          "items": {
+            "x-kind": "element"
+          }
+        }
+      },
       "required": [],
       "x-base-defaults": {},
       "x-events": {},
@@ -5469,7 +5616,33 @@
           "$ref": "../shared/base-element.schema.json#"
         }
       ],
-      "properties": {},
+      "properties": {
+        "padding": {
+          "x-declared-in": "ContainerProps",
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          ]
+        },
+        "noWrap": {
+          "x-declared-in": "ContainerProps",
+          "type": "boolean"
+        },
+        "elements": {
+          "x-declared-in": "ContainerTemplateProps",
+          "type": "array",
+          "items": {
+            "x-kind": "element"
+          }
+        }
+      },
       "required": [],
       "x-base-defaults": {},
       "x-events": {},
@@ -9358,7 +9531,44 @@
           "$ref": "../shared/base-element.schema.json#"
         }
       ],
-      "properties": {},
+      "properties": {
+        "loading": {
+          "x-declared-in": "ScrollViewTemplateProps",
+          "type": "boolean",
+          "default": false
+        },
+        "height": {
+          "x-declared-in": "ScrollViewTemplateProps",
+          "type": "number",
+          "default": 0
+        },
+        "padding": {
+          "x-declared-in": "ContainerProps",
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          ]
+        },
+        "noWrap": {
+          "x-declared-in": "ContainerProps",
+          "type": "boolean"
+        },
+        "elements": {
+          "x-declared-in": "ContainerTemplateProps",
+          "type": "array",
+          "items": {
+            "x-kind": "element"
+          },
+          "default": []
+        }
+      },
       "required": [],
       "x-base-defaults": {},
       "x-events": {},
@@ -11704,7 +11914,36 @@
           "x-declared-in": "SwitchGroup",
           "type": "array",
           "items": {
-            "x-ts-type": "ListSwitchesItemBase & { onChange?: ((el: ListSwitchesItemBase & { target: \"switch\"; }) => void) | undefined; }"
+            "type": "object",
+            "properties": {
+              "checked": {
+                "type": "boolean"
+              },
+              "disabled": {
+                "type": "boolean"
+              },
+              "error": {
+                "type": "boolean"
+              },
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "loading": {
+                "type": "boolean"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "value": {
+                "x-ts-type": "any"
+              },
+              "onChange": {
+                "x-kind": "handler"
+              }
+            }
           }
         },
         "loading": {
@@ -13358,13 +13597,11 @@
   },
   "report": {
     "summary": {
-      "any-type": 8,
+      "any-type": 9,
       "default-null-widened": 35,
       "default-unresolved": 2,
-      "default-without-prop": 4,
       "external-type": 3,
-      "props-missing": 5,
-      "unresolved-type": 4
+      "unresolved-type": 3
     },
     "elements": {
       "$base": [
@@ -13473,44 +13710,6 @@
           "message": "default: null, а тип без null — тип расширен"
         }
       ],
-      "fui-table": [
-        {
-          "code": "props-missing",
-          "severity": "error",
-          "path": "properties",
-          "message": "не найден FuiTableProps (extends ContainerImpl)"
-        },
-        {
-          "code": "default-without-prop",
-          "severity": "info",
-          "path": "defaults.headerSize",
-          "message": "ключ defaultProps без свойства в props"
-        }
-      ],
-      "fui-table-cell": [
-        {
-          "code": "props-missing",
-          "severity": "error",
-          "path": "properties",
-          "message": "не найден FuiTableCellProps (extends ContainerImpl)"
-        }
-      ],
-      "fui-table-column": [
-        {
-          "code": "props-missing",
-          "severity": "error",
-          "path": "properties",
-          "message": "не найден FuiTableColumnProps (extends ContainerImpl)"
-        }
-      ],
-      "fui-table-row": [
-        {
-          "code": "props-missing",
-          "severity": "error",
-          "path": "properties",
-          "message": "не найден FuiTableRowProps (extends ContainerImpl)"
-        }
-      ],
       "image": [
         {
           "code": "default-null-widened",
@@ -13581,32 +13780,6 @@
           "severity": "warn",
           "path": "properties.dropdown",
           "message": "default: null, а тип без null — тип расширен"
-        }
-      ],
-      "scroll-view": [
-        {
-          "code": "props-missing",
-          "severity": "error",
-          "path": "properties",
-          "message": "не найден ScrollViewProps (extends ContainerImpl)"
-        },
-        {
-          "code": "default-without-prop",
-          "severity": "info",
-          "path": "defaults.loading",
-          "message": "ключ defaultProps без свойства в props"
-        },
-        {
-          "code": "default-without-prop",
-          "severity": "info",
-          "path": "defaults.elements",
-          "message": "ключ defaultProps без свойства в props"
-        },
-        {
-          "code": "default-without-prop",
-          "severity": "info",
-          "path": "defaults.height",
-          "message": "ключ defaultProps без свойства в props"
         }
       ],
       "segment-button": [
@@ -13721,10 +13894,10 @@
       ],
       "switch-group": [
         {
-          "code": "unresolved-type",
+          "code": "any-type",
           "severity": "warn",
-          "path": "properties.listSwitches[]",
-          "message": "не распознан: ListSwitchesItemBase & { onChange?: ((el: ListSwitchesItemBase & { target: \"switch\"; }) => void) | undefined; }"
+          "path": "properties.listSwitches[].value",
+          "message": "any/unknown: any"
         }
       ],
       "tab-view": [
