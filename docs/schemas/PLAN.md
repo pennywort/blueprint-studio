@@ -59,15 +59,15 @@ properties/$ref/default/description`), обязательные `x-*`. Всё п
 
 ## Статус (2026-10-19) — генератор ВЫПОЛНЕН ✅
 
-| Пункт                                                                                                   | Статус           |
-| ------------------------------------------------------------------------------------------------------- | ---------------- |
-| Этап 0 (формат, версия, `x-*`, `x-unresolved`, эталоны)                                                 | ✅               |
-| Этап 1 (извлечение → IR → вывод, ajv, `--all`, отчёт, `--check`, детерминизм)                           | ✅               |
-| 2.1–2.5, 2.7                                                                                            | ✅               |
-| 2.3+ Props из поля `_props`, пересечения объектов, `Record`, `X & string`, `object`, `Number.MAX_VALUE` | ✅               |
-| 2.6 события из кода (`publishEvent`)                                                                    | ⏸ отложено       |
-| 2.8 JSDoc базы                                                                                          | ⏸ отложено       |
-| Этап 3 (потребление в blueprint-studio)                                                                 | ▶ следующий тред |
+| Пункт                                                                                                   | Статус     |
+| ------------------------------------------------------------------------------------------------------- | ---------- |
+| Этап 0 (формат, версия, `x-*`, `x-unresolved`, эталоны)                                                 | ✅         |
+| Этап 1 (извлечение → IR → вывод, ajv, `--all`, отчёт, `--check`, детерминизм)                           | ✅         |
+| 2.1–2.5, 2.7                                                                                            | ✅         |
+| 2.3+ Props из поля `_props`, пересечения объектов, `Record`, `X & string`, `object`, `Number.MAX_VALUE` | ✅         |
+| 2.6 события из кода (`publishEvent`)                                                                    | ⏸ отложено |
+| 2.8 JSDoc базы                                                                                          | ⏸ отложено |
+| Этап 3 (потребление в blueprint-studio)                                                                 | ✅         |
 
 - Генератор: исходники `docs/schemas/generator/` (README), сборка `docs/schemas/generate-schema.js`
   (`npm run schemas:build`), последний коммит генератора 836d186 в master.
@@ -78,3 +78,21 @@ properties/$ref/default/description`), обязательные `x-*`. Всё п
   `value` у switch/MenuItems/`onChangeValue` — `any` по смыслу, оставить.
 - В пакете схемы пишутся по файлам: `node generate-schema.js --all` → `src/schemas/<el>.schema.json`,
   `src/shared/*.schema.json` (`$ref`), `src/index.json`. Бандл — только для передачи в этот проект.
+
+## Этап 3 — как устроено (2026-10-19)
+
+- Решения владельца: элемент карты = `kind` (имя во фреймворке) + `props` по JSON-схеме, zod — только
+  структура карты; компоненты (CI picker, поиск сотрудника, адрес, логин) и комментарий — схемы проекта;
+  datePeriod → `date-range-field-picker`, infoBlock → `message-strip`, Select list → `select` /
+  `radio-group` (displayType radio).
+- Схемы фреймворка: `npm run schemas:import -- [бандл | папка пакета]` → копия
+  `src/infrastructure/element-schemas/framework/schemas-bundle.json` (без отчёта). Переход на npm-пакет
+  меняет только источник JSON в `container.ts`.
+- Схемы проекта: `src/infrastructure/element-schemas/project/project-schemas.json` (тот же формат).
+- Политика редактора: `src/infrastructure/element-schemas/editor-policy.json` — элементы, атрибуты,
+  обязательность, порядок, подписи, секции, варианты enum, `item` массивов объектов, `card`, `defaults`.
+  Только сужает: тип значения — из схемы, enum ⊆ схемы. Проверка — `npm run schemas:check`
+  (та же сборка `assemble-element-schemas.ts`, что у редактора при старте).
+- Варианты источников логики (`select.options`, `radio-group.items`) — таблица `domain/element-kinds.ts`.
+- Сохранённые карты: миграция записи v4 → v5 (`graph-record-migration.ts`); поля без пары во
+  фреймворке теряются (maxLength, withTime, иконка List item, position кнопки, search списка).
