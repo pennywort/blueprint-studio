@@ -155,12 +155,13 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - [эпик 002, ADR-19] Ёмкость уровней одной таблицей для страниц и шагов формы: уровень 0 — один узел, запрет виден в dnd, пустой уровень держит место (после удаления первого шага туда можно перенести шаг) [коммит cbfcf09; owner проверил 2026-10-16]
 - Принципы [owner 2026-10-16]: обратимость решений (policy as data) и Open/Closed + Strategy — AGENTS.md §4a; промпт аудита выноса правил в конфиг — docs/refactoring/A-CFG-config-audit.md [коммиты cbfcf09, fce6aae]
 - Генератор схем элементов фреймворка готов (этапы 0–2 docs/schemas/PLAN.md): мета-схема формата, x-format-version, общая база в shared через $ref; результат docs/schemas/results/schemas-bundle.json (132 элемента) [owner 2026-10-19; коммиты a8d3c90, 66ac82b, af62b63]
+- Этап 3 docs/schemas/PLAN.md — потребление схем: элемент = kind фреймворка + props по JSON-схеме; политика редактора editor-policy.json (только сужает схему), схемы проекта для компонентов и комментария, npm run schemas:import/check, миграция карт v4→v5 [owner 2026-10-19; коммит 76da757]
 
 ### 4.2 NOT DONE (пробелы)
 
 - Module Federation не настроена (пакет не установлен, конфигурация отсутствует) — ждёт решения контракта микрофронтенда, §6
 - effector/patronum не установлены, presentation-слой без стейт-менеджера (TEMPORARY: граф в useState useEditorGraph, мутации только через CommandBus)
-- Наполнение схем List item/Widget card (иконка, ссылка, настройки) и элемент FAQ — со схемами позже [owner 2026-10-13]; сейчас stub-схемы с минимальными полями; T-042 (IconPicker, AttachmentField, DeviceUrlMapEditor) отложена
+- Пакета схем фреймворка нет: stub — бандл генератора docs/schemas/results/schemas-bundle.json [owner 2026-10-19]; схемы компонентов (CI picker, поиск сотрудника, адрес, логин) черновые; вариант «по умолчанию» Select/Radio group не редактируется; атрибуты сложных типов (anyOf, объекты) скрыты; FAQ и T-042 отложены
 - Страница /preview — заглушка без реализации; отложена владельцем 2026-10-13 («не нужен сейчас, отдельная большая задача»); предпосылки: пакет preview lib-app-core (T-051) и персистентность (T-053); семантика видимости пока демонстрируется бейджем «Скрыт в предпросмотре» на карточке
 - Серверное хранилище ServiceGraph отсутствует (сейчас только IndexedDB браузера, T-053); один ключ = id карты; перенос между браузерами — только импорт/экспорт JSON [коммит 320b9a4]
 
@@ -189,7 +190,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 
 <!-- Всё неопределённое. UNKNOWN — не выдумывать ответ, ждать владельца или проверки в коде. -->
 
-- ❓ UNKNOWN: доступ к пакету element-schemas из lib-app-core — получен или stub-манифест постоянный?
+- ✅ RESOLVED [owner 2026-10-19, коммит 76da757]: доступ к пакету element-schemas — пакета пока нет; stub — бандл генератора схем, при появлении пакета — npm run schemas:import из него
 - ❓ UNKNOWN: формальная схема MicroAppDescriptor у движка lib-app-core (Q4 из proposal.md)
 - ❓ NEW [owner 2026-10-06]: кто владеет роутингом в микрофронте — host или remote? Текущий createHashRouter (ADR-08) может конфликтовать с host-роутером
 - ❓ NEW [owner 2026-10-06]: shared-зависимости Module Federation: react, react-dom, react-router-dom, flamingo, effector — singleton-политика и выравнивание версий с host
@@ -232,12 +233,11 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 
 <!-- Приоритизировано, максимум 7 пунктов. Выполненное удаляется (факт уходит в §4.1). -->
 
-1. [ ] NEW [owner 2026-10-19]: этап 3 docs/schemas/PLAN.md — потребление схем фреймворка: парсер (zod, x-format-version), политика редактора данными, замена ручного манифеста src/infrastructure/element-schemas
-2. [ ] Epic 002: T-042 (IconPicker, AttachmentField, DeviceUrlMapEditor) и наполнение схем List item/Widget card/FAQ — отложено до схем элементов [owner 2026-10-13]
-3. [ ] NEW: определить контракт микрофронтенда (exposes, shared, роутинг) — блокирует адаптацию bootstrap под remote
-4. [ ] NEW: установить и настроить Module Federation plugin для Rsbuild, проверить интеграцию с host
-5. [ ] /preview — отдельная большая задача [owner 2026-10-13]; после пакета preview lib-app-core (T-051) и персистентности (T-053)
-6. [ ] План R-CFG (docs/refactoring/R-CFG-config.md, принцип — конституция §4a): готовы R-CFG-1, R-CFG-2, частично R-CFG-5 и R-CFG-6; дальше — по одному шагу плана на сессию [owner 2026-10-16]
+1. [ ] Epic 002: T-042 (IconPicker, AttachmentField, DeviceUrlMapEditor) и наполнение схем List item/Widget card/FAQ — отложено до схем элементов [owner 2026-10-13]
+2. [ ] NEW: определить контракт микрофронтенда (exposes, shared, роутинг) — блокирует адаптацию bootstrap под remote
+3. [ ] NEW: установить и настроить Module Federation plugin для Rsbuild, проверить интеграцию с host
+4. [ ] /preview — отдельная большая задача [owner 2026-10-13]; после пакета preview lib-app-core (T-051) и персистентности (T-053)
+5. [ ] План R-CFG (docs/refactoring/R-CFG-config.md, принцип — конституция §4a): готовы R-CFG-1, R-CFG-2, частично R-CFG-5 и R-CFG-6; дальше — по одному шагу плана на сессию [owner 2026-10-16]
 
 ---
 
@@ -300,3 +300,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-10-16 | agent:claude | R-CFG-2: возможности блоков таблицей (domain/container-capabilities.ts)
 - 2026-10-16 | agent:claude | R-CFG-2 доводка: page.logic включает логику на страницах целиком
 - 2026-10-19 | agent:claude | генератор схем готов (этапы 0–2), следующий шаг — этап 3, потребление схем
+- 2026-10-19 | agent:claude | этап 3 потребления схем выполнен, stub — бандл генератора
