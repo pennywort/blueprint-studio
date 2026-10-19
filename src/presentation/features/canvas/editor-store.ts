@@ -22,9 +22,14 @@ export function useEditorStore() {
 
   // Проект выбирается query-параметром роута (/editor?project=stress&levels=…).
   const [searchParams] = useSearchParams();
-  const [graph, setGraph] = useState<ServiceGraph>(() =>
-    container.cradle.graphSeed(searchParams.get('project'), searchParams.toString()),
-  );
+  // История принадлежит одному графу (R-ARC-1, ADR-05): CommandBus — singleton
+  // DI и переживает уход со страницы, поэтому при открытии редактора она
+  // сбрасывается всегда — даже если сохранённой карты нет и load() вернёт
+  // null. Сброс идемпотентен — повторный вызов инициализатора безопасен.
+  const [graph, setGraph] = useState<ServiceGraph>(() => {
+    commandBus.reset();
+    return container.cradle.graphSeed(searchParams.get('project'), searchParams.toString());
+  });
   // Актуальный граф в ref: колбэки react-flow не должны зависеть от замыканий
   // на устаревший state, а мутации идут только через CommandBus.
   const graphRef = useRef(graph);
