@@ -818,7 +818,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -935,18 +935,18 @@
                 "placement": {
                   "type": "string",
                   "enum": [
-                    "left",
-                    "right",
-                    "top",
-                    "bottom",
                     "bottom-end",
                     "bottom-start",
+                    "bottom",
                     "left-end",
                     "left-start",
+                    "left",
                     "right-end",
                     "right-start",
+                    "right",
                     "top-end",
-                    "top-start"
+                    "top-start",
+                    "top"
                   ]
                 }
               },
@@ -1358,7 +1358,7 @@
             },
             "size": {
               "type": "string",
-              "enum": ["small", "big", "large", "bigger"]
+              "enum": ["small", "big", "bigger", "large"]
             }
           }
         }
@@ -1414,7 +1414,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -1464,7 +1464,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -1650,7 +1650,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -1725,7 +1725,7 @@
           "x-declared-in": "BottomSheetProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         },
         "padding": {
@@ -1750,7 +1750,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -1827,7 +1827,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -1928,7 +1928,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -2111,7 +2111,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -2411,7 +2411,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -2481,7 +2481,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -2877,7 +2877,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -3358,7 +3358,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -4576,7 +4576,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -4748,7 +4748,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -4901,7 +4901,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -5184,7 +5184,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -5235,7 +5235,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -5314,7 +5314,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -5370,7 +5370,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -5529,7 +5529,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -5622,7 +5622,7 @@
           "x-declared-in": "GridCellProps",
           "anyOf": [
             {
-              "x-ts-type": "BaseProps"
+              "x-kind": "element"
             },
             {
               "type": "null"
@@ -5652,7 +5652,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -5722,7 +5722,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -5888,7 +5888,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -5947,7 +5947,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -6049,7 +6049,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -6258,7 +6258,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -6870,18 +6870,6 @@
             {
               "type": "object",
               "properties": {
-                "disabled": {
-                  "type": "boolean"
-                },
-                "dateText": {
-                  "type": "string"
-                }
-              },
-              "required": ["disabled", "dateText"]
-            },
-            {
-              "type": "object",
-              "properties": {
                 "type": {
                   "type": "string",
                   "const": "checkbox"
@@ -6983,6 +6971,18 @@
                 }
               },
               "required": ["disabled"]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "disabled": {
+                  "type": "boolean"
+                },
+                "dateText": {
+                  "type": "string"
+                }
+              },
+              "required": ["disabled", "dateText"]
             },
             {
               "type": "object",
@@ -7256,7 +7256,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -7916,18 +7916,18 @@
                 "placement": {
                   "type": "string",
                   "enum": [
-                    "left",
-                    "right",
-                    "top",
-                    "bottom",
                     "bottom-end",
                     "bottom-start",
+                    "bottom",
                     "left-end",
                     "left-start",
+                    "left",
                     "right-end",
                     "right-start",
+                    "right",
                     "top-end",
-                    "top-start"
+                    "top-start",
+                    "top"
                   ]
                 }
               },
@@ -8015,7 +8015,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -8294,7 +8294,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -8457,7 +8457,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -9076,7 +9076,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -9331,7 +9331,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -10447,7 +10447,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -11045,7 +11045,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -11093,7 +11093,7 @@
         "size": {
           "x-declared-in": "StatusCardProps",
           "type": "string",
-          "enum": ["default", "small", "big", "medium", "large", "smaller", "bigger"]
+          "enum": ["default", "small", "big", "bigger", "large", "medium", "smaller"]
         },
         "placement": {
           "x-declared-in": "StatusCardProps",
@@ -11410,7 +11410,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -11826,7 +11826,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -11918,7 +11918,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -12128,7 +12128,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -13183,7 +13183,7 @@
           "x-declared-in": "ContainerTemplateProps",
           "type": "array",
           "items": {
-            "x-ts-type": "BaseProps"
+            "x-kind": "element"
           }
         }
       },
@@ -13364,7 +13364,7 @@
       "default-without-prop": 4,
       "external-type": 3,
       "props-missing": 5,
-      "unresolved-type": 45
+      "unresolved-type": 4
     },
     "elements": {
       "$base": [
@@ -13375,74 +13375,12 @@
           "message": "any/unknown: any"
         }
       ],
-      "accordion": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
       "autocomplete": [
         {
           "code": "default-null-widened",
           "severity": "warn",
           "path": "properties.selectedItem",
           "message": "default: null, а тип без null — тип расширен"
-        }
-      ],
-      "avatar-group": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "background-view": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "banner-card": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "bottom-sheet": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.childrenElements[]",
-          "message": "не распознан: BaseProps"
-        },
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "bottom-sheet-view": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "bubble": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
         }
       ],
       "button": [
@@ -13453,52 +13391,12 @@
           "message": "default: null, а тип без null — тип расширен"
         }
       ],
-      "button-group": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
       "button-zero-spacing": [
         {
           "code": "default-null-widened",
           "severity": "warn",
           "path": "properties.badge",
           "message": "default: null, а тип без null — тип расширен"
-        }
-      ],
-      "card": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "card-view": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "checkbox-group": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "container": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
         }
       ],
       "date-field": [
@@ -13541,12 +13439,6 @@
       ],
       "dialog": [
         {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        },
-        {
           "code": "default-null-widened",
           "severity": "warn",
           "path": "properties.height",
@@ -13567,38 +13459,6 @@
           "message": "default: null, а тип без null — тип расширен"
         }
       ],
-      "drawer": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "emoji-button-group": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "fragment": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "front-view": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
       "fui-step": [
         {
           "code": "external-type",
@@ -13607,24 +13467,10 @@
           "message": "внешний тип не раскрывается: Record<string, string | number>"
         },
         {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        },
-        {
           "code": "default-null-widened",
           "severity": "warn",
           "path": "properties.stepLabel",
           "message": "default: null, а тип без null — тип расширен"
-        }
-      ],
-      "fui-stepper": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
         }
       ],
       "fui-table": [
@@ -13632,7 +13478,7 @@
           "code": "props-missing",
           "severity": "error",
           "path": "properties",
-          "message": "не найден FuiTableProps"
+          "message": "не найден FuiTableProps (extends ContainerImpl)"
         },
         {
           "code": "default-without-prop",
@@ -13646,7 +13492,7 @@
           "code": "props-missing",
           "severity": "error",
           "path": "properties",
-          "message": "не найден FuiTableCellProps"
+          "message": "не найден FuiTableCellProps (extends ContainerImpl)"
         }
       ],
       "fui-table-column": [
@@ -13654,7 +13500,7 @@
           "code": "props-missing",
           "severity": "error",
           "path": "properties",
-          "message": "не найден FuiTableColumnProps"
+          "message": "не найден FuiTableColumnProps (extends ContainerImpl)"
         }
       ],
       "fui-table-row": [
@@ -13662,69 +13508,7 @@
           "code": "props-missing",
           "severity": "error",
           "path": "properties",
-          "message": "не найден FuiTableRowProps"
-        }
-      ],
-      "grid": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "grid-cell": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.element",
-          "message": "не распознан: BaseProps"
-        },
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "grid-row": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "grid-row-view": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "horizontal-scroll": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "horizontal-view": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "icon-toggle-button": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
+          "message": "не найден FuiTableRowProps (extends ContainerImpl)"
         }
       ],
       "image": [
@@ -13765,12 +13549,6 @@
           "severity": "warn",
           "path": "properties.actionSubtitle",
           "message": "any/unknown: any"
-        },
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
         }
       ],
       "logo": [
@@ -13791,12 +13569,6 @@
       ],
       "modal": [
         {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        },
-        {
           "code": "default-null-widened",
           "severity": "warn",
           "path": "properties.height",
@@ -13811,44 +13583,12 @@
           "message": "default: null, а тип без null — тип расширен"
         }
       ],
-      "panel": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "pop-up": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "responsive-grid": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "responsive-grid-view": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
       "scroll-view": [
         {
           "code": "props-missing",
           "severity": "error",
           "path": "properties",
-          "message": "не найден ScrollViewProps"
+          "message": "не найден ScrollViewProps (extends ContainerImpl)"
         },
         {
           "code": "default-without-prop",
@@ -13951,22 +13691,6 @@
           "message": "default: null, а тип без null — тип расширен"
         }
       ],
-      "skeleton": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
-      "stack": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
       "step-input": [
         {
           "code": "default-unresolved",
@@ -13987,14 +13711,6 @@
           "message": "default: null, а тип без null — тип расширен"
         }
       ],
-      "stretch-grid": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
       "suggest": [
         {
           "code": "default-null-widened",
@@ -14011,21 +13727,7 @@
           "message": "не распознан: ListSwitchesItemBase & { onChange?: ((el: ListSwitchesItemBase & { target: \"switch\"; }) => void) | undefined; }"
         }
       ],
-      "tab": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
       "tab-view": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        },
         {
           "code": "default-null-widened",
           "severity": "warn",
@@ -14042,12 +13744,6 @@
         }
       ],
       "tabs": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        },
         {
           "code": "default-null-widened",
           "severity": "warn",
@@ -14105,14 +13801,6 @@
           "message": "default: null, а тип без null — тип расширен"
         }
       ],
-      "view": [
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.elements[]",
-          "message": "не распознан: BaseProps"
-        }
-      ],
       "widget-card": [
         {
           "code": "default-null-widened",
@@ -14125,92 +13813,92 @@
     "sharedCandidates": [
       {
         "type": "IndicatorProp",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/DateFieldPickerElement/DateFieldPickerConstants.ts",
+        "file": "packages/lib/src/dom/elements/DateFieldPickerElement/DateFieldPickerConstants.ts",
         "usedIn": ["date-field-picker", "date-range-field-picker", "date-time-field"]
       },
       {
         "type": "SelectOption",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/SelectElement/SelectOption.ts",
+        "file": "packages/lib/src/dom/elements/SelectElement/SelectOption.ts",
         "usedIn": ["autocomplete", "select", "suggest"]
       },
       {
         "type": "BadgeModel",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/AccordionElement/AccordionConstants.ts",
+        "file": "packages/lib/src/dom/elements/AccordionElement/AccordionConstants.ts",
         "usedIn": ["accordion", "panel"]
       },
       {
         "type": "Button",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/TextElement/props/RightActionProps.ts",
+        "file": "packages/lib/src/dom/elements/TextElement/props/RightActionProps.ts",
         "usedIn": ["text", "text-field"]
       },
       {
         "type": "ChipsItemProps",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/ChipsElement/props/ChipsItemProps.ts",
+        "file": "packages/lib/src/dom/elements/ChipsElement/props/ChipsItemProps.ts",
         "usedIn": ["chips", "chips-group"]
       },
       {
         "type": "DialogButtonProps",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/DialogElement/props/DialogButtonProps.ts",
+        "file": "packages/lib/src/dom/elements/DialogElement/props/DialogButtonProps.ts",
         "usedIn": ["dialog", "modal"]
       },
       {
         "type": "DisabledTime",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/ModelConstants.ts",
+        "file": "packages/lib/src/dom/elements/ModelConstants.ts",
         "usedIn": ["date-time-field", "time-field"]
       },
       {
         "type": "EventValueType",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/ChipsElement/ChipsConstants.ts",
+        "file": "packages/lib/src/dom/elements/ChipsElement/ChipsConstants.ts",
         "usedIn": ["chips", "chips-group"]
       },
       {
         "type": "HorizontalStepItemProps",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/HorizontalStepElement/props/HorizontalStepItemProps.ts",
+        "file": "packages/lib/src/dom/elements/HorizontalStepElement/props/HorizontalStepItemProps.ts",
         "usedIn": ["horizontal-step", "stepper"]
       },
       {
         "type": "IconButton",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/TextElement/props/RightActionProps.ts",
+        "file": "packages/lib/src/dom/elements/TextElement/props/RightActionProps.ts",
         "usedIn": ["text", "text-field"]
       },
       {
         "type": "MarkdownOptions",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/TypographyElement/TypographyConstants.ts",
+        "file": "packages/lib/src/dom/elements/TypographyElement/TypographyConstants.ts",
         "usedIn": ["label", "typography"]
       },
       {
         "type": "MenuButtonItemProps",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/MenuButtonElement/props/MenuButtonItemProps.ts",
+        "file": "packages/lib/src/dom/elements/MenuButtonElement/props/MenuButtonItemProps.ts",
         "usedIn": ["dropdown", "menu-button"]
       },
       {
         "type": "PositionType",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/ViewElement/ViewConstants.ts",
+        "file": "packages/lib/src/dom/elements/ViewElement/ViewConstants.ts",
         "usedIn": ["container", "view"]
       },
       {
         "type": "SearchFieldOptionAvatarProps",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/SearchFieldElement/props/SearchFieldOptionAvatarProps.ts",
+        "file": "packages/lib/src/dom/elements/SearchFieldElement/props/SearchFieldOptionAvatarProps.ts",
         "usedIn": ["search", "search-field"]
       },
       {
         "type": "SearchFieldOptionProps",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/SearchFieldElement/props/SearchFieldOptionProps.ts",
+        "file": "packages/lib/src/dom/elements/SearchFieldElement/props/SearchFieldOptionProps.ts",
         "usedIn": ["search", "search-field"]
       },
       {
         "type": "SimpleCarouselItemProps",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/SimpleCarouselElement/props/SimpleCarouselItemProps.ts",
+        "file": "packages/lib/src/dom/elements/SimpleCarouselElement/props/SimpleCarouselItemProps.ts",
         "usedIn": ["carousel", "simple-carousel"]
       },
       {
         "type": "SocialBlockItem",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/elements/SocialBlockElement/SocialBlockItem.ts",
+        "file": "packages/lib/src/dom/elements/SocialBlockElement/SocialBlockItem.ts",
         "usedIn": ["social-block", "social-group"]
       },
       {
         "type": "TooltipProps",
-        "file": "C:/Users/преподобная/Documents/projects/app-core/packages/lib/src/dom/Tooltip/TooltipProps.ts",
+        "file": "packages/lib/src/dom/Tooltip/TooltipProps.ts",
         "usedIn": ["text", "text-field"]
       }
     ]
