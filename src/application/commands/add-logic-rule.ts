@@ -1,8 +1,6 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { LogicRule } from '@domain/model/logic-rule';
-import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
-import { InvariantViolationError } from './errors';
 import { findElementInGraph } from '@domain/element-containers';
 
 // Добавление правила условной видимости (T-037/T-064): готовое правило
@@ -25,11 +23,6 @@ export class AddLogicRule implements Command {
     const target = findElementInGraph(draft, this.rule.targetElementId);
     if (target) {
       delete target.element.layerDepth;
-    }
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
     }
   }
 }

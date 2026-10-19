@@ -1,13 +1,11 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ElementId, FormComponentId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
-import { validateGraph } from '@domain/invariants';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
 import { computeFormElementDepths } from '@domain/step-element-depths';
 import type { Command } from './command';
 import { preserveFormElementDepths, preservePageDepths, preserveFormStepDepths } from './depth-preservation';
-import { InvariantViolationError } from './errors';
 import { findElementLocation } from './graph-lookup';
 
 // Команда удаления элемента канваса (Epic 002, T-035): карточки страницы
@@ -47,10 +45,5 @@ export class RemoveElement implements Command {
     // недопустимыми (удалён элемент-источник), уходят вместе с причиной.
     preserveFormStepDepths(draft, stepDepthsBefore);
     draft.stepTransitions = validStepTransitions(draft);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

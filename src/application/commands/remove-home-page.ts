@@ -1,9 +1,7 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import { computeGraphDepths } from '@domain/graph-depths';
-import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
 import { preservePageDepths } from './depth-preservation';
-import { InvariantViolationError } from './errors';
 
 // Команда удаления Главной страницы (Epic 002, T-034). Удаление разрешено
 // (D8: Главная необязательна). Каскад связей: уходят исходящие связи
@@ -25,10 +23,5 @@ export class RemoveHomePage implements Command {
     draft.links = draft.links.filter((link) => !elementIds.has(link.sourceElementId));
 
     preservePageDepths(draft, depthsBeforeRemoval);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

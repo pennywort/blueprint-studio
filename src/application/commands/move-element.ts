@@ -2,12 +2,10 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ElementId, FormComponentId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { computeFormElementDepths } from '@domain/step-element-depths';
-import { validateGraph } from '@domain/invariants';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
 import type { Command } from './command';
 import { preserveFormElementDepths, preservePageDepths, preserveFormStepDepths } from './depth-preservation';
-import { InvariantViolationError } from './errors';
 import { removeNonAdjacentLinks } from './layer-placement';
 import { resolveElementTarget, type CanvasElementTarget } from './add-element';
 import { findElementLocation } from './graph-lookup';
@@ -111,10 +109,5 @@ export class MoveElement implements Command {
     // недопустимыми (элемент перенесён в другой шаг/блок), уходят вместе с причиной.
     preserveFormStepDepths(draft, stepDepthsBefore);
     draft.stepTransitions = validStepTransitions(draft);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

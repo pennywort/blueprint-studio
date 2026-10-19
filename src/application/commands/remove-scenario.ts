@@ -2,10 +2,8 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import type { SubScenario } from '@domain/model/scenario';
 import type { ScenarioId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
-import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
 import { preservePageDepths } from './depth-preservation';
-import { InvariantViolationError } from './errors';
 import { collectSubtreeElementIds, collectSubtreeScenarioIds } from './graph-lookup';
 
 // Команда удаления подсценария (Epic 002, T-035) с каскадом связей:
@@ -35,11 +33,6 @@ export class RemoveScenario implements Command {
     );
 
     preservePageDepths(draft, depthsBeforeRemoval);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }
 

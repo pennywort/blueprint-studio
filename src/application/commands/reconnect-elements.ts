@@ -2,9 +2,7 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import type { PageLinkTargetId } from '@domain/model/page-link';
 import type { ElementId, PageLinkId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
-import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
-import { InvariantViolationError } from './errors';
 import { findElementLocation, isLinkTargetPresent } from './graph-lookup';
 import { assertConnectableTarget, placeLinkTargetIntoNextLayer } from './layer-placement';
 
@@ -53,10 +51,5 @@ export class ReconnectElements implements Command {
     const others = { ...draft, links: draft.links.filter((candidate) => candidate.id !== this.linkId) };
     assertConnectableTarget(others, link.sourceElementId, link.targetId);
     placeLinkTargetIntoNextLayer(draft, link.sourceElementId, link.targetId, depthsBefore);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

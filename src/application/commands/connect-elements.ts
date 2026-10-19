@@ -1,9 +1,7 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { PageLink } from '@domain/model/page-link';
 import { computeGraphDepths } from '@domain/graph-depths';
-import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
-import { InvariantViolationError } from './errors';
 import { findElementLocation, isLinkTargetPresent } from './graph-lookup';
 import { assertConnectableTarget, placeLinkTargetIntoNextLayer } from './layer-placement';
 
@@ -41,10 +39,5 @@ export class ConnectElements implements Command {
     const depthsBefore = computeGraphDepths(draft);
     draft.links.push(this.link);
     placeLinkTargetIntoNextLayer(draft, this.link.sourceElementId, this.link.targetId, depthsBefore);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

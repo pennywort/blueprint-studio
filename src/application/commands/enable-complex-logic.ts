@@ -1,6 +1,5 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { FormComponentId } from '@domain/model/ids';
-import { validateGraph } from '@domain/invariants';
 import { canBeLogicSource } from '@domain/element-kinds';
 import { findElementInGraph } from '@domain/element-containers';
 import { supportsLogic } from '@domain/connection-matrix';
@@ -8,7 +7,6 @@ import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
 import type { Command } from './command';
 import { preserveFormStepDepths } from './depth-preservation';
-import { InvariantViolationError } from './errors';
 
 // Включение режима «Сложная логика» на элементе-источнике (T-037/T-064, L4):
 // само по себе не создаёт правил — только открывает возможность протягивать
@@ -40,10 +38,5 @@ export class EnableComplexLogic implements Command {
     // (connection-matrix) — его переходы уходят атомарно с флагом, undo вернёт.
     preserveFormStepDepths(draft, stepDepthsBefore);
     draft.stepTransitions = validStepTransitions(draft);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

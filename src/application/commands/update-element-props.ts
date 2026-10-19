@@ -1,13 +1,11 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import { CanvasElementSchema, type CanvasElement } from '@domain/model/canvas-element';
 import type { ElementId, FormComponentId } from '@domain/model/ids';
-import { validateGraph } from '@domain/invariants';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
 import { computeFormElementDepths } from '@domain/step-element-depths';
 import type { Command } from './command';
 import { preserveFormElementDepths, preserveFormStepDepths } from './depth-preservation';
-import { InvariantViolationError } from './errors';
 import { findElementLocation } from './graph-lookup';
 
 // Частичное обновление атрибутов элемента; id и kind исключены — идентичность
@@ -70,10 +68,5 @@ export class UpdateElementProps implements Command {
     // недопустимыми (удалён вариант Select'а), уходят вместе с причиной.
     preserveFormStepDepths(draft, stepDepthsBefore);
     draft.stepTransitions = validStepTransitions(draft);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

@@ -1,12 +1,10 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ApplicationFormId, FormStepId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
-import { validateGraph } from '@domain/invariants';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
 import type { Command } from './command';
 import { preservePageDepths, preserveFormStepDepths } from './depth-preservation';
-import { InvariantViolationError } from './errors';
 import { findFormById } from './graph-lookup';
 
 // Команда удаления шага формы заявки (Epic 002, T-035). Компоненты шага
@@ -48,10 +46,5 @@ export class RemoveFormStep implements Command {
     // недопустимыми (удалён шаг-источник или шаг-цель), уходят вместе с причиной.
     preserveFormStepDepths(draft, stepDepthsBefore);
     draft.stepTransitions = validStepTransitions(draft);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

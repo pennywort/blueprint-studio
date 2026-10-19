@@ -1,7 +1,9 @@
 import { applyPatches, enablePatches, produceWithPatches, type Patch } from 'immer';
 import type { ServiceGraph } from '@domain/model/service-graph';
+import { validateGraph } from '@domain/invariants';
 import type { IClock } from '@application/ports/clock';
 import type { Command } from './command';
+import { InvariantViolationError } from './errors';
 
 // Плагин патчей Immer включается один раз на модуль шины — без этого
 // produceWithPatches падает в рантайме.
@@ -26,8 +28,15 @@ export class CommandBus {
   constructor(private readonly deps: { clock: IClock }) {}
 
   execute(current: ServiceGraph, command: Command): ServiceGraph {
+    // Инварианты (конституция §4) проверяются здесь, один раз для любой
+    // команды (R-ARC-2, AGENTS.md §4a): исключение внутри produceWithPatches
+    // отменяет черновик — граф и история не меняются.
     const [next, patches, inversePatches] = produceWithPatches(current, (draft) => {
       command.apply(draft);
+      const violations = validateGraph(draft);
+      if (violations.length > 0) {
+        throw new InvariantViolationError(violations);
+      }
     });
 
     this.undoStack.push({ command, patches, inversePatches, executedAt: this.deps.clock.now() });

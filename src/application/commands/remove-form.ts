@@ -1,11 +1,9 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ApplicationFormId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
-import { validateGraph } from '@domain/invariants';
 import { validStepTransitions } from '@domain/step-transitions';
 import type { Command } from './command';
 import { preservePageDepths } from './depth-preservation';
-import { InvariantViolationError } from './errors';
 import { walkSubScenarios } from './graph-lookup';
 
 // Команда удаления формы заявки (Epic 002, T-035) с каскадом связей:
@@ -56,10 +54,5 @@ export class RemoveForm implements Command {
     // Каскад переходов между шагами [owner 2026-10-14]: переходы, ставшие
     // недопустимыми (удалена форма), уходят вместе с причиной.
     draft.stepTransitions = validStepTransitions(draft);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

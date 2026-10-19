@@ -1,10 +1,8 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ApplicationFormId, FormStepId } from '@domain/model/ids';
-import { validateGraph } from '@domain/invariants';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
 import type { Command } from './command';
-import { InvariantViolationError } from './errors';
 import { findFormById } from './graph-lookup';
 import { preserveFormStepDepths } from './depth-preservation';
 import { removeNonAdjacentStepTransitions, touchesStep } from './step-placement';
@@ -54,10 +52,5 @@ export class SwapFormSteps implements Command {
     );
     preserveFormStepDepths(draft, depthsBefore, new Set([step.id, other.id]));
     draft.stepTransitions = validStepTransitions(draft);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

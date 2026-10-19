@@ -1,7 +1,5 @@
 import type { HomePage, ServiceGraph } from '@domain/model/service-graph';
-import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
-import { InvariantViolationError } from './errors';
 import { nextPageOrderIndex } from './graph-lookup';
 
 // Команда добавления Главной страницы (Epic 002, T-034). Главная
@@ -18,10 +16,5 @@ export class AddHomePage implements Command {
       throw new Error('Главная страница уже существует в карте');
     }
     draft.homePage = { ...this.homePage, orderIndex: nextPageOrderIndex(draft) };
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

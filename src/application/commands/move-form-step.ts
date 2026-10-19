@@ -1,11 +1,9 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ApplicationFormId, FormStepId } from '@domain/model/ids';
-import { validateGraph } from '@domain/invariants';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { moveByAnchor } from '@domain/ordered-move';
 import { validStepTransitions } from '@domain/step-transitions';
 import type { Command } from './command';
-import { InvariantViolationError } from './errors';
 import { findFormById } from './graph-lookup';
 import { placeFormStepIntoLayer } from './step-placement';
 
@@ -56,10 +54,5 @@ export class MoveFormStep implements Command {
       moveByAnchor(form.steps, this.stepId, anchor);
     }
     draft.stepTransitions = validStepTransitions(draft);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

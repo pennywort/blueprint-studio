@@ -1,11 +1,9 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { FormComponentId } from '@domain/model/ids';
-import { validateGraph } from '@domain/invariants';
 import { canBeLogicSource } from '@domain/element-kinds';
 import { computeFormElementDepths } from '@domain/step-element-depths';
 import type { Command } from './command';
 import { preserveFormElementDepths } from './depth-preservation';
-import { InvariantViolationError } from './errors';
 import { findElementInGraph } from '@domain/element-containers';
 
 // Выключение режима «Сложная логика» (T-037/T-064, L4): при наличии правил —
@@ -36,10 +34,5 @@ export class DisableComplexLogic implements Command {
     );
 
     preserveFormElementDepths(draft, elementDepthsBefore);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

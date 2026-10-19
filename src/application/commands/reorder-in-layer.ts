@@ -1,9 +1,7 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { PageEntityId } from '@domain/model/ids';
-import { validateGraph } from '@domain/invariants';
 import { moveByAnchor } from '@domain/ordered-move';
 import type { Command } from './command';
-import { InvariantViolationError } from './errors';
 import { walkPages } from './graph-lookup';
 
 // Команда изменения порядка страницы внутри слоя (Epic 002, T-035; D13 —
@@ -46,10 +44,5 @@ export class ReorderInLayer implements Command {
     pages.forEach((page, index) => {
       page.orderIndex = index;
     });
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

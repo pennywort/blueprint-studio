@@ -1,10 +1,8 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { CanvasElement } from '@domain/model/canvas-element';
 import type { ApplicationFormId, FormStepId, ScenarioId } from '@domain/model/ids';
-import { validateGraph } from '@domain/invariants';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import type { Command } from './command';
-import { InvariantViolationError } from './errors';
 import { findFormById, findSubScenarioById } from './graph-lookup';
 
 // Блок-контейнер элемента на канвасе (T-034): Главная, подсценарий или шаг
@@ -63,11 +61,6 @@ export class AddElement implements Command {
       list.push({ ...this.element, layerDepth: depths.length === 0 ? 0 : Math.max(...depths) + 1 });
     } else {
       list.push(this.element);
-    }
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
     }
   }
 }
