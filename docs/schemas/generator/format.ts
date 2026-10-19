@@ -62,7 +62,10 @@ export interface MethodSchema {
 export type EventSchema = { [key: string]: JsonValue };
 
 export interface ContainerInfo {
-  /** null — контейнер, но список допустимых типов не извлечён. */
+  /**
+   * null — ограничений нет (любые дочерние элементы). Массив — только эти типы.
+   * Когда во фреймворке появится типизация детей, заполнится массив; формат не меняется.
+   */
   allowedChildren: string[] | null;
 }
 

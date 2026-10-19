@@ -320,11 +320,14 @@ export function readAllowedChildren(
     const members = [...body.matchAll(/ElementsTypes\.(\w+)/g)].map((m) => m[1]!);
     const byText = [...new Set(members.map((m) => enumValues[m]).filter((v): v is string => !!v))];
     if (byText.length > 0) {
-      diag.report('children-by-text', 'x-container', `${name}: тип возврата ${ret.getText(getter)}`);
+      diag.report('children-by-text', 'x-container', `${name}: тип возврата ${typeText(ret, getter)}`);
       return byText;
     }
   }
-  diag.report('children-unresolved', 'x-container', 'геттер допустимых типов не найден или не разобран');
+  // Нет геттера — ограничений нет (null). Геттер есть, но не разобран — это проблема.
+  if (getters.some(Boolean)) {
+    diag.report('children-unresolved', 'x-container', 'геттер допустимых типов не разобран');
+  }
   return null;
 }
 

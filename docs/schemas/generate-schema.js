@@ -612,11 +612,13 @@ function readAllowedChildren(cls, enumValues, diag) {
     const members = [...body.matchAll(/ElementsTypes\.(\w+)/g)].map((m) => m[1]);
     const byText = [...new Set(members.map((m) => enumValues[m]).filter((v) => !!v))];
     if (byText.length > 0) {
-      diag.report("children-by-text", "x-container", `${name}: \u0442\u0438\u043F \u0432\u043E\u0437\u0432\u0440\u0430\u0442\u0430 ${ret.getText(getter)}`);
+      diag.report("children-by-text", "x-container", `${name}: \u0442\u0438\u043F \u0432\u043E\u0437\u0432\u0440\u0430\u0442\u0430 ${typeText(ret, getter)}`);
       return byText;
     }
   }
-  diag.report("children-unresolved", "x-container", "\u0433\u0435\u0442\u0442\u0435\u0440 \u0434\u043E\u043F\u0443\u0441\u0442\u0438\u043C\u044B\u0445 \u0442\u0438\u043F\u043E\u0432 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0438\u043B\u0438 \u043D\u0435 \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u043D");
+  if (getters.some(Boolean)) {
+    diag.report("children-unresolved", "x-container", "\u0433\u0435\u0442\u0442\u0435\u0440 \u0434\u043E\u043F\u0443\u0441\u0442\u0438\u043C\u044B\u0445 \u0442\u0438\u043F\u043E\u0432 \u043D\u0435 \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u043D");
+  }
   return null;
 }
 function propsDeclIn(sf, name) {
@@ -830,7 +832,8 @@ function buildElementSchema(input, diag) {
   }
   if (decl) {
     for (const name of Object.keys(base.properties)) {
-      if (!(name in properties)) diag.report("base-only-prop", `properties.${name}`, "\u0435\u0441\u0442\u044C \u0432 \u0440\u0443\u0447\u043D\u043E\u0439 \u0431\u0430\u0437\u0435, \u043D\u0435\u0442 \u0432 \u043A\u043E\u0434\u0435");
+      if (!(name in properties))
+        diag.report("base-only-prop", `properties.${name}`, "\u0435\u0441\u0442\u044C \u0432 \u0440\u0443\u0447\u043D\u043E\u0439 \u0431\u0430\u0437\u0435, \u043D\u0435\u0442 \u0432 \u043A\u043E\u0434\u0435");
     }
   }
   const events = {};
