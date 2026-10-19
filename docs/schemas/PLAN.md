@@ -96,3 +96,23 @@ properties/$ref/default/description`), обязательные `x-*`. Всё п
 - Варианты источников логики (`select.options`, `radio-group.items`) — таблица `domain/element-kinds.ts`.
 - Сохранённые карты: миграция записи v4 → v5 (`graph-record-migration.ts`); поля без пары во
   фреймворке теряются (maxLength, withTime, иконка List item, position кнопки, search списка).
+
+## Этап 3 — что осталось (бэклог, 2026-10-19)
+
+Источник правды по остатку — этот список; в PROJECT_STATE §7 — ссылка на него.
+
+1. **Схемы компонентов** (configurationItemPicker, employeeSearch, addressPicker, employeeLoginField)
+   в `project/project-schemas.json` — черновые; описать отдельно с владельцем [owner 2026-10-19].
+2. **Пакет схем фреймворка**: пока нет, stub — `docs/schemas/results/schemas-bundle.json`. Когда появится —
+   `npm run schemas:import -- <папка пакета>` (или импорт JSON из пакета в `container.ts`), затем
+   `npm run schemas:check`; расхождения политики — ошибка сборки описаний.
+3. **Вариант «по умолчанию»** Select / Radio group (`props.value`) в панели атрибутов не редактируется —
+   нужен редактор выбора из `options`/`items`.
+4. **Атрибуты сложных типов** (anyOf/object: `margin`, `width`, `leftAtom`/`rightAtom` у list-item) скрыты —
+   нужны редакторы по типу схемы, затем открыть их в политике.
+5. **`schemas:check` не в pre-commit**: сломанная политика видна только при старте редактора —
+   добавить в Husky (или в `verify`).
+6. **Потери миграции v4 → v5** (maxLength, withTime, иконка List item, position кнопки, search списка):
+   вернуть, если поля появятся во фреймворке; иначе — схемы проекта.
+7. **T-042 и FAQ** (IconPicker, AttachmentField, DeviceUrlMapEditor; наполнение FAQ) — после п. 1–4.
+8. Отключённый тест `manifest-schema-provider.test.ts.disabled` ссылается на удалённый файл — не трогаем (§4).

@@ -237,7 +237,8 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 2. [ ] NEW: определить контракт микрофронтенда (exposes, shared, роутинг) — блокирует адаптацию bootstrap под remote
 3. [ ] NEW: установить и настроить Module Federation plugin для Rsbuild, проверить интеграцию с host
 4. [ ] /preview — отдельная большая задача [owner 2026-10-13]; после пакета preview lib-app-core (T-051) и персистентности (T-053)
-5. [ ] План R-CFG (docs/refactoring/R-CFG-config.md, принцип — конституция §4a): готовы R-CFG-1, R-CFG-2, частично R-CFG-5 и R-CFG-6; дальше — по одному шагу плана на сессию [owner 2026-10-16]
+5. [ ] Остаток этапа 3 схем элементов — бэклог `docs/schemas/PLAN.md` «Этап 3 — что осталось» (схемы компонентов, переход на пакет схем, редакторы `value` и сложных типов, `schemas:check` в pre-commit) [owner 2026-10-19]
+6. [ ] План R-CFG (docs/refactoring/R-CFG-config.md, принцип — конституция §4a): готовы R-CFG-1, R-CFG-2, частично R-CFG-5 и R-CFG-6; дальше — по одному шагу плана на сессию [owner 2026-10-16]
 
 ---
 
@@ -301,3 +302,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-10-16 | agent:claude | R-CFG-2 доводка: page.logic включает логику на страницах целиком
 - 2026-10-19 | agent:claude | генератор схем готов (этапы 0–2), следующий шаг — этап 3, потребление схем
 - 2026-10-19 | agent:claude | этап 3 потребления схем выполнен, stub — бандл генератора
+- 2026-10-19 | agent:claude | бэклог остатка этапа 3 схем записан в docs/schemas/PLAN.md, пункт в §7
