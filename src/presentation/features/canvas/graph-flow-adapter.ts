@@ -1,7 +1,5 @@
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
-import type { ListItem, WidgetCard } from '@domain/model/scenario';
-import type { FormComponent } from '@domain/model/form-components';
 import { DEFAULT_COMMENT_AUDIENCE, type CanvasElement } from '@domain/model/canvas-element';
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
 import { toElementId, toPageEntityId, type ElementId, type PageEntityId } from '@domain/model/ids';
@@ -10,10 +8,10 @@ import { walkSubScenarios } from '@domain/graph-walk';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
 import { evaluateVisibility } from '@domain/logic-visibility';
-import { canBeLogicSource, isCommentElement, isPageElement, kindRules } from '@domain/element-kinds';
+import { canBeLogicSource, elementVariants, isCommentElement, kindRules } from '@domain/element-kinds';
 import { containerCapabilities, type ContainerCapabilities } from '@domain/connection-matrix';
+import type { ElementCatalog } from '@presentation/features/element-catalog/element-catalog';
 import {
-  ELEMENT_KIND_LABELS,
   NODE_KIND_LABELS,
   NODE_SUBTITLES,
   formStepLabel,
@@ -203,33 +201,57 @@ export type FlowGraph = {
   edges: CanvasEdge[];
 };
 
-// Контекст маппинга элементов: связи и правила графа.
+// Контекст маппинга элементов: связи и правила графа, описания элементов.
 type ElementMapContext = {
   logicTargets: ReadonlySet<string>;
   logicHidden: ReadonlySet<string>;
+  catalog: ElementCatalog;
 };
 
-// Любой элемент — в любом блоке [owner 2026-10-13]: вид карточки задаёт
-// kind элемента, а логику и переходы — возможности блока (R-CFG-2,
-// производные матрицы связей connection-matrix; сейчас обе — только у шага формы).
+// Любой элемент — в любом блоке [owner 2026-10-13]: текст карточки задаёт
+// описание элемента (card политики редактора, этап 3 docs/schemas/PLAN.md),
+// логику и переходы — возможности блока (R-CFG-2, производные матрицы связей
+// connection-matrix; сейчас обе — только у шага формы).
 function elementToElementData(
   element: CanvasElement,
   context: ElementMapContext,
   capabilities: ContainerCapabilities,
 ): CanvasElementData {
+  const { catalog } = context;
   if (isCommentElement(element)) {
     // Комментарий-элемент — вне связей и «Сложной логики» в любом блоке.
     return {
       id: element.id,
-      title: element.text,
-      kindLabel: ELEMENT_KIND_LABELS.comment,
-      commentAudience: element.audience,
+      title: catalog.title(element),
+      kindLabel: catalog.kindLabel(element.kind),
+      commentAudience: catalog.badge(element) ?? DEFAULT_COMMENT_AUDIENCE,
       logicTarget: false,
     };
   }
-  const data = isPageElement(element)
-    ? listItemToElementData(element)
-    : formComponentToElementData(element, context.logicTargets, context.logicHidden);
+  const data: CanvasElementData = {
+    id: element.id,
+    title: catalog.title(element),
+    kindLabel: catalog.kindLabel(element.kind),
+    logicTarget: false,
+  };
+  const subtitle = catalog.subtitle(element);
+  if (subtitle) {
+    data.secondaryText = subtitle;
+  }
+  if (canBeLogicSource(element)) {
+    // Элемент выбора — потенциальный источник «Сложной логики» (L5) и,
+    // вариантами, переходов между шагами [owner 2026-10-14]: option-handle'ы
+    // есть всегда, правило видимости из них — только при включённом режиме (L4).
+    data.complexLogic = {
+      enabled: element.hasComplexLogic === true,
+      options: elementVariants(element).map((variant) => ({
+        handleId: logicSourceHandleId(element.id, variant.id),
+        label: variant.label,
+        value: variant.id,
+        isDefault: variant.isDefault,
+      })),
+    };
+  }
   if (element.comment) {
     data.note = { text: element.comment, audience: DEFAULT_COMMENT_AUDIENCE };
   }
@@ -251,52 +273,6 @@ function elementToElementData(
   return data;
 }
 
-function listItemToElementData(item: ListItem | WidgetCard): CanvasElementData {
-  const element: CanvasElementData = {
-    id: item.id,
-    title: item.title,
-    kindLabel: ELEMENT_KIND_LABELS[item.kind],
-    logicTarget: false,
-  };
-  if (item.secondaryText) {
-    element.secondaryText = item.secondaryText;
-  }
-  return element;
-}
-
-function formComponentToElementData(
-  component: FormComponent,
-  logicTargets: ReadonlySet<string>,
-  logicHidden: ReadonlySet<string>,
-): CanvasElementData {
-  const element: CanvasElementData = {
-    id: component.id,
-    title: 'label' in component ? component.label : component.kind,
-    kindLabel: ELEMENT_KIND_LABELS[component.kind],
-    hasIncomingLogic: logicTargets.has(component.id),
-    hiddenByLogic: logicHidden.has(component.id),
-    logicTarget: true,
-  };
-  if (canBeLogicSource(component)) {
-    // Select — потенциальный источник «Сложной логики» (L5) и, вариантами,
-    // переходов между шагами [owner 2026-10-14]: option-handle'ы есть всегда,
-    // правило видимости из них — только при включённом режиме (L4).
-    element.complexLogic = {
-      enabled: component.hasComplexLogic === true,
-      options: component.options.map((option) => ({
-        handleId: logicSourceHandleId(component.id, option.value),
-        label: option.label,
-        value: option.value,
-        isDefault: option.isDefault === true,
-      })),
-    };
-  }
-  if ('placeholder' in component && component.placeholder) {
-    element.secondaryText = component.placeholder;
-  }
-  return element;
-}
-
 // Прямой маппинг: ServiceGraph → узлы и рёбра react-flow.
 //
 // Узлы: Главная (необязательна, D8) + подсценарии + формы заявок (D12).
@@ -314,12 +290,17 @@ function formComponentToElementData(
 // их data, карточки элементов и рёбра сохраняют идентичность объектов, а
 // смена позиции не пересоздаёт data. Так react-flow и memo-компоненты
 // перерисовывают только то, что действительно изменилось.
-export function graphToFlow(graph: ServiceGraph, layout?: CanvasLayout, previous?: FlowGraph): FlowGraph {
-  const next = buildFlow(graph, layout);
+export function graphToFlow(
+  graph: ServiceGraph,
+  catalog: ElementCatalog,
+  layout?: CanvasLayout,
+  previous?: FlowGraph,
+): FlowGraph {
+  const next = buildFlow(graph, catalog, layout);
   return previous ? shareFlow(next, previous) : next;
 }
 
-function buildFlow(graph: ServiceGraph, layout?: CanvasLayout): FlowGraph {
+function buildFlow(graph: ServiceGraph, catalog: ElementCatalog, layout?: CanvasLayout): FlowGraph {
   const positionOf = (id: string): XYPosition => layout?.positions[id] ?? { x: 0, y: 0 };
   // Карточка элемента страницы с отступом строки (цель напротив якоря).
   const pageElementData = (element: CanvasElement, context: ElementMapContext): CanvasElementData => {
@@ -341,7 +322,7 @@ function buildFlow(graph: ServiceGraph, layout?: CanvasLayout): FlowGraph {
   // при битых данных берётся первое правило) — общий лес якорей.
   const logicParents = buildAnchorForest(logicRulesToAnchorLinks(graph.logicRules)).parentOf;
 
-  const elementContext: ElementMapContext = { logicTargets, logicHidden };
+  const elementContext: ElementMapContext = { logicTargets, logicHidden, catalog };
 
   const nodes: CanvasNode[] = [];
   // Владелец элемента → id узла: нужен, чтобы ребро вышло из узла страницы,

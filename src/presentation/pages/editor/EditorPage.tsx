@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { Divider, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import { canBeLogicSource } from '@domain/element-kinds';
-import { useContainer } from '@presentation/app/App';
+import {
+  ElementCatalogProvider,
+  useElementCatalog,
+} from '@presentation/features/element-catalog/element-catalog';
 import { EditorThemeProvider } from '@presentation/theme/editor-theme-provider';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { EditorCanvas } from '@presentation/features/canvas/editor-canvas';
@@ -83,7 +86,11 @@ export function EditorPage() {
         {/* Хоткеи редактора [owner 2026-10-15]: провайдер без разметки,
             значение не меняется — перерисовок не вызывает. */}
         <HotkeysProvider>
-          <EditorPageLayout />
+          {/* Описания элементов (схема + политика редактора) — для канваса,
+              меню и панели атрибутов (этап 3 docs/schemas/PLAN.md). */}
+          <ElementCatalogProvider>
+            <EditorPageLayout />
+          </ElementCatalogProvider>
         </HotkeysProvider>
       </EditorNotificationsProvider>
     </EditorThemeProvider>
@@ -95,9 +102,7 @@ export function EditorPage() {
 // скрыта, пока нет выделения (D10). Канвас и нижние контролы не меняются (T-011).
 function EditorPageLayout() {
   const classes = useStyles();
-  const container = useContainer();
-  const elementSchemas = container.cradle.elementSchemaProvider.listSchemas();
-  const schemaByKind = new Map(elementSchemas.map((schema) => [schema.kind, schema]));
+  const catalog = useElementCatalog();
   // TEMPORARY (до effector): граф в React state, мутации только через
   // CommandBus — см. use-editor-graph.ts.
   const editorGraph = useEditorGraph();
@@ -177,7 +182,7 @@ function EditorPageLayout() {
           <div className={classes.toolbarRail}>
             <div className={classes.toolbarSlot}>
               <EditorToolbar
-                elementSchemas={elementSchemas}
+                elementSchemas={catalog.schemas}
                 activePanel={sidePanel}
                 onPanelChange={setSidePanel}
                 selectedNodeType={editorGraph.selectedNodeType}
@@ -194,7 +199,7 @@ function EditorPageLayout() {
             <div className={classes.attributesPanel} data-testid="attributes-panel">
               <AttributesPanel
                 component={selectedElement.component}
-                schema={schemaByKind.get(selectedElement.component.kind) ?? null}
+                schema={catalog.schema(selectedElement.component.kind)}
                 onUpdateProps={editorGraph.updateElementProps}
                 onToggleComplexLogic={
                   canBeLogicSource(selectedElement.component) && selectedElement.logicAvailable

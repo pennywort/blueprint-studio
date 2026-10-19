@@ -1,5 +1,5 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
-import type { ElementId, FormComponentId } from '@domain/model/ids';
+import type { ElementId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
@@ -15,7 +15,7 @@ import { findElementLocation } from './graph-lookup';
 export class RemoveElement implements Command {
   readonly name = 'RemoveElement';
 
-  constructor(private readonly elementId: ElementId | FormComponentId) {}
+  constructor(private readonly elementId: ElementId) {}
 
   apply(draft: ServiceGraph): void {
     // Уровни шагов до мутации: шаг, потерявший входящий переход, остаётся на месте (ADR-15).

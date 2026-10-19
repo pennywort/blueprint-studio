@@ -1,5 +1,5 @@
 import type { ServiceGraph } from '../model/service-graph';
-import { canBeLogicSource } from '../element-kinds';
+import { canBeLogicSource, variantLabel } from '../element-kinds';
 import { containerKey, walkElementContainers } from '../element-containers';
 import { supportsLogic } from '../connection-matrix';
 import type { CanvasElement } from '../model/canvas-element';
@@ -70,9 +70,7 @@ export function checkLogicRules(graph: ServiceGraph): InvariantViolation[] {
 
     // L-I2: condition.optionId существует среди option'ов источника.
     if (rule.condition.kind === 'optionSelected' && canBeLogicSource(source.component)) {
-      const optionExists = source.component.options.some(
-        (option) => option.value === rule.condition.optionId,
-      );
+      const optionExists = variantLabel(source.component, rule.condition.optionId) !== null;
       if (!optionExists) {
         violations.push({ rule: RULE_ID, path, message: 'Правило ссылается на удалённое значение списка' });
       }

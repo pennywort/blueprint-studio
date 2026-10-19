@@ -6,7 +6,7 @@ import type { CanvasElementKind } from '@domain/model/canvas-element';
 import { kindRules } from '@domain/element-kinds';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import type { CanvasNodeType } from '@presentation/features/canvas/graph-flow-adapter';
-import { ELEMENT_KIND_LABELS, NODE_KIND_LABELS } from '@presentation/labels/editor-labels';
+import { NODE_KIND_LABELS } from '@presentation/labels/editor-labels';
 
 // Панель-заглушка кнопки 4: назначение не подтверждено владельцем (Q-1),
 // поэтому панель только переключается, содержимое не выдумываем.
@@ -16,8 +16,8 @@ export type EditorSidePanel = 'navigation';
 export type AddableNodeKind = 'home' | 'subScenario' | 'applicationForm';
 
 // Элемент из меню кнопки 2 (T-034): любой элемент — в любой выделенный узел
-// [owner 2026-10-13, ADR-17]: List item, Widget card и компоненты формы —
-// все из listSchemas() провайдера (T-041: у List item/Widget card — stub-схемы).
+// [owner 2026-10-13, ADR-17]: все элементы политики редактора из listSchemas()
+// провайдера (этап 3 docs/schemas/PLAN.md).
 export type AddableElementKind = CanvasElementKind;
 
 export type EditorToolbarProps = {
@@ -66,8 +66,8 @@ const NODE_MENU_ITEMS: ReadonlyArray<{ kind: AddableNodeKind; label: string }> =
 ];
 
 // Меню элементов (T-034): одинаково для любого выделенного узла — вид блока
-// вид элемента не ограничивает [owner 2026-10-13, ADR-17]. Подписи — из
-// маппинга адаптера: манифест схем хранит только machine-kind.
+// вид элемента не ограничивает [owner 2026-10-13, ADR-17]. Состав, порядок
+// и подписи — из описаний элементов (политика редактора).
 function elementMenuItems(
   selectedNodeType: CanvasNodeType | null,
   elementSchemas: readonly ElementSchema[],
@@ -78,7 +78,7 @@ function elementMenuItems(
   // Комментарий-элемент — отдельная кнопка тулбара, в меню его нет.
   return elementSchemas
     .filter((schema) => kindRules(schema.kind).inAddMenu)
-    .map((schema) => ({ kind: schema.kind, label: ELEMENT_KIND_LABELS[schema.kind] }));
+    .map((schema) => ({ kind: schema.kind, label: schema.label }));
 }
 
 // Левый вертикальный тулбар (T-021): ровно 4 IconButton с active-состоянием

@@ -1,5 +1,5 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
-import type { FormComponentId } from '@domain/model/ids';
+import type { ElementId } from '@domain/model/ids';
 import { canBeLogicSource } from '@domain/element-kinds';
 import { computeFormElementDepths } from '@domain/step-element-depths';
 import type { Command } from './command';
@@ -13,7 +13,7 @@ import { findElementInGraph } from '@domain/element-containers';
 export class DisableComplexLogic implements Command {
   readonly name = 'DisableComplexLogic';
 
-  constructor(private readonly componentId: FormComponentId) {}
+  constructor(private readonly componentId: ElementId) {}
 
   apply(draft: ServiceGraph): void {
     // Колонки элементов шагов до мутации: цель, потерявшая правило, остаётся на месте (ADR-15).

@@ -4,7 +4,6 @@ import {
   toApplicationFormId,
   toBlueprintId,
   toElementId,
-  toFormComponentId,
   toFormStepId,
   toLogicRuleId,
   toOptionId,
@@ -49,23 +48,22 @@ function stepFields(prefix: string, count: number): { elements: unknown[]; rules
   const elements: unknown[] = [];
   const rules: unknown[] = [];
   for (let index = 0; index < count; index += 1) {
-    const id = toFormComponentId(`${prefix}-f${index}`);
+    const id = toElementId(`${prefix}-f${index}`);
     if (index < 2) {
       elements.push({
         id,
-        kind: 'selectList',
-        label: `Список ${index + 1}`,
-        required: false,
-        displayType: 'dropdown',
-        multiSelect: false,
+        kind: 'select',
         hasComplexLogic: true,
-        options: OPTION_VALUES.map((value) => ({ label: `Вариант ${value}`, value })),
+        props: {
+          label: `Список ${index + 1}`,
+          options: OPTION_VALUES.map((value) => ({ id: value, label: `Вариант ${value}` })),
+        },
       });
     } else {
       elements.push(
         index % 2 === 0
-          ? { id, kind: 'textField', label: `Поле ${index + 1}`, required: false, multiline: false }
-          : { id, kind: 'checkbox', label: `Флажок ${index + 1}`, required: false },
+          ? { id, kind: 'text-field', props: { label: `Поле ${index + 1}` } }
+          : { id, kind: 'checkbox', props: { label: `Флажок ${index + 1}` } },
       );
     }
   }
@@ -99,9 +97,21 @@ export function createStressGraph(options: StressGraphOptions = DEFAULT_STRESS_O
   const items = (level: number, page: number, count: number): CanvasElement[] =>
     Array.from({ length: count }, (_, element) => ({
       id: pageElementId(level, page, element),
-      kind: element % 3 === 2 ? 'widgetCard' : 'listItem',
-      title: `Элемент ${element + 1} · стр. ${level}.${page + 1}`,
-      secondaryText: 'Описание элемента',
+      ...(element % 3 === 2
+        ? {
+            kind: 'widget-card',
+            props: {
+              title: `Элемент ${element + 1} · стр. ${level}.${page + 1}`,
+              subtitle: 'Описание элемента',
+            },
+          }
+        : {
+            kind: 'list-item',
+            props: {
+              primaryText: `Элемент ${element + 1} · стр. ${level}.${page + 1}`,
+              secondaryText: 'Описание элемента',
+            },
+          }),
     }));
 
   const homePage = {

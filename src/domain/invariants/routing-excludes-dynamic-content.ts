@@ -12,10 +12,15 @@ export const ROUTING_EXCLUDES_DYNAMIC_CONTENT_RULE = 'routing-excludes-dynamic-c
 export const SELECT_LIST_ROUTING_RULE = 'select-list-routing-forbids-dynamic-content';
 export const CI_PICKER_ROUTING_RULE = 'ci-picker-routing-forbids-dynamic-content';
 
+// Выделенные правила по виду элемента (kind — имя во фреймворке/схемах проекта).
+const RULE_BY_KIND: Readonly<Record<string, string>> = {
+  select: SELECT_LIST_ROUTING_RULE,
+  'radio-group': SELECT_LIST_ROUTING_RULE,
+  configurationItemPicker: CI_PICKER_ROUTING_RULE,
+};
+
 function ruleForKind(kind: string): string {
-  if (kind === 'selectList') return SELECT_LIST_ROUTING_RULE;
-  if (kind === 'configurationItemPicker') return CI_PICKER_ROUTING_RULE;
-  return ROUTING_EXCLUDES_DYNAMIC_CONTENT_RULE;
+  return RULE_BY_KIND[kind] ?? ROUTING_EXCLUDES_DYNAMIC_CONTENT_RULE;
 }
 
 export function checkRoutingExcludesDynamicContent(graph: ServiceGraph): InvariantViolation[] {

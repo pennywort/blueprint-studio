@@ -1,23 +1,17 @@
 import { z } from 'zod';
 import { ApplicationFormIdSchema, FormStepIdSchema, ScenarioIdSchema } from './ids';
-import { CanvasElementSchema, IconRefSchema } from './canvas-element';
+import { CanvasElementSchema } from './canvas-element';
 
 // Сценарии, контент страниц и формы заявок — спецификация 001-foundation, разделы 5.1–5.3.
 
 // --- Контент страниц (спека 5.2) ---
 
-// List item / Widget card — элементы канваса наравне с компонентами форм:
-// определены в canvas-element.ts (универсальные элементы [owner 2026-10-13]).
-export {
-  IconRefSchema,
-  ImageRefSchema,
-  ListItemSchema,
-  WidgetCardSchema,
-  type IconRef,
-  type ImageRef,
-  type ListItem,
-  type WidgetCard,
-} from './canvas-element';
+// Элементы страниц (List item, Widget card…) — элементы канваса наравне с
+// компонентами форм: canvas-element.ts (универсальные элементы [owner 2026-10-13]).
+
+// Ссылки на иконки — строковые ключи из перечня платформы (БТ 6.1).
+export const IconRefSchema = z.string();
+export type IconRef = z.infer<typeof IconRefSchema>;
 
 export const FaqQuestionSchema = z.object({
   question: z.string(),

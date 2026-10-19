@@ -6,6 +6,7 @@ import { computeLayout, type MeasuredNodeSizes } from './canvas-layout';
 import { graphToFlow, type CanvasNode, type FlowGraph } from './graph-flow-adapter';
 import { mapViolationsToCanvas } from './violation-markers';
 import { createCanvasInteractionStore } from './canvas-interaction';
+import { useElementCatalog } from '@presentation/features/element-catalog/element-catalog';
 
 // Узлы и рёбра канваса (ревью A3, R3): раскладка по измеренным размерам,
 // graphToFlow со структурным разделением, выделение узла и синхронизация
@@ -37,6 +38,8 @@ export function useCanvasNodes(
   // Высота узла в раскладке — без отступов строк, которые раскладка же и
   // дала: иначе отступы вошли бы в размер и раскладка «раскачивалась».
   const previousFlowRef = useRef<FlowGraph | undefined>(undefined);
+  // Текст карточек и подписи видов — из описаний элементов (схема + политика).
+  const catalog = useElementCatalog();
   const reportNodeSizes = useCallback(
     (sizes: MeasuredNodeSizes) => {
       const natural: Record<string, { width: number; height: number }> = {};
@@ -58,10 +61,10 @@ export function useCanvasNodes(
   // адаптер — неизменённые узлы, data, карточки и рёбра сохраняют
   // идентичность, смена позиции не пересоздаёт data.
   const flow = useMemo(() => {
-    const next = graphToFlow(graph, layout, previousFlowRef.current);
+    const next = graphToFlow(graph, catalog, layout, previousFlowRef.current);
     previousFlowRef.current = next;
     return next;
-  }, [graph, layout]);
+  }, [graph, catalog, layout]);
   // Нарушения инвариантов после каждой команды (T-043): подсветка узлов и
   // карточек. Команды отклоняют невалидные изменения, поэтому в обычной
   // работе список пуст; подсветка нужна для графов извне (загрузка, T-053).

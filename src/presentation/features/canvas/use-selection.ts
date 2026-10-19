@@ -4,6 +4,8 @@ import type { CanvasElement } from '@domain/model/canvas-element';
 import type { LogicRuleId } from '@domain/model/ids';
 import { supportsLogic } from '@domain/connection-matrix';
 import { findElementInGraph } from '@domain/element-containers';
+import { variantLabel } from '@domain/element-kinds';
+import { useElementCatalog } from '@presentation/features/element-catalog/element-catalog';
 import { findElementLocation } from '@application/commands/graph-lookup';
 
 // Данные инспектора для выделенного элемента: сам компонент формы + его
@@ -86,6 +88,7 @@ export function useSelection(graph: ServiceGraph) {
 
   // Выделенный элемент + его правила видимости (цель) — данные панели
   // атрибутов (T-041/T-067). Любой вид элемента (ADR-17).
+  const catalog = useElementCatalog();
   const selectedElement = useMemo<SelectedElementInfo | null>(() => {
     if (!selectedElementId) {
       return null;
@@ -99,12 +102,11 @@ export function useSelection(graph: ServiceGraph) {
       .filter((rule) => rule.targetElementId === selectedElementId)
       .map((rule) => {
         const source = findElementInGraph(graph, rule.sourceElementId)?.element;
-        const sourceLabel = source && 'label' in source ? source.label : (source?.kind ?? 'Элемент');
-        let optionLabel: string | null = null;
-        if (rule.condition.kind === 'optionSelected' && source?.kind === 'selectList') {
-          optionLabel =
-            source.options.find((option) => option.value === rule.condition.optionId)?.label ?? null;
-        }
+        const sourceLabel = source ? catalog.title(source) : 'Элемент';
+        const optionLabel =
+          source && rule.condition.kind === 'optionSelected'
+            ? variantLabel(source, rule.condition.optionId)
+            : null;
         return { ruleId: rule.id, sourceLabel, optionLabel };
       });
     return {
@@ -112,7 +114,7 @@ export function useSelection(graph: ServiceGraph) {
       logicAvailable: supportsLogic(location.container),
       incomingRules,
     };
-  }, [graph, selectedElementId]);
+  }, [graph, selectedElementId, catalog]);
 
   return {
     selectedNodeId,

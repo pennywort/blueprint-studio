@@ -1,5 +1,5 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
-import type { FormComponentId } from '@domain/model/ids';
+import type { ElementId } from '@domain/model/ids';
 import { canBeLogicSource } from '@domain/element-kinds';
 import { findElementInGraph } from '@domain/element-containers';
 import { supportsLogic } from '@domain/connection-matrix';
@@ -14,7 +14,7 @@ import { preserveFormStepDepths } from './depth-preservation';
 export class EnableComplexLogic implements Command {
   readonly name = 'EnableComplexLogic';
 
-  constructor(private readonly componentId: FormComponentId) {}
+  constructor(private readonly componentId: ElementId) {}
 
   apply(draft: ServiceGraph): void {
     // Уровни шагов до мутации: шаг, потерявший переход варианта, остаётся на месте.

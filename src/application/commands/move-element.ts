@@ -1,5 +1,5 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
-import type { ElementId, FormComponentId } from '@domain/model/ids';
+import type { ElementId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { computeFormElementDepths } from '@domain/step-element-depths';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
@@ -25,7 +25,7 @@ export type MoveElementTarget = CanvasElementTarget;
 
 export type DropAnchor = {
   /** Карточка-якорь в приёмнике: элемент встаёт до/после неё. */
-  elementId: ElementId | FormComponentId;
+  elementId: ElementId;
   placement: 'before' | 'after';
 };
 
@@ -33,7 +33,7 @@ export class MoveElement implements Command {
   readonly name = 'MoveElement';
 
   constructor(
-    private readonly elementId: ElementId | FormComponentId,
+    private readonly elementId: ElementId,
     private readonly target: MoveElementTarget,
     private readonly anchor?: DropAnchor,
     // Колонка внутри шага-приёмника [owner 2026-10-13] (только для formStep):

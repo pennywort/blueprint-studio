@@ -6,6 +6,7 @@ import { walkSubScenarios } from '@domain/graph-walk';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
 import { groupByLayer } from '@domain/layer-depths';
+import { elementVariants } from '@domain/element-kinds';
 import { logicRulesToAnchorLinks, logicSourceHandleId } from './graph-flow-adapter';
 import {
   buildAnchorForest,
@@ -126,16 +127,15 @@ function estimateStepHeight(step: FormStep, logicRules: ServiceGraph['logicRules
       return 0;
     }
     const inner = new Set(seen).add(id);
-    // Строки элемента: карточка, затем варианты Select'а — карточки всегда
-    // (переходы на шаги, [owner 2026-10-14]).
-    const options = component.kind === 'selectList' ? component.options : [];
+    // Строки элемента: карточка, затем варианты элемента выбора — карточки
+    // всегда (переходы на шаги, [owner 2026-10-14]).
     const rows: AnchorRow<string>[] = [{ top: 0, height: S.elementHeight, children: [] }];
-    for (const option of options) {
+    for (const variant of elementVariants(component)) {
       const previous = rows.at(-1)!;
       rows.push({
         top: previous.top + previous.height + S.optionGap,
         height: S.optionHeight,
-        children: childrenOf.get(logicSourceHandleId(id, option.value)) ?? [],
+        children: childrenOf.get(logicSourceHandleId(id, variant.id)) ?? [],
       });
     }
     const last = rows.at(-1)!;

@@ -3,6 +3,7 @@ import type { StepTransition } from './model/step-transition';
 import { findElementInGraph } from './element-containers';
 import { canConnect, connectionSourceRole, supportsStepTransitions } from './connection-matrix';
 import { computeFormStepDepths } from './form-step-depths';
+import { variantLabel } from './element-kinds';
 
 // Правила переходов между шагами формы [owner 2026-10-14] — единый источник
 // для подсветки шагов-целей при протягивании связи (connection-rules),
@@ -31,7 +32,7 @@ export function stepTransitionTargets(
   }
   const source = found.element;
   if (optionId !== undefined) {
-    if (source.kind !== 'selectList' || !source.options.some((option) => option.value === optionId)) {
+    if (variantLabel(source, optionId) === null) {
       return new Set();
     }
   }

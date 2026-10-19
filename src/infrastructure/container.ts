@@ -7,9 +7,10 @@ import type { IGraphRepository } from '@application/ports/graph-repository';
 import type { IGraphFileCodec } from '@application/ports/graph-file-codec';
 import type { IKeybindingsStorage } from '@application/ports/keybindings-storage';
 import { CommandBus } from '@application/commands/command-bus';
-import { ManifestSchemaProvider } from './element-schemas/manifest-schema-provider';
-import manifestJson from './element-schemas/element-manifest.json';
-import pageElementManifestJson from './element-schemas/page-element-manifest.json';
+import { FrameworkSchemaProvider } from './element-schemas/framework-schema-provider';
+import frameworkSchemasJson from './element-schemas/framework/schemas-bundle.json';
+import projectSchemasJson from './element-schemas/project/project-schemas.json';
+import editorPolicyJson from './element-schemas/editor-policy.json';
 import { UuidIdGenerator } from './misc/uuid-id-generator';
 import { SystemClock } from './misc/system-clock';
 import { IndexedDbGraphRepository } from './persistence/indexed-db-graph-repository';
@@ -50,11 +51,13 @@ export function buildContainer(options: ContainerOptions): AwilixContainer<Cradl
   container.register({
     idGenerator: asClass(UuidIdGenerator).singleton(),
     clock: asClass(SystemClock).singleton(),
-    // Манифест передаётся через inject: иначе PROXY-режим подставит cradle-proxy
-    // первым аргументом конструктора вместо данных. Stub-схемы List item/
-    // Widget card (T-041, ADR-07) — первыми: порядок меню добавления.
-    elementSchemaProvider: asClass(ManifestSchemaProvider)
-      .inject(() => ({ rawManifest: [...pageElementManifestJson, ...manifestJson] }))
+    // Схемы и политика передаются через inject: иначе PROXY-режим подставит
+    // cradle-proxy первым аргументом конструктора вместо данных (этап 3
+    // docs/schemas/PLAN.md; порядок меню добавления — порядок политики).
+    elementSchemaProvider: asClass(FrameworkSchemaProvider)
+      .inject(() => ({
+        sources: { framework: frameworkSchemasJson, project: projectSchemasJson, policy: editorPolicyJson },
+      }))
       .singleton(),
     commandBus: asClass(CommandBus).singleton(),
     graphRepository: asClass(IndexedDbGraphRepository).singleton(),

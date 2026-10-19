@@ -4,13 +4,11 @@ import { canBeLogicSource, kindRules } from '@domain/element-kinds';
 import {
   toApplicationFormId,
   toElementId,
-  toFormComponentId,
   toFormStepId,
   toPageEntityId,
   toPageId,
   toScenarioId,
   type ElementId,
-  type FormComponentId,
   type LogicRuleId,
 } from '@domain/model/ids';
 import { ReorderInLayer } from '@application/commands/reorder-in-layer';
@@ -40,7 +38,10 @@ import { useEditorNotifications } from '@presentation/features/notifications/edi
 import type { AddableElementKind, AddableNodeKind } from '@presentation/features/toolbar/editor-toolbar';
 import type { DropAnchorPosition, ElementDragPayload } from './element-dnd';
 import type { StepAnchorPosition } from './step-dnd';
-import { ELEMENT_KIND_LABELS } from '@presentation/labels/editor-labels';
+import {
+  useElementCatalog,
+  type ElementCatalog,
+} from '@presentation/features/element-catalog/element-catalog';
 import { flowNodesToLayerOrder, type CanvasNode, type CanvasNodeType } from './graph-flow-adapter';
 import {
   NEW_FORM_TITLE,
@@ -57,15 +58,16 @@ import { useCanvasNodes } from './use-canvas-nodes';
 
 export type { SelectedElementInfo } from './use-selection';
 
-// Варианты меню «+» шага формы: все виды элементов (List item, Widget card,
-// 12 форм-компонентов) — любой элемент в любой блок [owner 2026-10-13, ADR-17].
-// Комментарий-элемент добавляется отдельной кнопкой тулбара [owner 2026-10-15].
-const ELEMENT_KIND_OPTIONS = Object.entries(ELEMENT_KIND_LABELS)
-  .filter(([kind]) => kindRules(kind as CanvasElementKind).inAddMenu)
-  .map(([kind, label]) => ({
-    kind: kind as CanvasElementKind,
-    label,
-  }));
+// Варианты меню «+» шага формы: все элементы политики редактора — любой
+// элемент в любой блок [owner 2026-10-13, ADR-17]. Комментарий-элемент
+// добавляется отдельной кнопкой тулбара [owner 2026-10-15].
+function elementKindOptions(
+  catalog: ElementCatalog,
+): ReadonlyArray<{ kind: CanvasElementKind; label: string }> {
+  return catalog.schemas
+    .filter((schema) => kindRules(schema.kind).inAddMenu)
+    .map((schema) => ({ kind: schema.kind, label: schema.label }));
+}
 
 // Хук страницы редактора — композиция (ревью A3, R3): хранилище графа
 // (editor-store), выделение, связи, поиск и узлы канваса — отдельные хуки;
@@ -75,6 +77,13 @@ export function useEditorGraph() {
   const container = useContainer();
   const notifications = useEditorNotifications();
   const idGenerator = container.cradle.idGenerator;
+  const catalog = useElementCatalog();
+  // props нового элемента — defaults его описания (политика редактора).
+  const newElement = useCallback(
+    (kind: CanvasElementKind) =>
+      createDefaultElement(kind, idGenerator.next(), catalog.schema(kind)?.defaults ?? {}),
+    [catalog, idGenerator],
+  );
 
   const { graph, graphRef, runCommand, undo, redo, save, exportJson, canUndo, canRedo } = useEditorStore();
   const {
@@ -214,7 +223,7 @@ export function useEditorGraph() {
   // Панель атрибутов (T-041): любое изменение поля — команда UpdateElementProps
   // (undo/redo из коробки, валидация — внутри команды).
   const updateElementProps = useCallback(
-    (elementId: ElementId | FormComponentId, props: ElementPropsPatch) => {
+    (elementId: ElementId, props: ElementPropsPatch) => {
       runCommand(new UpdateElementProps(elementId, props));
     },
     [runCommand],
@@ -257,10 +266,10 @@ export function useEditorGraph() {
     (kind: AddableElementKind) => {
       const target = selectedNodeTarget();
       if (target) {
-        runCommand(new AddElement(target, createDefaultElement(kind, idGenerator.next())));
+        runCommand(new AddElement(target, newElement(kind)));
       }
     },
-    [idGenerator, runCommand, selectedNodeTarget],
+    [newElement, runCommand, selectedNodeTarget],
   );
 
   // Буфер обмена элементов (хоткеи Ctrl+C/X/V [owner 2026-10-15]): копия
@@ -323,11 +332,11 @@ export function useEditorGraph() {
       runCommand(
         new AddElement(
           { kind: 'formStep', formId: toApplicationFormId(formId), stepId: toFormStepId(stepId) },
-          createDefaultElement(kind, idGenerator.next()),
+          newElement(kind),
         ),
       );
     },
-    [idGenerator, runCommand],
+    [newElement, runCommand],
   );
 
   // Корзина в заголовке узла: удаление страницы с каскадом связей
@@ -447,7 +456,7 @@ export function useEditorGraph() {
       if (!component.hasComplexLogic && !supportsLogic(found.container)) {
         return;
       }
-      const componentId = toFormComponentId(component.id);
+      const componentId = component.id;
       if (component.hasComplexLogic) {
         const rulesCount = graphRef.current.logicRules.filter(
           (rule) => rule.sourceElementId === elementId,
@@ -493,9 +502,10 @@ export function useEditorGraph() {
       swapSteps,
       moveElement,
       reportElementRows,
-      elementKindOptions: ELEMENT_KIND_OPTIONS,
+      elementKindOptions: elementKindOptions(catalog),
     }),
     [
+      catalog,
       reportElementRows,
       selectElement,
       toggleComplexLogic,

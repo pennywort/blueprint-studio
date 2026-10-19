@@ -1,94 +1,60 @@
 import { z } from 'zod';
-import { ElementIdSchema } from './ids';
-import { FormComponentSchema } from './form-components';
+import { ElementIdSchema, FormStepIdSchema, ScenarioIdSchema } from './ids';
 
 // Универсальный элемент канваса [owner 2026-10-13: «элемент может быть в
-// любом блоке»]: List item, Widget card и 12 форм-компонентов — один
-// discriminated union по `kind`. Любой блок — Главная, подсценарий, шаг
-// формы — хранит единый упорядоченный список `elements` этого типа; вид
-// блока больше не ограничивает вид элемента (ранее List item/Widget card —
-// только страницы, компоненты форм — только шаги, спека 5.1).
+// любом блоке»]: любой блок — Главная, подсценарий, шаг формы — хранит единый
+// упорядоченный список `elements` этого типа.
+//
+// Этап 3 docs/schemas/PLAN.md [owner 2026-10-19]: состав и атрибуты
+// элемента описывает JSON-схема фреймворка (компоненты и комментарий —
+// схемы проекта), а не zod-схема по каждому виду. `kind` — имя элемента во
+// фреймворке (x-element-type: `text-field`, `select`…), `props` — значения
+// атрибутов по его схеме; генератор UI берёт их как есть (§4b AGENTS.md).
+// Какие элементы и атрибуты доступны в редакторе — политика редактора
+// (порт IElementSchemaProvider), что умеет вид — реестр element-kinds.
 
-// Ссылки на иконки/изображения — строковые ключи из перечня платформы (БТ 6.1).
-export const IconRefSchema = z.string();
-export type IconRef = z.infer<typeof IconRefSchema>;
-export const ImageRefSchema = z.string();
-export type ImageRef = z.infer<typeof ImageRefSchema>;
+/** Имя элемента во фреймворке или в схемах проекта (x-element-type). */
+export const CanvasElementKindSchema = z.string().min(1);
+export type CanvasElementKind = z.infer<typeof CanvasElementKindSchema>;
 
-const redirectFields = {
-  isRedirect: z.boolean().optional(),
-  redirectUrl: z.string().optional(),
-};
+/** Значения атрибутов элемента по его JSON-схеме. */
+export const ElementPropsSchema = z.record(z.string(), z.unknown());
+export type ElementProps = z.infer<typeof ElementPropsSchema>;
 
-// Мета-поля редактора, общие с компонентами форм (form-components baseFields):
-// комментарий для разработки (D4) и явная колонка внутри шага формы (ADR-16) —
-// карточка страницы, перенесённая в шаг, раскладывается по тем же правилам.
-const pageElementMetaFields = {
-  comment: z.string().optional(),
-  layerDepth: z.number().int().nonnegative().optional(),
-};
+// Маршрутизация задаётся в технических характеристиках (БТ, раздел 4.1),
+// поэтому хранится как метаданные элемента, а не в его props.
+export const RoutingRuleSchema = z.object({
+  // Элемент участвует в маршрутизации: его значение определяет переход.
+  targetStepId: FormStepIdSchema.optional(),
+  targetScenarioId: ScenarioIdSchema.optional(),
+});
+export type RoutingRule = z.infer<typeof RoutingRuleSchema>;
 
-export const ListItemSchema = z.object({
+export const CanvasElementSchema = z.object({
   // Стабильный id: элемент — источник связи на канвасе (Epic 002, T-004/D9).
   id: ElementIdSchema,
-  kind: z.literal('listItem'),
-  title: z.string(),
-  secondaryText: z.string().optional(),
-  icon: IconRefSchema.optional(),
-  ...redirectFields,
-  ...pageElementMetaFields,
-});
-export type ListItem = z.infer<typeof ListItemSchema>;
-
-export const WidgetCardSchema = z.object({
-  id: ElementIdSchema,
-  kind: z.literal('widgetCard'),
-  title: z.string(),
-  secondaryText: z.string().optional(),
-  icon: IconRefSchema.optional(),
-  image: ImageRefSchema.optional(),
-  ...redirectFields,
-  ...pageElementMetaFields,
-});
-export type WidgetCard = z.infer<typeof WidgetCardSchema>;
-
-// Адресат комментария-элемента по умолчанию (бейдж на карточке): комментарий
-// для разработчика — поэтому в левом меню он с иконкой кода.
-export const DEFAULT_COMMENT_AUDIENCE = 'Разработчику';
-
-// Комментарий-элемент [owner 2026-10-15]: полноценный элемент канваса, лежит в
-// любом блоке рядом с другими элементами (ADR-17), но не участвует ни в
-// связях навигации, ни в «Сложной логике». Не путать с полем `comment`
-// остальных элементов (комментарий-часть элемента, US-05).
-export const CommentElementSchema = z.object({
-  id: ElementIdSchema,
-  kind: z.literal('comment'),
-  text: z.string(),
-  // Для кого комментарий — бейдж внизу карточки.
-  audience: z.string(),
+  kind: CanvasElementKindSchema,
+  props: ElementPropsSchema,
+  // Ниже — метаданные редактора, не атрибуты элемента фреймворка (D4).
+  // Комментарий-часть элемента для разработчика (US-05).
+  comment: z.string().optional(),
+  // Явная колонка элемента внутри шага формы [owner 2026-10-13]: перенос dnd
+  // в другую колонку и закрепление элемента, потерявшего правило (ADR-15);
+  // без него колонка — производная правил «Сложной логики» (step-element-depths).
   layerDepth: z.number().int().nonnegative().optional(),
+  routing: RoutingRuleSchema.optional(),
+  // Элемент с динамическим контентом (инварианты #3–5).
+  hasDynamicContent: z.boolean().optional(),
+  // Включён режим «Сложная логика» (T-037, L4/L5): у вариантов источника
+  // появляются source-handle'ы правил видимости (element-kinds: logicSource).
+  hasComplexLogic: z.boolean().optional(),
 });
-export type CommentElement = z.infer<typeof CommentElementSchema>;
-
-export const CanvasElementSchema = z.discriminatedUnion('kind', [
-  ListItemSchema,
-  WidgetCardSchema,
-  CommentElementSchema,
-  ...FormComponentSchema.options,
-]);
 export type CanvasElement = z.infer<typeof CanvasElementSchema>;
-export type CanvasElementKind = CanvasElement['kind'];
 export type CanvasElementId = CanvasElement['id'];
 
-// Поле есть в доменной схеме элемента данного вида (в том числе
-// необязательное и ещё не заданное) — панель атрибутов показывает его
-// пустым, а не скрывает (T-041).
-export function hasElementField(kind: CanvasElementKind, key: string): boolean {
-  const option = CanvasElementSchema.options.find((candidate) => candidate.shape.kind.value === kind);
-  return option !== undefined && Object.prototype.hasOwnProperty.call(option.shape, key);
-}
+// Адресат комментария-части элемента (бейдж под карточкой): комментарий для
+// разработчика — поэтому в левом меню он с иконкой кода.
+export const DEFAULT_COMMENT_AUDIENCE = 'Разработчику';
 
-export type PageElementKind = 'listItem' | 'widgetCard';
-
-// Семейство вида и его возможности (isPageElementKind, isCommentKind, …) —
-// реестр видов domain/element-kinds.ts (R-CFG-1).
+// Семейство вида и его возможности (isPageElementKind, isCommentKind,
+// варианты источника логики, …) — реестр видов domain/element-kinds.ts (R-CFG-1).
