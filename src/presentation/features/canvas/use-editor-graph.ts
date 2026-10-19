@@ -9,7 +9,6 @@ import {
   toPageId,
   toScenarioId,
   type ElementId,
-  type LogicRuleId,
 } from '@domain/model/ids';
 import { ReorderInLayer } from '@application/commands/reorder-in-layer';
 import { AddHomePage } from '@application/commands/add-home-page';
@@ -29,7 +28,6 @@ import { SetPageLayerDepth } from '@application/commands/set-page-layer-depth';
 import { UpdateElementProps, type ElementPropsPatch } from '@application/commands/update-element-props';
 import { EnableComplexLogic } from '@application/commands/enable-complex-logic';
 import { DisableComplexLogic } from '@application/commands/disable-complex-logic';
-import { RemoveLogicRule } from '@application/commands/remove-logic-rule';
 import { findElementLocation, findFormById } from '@application/commands/graph-lookup';
 import { findElementInGraph } from '@domain/element-containers';
 import { supportsLogic } from '@domain/connection-matrix';
@@ -225,14 +223,6 @@ export function useEditorGraph() {
   const updateElementProps = useCallback(
     (elementId: ElementId, props: ElementPropsPatch) => {
       runCommand(new UpdateElementProps(elementId, props));
-    },
-    [runCommand],
-  );
-
-  // Удаление правила видимости из секции «Видимость» инспектора (T-067).
-  const removeLogicRule = useCallback(
-    (ruleId: LogicRuleId) => {
-      runCommand(new RemoveLogicRule(ruleId));
     },
     [runCommand],
   );
@@ -545,7 +535,6 @@ export function useEditorGraph() {
     clearSelection,
     selectedElement,
     updateElementProps,
-    removeLogicRule,
     toggleComplexLogic,
     connect,
     reconnect,

@@ -1,20 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { CanvasElement } from '@domain/model/canvas-element';
-import type { LogicRuleId } from '@domain/model/ids';
-import { supportsLogic } from '@domain/connection-matrix';
-import { findElementInGraph } from '@domain/element-containers';
-import { variantLabel } from '@domain/element-kinds';
-import { useElementCatalog } from '@presentation/features/element-catalog/element-catalog';
 import { findElementLocation } from '@application/commands/graph-lookup';
 
-// Данные инспектора для выделенного элемента: сам компонент формы + его
-// правила видимости, где он — цель (T-067).
+// Данные панели атрибутов для выделенного элемента (T-041).
 export type SelectedElementInfo = {
   component: CanvasElement;
-  /** Блок элемента умеет «Сложную логику» (R-CFG-2: шаг формы, L-I5). */
-  logicAvailable: boolean;
-  incomingRules: { ruleId: LogicRuleId; sourceLabel: string; optionLabel: string | null }[];
 };
 
 // Кнопка мыши зажата на канвасе: пока ЛКМ удержана, подразумевается попытка
@@ -86,35 +77,16 @@ export function useSelection(graph: ServiceGraph) {
     setSelectedNodeId((current) => (current === nodeId ? null : current));
   }, []);
 
-  // Выделенный элемент + его правила видимости (цель) — данные панели
-  // атрибутов (T-041/T-067). Любой вид элемента (ADR-17).
-  const catalog = useElementCatalog();
+  // Выделенный элемент — данные панели атрибутов (T-041). Любой вид
+  // элемента (ADR-17).
   const selectedElement = useMemo<SelectedElementInfo | null>(() => {
     if (!selectedElementId) {
       return null;
     }
     const location = findElementLocation(graph, selectedElementId);
     const component = location?.list[location.index];
-    if (!location || !component) {
-      return null;
-    }
-    const incomingRules = graph.logicRules
-      .filter((rule) => rule.targetElementId === selectedElementId)
-      .map((rule) => {
-        const source = findElementInGraph(graph, rule.sourceElementId)?.element;
-        const sourceLabel = source ? catalog.title(source) : 'Элемент';
-        const optionLabel =
-          source && rule.condition.kind === 'optionSelected'
-            ? variantLabel(source, rule.condition.optionId)
-            : null;
-        return { ruleId: rule.id, sourceLabel, optionLabel };
-      });
-    return {
-      component,
-      logicAvailable: supportsLogic(location.container),
-      incomingRules,
-    };
-  }, [graph, selectedElementId, catalog]);
+    return component ? { component } : null;
+  }, [graph, selectedElementId]);
 
   return {
     selectedNodeId,

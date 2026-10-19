@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Divider, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
-import { canBeLogicSource } from '@domain/element-kinds';
 import {
   ElementCatalogProvider,
   useElementCatalog,
@@ -201,13 +200,6 @@ function EditorPageLayout() {
                 component={selectedElement.component}
                 schema={catalog.schema(selectedElement.component.kind)}
                 onUpdateProps={editorGraph.updateElementProps}
-                onToggleComplexLogic={
-                  canBeLogicSource(selectedElement.component) && selectedElement.logicAvailable
-                    ? () => editorGraph.toggleComplexLogic(selectedElement.component.id)
-                    : undefined
-                }
-                incomingRules={selectedElement.incomingRules}
-                onRemoveRule={editorGraph.removeLogicRule}
               />
             </div>
           </>

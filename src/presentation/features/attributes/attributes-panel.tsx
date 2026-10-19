@@ -1,13 +1,4 @@
-import {
-  Divider,
-  FormControlLabel,
-  IconButton,
-  Switch,
-  TextField,
-  Typography,
-  makeStyles,
-} from '@blueprint-vendor/flamingo-core';
-import { Delete } from '@blueprint-vendor/flamingo-icons';
+import { TextField, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import type {
   ElementAttribute,
   ElementAttributeType,
@@ -15,8 +6,6 @@ import type {
 } from '@application/ports/element-schema-provider';
 import type { ElementPropsPatch } from '@application/commands/update-element-props';
 import type { CanvasElement } from '@domain/model/canvas-element';
-import { canBeLogicSource, isCommentElement } from '@domain/element-kinds';
-import type { LogicRuleId } from '@domain/model/ids';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { resolvePropertyEditor } from './property-editor-registry';
 import './builtin-property-editors';
@@ -35,21 +24,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     display: 'flex',
     flexDirection: 'column',
   },
-  ruleRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: theme.spacing(1),
-  },
 }));
-
-// Правило видимости, приходящее на выделенный элемент (цель): для секции
-// «Видимость» инспектора (T-067).
-export type IncomingRuleView = {
-  ruleId: LogicRuleId;
-  sourceLabel: string;
-  optionLabel: string | null;
-};
 
 export type AttributesPanelProps = {
   /** Выделенный элемент (любой вид, ADR-17) — источник значений полей. */
@@ -61,32 +36,17 @@ export type AttributesPanelProps = {
    * буфер панели — одна команда на паузу ввода/blur (R2).
    */
   onUpdateProps: (elementId: CanvasElement['id'], patch: ElementPropsPatch) => void;
-  /** Только для источника логики: свитч «Сложная логика» (T-067). */
-  onToggleComplexLogic?: () => void;
-  /** Правила видимости, где элемент — цель (T-067). */
-  incomingRules: IncomingRuleView[];
-  onRemoveRule: (ruleId: LogicRuleId) => void;
 };
 
-// Schema-driven панель атрибутов (T-041, этап 3 docs/schemas/PLAN.md): состав
-// полей, порядок, подписи, секции и редакторы — из описания элемента (схема
-// фреймворка + политика редактора), ничего не захардкожено под конкретный
-// элемент. Значения — props элемента по ключу атрибута. Поле «Комментарий
-// для разработки» — универсально (US-05). Секции «Сложная логика» и
-// «Видимость» — инспектор T-067.
-export function AttributesPanel({
-  component,
-  schema,
-  onUpdateProps,
-  onToggleComplexLogic,
-  incomingRules,
-  onRemoveRule,
-}: AttributesPanelProps) {
+// Schema-driven панель атрибутов (T-041, этап 3 docs/schemas/PLAN.md): в панели
+// только атрибуты элемента по схеме + политике редактора — состав, порядок,
+// подписи, секции и редакторы из описания элемента; ничего сверх них
+// [owner 2026-10-19]. Значения — props элемента по ключу атрибута.
+export function AttributesPanel({ component, schema, onUpdateProps }: AttributesPanelProps) {
   const classes = useStyles();
   // Буфер ввода (R2): поля показывают черновик поверх значений графа.
   const buffer = useBufferedProps<CanvasElement['id']>(component.id, onUpdateProps);
   const props = { ...component.props, ...buffer.draft?.props };
-  const comment = buffer.draft?.comment ?? component.comment;
 
   // Атрибут виден, если выполнено его условие видимости (политика).
   const attributes = (schema?.attributes ?? []).filter(
@@ -120,18 +80,6 @@ export function AttributesPanel({
             : 'Элемента нет в политике редактора — атрибуты не редактируются'}
         </Typography>
       </div>
-
-      {canBeLogicSource(component) && onToggleComplexLogic ? (
-        <div className={classes.field} data-testid="complex-logic-section">
-          <FormControlLabel
-            control={<Switch checked={component.hasComplexLogic === true} onChange={onToggleComplexLogic} />}
-            label="Сложная логика"
-          />
-          <Typography variant="caption" color="textSecondary">
-            При включении у каждого варианта появится точка соединения для правил видимости
-          </Typography>
-        </div>
-      ) : null}
 
       {groups.map((group) => (
         <div key={group.section ?? ''} className={classes.field}>
@@ -170,47 +118,6 @@ export function AttributesPanel({
           })}
         </div>
       ))}
-
-      {incomingRules.length > 0 ? (
-        <div className={classes.field} data-testid="visibility-section">
-          <Typography className={classes.sectionTitle} variant="subtitle2">
-            Видимость
-          </Typography>
-          {incomingRules.map((rule) => (
-            <div className={classes.ruleRow} key={rule.ruleId}>
-              <Typography variant="body2">
-                {rule.sourceLabel}
-                {rule.optionLabel ? ` · вариант «${rule.optionLabel}»` : ''}
-              </Typography>
-              <IconButton size="small" aria-label="Удалить правило" onClick={() => onRemoveRule(rule.ruleId)}>
-                <Delete fontSize="small" />
-              </IconButton>
-            </div>
-          ))}
-          <Typography variant="caption" color="textSecondary">
-            Элемент показывается, когда выбран указанный вариант (неявное ИЛИ между правилами)
-          </Typography>
-        </div>
-      ) : null}
-
-      {/* Комментарий-часть элемента (US-05); у комментария-элемента его нет. */}
-      {!isCommentElement(component) ? (
-        <>
-          <Divider />
-          <div className={classes.field}>
-            <TextField
-              fullWidth
-              size="small"
-              variant="outlined"
-              multiline
-              rows={2}
-              label="Комментарий для разработки"
-              value={comment ?? ''}
-              onChange={(event) => buffer.change({ comment: event.target.value })}
-            />
-          </div>
-        </>
-      ) : null}
     </div>
   );
 }
