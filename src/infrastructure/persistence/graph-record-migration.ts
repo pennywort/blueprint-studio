@@ -1,7 +1,7 @@
 // Версии формата записи карты в хранилище (ревью A11, R4). Запись без
 // номера — формат до миграции «универсальные элементы» (версия 1).
 // Каждая следующая версия добавляет шаг миграции в MIGRATIONS.
-export const GRAPH_RECORD_VERSION = 3;
+export const GRAPH_RECORD_VERSION = 4;
 
 const VERSION_FIELD = 'schemaVersion';
 
@@ -107,10 +107,36 @@ function migrateFormStepLevels(raw: unknown): unknown {
   return { ...raw, applicationForms };
 }
 
+// Переход — только стрелка канваса [owner 2026-10-19, R-SCH-7], версия 3 → 4.
+// Поля спеки 001 удалены: вложенные подсценарии (`children`) выносятся в
+// общий список в порядке прежнего обхода (родитель, затем его потомки) —
+// канвас их и так показывал плоско; `type`, `link`, `applicationFormId`
+// снимаются (UI их не задавал).
+function flattenSubScenarios(subScenarios: unknown): unknown[] {
+  if (!Array.isArray(subScenarios)) {
+    return [];
+  }
+  return subScenarios.flatMap((scenario: unknown) => {
+    if (!isRecord(scenario)) {
+      return [scenario];
+    }
+    const { children, type: _type, link: _link, applicationFormId: _formId, ...page } = scenario;
+    return [page, ...flattenSubScenarios(children)];
+  });
+}
+
+function migrateTransitionsToLinks(raw: unknown): unknown {
+  if (!isRecord(raw) || !Array.isArray(raw.subScenarios)) {
+    return raw;
+  }
+  return { ...raw, subScenarios: flattenSubScenarios(raw.subScenarios) };
+}
+
 /** Шаг миграции: с версии (ключ) на следующую. */
 const MIGRATIONS: Readonly<Record<number, (raw: unknown) => unknown>> = {
   1: migrateUniversalElements,
   2: migrateFormStepLevels,
+  3: migrateTransitionsToLinks,
 };
 
 // Запись хранилища → данные для доменной схемы: шаги миграции от версии

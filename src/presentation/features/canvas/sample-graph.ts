@@ -44,7 +44,6 @@ export function createSampleGraph(): ServiceGraph {
     subScenarios: [
       {
         id: toScenarioId('demo-scenario-deposits'),
-        type: 'navigation',
         title: 'Подбор вклада',
         orderIndex: 1,
         elements: [
@@ -58,7 +57,6 @@ export function createSampleGraph(): ServiceGraph {
       },
       {
         id: toScenarioId('demo-scenario-documents'),
-        type: 'navigation',
         title: 'Документы',
         orderIndex: 2,
         // Длинный список элементов; у одного из последних — исходящая связь.

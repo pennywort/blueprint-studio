@@ -116,7 +116,6 @@ export function createStressGraph(options: StressGraphOptions = DEFAULT_STRESS_O
     for (let page = 0; page < pagesPerLevel; page += 1) {
       subScenarios.push({
         id: toScenarioId(`s${level}-${page}`),
-        type: 'navigation',
         title: `Подсценарий ${level}.${page + 1}`,
         orderIndex: orderIndex++,
         layerDepth: level,

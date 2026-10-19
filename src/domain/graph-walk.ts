@@ -16,19 +16,14 @@ export type PageEntry =
   | { kind: 'subScenario'; page: SubScenario }
   | { kind: 'form'; page: ApplicationForm };
 
-// Вложенность подсценариев через children не ограничена (БТ, раздел 7) —
-// обход всегда рекурсивный, иначе вложенные страницы «теряются».
+// Подсценарии карты. Список плоский: вложенность `children` удалена
+// (R-SCH-7) — иерархию задают стрелки канваса (links).
 export function* walkSubScenarios(subScenarios: SubScenario[]): Generator<SubScenario> {
-  for (const subScenario of subScenarios) {
-    yield subScenario;
-    if (subScenario.children) {
-      yield* walkSubScenarios(subScenario.children);
-    }
-  }
+  yield* subScenarios;
 }
 
-// Все страницы карты с видом: Главная (если есть, D8), подсценарии
-// (рекурсивно), формы заявок (D12 — в слоях на общих основаниях).
+// Все страницы карты с видом: Главная (если есть, D8), подсценарии,
+// формы заявок (D12 — в слоях на общих основаниях).
 export function* walkPageEntries(graph: ServiceGraph): Generator<PageEntry> {
   if (graph.homePage) {
     yield { kind: 'home', page: graph.homePage };

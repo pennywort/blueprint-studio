@@ -46,29 +46,7 @@ export function findPageById(graph: ServiceGraph, pageId: PageEntityId): PageEnt
   return null;
 }
 
-// Id всех подсценариев поддерева (включая корень) — для каскадного удаления
-// связей, направленных на удаляемые страницы.
-export function collectSubtreeScenarioIds(root: SubScenario): Set<string> {
-  const ids = new Set<string>();
-  for (const scenario of walkSubScenarios([root])) {
-    ids.add(scenario.id);
-  }
-  return ids;
-}
-
-// Id всех элементов страниц поддерева — источники связей (D9) удаляемых
-// страниц; их исходящие связи удаляются каскадом вместе со страницей.
-export function collectSubtreeElementIds(root: SubScenario): Set<string> {
-  const ids = new Set<string>();
-  for (const scenario of walkSubScenarios([root])) {
-    for (const element of scenario.elements) {
-      ids.add(element.id);
-    }
-  }
-  return ids;
-}
-
-// Подсценарий по id с учётом неограниченной вложенности (БТ, раздел 7).
+// Подсценарий по id.
 export function findSubScenarioById(graph: ServiceGraph, scenarioId: string): SubScenario | null {
   for (const scenario of walkSubScenarios(graph.subScenarios)) {
     if (scenario.id === scenarioId) {

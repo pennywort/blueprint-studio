@@ -2,7 +2,6 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import { ruleSeverity, type RuleSeverity } from '@domain/rule-policy';
 import { checkElementCountLimits } from './element-count-limits';
 import { checkRadioMaxFiveOptions } from './radio-max-five-options';
-import { checkScenarioTypeFields } from './scenario-type-fields';
 import { checkRoutingExcludesDynamicContent } from './routing-excludes-dynamic-content';
 import { checkLogicRules } from './logic-rules';
 import { checkLayerCapacity } from './layer-capacity';
@@ -26,7 +25,6 @@ export function collectViolations(graph: ServiceGraph): InvariantViolation[] {
   return [
     ...checkElementCountLimits(graph),
     ...checkRadioMaxFiveOptions(graph),
-    ...checkScenarioTypeFields(graph),
     ...checkRoutingExcludesDynamicContent(graph),
     ...checkLogicRules(graph),
     ...checkLayerCapacity(graph),

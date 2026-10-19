@@ -154,7 +154,6 @@ export function useEditorGraph() {
         runCommand(
           new AddScenario({
             id: toScenarioId(idGenerator.next()),
-            type: 'navigation',
             title: NEW_SCENARIO_TITLE,
             elements: [],
           }),
