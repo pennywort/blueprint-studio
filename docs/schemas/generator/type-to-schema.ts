@@ -7,7 +7,7 @@
 
 import { Node, SyntaxKind, type Symbol as TsSymbol, type Type } from 'ts-morph';
 
-import { ELEMENT_TYPE_ENUMS, KNOWN_EXTERNAL_TYPES } from './config';
+import { ELEMENT_REF_TYPES, ELEMENT_TYPE_ENUMS, KNOWN_EXTERNAL_TYPES } from './config';
 import type { Diagnostics } from './diagnostics';
 import type { JsonType, JsonValue, PropSchema } from './format';
 import type { SharedRegistry } from './shared';
@@ -20,8 +20,25 @@ export interface TypeContext {
   printNode: Node;
 }
 
+/** Текст типа без import("абсолютный/путь") — иначе в схему попадает путь с машины разработчика. */
 export function typeText(type: Type, node: Node): string {
-  return type.getText(node);
+  return type.getText(node).replace(/import\("[^"]*"\)\./g, '');
+}
+
+/** Ссылка на вложенный элемент (props шаблона или рантайм-узел): тип или его предок из ELEMENT_REF_TYPES. */
+function isElementRef(type: Type): boolean {
+  const queue: Type[] = [type];
+  const seen = new Set<Type>();
+  while (queue.length > 0) {
+    const t = queue.shift()!;
+    if (seen.has(t)) continue;
+    seen.add(t);
+    const names = [t.getAliasSymbol()?.getName(), t.getSymbol()?.getName()];
+    if (names.some((n) => n && ELEMENT_REF_TYPES.includes(n))) return true;
+    queue.push(...t.getBaseTypes());
+    if (t.isIntersection()) queue.push(...t.getIntersectionTypes());
+  }
+  return false;
 }
 
 /** JSDoc-описание объявления (первое непустое). */
@@ -138,6 +155,9 @@ export function typeToSchema(
   if (type.getCallSignatures().length > 0) return { 'x-kind': 'handler' };
 
   if (type.isUnion()) return unionToSchema(type, ctx, path, seen);
+
+  // Вложенный элемент: тип и допустимые дети — у самого элемента (x-container)
+  if (type.isObject() && isElementRef(type)) return { 'x-kind': 'element' };
 
   if (type.isEnumLiteral() || type.isStringLiteral()) {
     return { type: 'string', const: String(type.getLiteralValue() ?? type.getText()) };

@@ -52,9 +52,16 @@ function stripAnyType(value: JsonValue, onFound: () => void): JsonValue {
   return value;
 }
 
-export function readBaseSchemas(baseElementPath: string, baseEventsPath: string): BaseSchemas {
-  const read = (p: string): { [key: string]: JsonValue } =>
-    fs.existsSync(p) ? (JSON.parse(fs.readFileSync(p, 'utf-8')) as { [key: string]: JsonValue }) : {};
+export function readBaseSchemas(
+  baseElementPath: string,
+  baseEventsPath: string,
+  warn: (msg: string) => void,
+): BaseSchemas {
+  const read = (p: string): { [key: string]: JsonValue } => {
+    if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, 'utf-8')) as { [key: string]: JsonValue };
+    warn(`[WARN] ручная база не найдена: ${p}`);
+    return {};
+  };
   const properties = (read(baseElementPath).properties ?? {}) as unknown as Record<string, PropSchema>;
   const events = (read(baseEventsPath)['x-events'] ?? {}) as Record<string, EventSchema>;
   return { properties, events };
@@ -104,12 +111,8 @@ export function buildElementSchema(input: BuildInput, diag: Diagnostics): Elemen
   const properties: Record<string, PropSchema> = {};
   const required: string[] = [];
 
-  // 1. Ручная база: определение из базы, дефолт — элемента (если задан)
-  for (const [name, schema] of Object.entries(base.properties)) {
-    properties[name] = name in defaults ? { ...schema, default: defaults[name]! } : { ...schema };
-  }
-
-  // 2. Props элемента (собственные и унаследованные)
+  // Props элемента (собственные и унаследованные) — источник правды о типе.
+  // Ручная база даёт только описание, если в коде нет JSDoc.
   const decl = findPropsDecl(project, cls, entry);
   if (!decl) {
     diag.report('props-missing', 'properties', `не найден ${entry.className.replace(/Element$/, '')}Props`);
@@ -117,15 +120,9 @@ export function buildElementSchema(input: BuildInput, diag: Diagnostics): Elemen
     for (const prop of readProps(decl)) {
       const name = prop.name;
       if (name.startsWith('_') || EXCLUDED_PROPS.includes(name)) continue;
-      if (name in base.properties) {
-        properties[name] = { ...properties[name]!, 'x-declared-in': prop.declaredIn };
-        continue;
-      }
-      if (!prop.own) diag.report('inherited-prop', `properties.${name}`, `из ${prop.declaredIn}`);
-
       const ctx = { elementType, diag, shared, printNode: decl };
       let schema: PropSchema = typeToSchema(prop.symbol.getTypeAtLocation(decl), ctx, `properties.${name}`);
-      const description = jsDocDescription(prop.symbol);
+      const description = jsDocDescription(prop.symbol) ?? base.properties[name]?.description;
       schema = { ...(description ? { description } : {}), 'x-declared-in': prop.declaredIn, ...schema };
 
       if (name in defaults) {
@@ -150,8 +147,14 @@ export function buildElementSchema(input: BuildInput, diag: Diagnostics): Elemen
       diag.report('default-without-prop', `defaults.${name}`, 'ключ defaultProps без свойства в props');
     }
   }
+  if (decl) {
+    for (const name of Object.keys(base.properties)) {
+      if (!(name in properties))
+        diag.report('base-only-prop', `properties.${name}`, 'есть в ручной базе, нет в коде');
+    }
+  }
 
-  // 3. События — ручная база
+  // События — ручная база
   const events: Record<string, EventSchema> = {};
   for (const [name, ev] of Object.entries(base.events)) {
     events[name] = stripAnyType(ev, () =>

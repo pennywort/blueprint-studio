@@ -40,8 +40,8 @@ export interface PropSchema {
   default?: JsonValue;
   /** Имя TS-типа, в котором объявлено свойство (только у props верхнего уровня). */
   'x-declared-in'?: string;
-  /** Значение — функция-обработчик, а не данные. */
-  'x-kind'?: 'handler';
+  /** handler — функция-обработчик; element — вложенный элемент (шаблон или узел). */
+  'x-kind'?: 'handler' | 'element';
   /** Тип не выражен схемой: исходный текст TS-типа. Причина — в отчёте. */
   'x-ts-type'?: string;
 }

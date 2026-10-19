@@ -91,6 +91,12 @@ export const EXCLUDED_PROPS: readonly string[] = [
 export const ELEMENT_TYPE_ENUMS: readonly string[] = ['ElementsTypes', 'InternalComponentTypes'];
 
 /**
+ * Типы вложенных элементов: значение такого типа (или его наследника) — дочерний элемент,
+ * в схеме { "x-kind": "element" }. Props шаблона и рантайм-узлы движка.
+ */
+export const ELEMENT_REF_TYPES: readonly string[] = ['BaseProps', 'BaseElement', 'BaseElementImpl'];
+
+/**
  * Внешние типы (lib.d.ts и т.п.) с известным JSON-представлением.
  * Остальные внешние типы получают x-ts-type и запись в отчёте.
  */

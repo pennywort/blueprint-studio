@@ -20,6 +20,7 @@ import {
 import { CHILDREN_GETTERS, CONTAINER_BASE_CLASSES, PATHS, PUBLIC_METHOD_DECORATORS } from './config';
 import type { Diagnostics } from './diagnostics';
 import type { JsonValue, MethodSchema } from './format';
+import { typeText } from './type-to-schema';
 
 // ─── Справочник элементов ────────────────────────────────────────────────────
 
@@ -169,7 +170,8 @@ function valueOf(node: Node, depth = 0): Extracted {
   }
   if (Node.isIdentifier(node) || Node.isPropertyAccessExpression(node)) {
     if (node.getText() === 'undefined') return undefined;
-    for (const decl of node.getSymbol()?.getDeclarations() ?? []) {
+    const sym = node.getSymbol();
+    for (const decl of (sym?.getAliasedSymbol() ?? sym)?.getDeclarations() ?? []) {
       if (Node.isEnumMember(decl)) {
         const v = decl.getValue();
         return v === undefined ? decl.getName() : v;
@@ -178,6 +180,19 @@ function valueOf(node: Node, depth = 0): Extracted {
         const init = decl.getInitializer();
         if (init) return valueOf(init, depth + 1);
       }
+    }
+    return UNRESOLVED;
+  }
+  // Enum['key'] — член enum по строковому ключу
+  if (Node.isElementAccessExpression(node)) {
+    const arg = node.getArgumentExpression();
+    const sym = node.getExpression().getSymbol();
+    const enumDecl = (sym?.getAliasedSymbol() ?? sym)?.getDeclarations().find(Node.isEnumDeclaration);
+    if (enumDecl && arg && Node.isStringLiteral(arg)) {
+      const key = arg.getLiteralValue();
+      // имя члена может быть записано в кавычках: 'row-reverse' = ...
+      const member = enumDecl.getMembers().find((m) => m.getName().replace(/^['"]|['"]$/g, '') === key);
+      if (member) return member.getValue() ?? member.getName();
     }
     return UNRESOLVED;
   }
@@ -235,10 +250,10 @@ export function readMethods(cls: ClassDeclaration): MethodSchema[] {
     if (!m.getDecorators().some((d) => PUBLIC_METHOD_DECORATORS.includes(d.getName()))) continue;
     methods.push({
       name: m.getName(),
-      returnType: m.getReturnTypeNode()?.getText() ?? m.getReturnType().getText(m),
+      returnType: m.getReturnTypeNode()?.getText() ?? typeText(m.getReturnType(), m),
       parameters: m.getParameters().map((p) => ({
         name: p.getName(),
-        type: p.getTypeNode()?.getText() ?? p.getType().getText(p),
+        type: p.getTypeNode()?.getText() ?? typeText(p.getType(), p),
         optional: p.isOptional(),
       })),
     });
@@ -321,12 +336,24 @@ function propsDeclIn(sf: SourceFile, name: string): PropsDecl | undefined {
   return sf.getInterface(name) ?? sf.getTypeAlias(name);
 }
 
-/** Объявление <Base>Props: по импортам класса, затем по каталогу элемента. */
+/**
+ * Объявление props элемента: первый аргумент типа базового класса
+ * (`extends BaseElementImpl<XProps, XModel>`), затем по имени <Base>Props в импортах и каталоге.
+ */
 export function findPropsDecl(
   project: Project,
   cls: ClassDeclaration,
   entry: ElementEntry,
 ): PropsDecl | null {
+  const arg = cls.getExtends()?.getTypeArguments()[0];
+  if (arg) {
+    const t = arg.getType();
+    const decl = (t.getAliasSymbol() ?? t.getSymbol())
+      ?.getDeclarations()
+      .find((d): d is PropsDecl => Node.isInterfaceDeclaration(d) || Node.isTypeAliasDeclaration(d));
+    if (decl) return decl;
+  }
+
   const name = `${entry.className.replace(/Element$/, '')}Props`;
   const isPropsFile = (p: string): boolean =>
     /Props\.ts$/.test(path.basename(p)) && !/ModelProps/.test(path.basename(p));

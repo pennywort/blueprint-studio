@@ -90,6 +90,7 @@ var EXCLUDED_PROPS = [
   "isComponentChild"
 ];
 var ELEMENT_TYPE_ENUMS = ["ElementsTypes", "InternalComponentTypes"];
+var ELEMENT_REF_TYPES = ["BaseProps", "BaseElement", "BaseElementImpl"];
 var KNOWN_EXTERNAL_TYPES = {
   Date: { type: "string", format: "date-time" }
 };
@@ -134,8 +135,8 @@ var DIAGNOSTIC_CODES = {
   "schema-invalid": "error",
   /** Props-файл или тип <X>Props не найден. */
   "props-missing": "error",
-  /** Props унаследован (не объявлен в <X>Props) и не описан базой. */
-  "inherited-prop": "info",
+  /** Свойство есть в ручной базе, но не в props-типе элемента — в схему не попадает. */
+  "base-only-prop": "info",
   /** Контейнер, но список дочерних типов не извлечён. */
   "children-unresolved": "warn",
   /** Список дочерних типов извлечён по тексту, а не по типу. */
@@ -159,355 +160,30 @@ var fs2 = __toESM(require("fs"), 1);
 // docs/schemas/generator/extract.ts
 var fs = __toESM(require("fs"), 1);
 var path = __toESM(require("path"), 1);
-var import_ts_morph = require("ts-morph");
-function findFileRecursively(dirPath, fileName) {
-  const exact = path.join(dirPath, fileName);
-  if (fs.existsSync(exact)) return exact;
-  for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const found = findFileRecursively(path.join(dirPath, entry.name), fileName);
-    if (found) return found;
-  }
-  return null;
-}
-function findMapObject(sf) {
-  const decl = sf.getVariableDeclaration(PATHS.elementsMapVariable);
-  const init = decl?.getInitializer();
-  if (init?.isKind(import_ts_morph.SyntaxKind.ObjectLiteralExpression)) return init;
-  for (const ea of sf.getExportAssignments()) {
-    const expr = ea.getExpression();
-    if (expr.isKind(import_ts_morph.SyntaxKind.ObjectLiteralExpression)) return expr;
-  }
-  return null;
-}
-function memberNameOfKey(text) {
-  return (text.startsWith("[") && text.endsWith("]") ? text.slice(1, -1) : text).split(".").pop() ?? text;
-}
-function readCatalog(rootDir, warn) {
-  const mapPath = path.resolve(rootDir, PATHS.elementsMap);
-  const constantsPath = path.resolve(rootDir, PATHS.constants);
-  for (const p of [mapPath, constantsPath]) {
-    if (!fs.existsSync(p)) throw new Error(`\u041D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0444\u0430\u0439\u043B: ${p}`);
-  }
-  const project = new import_ts_morph.Project({ compilerOptions: { strict: true, skipLibCheck: true } });
-  const enumDecl = project.addSourceFileAtPath(constantsPath).getEnum(PATHS.elementsTypesEnum);
-  if (!enumDecl) throw new Error(`enum ${PATHS.elementsTypesEnum} \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0432 ${constantsPath}`);
-  const enumValues = {};
-  for (const m of enumDecl.getMembers()) {
-    const v = m.getValue();
-    if (typeof v === "string") enumValues[m.getName()] = v;
-  }
-  const mapObject = findMapObject(project.addSourceFileAtPath(mapPath));
-  if (!mapObject?.isKind(import_ts_morph.SyntaxKind.ObjectLiteralExpression)) throw new Error("\u041E\u0431\u044A\u0435\u043A\u0442 ElementsMap \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D");
-  const elementsDir = path.resolve(rootDir, PATHS.elementsDir);
-  const elements = {};
-  const aliases = [];
-  for (const prop of mapObject.getProperties()) {
-    if (!prop.isKind(import_ts_morph.SyntaxKind.PropertyAssignment)) continue;
-    const member = memberNameOfKey(prop.getNameNode().getText());
-    const elementType = enumValues[member];
-    if (!elementType) {
-      warn(`[WARN] \u043D\u0435\u0442 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F ${PATHS.elementsTypesEnum}.${member}`);
-      continue;
-    }
-    const init = prop.getInitializer();
-    if (init?.isKind(import_ts_morph.SyntaxKind.PropertyAccessExpression)) {
-      const target = enumValues[init.getName()];
-      if (target) aliases.push({ alias: elementType, target });
-      continue;
-    }
-    if (!init?.isKind(import_ts_morph.SyntaxKind.Identifier)) continue;
-    const className = init.getText();
-    const file = findFileRecursively(elementsDir, `${className}.ts`);
-    if (!file) {
-      warn(`[WARN] \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0444\u0430\u0439\u043B \u043A\u043B\u0430\u0441\u0441\u0430 ${className}`);
-      continue;
-    }
-    elements[elementType] = { elementType, className, dirPath: path.dirname(file), deprecatedAliases: [] };
-  }
-  for (const { alias, target } of aliases) {
-    elements[target]?.deprecatedAliases.push(alias);
-  }
-  for (const e of Object.values(elements)) e.deprecatedAliases.sort();
-  return { elements, enumValues };
-}
-function createProgram(rootDir) {
-  const libPath = path.resolve(rootDir, PATHS.libPackage);
-  const project = new import_ts_morph.Project({
-    tsConfigFilePath: path.join(libPath, "tsconfig.json"),
-    compilerOptions: {
-      strict: true,
-      skipLibCheck: true,
-      experimentalDecorators: true,
-      emitDecoratorMetadata: true
-    }
-  });
-  project.addSourceFilesAtPaths([path.join(libPath, "src/**/*.ts")]);
-  return project;
-}
-function findClass(project, entry) {
-  const own = project.getSourceFile(path.join(entry.dirPath, `${entry.className}.ts`))?.getClass(entry.className);
-  if (own) return own;
-  for (const sf of project.getSourceFiles()) {
-    const cls = sf.getClass(entry.className);
-    if (cls) return cls;
-  }
-  return null;
-}
-var UNRESOLVED = /* @__PURE__ */ Symbol("unresolved");
-function valueOf(node, depth = 0) {
-  if (depth > 10) return UNRESOLVED;
-  if (import_ts_morph.Node.isNullLiteral(node)) return null;
-  if (import_ts_morph.Node.isTrueLiteral(node)) return true;
-  if (import_ts_morph.Node.isFalseLiteral(node)) return false;
-  if (import_ts_morph.Node.isNumericLiteral(node)) return node.getLiteralValue();
-  if (import_ts_morph.Node.isStringLiteral(node) || import_ts_morph.Node.isNoSubstitutionTemplateLiteral(node)) return node.getLiteralValue();
-  if (import_ts_morph.Node.isPrefixUnaryExpression(node) && node.getOperatorToken() === import_ts_morph.SyntaxKind.MinusToken) {
-    const v = valueOf(node.getOperand(), depth + 1);
-    return typeof v === "number" ? -v : UNRESOLVED;
-  }
-  if (import_ts_morph.Node.isParenthesizedExpression(node) || import_ts_morph.Node.isAsExpression(node) || import_ts_morph.Node.isSatisfiesExpression(node)) {
-    return valueOf(node.getExpression(), depth + 1);
-  }
-  if (import_ts_morph.Node.isIdentifier(node) || import_ts_morph.Node.isPropertyAccessExpression(node)) {
-    if (node.getText() === "undefined") return void 0;
-    for (const decl of node.getSymbol()?.getDeclarations() ?? []) {
-      if (import_ts_morph.Node.isEnumMember(decl)) {
-        const v = decl.getValue();
-        return v === void 0 ? decl.getName() : v;
-      }
-      if (import_ts_morph.Node.isVariableDeclaration(decl)) {
-        const init = decl.getInitializer();
-        if (init) return valueOf(init, depth + 1);
-      }
-    }
-    return UNRESOLVED;
-  }
-  if (import_ts_morph.Node.isArrayLiteralExpression(node)) {
-    const items = [];
-    for (const el of node.getElements()) {
-      const v = valueOf(el, depth + 1);
-      if (v === UNRESOLVED || v === void 0) return UNRESOLVED;
-      items.push(v);
-    }
-    return items;
-  }
-  if (import_ts_morph.Node.isObjectLiteralExpression(node)) {
-    const obj = {};
-    for (const p of node.getProperties()) {
-      if (!import_ts_morph.Node.isPropertyAssignment(p)) return UNRESOLVED;
-      const init = p.getInitializer();
-      const v = init ? valueOf(init, depth + 1) : UNRESOLVED;
-      if (v === UNRESOLVED) return UNRESOLVED;
-      if (v !== void 0) obj[p.getName().replace(/^['"]|['"]$/g, "")] = v;
-    }
-    return obj;
-  }
-  return UNRESOLVED;
-}
-function readDefaults(cls, diag) {
-  const out = {};
-  const member = cls.getStaticProperty("defaultProps");
-  if (!member || !import_ts_morph.Node.isPropertyDeclaration(member)) return out;
-  const init = member.getInitializer();
-  if (!init || !import_ts_morph.Node.isObjectLiteralExpression(init)) return out;
-  for (const p of init.getProperties()) {
-    if (!import_ts_morph.Node.isPropertyAssignment(p)) continue;
-    const name = p.getName().replace(/^['"_]+|['"]+$/g, "");
-    const valueNode = p.getInitializer();
-    if (!valueNode) continue;
-    if (import_ts_morph.Node.isArrowFunction(valueNode) || import_ts_morph.Node.isFunctionExpression(valueNode)) continue;
-    const v = valueOf(valueNode);
-    if (v === UNRESOLVED) {
-      diag.report("default-unresolved", `props.${name}.default`, valueNode.getText());
-      continue;
-    }
-    if (v !== void 0) out[name] = v;
-  }
-  return out;
-}
-function readMethods(cls) {
-  const methods = [];
-  for (const m of cls.getInstanceMethods()) {
-    if (!m.getDecorators().some((d) => PUBLIC_METHOD_DECORATORS.includes(d.getName()))) continue;
-    methods.push({
-      name: m.getName(),
-      returnType: m.getReturnTypeNode()?.getText() ?? m.getReturnType().getText(m),
-      parameters: m.getParameters().map((p) => ({
-        name: p.getName(),
-        type: p.getTypeNode()?.getText() ?? p.getType().getText(p),
-        optional: p.isOptional()
-      }))
-    });
-  }
-  return methods;
-}
-function isContainer(cls) {
-  let current = cls;
-  for (let i = 0; current && i < 20; i++) {
-    const ext = current.getExtends()?.getExpression().getText();
-    if (ext && CONTAINER_BASE_CLASSES.includes(ext)) return true;
-    current = current.getBaseClass();
-  }
-  const text = cls.getExtends()?.getText() ?? "";
-  return CONTAINER_BASE_CLASSES.some((n) => text.includes(n));
-}
-function readAllowedChildren(cls, enumValues, diag) {
-  const chain = [];
-  for (let c = cls; c && chain.length < 20; c = c.getBaseClass()) chain.push(c);
-  const getters = CHILDREN_GETTERS.flatMap((name) => chain.map((c) => c.getGetAccessor(name)));
-  for (const getter of getters) {
-    if (!getter) continue;
-    const name = `${getter.getParentOrThrow().getSymbol()?.getName()}.${getter.getName()}`;
-    const literal = getter.getDescendantsOfKind(import_ts_morph.SyntaxKind.ReturnStatement).map((r) => r.getExpression()).find((e) => e && import_ts_morph.Node.isArrayLiteralExpression(e));
-    if (literal && import_ts_morph.Node.isArrayLiteralExpression(literal)) {
-      const values2 = literal.getElements().map((e) => valueOf(e));
-      if (values2.length > 0 && values2.every((v) => typeof v === "string"))
-        return [...new Set(values2)];
-    }
-    const ret = getter.getReturnType();
-    const el = ret.getArrayElementType();
-    const parts = el ? el.isUnion() ? el.getUnionTypes() : [el] : ret.isTuple() ? ret.getTupleElements() : [];
-    const values = parts.map((p) => p.getLiteralValue()).filter((v) => typeof v === "string");
-    const narrowed = values.length < Object.keys(enumValues).length;
-    if (values.length > 0 && values.length === parts.length && narrowed) return [...new Set(values)];
-    const body = getter.getBody()?.getText() ?? "";
-    const members = [...body.matchAll(/ElementsTypes\.(\w+)/g)].map((m) => m[1]);
-    const byText = [...new Set(members.map((m) => enumValues[m]).filter((v) => !!v))];
-    if (byText.length > 0) {
-      diag.report("children-by-text", "x-container", `${name}: \u0442\u0438\u043F \u0432\u043E\u0437\u0432\u0440\u0430\u0442\u0430 ${ret.getText(getter)}`);
-      return byText;
-    }
-  }
-  diag.report("children-unresolved", "x-container", "\u0433\u0435\u0442\u0442\u0435\u0440 \u0434\u043E\u043F\u0443\u0441\u0442\u0438\u043C\u044B\u0445 \u0442\u0438\u043F\u043E\u0432 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0438\u043B\u0438 \u043D\u0435 \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u043D");
-  return null;
-}
-function propsDeclIn(sf, name) {
-  return sf.getInterface(name) ?? sf.getTypeAlias(name);
-}
-function findPropsDecl(project, cls, entry) {
-  const name = `${entry.className.replace(/Element$/, "")}Props`;
-  const isPropsFile = (p) => /Props\.ts$/.test(path.basename(p)) && !/ModelProps/.test(path.basename(p));
-  for (const imp of cls.getSourceFile().getImportDeclarations()) {
-    const sf = imp.getModuleSpecifierSourceFile();
-    if (sf && isPropsFile(sf.getFilePath())) {
-      const decl = propsDeclIn(sf, name);
-      if (decl) return decl;
-    }
-  }
-  for (const sf of project.getSourceFiles()) {
-    if (sf.getFilePath().startsWith(entry.dirPath) && isPropsFile(sf.getFilePath())) {
-      const decl = propsDeclIn(sf, name);
-      if (decl) return decl;
-    }
-  }
-  return null;
-}
-function readProps(decl) {
-  const ownName = decl.getName();
-  return decl.getType().getProperties().map((symbol) => {
-    const d = symbol.getDeclarations()[0];
-    const owner = d?.getFirstAncestor(
-      (a) => import_ts_morph.Node.isInterfaceDeclaration(a) || import_ts_morph.Node.isTypeAliasDeclaration(a)
-    );
-    const declaredIn = owner?.getName() ?? ownName;
-    return {
-      name: symbol.getName(),
-      symbol,
-      optional: symbol.isOptional(),
-      declaredIn,
-      own: declaredIn === ownName
-    };
-  });
-}
-
-// docs/schemas/generator/format.ts
-var FORMAT_VERSION = 1;
-var JSON_SCHEMA_DRAFT = "http://json-schema.org/draft-07/schema#";
-var ELEMENT_KEY_ORDER = [
-  "$schema",
-  "$id",
-  "title",
-  "description",
-  "type",
-  "x-format-version",
-  "x-element-type",
-  "x-category",
-  "x-deprecated-aliases",
-  "x-container",
-  "properties",
-  "required",
-  "x-events",
-  "x-methods"
-];
-var PROP_KEY_ORDER = [
-  "$schema",
-  "$id",
-  "title",
-  "description",
-  "x-declared-in",
-  "x-kind",
-  "$ref",
-  "type",
-  "const",
-  "format",
-  "enum",
-  "items",
-  "properties",
-  "required",
-  "additionalProperties",
-  "anyOf",
-  "oneOf",
-  "x-ts-type",
-  "default"
-];
-function orderKeys(obj, order) {
-  const rank = (k) => {
-    const i = order.indexOf(k);
-    return i === -1 ? order.length : i;
-  };
-  const keys = Object.keys(obj).sort(
-    (a, b) => rank(a) - rank(b) || (rank(a) === order.length ? a.localeCompare(b) : 0)
-  );
-  const out = {};
-  for (const k of keys) out[k] = obj[k];
-  return out;
-}
-function canonicalProp(schema) {
-  const s = { ...schema };
-  if (s.items) s.items = canonicalProp(s.items);
-  if (s.properties) {
-    const props = {};
-    for (const [k, v] of Object.entries(s.properties)) props[k] = canonicalProp(v);
-    s.properties = props;
-  }
-  if (s.additionalProperties && typeof s.additionalProperties === "object") {
-    s.additionalProperties = canonicalProp(s.additionalProperties);
-  }
-  if (s.anyOf) s.anyOf = s.anyOf.map(canonicalProp);
-  if (s.oneOf) s.oneOf = s.oneOf.map(canonicalProp);
-  return orderKeys(s, PROP_KEY_ORDER);
-}
-function canonicalElement(schema) {
-  const props = {};
-  for (const [k, v] of Object.entries(schema.properties)) props[k] = canonicalProp(v);
-  return orderKeys(
-    { ...schema, properties: props, required: [...schema.required].sort() },
-    ELEMENT_KEY_ORDER
-  );
-}
-function serialize(value) {
-  return JSON.stringify(value, null, 2) + "\n";
-}
+var import_ts_morph2 = require("ts-morph");
 
 // docs/schemas/generator/type-to-schema.ts
-var import_ts_morph2 = require("ts-morph");
+var import_ts_morph = require("ts-morph");
 function typeText(type, node) {
-  return type.getText(node);
+  return type.getText(node).replace(/import\("[^"]*"\)\./g, "");
+}
+function isElementRef(type) {
+  const queue = [type];
+  const seen = /* @__PURE__ */ new Set();
+  while (queue.length > 0) {
+    const t = queue.shift();
+    if (seen.has(t)) continue;
+    seen.add(t);
+    const names = [t.getAliasSymbol()?.getName(), t.getSymbol()?.getName()];
+    if (names.some((n) => n && ELEMENT_REF_TYPES.includes(n))) return true;
+    queue.push(...t.getBaseTypes());
+    if (t.isIntersection()) queue.push(...t.getIntersectionTypes());
+  }
+  return false;
 }
 function jsDocDescription(symbol) {
   for (const decl of symbol.getDeclarations()) {
-    if (import_ts_morph2.Node.isJSDocable(decl)) {
+    if (import_ts_morph.Node.isJSDocable(decl)) {
       const text = decl.getJsDocs().map((d) => d.getDescription().trim()).filter(Boolean).join("\n");
       if (text) return text;
     }
@@ -533,9 +209,9 @@ function isRuntimeObjectType(type) {
   for (const prop of type.getProperties()) {
     for (const decl of prop.getDeclarations()) {
       const parent = decl.getParent();
-      if (decl.isKind(import_ts_morph2.SyntaxKind.MethodDeclaration) && parent?.isKind(import_ts_morph2.SyntaxKind.ClassDeclaration))
+      if (decl.isKind(import_ts_morph.SyntaxKind.MethodDeclaration) && parent?.isKind(import_ts_morph.SyntaxKind.ClassDeclaration))
         return true;
-      if (decl.isKind(import_ts_morph2.SyntaxKind.MethodSignature) && parent?.isKind(import_ts_morph2.SyntaxKind.InterfaceDeclaration))
+      if (decl.isKind(import_ts_morph.SyntaxKind.MethodSignature) && parent?.isKind(import_ts_morph.SyntaxKind.InterfaceDeclaration))
         return true;
     }
   }
@@ -545,8 +221,8 @@ function isElementTypeRef(type) {
   const parts = type.isUnion() ? type.getUnionTypes().filter((p) => !p.isUndefined() && !p.isNull()) : [type];
   return parts.length > 0 && parts.every((p) => {
     const decl = p.getSymbol()?.getDeclarations()[0];
-    const enumDecl = decl?.isKind(import_ts_morph2.SyntaxKind.EnumMember) ? decl.getParent() : decl;
-    return enumDecl?.isKind(import_ts_morph2.SyntaxKind.EnumDeclaration) === true && ELEMENT_TYPE_ENUMS.includes(enumDecl.getName());
+    const enumDecl = decl?.isKind(import_ts_morph.SyntaxKind.EnumMember) ? decl.getParent() : decl;
+    return enumDecl?.isKind(import_ts_morph.SyntaxKind.EnumDeclaration) === true && ELEMENT_TYPE_ENUMS.includes(enumDecl.getName());
   });
 }
 function literalValue(t) {
@@ -583,14 +259,15 @@ function typeToSchema(type, ctx, path4, seen = /* @__PURE__ */ new Set()) {
   if (type.isAny() || type.isUnknown()) return unresolved(ctx, type, path4, "any-type", "any/unknown");
   if (type.getCallSignatures().length > 0) return { "x-kind": "handler" };
   if (type.isUnion()) return unionToSchema(type, ctx, path4, seen);
+  if (type.isObject() && isElementRef(type)) return { "x-kind": "element" };
   if (type.isEnumLiteral() || type.isStringLiteral()) {
     return { type: "string", const: String(type.getLiteralValue() ?? type.getText()) };
   }
   if (type.isNumberLiteral()) return { type: "number", const: Number(type.getLiteralValue()) };
   if (type.isBooleanLiteral()) return { type: "boolean", const: type.getText() === "true" };
   if (type.isEnum()) {
-    const decl = type.getSymbol()?.getDeclarations().find((d) => d.isKind(import_ts_morph2.SyntaxKind.EnumDeclaration));
-    if (decl?.isKind(import_ts_morph2.SyntaxKind.EnumDeclaration)) {
+    const decl = type.getSymbol()?.getDeclarations().find((d) => d.isKind(import_ts_morph.SyntaxKind.EnumDeclaration));
+    if (decl?.isKind(import_ts_morph.SyntaxKind.EnumDeclaration)) {
       const values = decl.getMembers().map((m) => String(m.getValue() ?? m.getName()));
       return { type: "string", enum: values };
     }
@@ -707,6 +384,365 @@ function objectToSchema(type, ctx, path4, seen) {
   return { type: "object" };
 }
 
+// docs/schemas/generator/extract.ts
+function findFileRecursively(dirPath, fileName) {
+  const exact = path.join(dirPath, fileName);
+  if (fs.existsSync(exact)) return exact;
+  for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const found = findFileRecursively(path.join(dirPath, entry.name), fileName);
+    if (found) return found;
+  }
+  return null;
+}
+function findMapObject(sf) {
+  const decl = sf.getVariableDeclaration(PATHS.elementsMapVariable);
+  const init = decl?.getInitializer();
+  if (init?.isKind(import_ts_morph2.SyntaxKind.ObjectLiteralExpression)) return init;
+  for (const ea of sf.getExportAssignments()) {
+    const expr = ea.getExpression();
+    if (expr.isKind(import_ts_morph2.SyntaxKind.ObjectLiteralExpression)) return expr;
+  }
+  return null;
+}
+function memberNameOfKey(text) {
+  return (text.startsWith("[") && text.endsWith("]") ? text.slice(1, -1) : text).split(".").pop() ?? text;
+}
+function readCatalog(rootDir, warn) {
+  const mapPath = path.resolve(rootDir, PATHS.elementsMap);
+  const constantsPath = path.resolve(rootDir, PATHS.constants);
+  for (const p of [mapPath, constantsPath]) {
+    if (!fs.existsSync(p)) throw new Error(`\u041D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0444\u0430\u0439\u043B: ${p}`);
+  }
+  const project = new import_ts_morph2.Project({ compilerOptions: { strict: true, skipLibCheck: true } });
+  const enumDecl = project.addSourceFileAtPath(constantsPath).getEnum(PATHS.elementsTypesEnum);
+  if (!enumDecl) throw new Error(`enum ${PATHS.elementsTypesEnum} \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0432 ${constantsPath}`);
+  const enumValues = {};
+  for (const m of enumDecl.getMembers()) {
+    const v = m.getValue();
+    if (typeof v === "string") enumValues[m.getName()] = v;
+  }
+  const mapObject = findMapObject(project.addSourceFileAtPath(mapPath));
+  if (!mapObject?.isKind(import_ts_morph2.SyntaxKind.ObjectLiteralExpression)) throw new Error("\u041E\u0431\u044A\u0435\u043A\u0442 ElementsMap \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D");
+  const elementsDir = path.resolve(rootDir, PATHS.elementsDir);
+  const elements = {};
+  const aliases = [];
+  for (const prop of mapObject.getProperties()) {
+    if (!prop.isKind(import_ts_morph2.SyntaxKind.PropertyAssignment)) continue;
+    const member = memberNameOfKey(prop.getNameNode().getText());
+    const elementType = enumValues[member];
+    if (!elementType) {
+      warn(`[WARN] \u043D\u0435\u0442 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F ${PATHS.elementsTypesEnum}.${member}`);
+      continue;
+    }
+    const init = prop.getInitializer();
+    if (init?.isKind(import_ts_morph2.SyntaxKind.PropertyAccessExpression)) {
+      const target = enumValues[init.getName()];
+      if (target) aliases.push({ alias: elementType, target });
+      continue;
+    }
+    if (!init?.isKind(import_ts_morph2.SyntaxKind.Identifier)) continue;
+    const className = init.getText();
+    const file = findFileRecursively(elementsDir, `${className}.ts`);
+    if (!file) {
+      warn(`[WARN] \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0444\u0430\u0439\u043B \u043A\u043B\u0430\u0441\u0441\u0430 ${className}`);
+      continue;
+    }
+    elements[elementType] = { elementType, className, dirPath: path.dirname(file), deprecatedAliases: [] };
+  }
+  for (const { alias, target } of aliases) {
+    elements[target]?.deprecatedAliases.push(alias);
+  }
+  for (const e of Object.values(elements)) e.deprecatedAliases.sort();
+  return { elements, enumValues };
+}
+function createProgram(rootDir) {
+  const libPath = path.resolve(rootDir, PATHS.libPackage);
+  const project = new import_ts_morph2.Project({
+    tsConfigFilePath: path.join(libPath, "tsconfig.json"),
+    compilerOptions: {
+      strict: true,
+      skipLibCheck: true,
+      experimentalDecorators: true,
+      emitDecoratorMetadata: true
+    }
+  });
+  project.addSourceFilesAtPaths([path.join(libPath, "src/**/*.ts")]);
+  return project;
+}
+function findClass(project, entry) {
+  const own = project.getSourceFile(path.join(entry.dirPath, `${entry.className}.ts`))?.getClass(entry.className);
+  if (own) return own;
+  for (const sf of project.getSourceFiles()) {
+    const cls = sf.getClass(entry.className);
+    if (cls) return cls;
+  }
+  return null;
+}
+var UNRESOLVED = /* @__PURE__ */ Symbol("unresolved");
+function valueOf(node, depth = 0) {
+  if (depth > 10) return UNRESOLVED;
+  if (import_ts_morph2.Node.isNullLiteral(node)) return null;
+  if (import_ts_morph2.Node.isTrueLiteral(node)) return true;
+  if (import_ts_morph2.Node.isFalseLiteral(node)) return false;
+  if (import_ts_morph2.Node.isNumericLiteral(node)) return node.getLiteralValue();
+  if (import_ts_morph2.Node.isStringLiteral(node) || import_ts_morph2.Node.isNoSubstitutionTemplateLiteral(node)) return node.getLiteralValue();
+  if (import_ts_morph2.Node.isPrefixUnaryExpression(node) && node.getOperatorToken() === import_ts_morph2.SyntaxKind.MinusToken) {
+    const v = valueOf(node.getOperand(), depth + 1);
+    return typeof v === "number" ? -v : UNRESOLVED;
+  }
+  if (import_ts_morph2.Node.isParenthesizedExpression(node) || import_ts_morph2.Node.isAsExpression(node) || import_ts_morph2.Node.isSatisfiesExpression(node)) {
+    return valueOf(node.getExpression(), depth + 1);
+  }
+  if (import_ts_morph2.Node.isIdentifier(node) || import_ts_morph2.Node.isPropertyAccessExpression(node)) {
+    if (node.getText() === "undefined") return void 0;
+    const sym = node.getSymbol();
+    for (const decl of (sym?.getAliasedSymbol() ?? sym)?.getDeclarations() ?? []) {
+      if (import_ts_morph2.Node.isEnumMember(decl)) {
+        const v = decl.getValue();
+        return v === void 0 ? decl.getName() : v;
+      }
+      if (import_ts_morph2.Node.isVariableDeclaration(decl)) {
+        const init = decl.getInitializer();
+        if (init) return valueOf(init, depth + 1);
+      }
+    }
+    return UNRESOLVED;
+  }
+  if (import_ts_morph2.Node.isElementAccessExpression(node)) {
+    const arg = node.getArgumentExpression();
+    const sym = node.getExpression().getSymbol();
+    const enumDecl = (sym?.getAliasedSymbol() ?? sym)?.getDeclarations().find(import_ts_morph2.Node.isEnumDeclaration);
+    if (enumDecl && arg && import_ts_morph2.Node.isStringLiteral(arg)) {
+      const key = arg.getLiteralValue();
+      const member = enumDecl.getMembers().find((m) => m.getName().replace(/^['"]|['"]$/g, "") === key);
+      if (member) return member.getValue() ?? member.getName();
+    }
+    return UNRESOLVED;
+  }
+  if (import_ts_morph2.Node.isArrayLiteralExpression(node)) {
+    const items = [];
+    for (const el of node.getElements()) {
+      const v = valueOf(el, depth + 1);
+      if (v === UNRESOLVED || v === void 0) return UNRESOLVED;
+      items.push(v);
+    }
+    return items;
+  }
+  if (import_ts_morph2.Node.isObjectLiteralExpression(node)) {
+    const obj = {};
+    for (const p of node.getProperties()) {
+      if (!import_ts_morph2.Node.isPropertyAssignment(p)) return UNRESOLVED;
+      const init = p.getInitializer();
+      const v = init ? valueOf(init, depth + 1) : UNRESOLVED;
+      if (v === UNRESOLVED) return UNRESOLVED;
+      if (v !== void 0) obj[p.getName().replace(/^['"]|['"]$/g, "")] = v;
+    }
+    return obj;
+  }
+  return UNRESOLVED;
+}
+function readDefaults(cls, diag) {
+  const out = {};
+  const member = cls.getStaticProperty("defaultProps");
+  if (!member || !import_ts_morph2.Node.isPropertyDeclaration(member)) return out;
+  const init = member.getInitializer();
+  if (!init || !import_ts_morph2.Node.isObjectLiteralExpression(init)) return out;
+  for (const p of init.getProperties()) {
+    if (!import_ts_morph2.Node.isPropertyAssignment(p)) continue;
+    const name = p.getName().replace(/^['"_]+|['"]+$/g, "");
+    const valueNode = p.getInitializer();
+    if (!valueNode) continue;
+    if (import_ts_morph2.Node.isArrowFunction(valueNode) || import_ts_morph2.Node.isFunctionExpression(valueNode)) continue;
+    const v = valueOf(valueNode);
+    if (v === UNRESOLVED) {
+      diag.report("default-unresolved", `props.${name}.default`, valueNode.getText());
+      continue;
+    }
+    if (v !== void 0) out[name] = v;
+  }
+  return out;
+}
+function readMethods(cls) {
+  const methods = [];
+  for (const m of cls.getInstanceMethods()) {
+    if (!m.getDecorators().some((d) => PUBLIC_METHOD_DECORATORS.includes(d.getName()))) continue;
+    methods.push({
+      name: m.getName(),
+      returnType: m.getReturnTypeNode()?.getText() ?? typeText(m.getReturnType(), m),
+      parameters: m.getParameters().map((p) => ({
+        name: p.getName(),
+        type: p.getTypeNode()?.getText() ?? typeText(p.getType(), p),
+        optional: p.isOptional()
+      }))
+    });
+  }
+  return methods;
+}
+function isContainer(cls) {
+  let current = cls;
+  for (let i = 0; current && i < 20; i++) {
+    const ext = current.getExtends()?.getExpression().getText();
+    if (ext && CONTAINER_BASE_CLASSES.includes(ext)) return true;
+    current = current.getBaseClass();
+  }
+  const text = cls.getExtends()?.getText() ?? "";
+  return CONTAINER_BASE_CLASSES.some((n) => text.includes(n));
+}
+function readAllowedChildren(cls, enumValues, diag) {
+  const chain = [];
+  for (let c = cls; c && chain.length < 20; c = c.getBaseClass()) chain.push(c);
+  const getters = CHILDREN_GETTERS.flatMap((name) => chain.map((c) => c.getGetAccessor(name)));
+  for (const getter of getters) {
+    if (!getter) continue;
+    const name = `${getter.getParentOrThrow().getSymbol()?.getName()}.${getter.getName()}`;
+    const literal = getter.getDescendantsOfKind(import_ts_morph2.SyntaxKind.ReturnStatement).map((r) => r.getExpression()).find((e) => e && import_ts_morph2.Node.isArrayLiteralExpression(e));
+    if (literal && import_ts_morph2.Node.isArrayLiteralExpression(literal)) {
+      const values2 = literal.getElements().map((e) => valueOf(e));
+      if (values2.length > 0 && values2.every((v) => typeof v === "string"))
+        return [...new Set(values2)];
+    }
+    const ret = getter.getReturnType();
+    const el = ret.getArrayElementType();
+    const parts = el ? el.isUnion() ? el.getUnionTypes() : [el] : ret.isTuple() ? ret.getTupleElements() : [];
+    const values = parts.map((p) => p.getLiteralValue()).filter((v) => typeof v === "string");
+    const narrowed = values.length < Object.keys(enumValues).length;
+    if (values.length > 0 && values.length === parts.length && narrowed) return [...new Set(values)];
+    const body = getter.getBody()?.getText() ?? "";
+    const members = [...body.matchAll(/ElementsTypes\.(\w+)/g)].map((m) => m[1]);
+    const byText = [...new Set(members.map((m) => enumValues[m]).filter((v) => !!v))];
+    if (byText.length > 0) {
+      diag.report("children-by-text", "x-container", `${name}: \u0442\u0438\u043F \u0432\u043E\u0437\u0432\u0440\u0430\u0442\u0430 ${ret.getText(getter)}`);
+      return byText;
+    }
+  }
+  diag.report("children-unresolved", "x-container", "\u0433\u0435\u0442\u0442\u0435\u0440 \u0434\u043E\u043F\u0443\u0441\u0442\u0438\u043C\u044B\u0445 \u0442\u0438\u043F\u043E\u0432 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0438\u043B\u0438 \u043D\u0435 \u0440\u0430\u0437\u043E\u0431\u0440\u0430\u043D");
+  return null;
+}
+function propsDeclIn(sf, name) {
+  return sf.getInterface(name) ?? sf.getTypeAlias(name);
+}
+function findPropsDecl(project, cls, entry) {
+  const arg = cls.getExtends()?.getTypeArguments()[0];
+  if (arg) {
+    const t = arg.getType();
+    const decl = (t.getAliasSymbol() ?? t.getSymbol())?.getDeclarations().find((d) => import_ts_morph2.Node.isInterfaceDeclaration(d) || import_ts_morph2.Node.isTypeAliasDeclaration(d));
+    if (decl) return decl;
+  }
+  const name = `${entry.className.replace(/Element$/, "")}Props`;
+  const isPropsFile = (p) => /Props\.ts$/.test(path.basename(p)) && !/ModelProps/.test(path.basename(p));
+  for (const imp of cls.getSourceFile().getImportDeclarations()) {
+    const sf = imp.getModuleSpecifierSourceFile();
+    if (sf && isPropsFile(sf.getFilePath())) {
+      const decl = propsDeclIn(sf, name);
+      if (decl) return decl;
+    }
+  }
+  for (const sf of project.getSourceFiles()) {
+    if (sf.getFilePath().startsWith(entry.dirPath) && isPropsFile(sf.getFilePath())) {
+      const decl = propsDeclIn(sf, name);
+      if (decl) return decl;
+    }
+  }
+  return null;
+}
+function readProps(decl) {
+  const ownName = decl.getName();
+  return decl.getType().getProperties().map((symbol) => {
+    const d = symbol.getDeclarations()[0];
+    const owner = d?.getFirstAncestor(
+      (a) => import_ts_morph2.Node.isInterfaceDeclaration(a) || import_ts_morph2.Node.isTypeAliasDeclaration(a)
+    );
+    const declaredIn = owner?.getName() ?? ownName;
+    return {
+      name: symbol.getName(),
+      symbol,
+      optional: symbol.isOptional(),
+      declaredIn,
+      own: declaredIn === ownName
+    };
+  });
+}
+
+// docs/schemas/generator/format.ts
+var FORMAT_VERSION = 1;
+var JSON_SCHEMA_DRAFT = "http://json-schema.org/draft-07/schema#";
+var ELEMENT_KEY_ORDER = [
+  "$schema",
+  "$id",
+  "title",
+  "description",
+  "type",
+  "x-format-version",
+  "x-element-type",
+  "x-category",
+  "x-deprecated-aliases",
+  "x-container",
+  "properties",
+  "required",
+  "x-events",
+  "x-methods"
+];
+var PROP_KEY_ORDER = [
+  "$schema",
+  "$id",
+  "title",
+  "description",
+  "x-declared-in",
+  "x-kind",
+  "$ref",
+  "type",
+  "const",
+  "format",
+  "enum",
+  "items",
+  "properties",
+  "required",
+  "additionalProperties",
+  "anyOf",
+  "oneOf",
+  "x-ts-type",
+  "default"
+];
+function orderKeys(obj, order) {
+  const rank = (k) => {
+    const i = order.indexOf(k);
+    return i === -1 ? order.length : i;
+  };
+  const keys = Object.keys(obj).sort(
+    (a, b) => rank(a) - rank(b) || (rank(a) === order.length ? a.localeCompare(b) : 0)
+  );
+  const out = {};
+  for (const k of keys) out[k] = obj[k];
+  return out;
+}
+function canonicalProp(schema) {
+  const s = { ...schema };
+  if (s.items) s.items = canonicalProp(s.items);
+  if (s.properties) {
+    const props = {};
+    for (const [k, v] of Object.entries(s.properties)) props[k] = canonicalProp(v);
+    s.properties = props;
+  }
+  if (s.additionalProperties && typeof s.additionalProperties === "object") {
+    s.additionalProperties = canonicalProp(s.additionalProperties);
+  }
+  if (s.anyOf) s.anyOf = s.anyOf.map(canonicalProp);
+  if (s.oneOf) s.oneOf = s.oneOf.map(canonicalProp);
+  return orderKeys(s, PROP_KEY_ORDER);
+}
+function canonicalElement(schema) {
+  const props = {};
+  for (const [k, v] of Object.entries(schema.properties)) props[k] = canonicalProp(v);
+  return orderKeys(
+    { ...schema, properties: props, required: [...schema.required].sort() },
+    ELEMENT_KEY_ORDER
+  );
+}
+function serialize(value) {
+  return JSON.stringify(value, null, 2) + "\n";
+}
+
 // docs/schemas/generator/emit.ts
 function stripAnyType(value, onFound) {
   if (Array.isArray(value)) return value.map((v) => stripAnyType(v, onFound));
@@ -723,8 +759,12 @@ function stripAnyType(value, onFound) {
   }
   return value;
 }
-function readBaseSchemas(baseElementPath, baseEventsPath) {
-  const read = (p) => fs2.existsSync(p) ? JSON.parse(fs2.readFileSync(p, "utf-8")) : {};
+function readBaseSchemas(baseElementPath, baseEventsPath, warn) {
+  const read = (p) => {
+    if (fs2.existsSync(p)) return JSON.parse(fs2.readFileSync(p, "utf-8"));
+    warn(`[WARN] \u0440\u0443\u0447\u043D\u0430\u044F \u0431\u0430\u0437\u0430 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430: ${p}`);
+    return {};
+  };
   const properties = read(baseElementPath).properties ?? {};
   const events = read(baseEventsPath)["x-events"] ?? {};
   return { properties, events };
@@ -756,9 +796,6 @@ function buildElementSchema(input, diag) {
   const defaults = readDefaults(cls, diag);
   const properties = {};
   const required = [];
-  for (const [name, schema2] of Object.entries(base.properties)) {
-    properties[name] = name in defaults ? { ...schema2, default: defaults[name] } : { ...schema2 };
-  }
   const decl = findPropsDecl(project, cls, entry);
   if (!decl) {
     diag.report("props-missing", "properties", `\u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D ${entry.className.replace(/Element$/, "")}Props`);
@@ -766,14 +803,9 @@ function buildElementSchema(input, diag) {
     for (const prop of readProps(decl)) {
       const name = prop.name;
       if (name.startsWith("_") || EXCLUDED_PROPS.includes(name)) continue;
-      if (name in base.properties) {
-        properties[name] = { ...properties[name], "x-declared-in": prop.declaredIn };
-        continue;
-      }
-      if (!prop.own) diag.report("inherited-prop", `properties.${name}`, `\u0438\u0437 ${prop.declaredIn}`);
       const ctx = { elementType, diag, shared, printNode: decl };
       let schema2 = typeToSchema(prop.symbol.getTypeAtLocation(decl), ctx, `properties.${name}`);
-      const description = jsDocDescription(prop.symbol);
+      const description = jsDocDescription(prop.symbol) ?? base.properties[name]?.description;
       schema2 = { ...description ? { description } : {}, "x-declared-in": prop.declaredIn, ...schema2 };
       if (name in defaults) {
         const value = defaults[name];
@@ -794,6 +826,11 @@ function buildElementSchema(input, diag) {
   for (const name of Object.keys(defaults)) {
     if (!(name in properties) && !EXCLUDED_PROPS.includes(name)) {
       diag.report("default-without-prop", `defaults.${name}`, "\u043A\u043B\u044E\u0447 defaultProps \u0431\u0435\u0437 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0432 props");
+    }
+  }
+  if (decl) {
+    for (const name of Object.keys(base.properties)) {
+      if (!(name in properties)) diag.report("base-only-prop", `properties.${name}`, "\u0435\u0441\u0442\u044C \u0432 \u0440\u0443\u0447\u043D\u043E\u0439 \u0431\u0430\u0437\u0435, \u043D\u0435\u0442 \u0432 \u043A\u043E\u0434\u0435");
     }
   }
   const events = {};
@@ -1030,7 +1067,8 @@ function main() {
   const shared = new SharedRegistry(rootDir, warn);
   const base = readBaseSchemas(
     path3.resolve(pkgDir, PATHS.baseElementSchema),
-    path3.resolve(pkgDir, PATHS.baseEventsSchema)
+    path3.resolve(pkgDir, PATHS.baseEventsSchema),
+    warn
   );
   const schemas = {};
   const diagnostics = {};

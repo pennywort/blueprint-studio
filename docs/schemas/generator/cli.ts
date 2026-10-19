@@ -97,6 +97,7 @@ function main(): number {
   const base = readBaseSchemas(
     path.resolve(pkgDir, PATHS.baseElementSchema),
     path.resolve(pkgDir, PATHS.baseEventsSchema),
+    warn,
   );
 
   const schemas: Record<string, ElementSchema> = {};

@@ -31,8 +31,8 @@ export const DIAGNOSTIC_CODES = {
   'schema-invalid': 'error',
   /** Props-файл или тип <X>Props не найден. */
   'props-missing': 'error',
-  /** Props унаследован (не объявлен в <X>Props) и не описан базой. */
-  'inherited-prop': 'info',
+  /** Свойство есть в ручной базе, но не в props-типе элемента — в схему не попадает. */
+  'base-only-prop': 'info',
   /** Контейнер, но список дочерних типов не извлечён. */
   'children-unresolved': 'warn',
   /** Список дочерних типов извлечён по тексту, а не по типу. */
