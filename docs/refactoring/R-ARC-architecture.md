@@ -3,7 +3,7 @@
 > Источник: `/architecture-review` всего проекта, 2026-10-19 (master `caaa9ac`).
 > Фокус ревью: дрейф от ADR, параллельные механизмы (AGENTS.md §4a), слои и порты,
 > генерируемость UI из карты (§4b), лёгкость внедрения изменений поведения.
-> Статус: ⏳ ожидает. Код по ревью не менялся.
+> Статус: 🔄 в работе — R-ARC-1, R-ARC-2 ✅; R-ARC-3/4 разобраны в R-SCH, ждут решений владельца.
 
 ## Как запустить в новой сессии
 
@@ -36,6 +36,10 @@
 
 ## R-ARC-1. Сброс undo-истории при смене графа (баг, риск низкий)
 
+✅ 2026-10-19, `1a0c123`: `commandBus.reset()` в инициализаторе графа `useEditorStore` — при каждом
+открытии редактора. Баг воспроизведён `npm run ui` до правки (stress: правка → список → демо → Undo
+активна), после — неактивна; undo/redo внутри проекта работают.
+
 **Факт.** `CommandBus` — singleton в DI (`infrastructure/container.ts`, `asClass(CommandBus).singleton()`),
 хранит `undoStack`/`redoStack` патчей Immer. Граф живёт в React state страницы
 (`presentation/features/canvas/editor-store.ts`, `useEditorStore`). `commandBus.reset()` вызывается
@@ -57,6 +61,11 @@
 ---
 
 ## R-ARC-2. Проверка инвариантов в `CommandBus` (§4a, риск средний)
+
+✅ 2026-10-19, `151ef5c`: проверка в `CommandBus.execute`, блок удалён из 26 команд (их 26, не 27).
+Правило «весь граф валиден» не менялось — вопрос В5 в `R-SCH-element-schemas.md`. **Живой пример:**
+демо-граф (`sample-graph.ts`) уже нарушает «На уровне 0 формы шагов: не больше 1» — в демо любая
+команда отклоняется (так было и до шага); чинить данные демо или правило — решение владельца.
 
 **Факт.** Блок
 `const violations = validateGraph(draft); if (violations.length > 0) throw new InvariantViolationError(violations);`
