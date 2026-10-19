@@ -7,7 +7,7 @@
 
 import { Node, SyntaxKind, type Symbol as TsSymbol, type Type } from 'ts-morph';
 
-import { ELEMENT_TYPE_ENUMS } from './config';
+import { ELEMENT_TYPE_ENUMS, KNOWN_EXTERNAL_TYPES } from './config';
 import type { Diagnostics } from './diagnostics';
 import type { JsonType, JsonValue, PropSchema } from './format';
 import type { SharedRegistry } from './shared';
@@ -245,6 +245,8 @@ function objectToSchema(type: Type, ctx: TypeContext, path: string, seen: Set<st
   const sf = decl?.getSourceFile();
 
   if (sf && (sf.isDeclarationFile() || sf.getFilePath().includes('/typescript/lib/'))) {
+    const known = sym ? KNOWN_EXTERNAL_TYPES[sym.getName()] : undefined;
+    if (known) return { ...known };
     return unresolved(ctx, type, path, 'external-type', 'внешний тип не раскрывается');
   }
   if (isRuntimeObjectType(type)) return unresolved(ctx, type, path, 'runtime-type', 'рантайм-объект движка');

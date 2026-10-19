@@ -26,6 +26,8 @@ export interface PropSchema {
   $ref?: string;
   type?: JsonType | JsonType[];
   const?: JsonValue;
+  /** Только 'date-time' (Date). */
+  format?: 'date-time';
   enum?: JsonValue[];
   items?: PropSchema;
   properties?: Record<string, PropSchema>;
@@ -157,6 +159,7 @@ const PROP_KEY_ORDER = [
   '$ref',
   'type',
   'const',
+  'format',
   'enum',
   'items',
   'properties',

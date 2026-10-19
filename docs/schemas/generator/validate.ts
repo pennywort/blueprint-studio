@@ -52,6 +52,8 @@ export function createValidator(shared: Record<string, SharedSchema>, warn: (msg
     strictTuples: false,
     strictRequired: false,
     allErrors: true,
+    // format (date-time) — подсказка редактору; проверка форматов требует ajv-formats
+    validateFormats: false,
   });
   ajv.addVocabulary(EXTENSION_KEYWORDS);
   for (const s of Object.values(shared)) ajv.addSchema(s);

@@ -3,7 +3,7 @@
  * а не кода (одно правило — одно значение).
  */
 
-import type { Category } from './format';
+import type { Category, PropSchema } from './format';
 
 /**
  * Корень монорепозитория фреймворка относительно каталога генератора.
@@ -90,6 +90,14 @@ export const EXCLUDED_PROPS: readonly string[] = [
  * (дискриминатор атома, вид action-элемента) остаётся в схеме.
  */
 export const ELEMENT_TYPE_ENUMS: readonly string[] = ['ElementsTypes', 'InternalComponentTypes'];
+
+/**
+ * Внешние типы (lib.d.ts и т.п.) с известным JSON-представлением.
+ * Остальные внешние типы получают x-ts-type и запись в отчёте.
+ */
+export const KNOWN_EXTERNAL_TYPES: Readonly<Record<string, PropSchema>> = {
+  Date: { type: 'string', format: 'date-time' },
+};
 
 /** Базовый класс-контейнер: наследники (на любой глубине) — контейнеры. */
 export const CONTAINER_BASE_CLASSES: readonly string[] = ['ContainerImpl'];
