@@ -5274,14 +5274,10 @@
         },
         "stepLabel": {
           "x-declared-in": "FuiStepProps",
-          "anyOf": [
-            {
-              "x-ts-type": "Record<string, string | number>"
-            },
-            {
-              "type": "null"
-            }
-          ],
+          "type": ["object", "null"],
+          "additionalProperties": {
+            "type": ["string", "number"]
+          },
           "default": null
         },
         "open": {
@@ -7210,14 +7206,7 @@
                         "x-ts-type": "any"
                       },
                       "title": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "x-ts-type": "object"
-                          }
-                        ]
+                        "type": ["string", "object"]
                       },
                       "disabled": {
                         "type": "boolean"
@@ -7251,7 +7240,25 @@
         },
         "primaryText": {
           "x-declared-in": "ListItemProps",
-          "x-ts-type": "ListItemPrimaryTextProps & string",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "noWrap": {
+                  "type": "boolean"
+                },
+                "variant": {
+                  "type": "string"
+                }
+              }
+            }
+          ],
           "default": ""
         },
         "secondaryText": {
@@ -11410,11 +11417,13 @@
         },
         "min": {
           "x-declared-in": "StepInputProps",
-          "type": "number"
+          "type": "number",
+          "default": -1.7976931348623157e308
         },
         "max": {
           "x-declared-in": "StepInputProps",
-          "type": "number"
+          "type": "number",
+          "default": 1.7976931348623157e308
         },
         "step": {
           "x-declared-in": "StepInputProps",
@@ -12221,7 +12230,7 @@
           "x-declared-in": "TableProps",
           "type": "array",
           "items": {
-            "x-ts-type": "object"
+            "type": "object"
           },
           "default": []
         },
@@ -12508,7 +12517,7 @@
             {
               "type": "array",
               "items": {
-                "x-ts-type": "Record<string, any>"
+                "type": "object"
               }
             }
           ],
@@ -12782,7 +12791,7 @@
             {
               "type": "array",
               "items": {
-                "x-ts-type": "Record<string, any>"
+                "type": "object"
               }
             }
           ],
@@ -13599,9 +13608,7 @@
     "summary": {
       "any-type": 9,
       "default-null-widened": 35,
-      "default-unresolved": 2,
-      "external-type": 3,
-      "unresolved-type": 3
+      "loose-object": 4
     },
     "elements": {
       "$base": [
@@ -13698,12 +13705,6 @@
       ],
       "fui-step": [
         {
-          "code": "external-type",
-          "severity": "info",
-          "path": "properties.stepLabel",
-          "message": "внешний тип не раскрывается: Record<string, string | number>"
-        },
-        {
           "code": "default-null-widened",
           "severity": "warn",
           "path": "properties.stepLabel",
@@ -13726,16 +13727,10 @@
           "message": "any/unknown: any"
         },
         {
-          "code": "unresolved-type",
-          "severity": "warn",
+          "code": "loose-object",
+          "severity": "info",
           "path": "properties.rightAtom.anyOf[6].MenuItems[0].title.anyOf[1]",
-          "message": "не распознан: object"
-        },
-        {
-          "code": "unresolved-type",
-          "severity": "warn",
-          "path": "properties.primaryText",
-          "message": "не распознан: ListItemPrimaryTextProps & string"
+          "message": "object без описания полей"
         },
         {
           "code": "any-type",
@@ -13866,18 +13861,6 @@
       ],
       "step-input": [
         {
-          "code": "default-unresolved",
-          "severity": "warn",
-          "path": "props.min.default",
-          "message": "-Number.MAX_VALUE"
-        },
-        {
-          "code": "default-unresolved",
-          "severity": "warn",
-          "path": "props.max.default",
-          "message": "Number.MAX_VALUE"
-        },
-        {
           "code": "default-null-widened",
           "severity": "warn",
           "path": "properties.value",
@@ -13910,10 +13893,10 @@
       ],
       "table": [
         {
-          "code": "unresolved-type",
-          "severity": "warn",
+          "code": "loose-object",
+          "severity": "info",
           "path": "properties.data[]",
-          "message": "не распознан: object"
+          "message": "object без описания полей"
         }
       ],
       "tabs": [
@@ -13926,10 +13909,10 @@
       ],
       "text": [
         {
-          "code": "external-type",
+          "code": "loose-object",
           "severity": "info",
           "path": "properties.mask.anyOf[1][]",
-          "message": "внешний тип не раскрывается: Record<string, any>"
+          "message": "произвольные ключи: Record<string, any>"
         },
         {
           "code": "default-null-widened",
@@ -13940,10 +13923,10 @@
       ],
       "text-field": [
         {
-          "code": "external-type",
+          "code": "loose-object",
           "severity": "info",
           "path": "properties.mask.anyOf[1][]",
-          "message": "внешний тип не раскрывается: Record<string, any>"
+          "message": "произвольные ключи: Record<string, any>"
         },
         {
           "code": "default-null-widened",
