@@ -1,0 +1,190 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://framework.internal/schemas/date-field.schema.json",
+  "title": "Date Picker",
+  "description": "JSON-схема для UI-элемента \"date-field\"",
+  "type": "object",
+  "elementType": "date-field",
+  "x-category": "form",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Уникальный идентификатор элемента"
+    },
+    "visible": {
+      "type": "boolean",
+      "description": "Видимость элемента",
+      "default": true
+    },
+    "cursor": {
+      "type": "string",
+      "enum": ["default", "pointer"],
+      "description": "Тип курсора",
+      "default": "default"
+    },
+    "gravity": {
+      "type": "string",
+      "enum": ["left", "right", "center"],
+      "description": "Выравнивание внутри родителя",
+      "default": "left"
+    },
+    "margin": {
+      "description": "Внешние отступы",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        {
+          "enum": ["none", "normal"]
+        }
+      ],
+      "default": 0
+    },
+    "width": {
+      "description": "Ширина элемента",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "enum": ["match_parent", "wrap_content"]
+        }
+      ],
+      "default": "match_parent"
+    },
+    "flex": {
+      "type": "string",
+      "description": "Flex-свойство"
+    },
+    "alignSelf": {
+      "type": "string",
+      "description": "Выравнивание по собственной оси"
+    },
+    "overflow": {
+      "type": "string",
+      "description": "Поведение при переполнении"
+    },
+    "minHeight": {
+      "description": "Минимальная высота",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "maxHeight": {
+      "description": "Максимальная высота",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "label": {
+      "type": "string",
+      "default": ""
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["date", "time", "datetime"],
+      "default": "datetime"
+    },
+    "disabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "required": {
+      "type": "boolean",
+      "default": false
+    },
+    "placeholder": {
+      "type": "string",
+      "default": ""
+    },
+    "error": {
+      "type": "string",
+      "default": ""
+    },
+    "value": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {}
+      ],
+      "default": null
+    },
+    "minDate": {
+      "default": null
+    },
+    "maxDate": {
+      "default": null
+    },
+    "disabledDates": {
+      "type": "array",
+      "items": {},
+      "default": []
+    },
+    "disabledKeyboard": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "x-events": {
+    "onChangeValue": {
+      "description": "Событие изменения значения элемента",
+      "parameters": {
+        "value": {
+          "description": "Новое значение",
+          "type": "any"
+        },
+        "options": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Необязательный идентификатор"
+            }
+          }
+        }
+      }
+    },
+    "onClick": {
+      "description": "Событие клика по элементу",
+      "parameters": {
+        "event": {
+          "description": "Объект события",
+          "type": "object"
+        }
+      }
+    }
+  },
+  "x-methods": [],
+  "x-defaults": {
+    "label": "",
+    "mode": "datetime",
+    "disabled": false,
+    "required": false,
+    "placeholder": "",
+    "error": "",
+    "value": null,
+    "minDate": null,
+    "maxDate": null,
+    "disabledDates": [],
+    "disabledKeyboard": false
+  },
+  "required": [],
+  "deprecatedAliases": []
+}
