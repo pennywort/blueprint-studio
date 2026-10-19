@@ -194,6 +194,10 @@ export function typeToSchema(
   if (type.isNull()) return { type: 'null' };
 
   if (type.isObject()) return objectToSchema(type, ctx, path, seen);
+  // Пересечение объектов (A & { x }) — один объект со свойствами всех частей (план 2.3)
+  if (type.isIntersection() && type.getIntersectionTypes().every((t) => t.isObject())) {
+    return objectToSchema(type, ctx, path, seen);
+  }
 
   return unresolved(ctx, type, path, 'unresolved-type', 'не распознан');
 }
@@ -283,7 +287,9 @@ function objectToSchema(type: Type, ctx: TypeContext, path: string, seen: Set<st
   for (const prop of type.getProperties()) {
     const name = prop.getName();
     if (name.startsWith('_')) continue;
-    const propType = decl ? prop.getTypeAtLocation(decl) : prop.getDeclaredType();
+    // У пересечения нет своего объявления — тип берём в месте объявления свойства
+    const at = decl ?? prop.getValueDeclaration() ?? prop.getDeclarations()[0];
+    const propType = at ? prop.getTypeAtLocation(at) : prop.getDeclaredType();
     if (name === 'type' && isElementTypeRef(propType)) continue;
     const schema = typeToSchema(propType, ctx, `${path}.${name}`, nextSeen);
     const description = jsDocDescription(prop);

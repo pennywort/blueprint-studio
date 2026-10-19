@@ -294,6 +294,9 @@ function typeToSchema(type, ctx, path5, seen = /* @__PURE__ */ new Set()) {
   if (type.isBoolean()) return { type: "boolean" };
   if (type.isNull()) return { type: "null" };
   if (type.isObject()) return objectToSchema(type, ctx, path5, seen);
+  if (type.isIntersection() && type.getIntersectionTypes().every((t) => t.isObject())) {
+    return objectToSchema(type, ctx, path5, seen);
+  }
   return unresolved(ctx, type, path5, "unresolved-type", "\u043D\u0435 \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u043D");
 }
 function unionToSchema(type, ctx, path5, seen) {
@@ -368,7 +371,8 @@ function objectToSchema(type, ctx, path5, seen) {
   for (const prop of type.getProperties()) {
     const name = prop.getName();
     if (name.startsWith("_")) continue;
-    const propType = decl ? prop.getTypeAtLocation(decl) : prop.getDeclaredType();
+    const at = decl ?? prop.getValueDeclaration() ?? prop.getDeclarations()[0];
+    const propType = at ? prop.getTypeAtLocation(at) : prop.getDeclaredType();
     if (name === "type" && isElementTypeRef(propType)) continue;
     const schema = typeToSchema(propType, ctx, `${path5}.${name}`, nextSeen);
     const description = jsDocDescription(prop);
@@ -642,6 +646,13 @@ function propsDeclIn(sf, name) {
   return sf.getInterface(name) ?? sf.getTypeAlias(name);
 }
 function findPropsDecl(project, cls, entry) {
+  for (const name2 of ["_props", "props"]) {
+    const typeNode = cls.getProperty(name2)?.getTypeNode();
+    if (!typeNode) continue;
+    const t = typeNode.getType();
+    const decl = (t.getAliasSymbol() ?? t.getSymbol())?.getDeclarations().find((d) => import_ts_morph2.Node.isInterfaceDeclaration(d) || import_ts_morph2.Node.isTypeAliasDeclaration(d));
+    if (decl) return decl;
+  }
   const arg = cls.getExtends()?.getTypeArguments()[0];
   if (arg) {
     const t = arg.getType();
@@ -898,7 +909,11 @@ function buildElementSchema(input, diag) {
   const baseDefaults = {};
   const decl = findPropsDecl(project, cls, entry);
   if (!decl) {
-    diag.report("props-missing", "properties", `\u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D ${entry.className.replace(/Element$/, "")}Props (extends ${cls.getExtends()?.getText() ?? "\u2014"})`);
+    diag.report(
+      "props-missing",
+      "properties",
+      `\u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D ${entry.className.replace(/Element$/, "")}Props (extends ${cls.getExtends()?.getText() ?? "\u2014"})`
+    );
   } else {
     for (const prop of readProps(decl)) {
       if (prop.name.startsWith("_") || EXCLUDED_PROPS.includes(prop.name)) continue;

@@ -366,6 +366,17 @@ export function findPropsDecl(
   cls: ClassDeclaration,
   entry: ElementEntry,
 ): PropsDecl | null {
+  // Явно объявленное поле класса `_props: XProps` (наследник ContainerImpl без generic)
+  for (const name of ['_props', 'props']) {
+    const typeNode = cls.getProperty(name)?.getTypeNode();
+    if (!typeNode) continue;
+    const t = typeNode.getType();
+    const decl = (t.getAliasSymbol() ?? t.getSymbol())
+      ?.getDeclarations()
+      .find((d): d is PropsDecl => Node.isInterfaceDeclaration(d) || Node.isTypeAliasDeclaration(d));
+    if (decl) return decl;
+  }
+
   const arg = cls.getExtends()?.getTypeArguments()[0];
   if (arg) {
     const t = arg.getType();
