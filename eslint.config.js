@@ -26,7 +26,8 @@ const DOMAIN_FORBIDDEN = [
 ];
 
 export default [
-  { ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'vendor/**'] },
+  // docs/schemas — код и примеры из фреймворка (генератор схем), собирается там, не здесь
+  { ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'vendor/**', 'docs/schemas/**'] },
   js.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
