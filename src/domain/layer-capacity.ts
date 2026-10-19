@@ -11,11 +11,8 @@ export type LayerCapacity = Readonly<Record<number, number>>;
 /** Канвас страниц: корень карты один — Главная или единственный блок-корень (ADR-15, D8). */
 export const PAGE_LAYER_CAPACITY: LayerCapacity = { 0: 1 };
 
-/**
- * Шаги формы заявки: ограничение отключено [owner 2026-10-19]. Включить
- * обратно «первый уровень — один шаг» (как у страниц) — `{ 0: 1 }`.
- */
-export const FORM_STEP_LAYER_CAPACITY: LayerCapacity = {};
+/** Шаги формы заявки: первый уровень — один шаг, как у страниц [owner 2026-10-16]. */
+export const FORM_STEP_LAYER_CAPACITY: LayerCapacity = { 0: 1 };
 
 /** Элементы внутри шага: колонки без ограничения (ADR-17). */
 export const STEP_ELEMENT_LAYER_CAPACITY: LayerCapacity = {};

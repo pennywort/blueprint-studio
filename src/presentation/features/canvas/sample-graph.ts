@@ -168,6 +168,10 @@ export function createSampleGraph(): ServiceGraph {
           },
           {
             id: toFormStepId('demo-form-deposit-step-3'),
+            // Шаг без входящего перехода держит явный уровень (ADR-15, как
+            // миграция v2→3): иначе он — второй корень уровня 0 и демо-граф
+            // нарушает ёмкость уровня (layer-capacity).
+            layerDepth: 2,
             elements: [
               {
                 id: toFormComponentId('demo-field-confirm'),
