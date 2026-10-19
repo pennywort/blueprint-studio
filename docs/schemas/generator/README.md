@@ -1,6 +1,8 @@
 # Генератор схем элементов
 
-Заменяет `generate-schema.js`. Живёт во фреймворке в `packages/element-schemas/scripts/generator/`.
+Исходники — эта папка. Во фреймворк переносится **один собранный файл** `docs/schemas/generate-schema.js`
+(`npm run schemas:build` в blueprint-studio) → `packages/element-schemas/scripts/generate-schema.js`,
+запуск: `node generate-schema.js --all --bundle ../schemas-bundle.json`. Нужен `ts-morph` (уже есть во фреймворке).
 
 | Файл                | Что внутри                                                       |
 | ------------------- | ---------------------------------------------------------------- |

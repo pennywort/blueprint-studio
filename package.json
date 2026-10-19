@@ -17,6 +17,7 @@
     "state:summary": "node scripts/project-state.mjs summary",
     "state:section": "node scripts/project-state.mjs section",
     "state:log": "node scripts/project-state.mjs log",
+    "schemas:build": "esbuild docs/schemas/generator/cli.ts --bundle --platform=node --format=cjs --target=node18 --external:ts-morph --external:ajv --legal-comments=none --banner:js=\"// СОБРАНО из docs/schemas/generator (npm run schemas:build) — не править вручную\" --outfile=docs/schemas/generate-schema.js",
     "agents:sync": "node scripts/agent/sync-agents.mjs"
   },
   "dependencies": {

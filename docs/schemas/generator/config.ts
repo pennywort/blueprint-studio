@@ -6,11 +6,10 @@
 import type { Category, PropSchema } from './format';
 
 /**
- * Корень монорепозитория фреймворка относительно каталога генератора.
- * Генератор лежит в packages/element-schemas/scripts/generator → вверх на 4 уровня.
- * Переопределяется флагом --root.
+ * Признак корня монорепозитория: корень ищется вверх от каталога генератора
+ * (работает и для папки generator/, и для собранного одного файла). Флаг --root — явный путь.
  */
-export const ROOT_FROM_GENERATOR = '../../../..';
+export const ROOT_MARKER = 'packages/lib/tsconfig.json';
 
 /** Пути относительно корня монорепозитория. */
 export const PATHS = {

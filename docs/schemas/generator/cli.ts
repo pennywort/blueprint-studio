@@ -1,4 +1,3 @@
-#!/usr/bin/env ts-node
 /**
  * Генератор JSON-схем UI-элементов.
  *
@@ -13,7 +12,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { CLI_NAME_ALIASES, PATHS, ROOT_FROM_GENERATOR } from './config';
+import { CLI_NAME_ALIASES, PATHS, ROOT_MARKER } from './config';
 import { Diagnostics } from './diagnostics';
 import { buildElementSchema, readBaseSchemas } from './emit';
 import { createProgram, findClass, readCatalog } from './extract';
@@ -50,13 +49,22 @@ function normalizeName(raw: string): string {
   return CLI_NAME_ALIASES[raw.toUpperCase()] ?? raw.toLowerCase().replace(/_/g, '-');
 }
 
+function findRoot(from: string): string | null {
+  for (let dir = from; ; dir = path.dirname(dir)) {
+    if (fs.existsSync(path.join(dir, ROOT_MARKER))) return dir;
+    if (path.dirname(dir) === dir) return null;
+  }
+}
+
 function main(): number {
   const args = parseArgs(process.argv.slice(2));
   const warn = (msg: string): void => console.warn(msg);
 
-  const rootDir = path.resolve(
-    typeof args.root === 'string' ? args.root : path.resolve(__dirname, ROOT_FROM_GENERATOR),
-  );
+  const rootDir = typeof args.root === 'string' ? path.resolve(args.root) : findRoot(__dirname);
+  if (!rootDir) {
+    console.error(`Корень фреймворка не найден (нет ${ROOT_MARKER} выше скрипта) — укажите --root`);
+    return 1;
+  }
   const pkgDir = path.resolve(rootDir, PATHS.schemasPackage);
   const outputDir =
     typeof args.outputDir === 'string'

@@ -1,0 +1,2 @@
+# Собирается npm run schemas:build
+docs/schemas/generate-schema.js
