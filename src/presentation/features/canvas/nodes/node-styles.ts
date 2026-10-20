@@ -15,12 +15,15 @@ export const useNodeStyles = makeStyles<EditorTheme>((theme) => ({
     display: 'flex',
     flexDirection: 'column',
     gap: CANVAS_LAYOUT.nodeContentGap,
+    // Без тени elevation Card: рамка выделения/ошибки — единственная граница
+    // блока (F7, [owner 2026-10-20]).
+    boxShadow: 'none',
   },
   // Нарушение инвариантов узла или его элементов (T-043).
   invalid: {
     // Одна рамка: та же внутренняя (inset), что у выделения, цветом ошибки;
     // выделение важнее — его селектор специфичнее (T-043, [owner 2026-10-14]).
-    boxShadow: `${theme.shadows[1]}, inset 0 0 0 2px ${theme.palette.error.main}`,
+    boxShadow: `inset 0 0 0 2px ${theme.palette.error.main}`,
   },
   // Hover-подсветка целевого узла при перетаскивании связи (T-032, макет
   // «связь-…-переход-к-подсценарию»): серый фон + рамка, цвета из темы.
