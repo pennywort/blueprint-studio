@@ -192,6 +192,11 @@ export function valueOf(node: Node, depth = 0): Extracted {
         if (init) return valueOf(init, depth + 1);
       }
     }
+    // Объявление без инициализатора (.d.ts, declare const X: { readonly a: 'a' }) —
+    // значение из литерального типа выражения
+    const t = node.getType();
+    if (t.isStringLiteral() || t.isNumberLiteral()) return t.getLiteralValue() as string | number;
+    if (t.isBooleanLiteral()) return t.getText() === 'true';
     return UNRESOLVED;
   }
   // Enum['key'] — член enum по строковому ключу

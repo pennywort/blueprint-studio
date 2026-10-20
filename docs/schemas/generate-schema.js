@@ -505,6 +505,9 @@ function valueOf(node, depth = 0) {
         if (init) return valueOf(init, depth + 1);
       }
     }
+    const t = node.getType();
+    if (t.isStringLiteral() || t.isNumberLiteral()) return t.getLiteralValue();
+    if (t.isBooleanLiteral()) return t.getText() === "true";
     return UNRESOLVED;
   }
   if (import_ts_morph2.Node.isElementAccessExpression(node)) {
@@ -1161,10 +1164,16 @@ function elementPropsSources(project, catalog) {
     for (const prop of readProps(decl)) {
       if (isSchemaProp(prop.name)) declNodes.set(prop.name, prop.symbol.getDeclarations()[0]);
     }
-    sources.push({ elementType: entry.elementType, ref: `../schemas/${entry.elementType}.schema.json#`, declNodes });
+    sources.push({
+      elementType: entry.elementType,
+      ref: `../schemas/${entry.elementType}.schema.json#`,
+      declNodes
+    });
   }
+  const legacy = new Set(Object.keys(CLI_NAME_ALIASES).map((k) => k.toLowerCase().replace(/_/g, "-")));
+  const rank = (s) => legacy.has(s.elementType) ? 1 : 0;
   return sources.sort(
-    (a, b) => b.declNodes.size - a.declNodes.size || a.elementType.localeCompare(b.elementType)
+    (a, b) => b.declNodes.size - a.declNodes.size || rank(a) - rank(b) || a.elementType.localeCompare(b.elementType)
   );
 }
 function coveringSource(props, sources) {

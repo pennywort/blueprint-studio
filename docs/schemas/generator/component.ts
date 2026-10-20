@@ -16,7 +16,7 @@ import {
   type Type,
 } from 'ts-morph';
 
-import { CATEGORY_BY_ELEMENT, COMPONENT, EXCLUDED_PROPS, SCHEMA_ID_BASE } from './config';
+import { CATEGORY_BY_ELEMENT, CLI_NAME_ALIASES, COMPONENT, EXCLUDED_PROPS, SCHEMA_ID_BASE } from './config';
 import type { Diagnostics } from './diagnostics';
 import { withDefault } from './emit';
 import { UNRESOLVED, findClass, findPropsDecl, readProps, valueOf, type ElementCatalog } from './extract';
@@ -307,9 +307,13 @@ export function elementPropsSources(project: Project, catalog: ElementCatalog): 
       declNodes,
     });
   }
-  // Самый широкий набор — первым; при равенстве — по имени (детерминизм)
+  // Самый широкий набор — первым; при равенстве — актуальное имя раньше устаревшего
+  // (text-field, а не text: CLI_NAME_ALIASES), затем по имени (детерминизм)
+  const legacy = new Set(Object.keys(CLI_NAME_ALIASES).map((k) => k.toLowerCase().replace(/_/g, '-')));
+  const rank = (s: { elementType: string }): number => (legacy.has(s.elementType) ? 1 : 0);
   return sources.sort(
-    (a, b) => b.declNodes.size - a.declNodes.size || a.elementType.localeCompare(b.elementType),
+    (a, b) =>
+      b.declNodes.size - a.declNodes.size || rank(a) - rank(b) || a.elementType.localeCompare(b.elementType),
   );
 }
 
