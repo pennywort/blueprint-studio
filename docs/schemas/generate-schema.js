@@ -1150,7 +1150,30 @@ function declaredIn(symbol, props) {
   const ownerName = owner && (import_ts_morph3.Node.isInterfaceDeclaration(owner) || import_ts_morph3.Node.isTypeAliasDeclaration(owner)) ? owner.getName() : void 0;
   return ownerName ?? (props.getAliasSymbol() ?? props.getSymbol())?.getName() ?? "";
 }
-function buildComponentSchema(entry, shared, diag) {
+var isSchemaProp = (name) => !name.startsWith("_") && !EXCLUDED_PROPS.includes(name);
+function elementPropsSources(project, catalog) {
+  const sources = [];
+  for (const entry of Object.values(catalog.elements)) {
+    const cls = findClass(project, entry);
+    const decl = cls ? findPropsDecl(project, cls, entry) : null;
+    if (!decl) continue;
+    const declNodes = /* @__PURE__ */ new Map();
+    for (const prop of readProps(decl)) {
+      if (isSchemaProp(prop.name)) declNodes.set(prop.name, prop.symbol.getDeclarations()[0]);
+    }
+    sources.push({ elementType: entry.elementType, ref: `../schemas/${entry.elementType}.schema.json#`, declNodes });
+  }
+  return sources.sort(
+    (a, b) => b.declNodes.size - a.declNodes.size || a.elementType.localeCompare(b.elementType)
+  );
+}
+function coveringSource(props, sources) {
+  return sources.find(
+    (s) => s.declNodes.size > 0 && [...s.declNodes].every(([name, node]) => !isSchemaProp(name) || props.get(name) === node)
+  ) ?? null;
+}
+function buildComponentSchema(input, diag) {
+  const { entry, shared, sources } = input;
   const { call, elementType } = entry;
   const ctx = { elementType, diag, shared };
   const [propsType, ctrlType] = typeArguments(call);
@@ -1158,6 +1181,8 @@ function buildComponentSchema(entry, shared, diag) {
   const defaults = readComponentDefaults(member(options, "defaultProps"), diag);
   const properties = {};
   const required = [];
+  const baseDefaults = {};
+  let source = null;
   if (!propsType || propsType.isAny() || propsType.isUnknown()) {
     diag.report(
       "component-props-missing",
@@ -1165,9 +1190,15 @@ function buildComponentSchema(entry, shared, diag) {
       `\u0442\u0438\u043F props \u043D\u0435 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0451\u043D: ${call.getText().slice(0, 80)}`
     );
   } else {
-    for (const symbol of propsType.getProperties()) {
+    const symbols = propsType.getProperties();
+    source = coveringSource(new Map(symbols.map((s) => [s.getName(), s.getDeclarations()[0]])), sources);
+    for (const symbol of symbols) {
       const name = symbol.getName();
-      if (name.startsWith("_") || EXCLUDED_PROPS.includes(name)) continue;
+      if (!isSchemaProp(name)) continue;
+      if (source?.declNodes.has(name)) {
+        if (name in defaults) baseDefaults[name] = defaults[name];
+        continue;
+      }
       const description = jsDocDescription(symbol);
       const schema = {
         ...description ? { description } : {},
@@ -1179,7 +1210,7 @@ function buildComponentSchema(entry, shared, diag) {
     }
   }
   for (const name of Object.keys(defaults)) {
-    if (!(name in properties)) {
+    if (!(name in properties) && !(name in baseDefaults)) {
       diag.report("default-without-prop", `defaults.${name}`, "\u043A\u043B\u044E\u0447 defaultProps \u0431\u0435\u0437 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0432 props");
     }
   }
@@ -1193,8 +1224,10 @@ function buildComponentSchema(entry, shared, diag) {
     "x-element-type": elementType,
     "x-entity": "component",
     "x-category": CATEGORY_BY_ELEMENT[elementType] ?? "basic",
+    ...source ? { allOf: [{ $ref: source.ref }] } : {},
     properties,
     required,
+    "x-base-defaults": baseDefaults,
     "x-events": readEvents(options, ctx),
     "x-methods": readControllerMethods(ctrlType, call),
     "x-composition": readComposition(member(options, "view")),
@@ -1389,7 +1422,7 @@ function createValidator(shared, warn) {
   });
   ajv.addVocabulary(EXTENSION_KEYWORDS);
   for (const s of Object.values(shared)) ajv.addSchema("required" in s ? { ...s, required: [] } : s);
-  return (schema, diag) => {
+  const check = (schema, diag) => {
     const defaults = {
       ..."x-base-defaults" in schema ? schema["x-base-defaults"] : {}
     };
@@ -1409,6 +1442,10 @@ function createValidator(shared, warn) {
       ajv.removeSchema(schema.$id);
     }
   };
+  const register = (schemas) => {
+    for (const s of schemas) ajv.addSchema({ ...s, required: [] });
+  };
+  return { check, register };
 }
 
 // docs/schemas/generator/cli.ts
@@ -1505,12 +1542,13 @@ function main() {
       diag.report("element-failed", "$", e.message);
     }
   }
+  const sources = componentTargets.length > 0 ? [...elementPropsSources(project, catalog), ...base ? [base] : []] : [];
   const components = {};
   for (const t of componentTargets) {
     const diag = new Diagnostics();
     diagnostics[t] = diag;
     try {
-      components[t] = buildComponentSchema(componentByType.get(t), shared, diag);
+      components[t] = buildComponentSchema({ entry: componentByType.get(t), shared, sources }, diag);
     } catch (e) {
       diag.report("element-failed", "$", e.message);
     }
@@ -1519,8 +1557,9 @@ function main() {
   if (base) sharedSchemas[BASE.fileName] = base.schema;
   const validate = createValidator(sharedSchemas, warn);
   if (validate) {
-    for (const [t, s] of Object.entries(schemas)) validate(s, diagnostics[t]);
-    for (const [t, s] of Object.entries(components)) validate(s, diagnostics[t]);
+    for (const [t, s] of Object.entries(schemas)) validate.check(s, diagnostics[t]);
+    validate.register(Object.values(schemas));
+    for (const [t, s] of Object.entries(components)) validate.check(s, diagnostics[t]);
   }
   const report = { summary: {}, elements: {}, sharedCandidates: shared.candidates() };
   for (const t of [BASE_KEY, CATALOG_KEY, ...targets, ...componentTargets]) {

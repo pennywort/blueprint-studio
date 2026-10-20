@@ -13,7 +13,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { buildComponentSchema, findComponents } from './component';
+import { buildComponentSchema, elementPropsSources, findComponents, type PropsSource } from './component';
 import { BASE, CLI_NAME_ALIASES, COMPONENT, PATHS, ROOT_MARKER } from './config';
 import { Diagnostics } from './diagnostics';
 import { buildBase, buildElementSchema } from './emit';
@@ -144,12 +144,15 @@ function main(): number {
     }
   }
 
+  // Унаследованные целиком props элемента или базы — ссылкой, не копией
+  const sources: PropsSource[] =
+    componentTargets.length > 0 ? [...elementPropsSources(project, catalog), ...(base ? [base] : [])] : [];
   const components: Record<string, ComponentSchema> = {};
   for (const t of componentTargets) {
     const diag = new Diagnostics();
     diagnostics[t] = diag;
     try {
-      components[t] = buildComponentSchema(componentByType.get(t)!, shared, diag);
+      components[t] = buildComponentSchema({ entry: componentByType.get(t)!, shared, sources }, diag);
     } catch (e) {
       diag.report('element-failed', '$', (e as Error).message);
     }
@@ -159,8 +162,10 @@ function main(): number {
   if (base) sharedSchemas[BASE.fileName] = base.schema;
   const validate = createValidator(sharedSchemas, warn);
   if (validate) {
-    for (const [t, s] of Object.entries(schemas)) validate(s, diagnostics[t]!);
-    for (const [t, s] of Object.entries(components)) validate(s, diagnostics[t]!);
+    for (const [t, s] of Object.entries(schemas)) validate.check(s, diagnostics[t]!);
+    // Компоненты ссылаются на схемы элементов — регистрируем их после проверки элементов
+    validate.register(Object.values(schemas));
+    for (const [t, s] of Object.entries(components)) validate.check(s, diagnostics[t]!);
   }
 
   const report: Report = { summary: {}, elements: {}, sharedCandidates: shared.candidates() };

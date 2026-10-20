@@ -31,8 +31,9 @@ ajv необязателен: `npm i -D -E ajv@8.17.1` в пакете схем 
 ## Что пишется
 
 - `src/schemas/<элемент>.schema.json` — свои props элемента + `allOf: [$ref base]`;
-- `src/components/<компонент>.schema.json` — схема компонента (`x-entity: component`, без `allOf`):
-  props = тип P фабрики, `x-methods` = контроллер C, `x-events` = `$emit`, `x-composition` = типы
+- `src/components/<компонент>.schema.json` — схема компонента (`x-entity: component`): props = тип P
+  фабрики; унаследованные целиком props элемента или база — ссылкой `allOf: [{$ref}]` на схему элемента
+  или `shared/base-element` (дефолты для них — `x-base-defaults`), при Pick/Omit/переобъявлении — копией; `x-methods` = контроллер C, `x-events` = `$emit`, `x-composition` = типы
   из `createElement` во view, `x-slots`; в бандле — секция `components`;
 - `src/shared/base-element.schema.json` — общие props (`BaseProps`) и события (`BaseElement.on*`), из кода при каждом прогоне;
 - `src/shared/icon.schema.json` — список иконок;

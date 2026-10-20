@@ -103,7 +103,8 @@ export interface ElementSchema {
 /**
  * Компонент фреймворка: составная сущность из элементов с логикой (ComponentFactoryImpl).
  * Имя — член ElementsTypes (первый аргумент фабрики), props и контроллер — аргументы типа
- * фабрики. Общей базы (allOf) нет: props компонента — ровно его тип P.
+ * фабрики. Унаследованный целиком набор props (props элемента или база) — ссылкой allOf + $ref,
+ * а не копией; в properties — только свои props компонента.
  */
 export interface ComponentSchema {
   $schema: typeof JSON_SCHEMA_DRAFT;
@@ -115,8 +116,12 @@ export interface ComponentSchema {
   'x-element-type': string;
   'x-entity': 'component';
   'x-category': Category;
+  /** [{ $ref: схема элемента | shared/base-element }]; нет ключа — набора для ссылки нет. */
+  allOf?: Array<{ $ref: string }>;
   properties: Record<string, PropSchema>;
   required: string[];
+  /** Значения по умолчанию, которые компонент задаёт props из allOf. */
+  'x-base-defaults': Record<string, JsonValue>;
   /** События `$emit('имя', значение)`: параметр `value` — тип значения. */
   'x-events': Record<string, EventSchema>;
   /** Методы контроллера (аргумент типа C фабрики). */

@@ -63,7 +63,7 @@ export function createValidator(shared: Bundle['shared'], warn: (msg: string) =>
   // required снимаем и у базы: проверяется объект «только дефолты», а не полный элемент
   for (const s of Object.values(shared)) ajv.addSchema('required' in s ? { ...s, required: [] } : s);
 
-  return (schema: ElementSchema | ComponentSchema, diag: Diagnostics): void => {
+  const check = (schema: ElementSchema | ComponentSchema, diag: Diagnostics): void => {
     // Дефолты проверяются схемой элемента без required: объект «все дефолты сразу»
     const defaults: { [key: string]: JsonValue } = {
       ...('x-base-defaults' in schema ? schema['x-base-defaults'] : {}),
@@ -84,4 +84,9 @@ export function createValidator(shared: Bundle['shared'], warn: (msg: string) =>
       ajv.removeSchema(schema.$id);
     }
   };
+  /** Схемы, на которые ссылаются следующие проверяемые (схемы элементов для компонентов). */
+  const register = (schemas: ReadonlyArray<ElementSchema>): void => {
+    for (const s of schemas) ajv.addSchema({ ...s, required: [] });
+  };
+  return { check, register };
 }

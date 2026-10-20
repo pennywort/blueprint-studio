@@ -19,7 +19,7 @@ import {
 import { CATEGORY_BY_ELEMENT, COMPONENT, EXCLUDED_PROPS, SCHEMA_ID_BASE } from './config';
 import type { Diagnostics } from './diagnostics';
 import { withDefault } from './emit';
-import { UNRESOLVED, valueOf } from './extract';
+import { UNRESOLVED, findClass, findPropsDecl, readProps, valueOf, type ElementCatalog } from './extract';
 import {
   FORMAT_VERSION,
   JSON_SCHEMA_DRAFT,
@@ -276,13 +276,68 @@ function declaredIn(symbol: TsSymbol, props: Type): string {
   return ownerName ?? (props.getAliasSymbol() ?? props.getSymbol())?.getName() ?? '';
 }
 
+// ─── Ссылки на готовые наборы props ──────────────────────────────────────────
+
+/**
+ * Набор props, описанный другой схемой: база (shared/base-element) или props элемента.
+ * Компонент, унаследовавший набор целиком, ссылается на него (allOf + $ref), а не копирует.
+ */
+export interface PropsSource {
+  ref: string;
+  /** Имя prop → узел объявления: совпадение узла у P = prop унаследован без переобъявления. */
+  declNodes: Map<string, Node | undefined>;
+}
+
+const isSchemaProp = (name: string): boolean => !name.startsWith('_') && !EXCLUDED_PROPS.includes(name);
+
+/** Props элементов справочника как источники ссылок (схема элемента уже включает базу). */
+export function elementPropsSources(project: Project, catalog: ElementCatalog): PropsSource[] {
+  const sources: Array<PropsSource & { elementType: string }> = [];
+  for (const entry of Object.values(catalog.elements)) {
+    const cls = findClass(project, entry);
+    const decl = cls ? findPropsDecl(project, cls, entry) : null;
+    if (!decl) continue;
+    const declNodes = new Map<string, Node | undefined>();
+    for (const prop of readProps(decl)) {
+      if (isSchemaProp(prop.name)) declNodes.set(prop.name, prop.symbol.getDeclarations()[0]);
+    }
+    sources.push({
+      elementType: entry.elementType,
+      ref: `../schemas/${entry.elementType}.schema.json#`,
+      declNodes,
+    });
+  }
+  // Самый широкий набор — первым; при равенстве — по имени (детерминизм)
+  return sources.sort(
+    (a, b) => b.declNodes.size - a.declNodes.size || a.elementType.localeCompare(b.elementType),
+  );
+}
+
+/** Первый источник, все props которого унаследованы P без переобъявления. */
+function coveringSource(
+  props: Map<string, Node | undefined>,
+  sources: readonly PropsSource[],
+): PropsSource | null {
+  return (
+    sources.find(
+      (s) =>
+        s.declNodes.size > 0 &&
+        [...s.declNodes].every(([name, node]) => !isSchemaProp(name) || props.get(name) === node),
+    ) ?? null
+  );
+}
+
 // ─── Схема ───────────────────────────────────────────────────────────────────
 
-export function buildComponentSchema(
-  entry: ComponentEntry,
-  shared: SharedRegistry,
-  diag: Diagnostics,
-): ComponentSchema {
+export interface ComponentBuildInput {
+  entry: ComponentEntry;
+  shared: SharedRegistry;
+  /** Props элементов (сначала) и база (последней) — кандидаты на ссылку. */
+  sources: readonly PropsSource[];
+}
+
+export function buildComponentSchema(input: ComponentBuildInput, diag: Diagnostics): ComponentSchema {
+  const { entry, shared, sources } = input;
   const { call, elementType } = entry;
   const ctx = { elementType, diag, shared };
   const [propsType, ctrlType] = typeArguments(call);
@@ -291,6 +346,8 @@ export function buildComponentSchema(
 
   const properties: Record<string, PropSchema> = {};
   const required: string[] = [];
+  const baseDefaults: Record<string, JsonValue> = {};
+  let source: PropsSource | null = null;
   if (!propsType || propsType.isAny() || propsType.isUnknown()) {
     diag.report(
       'component-props-missing',
@@ -298,9 +355,16 @@ export function buildComponentSchema(
       `тип props не определён: ${call.getText().slice(0, 80)}`,
     );
   } else {
-    for (const symbol of propsType.getProperties()) {
+    const symbols = propsType.getProperties();
+    source = coveringSource(new Map(symbols.map((s) => [s.getName(), s.getDeclarations()[0]])), sources);
+    for (const symbol of symbols) {
       const name = symbol.getName();
-      if (name.startsWith('_') || EXCLUDED_PROPS.includes(name)) continue;
+      if (!isSchemaProp(name)) continue;
+      // Описан схемой, на которую ссылается компонент: здесь — только его дефолт
+      if (source?.declNodes.has(name)) {
+        if (name in defaults) baseDefaults[name] = defaults[name]!;
+        continue;
+      }
       const description = jsDocDescription(symbol);
       const schema: PropSchema = {
         ...(description ? { description } : {}),
@@ -312,7 +376,7 @@ export function buildComponentSchema(
     }
   }
   for (const name of Object.keys(defaults)) {
-    if (!(name in properties)) {
+    if (!(name in properties) && !(name in baseDefaults)) {
       diag.report('default-without-prop', `defaults.${name}`, 'ключ defaultProps без свойства в props');
     }
   }
@@ -327,8 +391,10 @@ export function buildComponentSchema(
     'x-element-type': elementType,
     'x-entity': 'component',
     'x-category': CATEGORY_BY_ELEMENT[elementType] ?? 'basic',
+    ...(source ? { allOf: [{ $ref: source.ref }] } : {}),
     properties,
     required,
+    'x-base-defaults': baseDefaults,
     'x-events': readEvents(options, ctx),
     'x-methods': readControllerMethods(ctrlType, call),
     'x-composition': readComposition(member(options, 'view')),
