@@ -103,7 +103,7 @@ function main(): number {
   const base = buildBase(project, rootDir, shared, diagnostics[BASE_KEY]!);
 
   // Компоненты — по вызовам фабрики во всей программе (не по путям): нужны и для --element.
-  const componentEntries = findComponents(project, diagnostics[CATALOG_KEY]!);
+  const componentEntries = findComponents(project, rootDir, diagnostics[CATALOG_KEY]!);
   const componentByType = new Map(componentEntries.map((c) => [c.elementType, c]));
   const componentTargets = args.all
     ? componentEntries.map((c) => c.elementType)

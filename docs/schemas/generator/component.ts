@@ -6,6 +6,8 @@
  * ни были объявлены их типы.
  */
 
+import * as path from 'path';
+
 import {
   Node,
   SyntaxKind,
@@ -66,7 +68,7 @@ function titleOf(call: CallExpression, fallback: string): string {
  * Все вызовы фабрики в программе. Имя — значение первого аргумента (член ElementsTypes).
  * Ошибки (имя не сводится, дубли) — в диагностику каталога.
  */
-export function findComponents(project: Project, diag: Diagnostics): ComponentEntry[] {
+export function findComponents(project: Project, rootDir: string, diag: Diagnostics): ComponentEntry[] {
   const out: ComponentEntry[] = [];
   const seen = new Set<string>();
   for (const sf of project.getSourceFiles()) {
@@ -76,7 +78,9 @@ export function findComponents(project: Project, diag: Diagnostics): ComponentEn
     for (const call of sf.getDescendantsOfKind(SyntaxKind.CallExpression)) {
       if (!isFactoryCall(call)) continue;
       const nameArg = call.getArguments()[0];
-      const where = `${sf.getBaseName()}:${call.getStartLineNumber()}`;
+      // Путь от корня монорепозитория: по одному имени файл не найти
+      const file = path.relative(rootDir, sf.getFilePath()).replace(/\\/g, '/');
+      const where = `${file}:${call.getStartLineNumber()}`;
       const name = nameArg ? valueOf(nameArg) : UNRESOLVED;
       if (typeof name !== 'string') {
         diag.report('component-name-unresolved', where, nameArg?.getText() ?? 'нет аргумента');

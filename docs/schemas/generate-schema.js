@@ -25,9 +25,10 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 
 // docs/schemas/generator/cli.ts
 var fs3 = __toESM(require("fs"), 1);
-var path4 = __toESM(require("path"), 1);
+var path5 = __toESM(require("path"), 1);
 
 // docs/schemas/generator/component.ts
+var path3 = __toESM(require("path"), 1);
 var import_ts_morph3 = require("ts-morph");
 
 // docs/schemas/generator/config.ts
@@ -173,9 +174,9 @@ function jsDocDescription(symbol) {
   }
   return void 0;
 }
-function unresolved(ctx, type, path5, code, why) {
+function unresolved(ctx, type, path6, code, why) {
   const text = typeText(type, ctx.printNode);
-  ctx.diag.report(code, path5, `${why}: ${text}`);
+  ctx.diag.report(code, path6, `${why}: ${text}`);
   return { "x-ts-type": text };
 }
 function isNamedSourceType(type) {
@@ -236,12 +237,12 @@ function dedupe(schemas) {
     return true;
   });
 }
-function typeToSchema(type, ctx, path5, seen = /* @__PURE__ */ new Set()) {
+function typeToSchema(type, ctx, path6, seen = /* @__PURE__ */ new Set()) {
   const sharedRef = ctx.shared.matchType(type);
   if (sharedRef) return { $ref: sharedRef.$ref };
-  if (type.isAny() || type.isUnknown()) return unresolved(ctx, type, path5, "any-type", "any/unknown");
+  if (type.isAny() || type.isUnknown()) return unresolved(ctx, type, path6, "any-type", "any/unknown");
   if (type.getCallSignatures().length > 0) return { "x-kind": "handler" };
-  if (type.isUnion()) return unionToSchema(type, ctx, path5, seen);
+  if (type.isUnion()) return unionToSchema(type, ctx, path6, seen);
   if ((type.isObject() || type.isIntersection()) && isElementRef(type)) return { "x-kind": "element" };
   if (type.isEnumLiteral() || type.isStringLiteral()) {
     return { type: "string", const: String(type.getLiteralValue() ?? type.getText()) };
@@ -254,15 +255,15 @@ function typeToSchema(type, ctx, path5, seen = /* @__PURE__ */ new Set()) {
       const values = decl.getMembers().map((m) => String(m.getValue() ?? m.getName()));
       return { type: "string", enum: values };
     }
-    return unresolved(ctx, type, path5, "unresolved-type", "enum \u0431\u0435\u0437 \u043E\u0431\u044A\u044F\u0432\u043B\u0435\u043D\u0438\u044F");
+    return unresolved(ctx, type, path6, "unresolved-type", "enum \u0431\u0435\u0437 \u043E\u0431\u044A\u044F\u0432\u043B\u0435\u043D\u0438\u044F");
   }
   if (type.isArray()) {
     const el = type.getArrayElementType();
-    if (!el) return unresolved(ctx, type, path5, "unresolved-type", "\u0442\u0438\u043F \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430 \u043C\u0430\u0441\u0441\u0438\u0432\u0430");
-    return { type: "array", items: typeToSchema(el, ctx, `${path5}[]`, seen) };
+    if (!el) return unresolved(ctx, type, path6, "unresolved-type", "\u0442\u0438\u043F \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u0430 \u043C\u0430\u0441\u0441\u0438\u0432\u0430");
+    return { type: "array", items: typeToSchema(el, ctx, `${path6}[]`, seen) };
   }
   if (type.isTuple()) {
-    const items = dedupe(type.getTupleElements().map((t, i) => typeToSchema(t, ctx, `${path5}[${i}]`, seen)));
+    const items = dedupe(type.getTupleElements().map((t, i) => typeToSchema(t, ctx, `${path6}[${i}]`, seen)));
     return { type: "array", items: items.length === 1 ? items[0] : { anyOf: items } };
   }
   if (type.isString() || type.isTemplateLiteral()) return { type: "string" };
@@ -270,20 +271,20 @@ function typeToSchema(type, ctx, path5, seen = /* @__PURE__ */ new Set()) {
   if (type.isBoolean()) return { type: "boolean" };
   if (type.isNull()) return { type: "null" };
   if (type.getFlags() & import_ts_morph.TypeFlags.NonPrimitive) {
-    ctx.diag.report("loose-object", path5, "object \u0431\u0435\u0437 \u043E\u043F\u0438\u0441\u0430\u043D\u0438\u044F \u043F\u043E\u043B\u0435\u0439");
+    ctx.diag.report("loose-object", path6, "object \u0431\u0435\u0437 \u043E\u043F\u0438\u0441\u0430\u043D\u0438\u044F \u043F\u043E\u043B\u0435\u0439");
     return { type: "object" };
   }
-  if (type.isObject()) return objectToSchema(type, ctx, path5, seen);
+  if (type.isObject()) return objectToSchema(type, ctx, path6, seen);
   if (type.isIntersection() && type.getIntersectionTypes().every((t) => t.isObject())) {
-    return objectToSchema(type, ctx, path5, seen);
+    return objectToSchema(type, ctx, path6, seen);
   }
   if (type.isIntersection()) {
     const prim = type.getIntersectionTypes().find((t) => t.isString() || t.isNumber() || t.isBoolean());
-    if (prim) return typeToSchema(prim, ctx, path5, seen);
+    if (prim) return typeToSchema(prim, ctx, path6, seen);
   }
-  return unresolved(ctx, type, path5, "unresolved-type", "\u043D\u0435 \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u043D");
+  return unresolved(ctx, type, path6, "unresolved-type", "\u043D\u0435 \u0440\u0430\u0441\u043F\u043E\u0437\u043D\u0430\u043D");
 }
-function unionToSchema(type, ctx, path5, seen) {
+function unionToSchema(type, ctx, path6, seen) {
   const parts = type.getUnionTypes();
   const hasNull = parts.some((p) => p.isNull());
   const rest = parts.filter((p) => !p.isNull() && !p.isUndefined());
@@ -321,11 +322,11 @@ function unionToSchema(type, ctx, path5, seen) {
   const first = branches.length;
   const single = first === 0 && others.length === 1;
   others.forEach(
-    (p, i) => branches.push(typeToSchema(p, ctx, single ? path5 : `${path5}.anyOf[${first + i}]`, seen))
+    (p, i) => branches.push(typeToSchema(p, ctx, single ? path6 : `${path6}.anyOf[${first + i}]`, seen))
   );
   const unique = dedupe(branches);
   if (unique.length === 0)
-    return hasNull ? { type: "null" } : unresolved(ctx, type, path5, "unresolved-type", "\u043F\u0443\u0441\u0442\u043E\u0439 union");
+    return hasNull ? { type: "null" } : unresolved(ctx, type, path6, "unresolved-type", "\u043F\u0443\u0441\u0442\u043E\u0439 union");
   if (unique.length === 1) return hasNull ? withNull(unique[0], nullableRef) : unique[0];
   const simple = unique.every((s) => Object.keys(s).length === 1 && typeof s.type === "string");
   if (simple) {
@@ -335,7 +336,7 @@ function unionToSchema(type, ctx, path5, seen) {
   }
   return { anyOf: hasNull && !nullableRef ? [...unique, { type: "null" }] : unique };
 }
-function objectToSchema(type, ctx, path5, seen) {
+function objectToSchema(type, ctx, path6, seen) {
   const sym = type.getAliasSymbol() ?? type.getSymbol();
   const decl = sym?.getDeclarations()[0];
   const sf = decl?.getSourceFile();
@@ -343,13 +344,13 @@ function objectToSchema(type, ctx, path5, seen) {
   if (!isRecord && sf && (sf.isDeclarationFile() || sf.getFilePath().includes("/typescript/lib/"))) {
     const known = sym ? KNOWN_EXTERNAL_TYPES[sym.getName()] : void 0;
     if (known) return { ...known };
-    return unresolved(ctx, type, path5, "external-type", "\u0432\u043D\u0435\u0448\u043D\u0438\u0439 \u0442\u0438\u043F \u043D\u0435 \u0440\u0430\u0441\u043A\u0440\u044B\u0432\u0430\u0435\u0442\u0441\u044F");
+    return unresolved(ctx, type, path6, "external-type", "\u0432\u043D\u0435\u0448\u043D\u0438\u0439 \u0442\u0438\u043F \u043D\u0435 \u0440\u0430\u0441\u043A\u0440\u044B\u0432\u0430\u0435\u0442\u0441\u044F");
   }
-  if (isRuntimeObjectType(type)) return unresolved(ctx, type, path5, "runtime-type", "\u0440\u0430\u043D\u0442\u0430\u0439\u043C-\u043E\u0431\u044A\u0435\u043A\u0442 \u0434\u0432\u0438\u0436\u043A\u0430");
+  if (isRuntimeObjectType(type)) return unresolved(ctx, type, path6, "runtime-type", "\u0440\u0430\u043D\u0442\u0430\u0439\u043C-\u043E\u0431\u044A\u0435\u043A\u0442 \u0434\u0432\u0438\u0436\u043A\u0430");
   const named = isNamedSourceType(type);
   if (named) ctx.shared.trackUsage(named.name, named.file, ctx.elementType);
   const key = `${sf?.getFilePath() ?? ""}#${type.getText()}`;
-  if (seen.has(key)) return unresolved(ctx, type, path5, "cycle-type", "\u0446\u0438\u043A\u043B\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0441\u0441\u044B\u043B\u043A\u0430");
+  if (seen.has(key)) return unresolved(ctx, type, path6, "cycle-type", "\u0446\u0438\u043A\u043B\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0441\u0441\u044B\u043B\u043A\u0430");
   const nextSeen = new Set(seen).add(key);
   const properties = {};
   const required = [];
@@ -359,7 +360,7 @@ function objectToSchema(type, ctx, path5, seen) {
     const at = decl ?? prop.getValueDeclaration() ?? prop.getDeclarations()[0];
     const propType = at ? prop.getTypeAtLocation(at) : prop.getDeclaredType();
     if (name === "type" && isElementTypeRef(propType)) continue;
-    const schema = typeToSchema(propType, ctx, `${path5}.${name}`, nextSeen);
+    const schema = typeToSchema(propType, ctx, `${path6}.${name}`, nextSeen);
     const description = jsDocDescription(prop);
     properties[name] = description ? { description, ...schema } : schema;
     if (!prop.isOptional()) required.push(name);
@@ -372,10 +373,10 @@ function objectToSchema(type, ctx, path5, seen) {
   const index = type.getStringIndexType();
   if (index) {
     if (index.isAny() || index.isUnknown()) {
-      ctx.diag.report("loose-object", path5, `\u043F\u0440\u043E\u0438\u0437\u0432\u043E\u043B\u044C\u043D\u044B\u0435 \u043A\u043B\u044E\u0447\u0438: ${typeText(type, ctx.printNode)}`);
+      ctx.diag.report("loose-object", path6, `\u043F\u0440\u043E\u0438\u0437\u0432\u043E\u043B\u044C\u043D\u044B\u0435 \u043A\u043B\u044E\u0447\u0438: ${typeText(type, ctx.printNode)}`);
       return { type: "object" };
     }
-    return { type: "object", additionalProperties: typeToSchema(index, ctx, `${path5}{}`, nextSeen) };
+    return { type: "object", additionalProperties: typeToSchema(index, ctx, `${path6}{}`, nextSeen) };
   }
   return { type: "object" };
 }
@@ -983,7 +984,7 @@ function titleOf(call, fallback) {
   if (!name) return fallback;
   return name.replace(COMPONENT.titleSuffix, "").replace(/([A-Z])/g, " $1").trim();
 }
-function findComponents(project, diag) {
+function findComponents(project, rootDir, diag) {
   const out = [];
   const seen = /* @__PURE__ */ new Set();
   for (const sf of project.getSourceFiles()) {
@@ -991,7 +992,8 @@ function findComponents(project, diag) {
     for (const call of sf.getDescendantsOfKind(import_ts_morph3.SyntaxKind.CallExpression)) {
       if (!isFactoryCall(call)) continue;
       const nameArg = call.getArguments()[0];
-      const where = `${sf.getBaseName()}:${call.getStartLineNumber()}`;
+      const file = path3.relative(rootDir, sf.getFilePath()).replace(/\\/g, "/");
+      const where = `${file}:${call.getStartLineNumber()}`;
       const name = nameArg ? valueOf(nameArg) : UNRESOLVED;
       if (typeof name !== "string") {
         diag.report("component-name-unresolved", where, nameArg?.getText() ?? "\u043D\u0435\u0442 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430");
@@ -1291,15 +1293,15 @@ var DIAGNOSTIC_CODES = {
 };
 var Diagnostics = class {
   items = [];
-  report(code, path5, message) {
-    const exists = this.items.some((d) => d.code === code && d.path === path5 && d.message === message);
-    if (!exists) this.items.push({ code, severity: DIAGNOSTIC_CODES[code], path: path5, message });
+  report(code, path6, message) {
+    const exists = this.items.some((d) => d.code === code && d.path === path6 && d.message === message);
+    if (!exists) this.items.push({ code, severity: DIAGNOSTIC_CODES[code], path: path6, message });
   }
 };
 
 // docs/schemas/generator/shared.ts
 var fs2 = __toESM(require("fs"), 1);
-var path3 = __toESM(require("path"), 1);
+var path4 = __toESM(require("path"), 1);
 var import_ts_morph4 = require("ts-morph");
 function enumMemberValues(decl) {
   return decl.getMembers().map((m) => {
@@ -1313,7 +1315,7 @@ var SharedRegistry = class {
   constructor(rootDir, warn) {
     this.rootDir = rootDir;
     for (const config of SHARED_ENUMS) {
-      const file = path3.resolve(rootDir, config.sourceFile);
+      const file = path4.resolve(rootDir, config.sourceFile);
       if (!fs2.existsSync(file)) {
         warn(`[WARN] shared ${config.typeName}: \u0444\u0430\u0439\u043B \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D ${config.sourceFile}`);
         continue;
@@ -1360,7 +1362,7 @@ var SharedRegistry = class {
     return this.loaded.some((e) => e.config.nullable && ref === `../shared/${e.config.fileName}#`);
   }
   trackUsage(typeName, file, elementType) {
-    file = path3.relative(this.rootDir, file).replace(/\\/g, "/");
+    file = path4.relative(this.rootDir, file).replace(/\\/g, "/");
     const key = `${file}#${typeName}`;
     const rec = this.usage.get(key) ?? { type: typeName, file, usedIn: /* @__PURE__ */ new Set() };
     rec.usedIn.add(elementType);
@@ -1479,25 +1481,25 @@ function normalizeName(raw) {
   return CLI_NAME_ALIASES[raw.toUpperCase()] ?? raw.toLowerCase().replace(/_/g, "-");
 }
 function findRoot(from) {
-  for (let dir = from; ; dir = path4.dirname(dir)) {
-    if (fs3.existsSync(path4.join(dir, ROOT_MARKER))) return dir;
-    if (path4.dirname(dir) === dir) return null;
+  for (let dir = from; ; dir = path5.dirname(dir)) {
+    if (fs3.existsSync(path5.join(dir, ROOT_MARKER))) return dir;
+    if (path5.dirname(dir) === dir) return null;
   }
 }
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const warn = (msg) => console.warn(msg);
-  const rootDir = typeof args.root === "string" ? path4.resolve(args.root) : findRoot(__dirname);
+  const rootDir = typeof args.root === "string" ? path5.resolve(args.root) : findRoot(__dirname);
   if (!rootDir) {
     console.error(`\u041A\u043E\u0440\u0435\u043D\u044C \u0444\u0440\u0435\u0439\u043C\u0432\u043E\u0440\u043A\u0430 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D (\u043D\u0435\u0442 ${ROOT_MARKER} \u0432\u044B\u0448\u0435 \u0441\u043A\u0440\u0438\u043F\u0442\u0430) \u2014 \u0443\u043A\u0430\u0436\u0438\u0442\u0435 --root`);
     return 1;
   }
-  const pkgDir = path4.resolve(rootDir, PATHS.schemasPackage);
-  const outputDir = typeof args.outputDir === "string" ? path4.resolve(args.outputDir) : path4.resolve(pkgDir, PATHS.schemasDir);
-  const sharedDir = path4.resolve(outputDir, "..", path4.basename(PATHS.sharedDir));
-  const componentsDir = path4.resolve(outputDir, "..", path4.basename(COMPONENT.componentsDir));
+  const pkgDir = path5.resolve(rootDir, PATHS.schemasPackage);
+  const outputDir = typeof args.outputDir === "string" ? path5.resolve(args.outputDir) : path5.resolve(pkgDir, PATHS.schemasDir);
+  const sharedDir = path5.resolve(outputDir, "..", path5.basename(PATHS.sharedDir));
+  const componentsDir = path5.resolve(outputDir, "..", path5.basename(COMPONENT.componentsDir));
   const checkOnly = !!(args.check || args.checkOnly);
-  const bundlePath = typeof args.bundle === "string" ? path4.resolve(args.bundle) : null;
+  const bundlePath = typeof args.bundle === "string" ? path5.resolve(args.bundle) : null;
   const catalog = readCatalog(rootDir, warn);
   let targets;
   if (args.all) {
@@ -1516,7 +1518,7 @@ function main() {
     [CATALOG_KEY]: new Diagnostics()
   };
   const base = buildBase(project, rootDir, shared, diagnostics[BASE_KEY]);
-  const componentEntries = findComponents(project, diagnostics[CATALOG_KEY]);
+  const componentEntries = findComponents(project, rootDir, diagnostics[CATALOG_KEY]);
   const componentByType = new Map(componentEntries.map((c) => [c.elementType, c]));
   const componentTargets = args.all ? componentEntries.map((c) => c.elementType) : targets.filter((t) => componentByType.has(t));
   targets = targets.filter((t) => !componentByType.has(t) || catalog.elements[t]);
@@ -1590,35 +1592,35 @@ function main() {
       components,
       report
     };
-    fs3.mkdirSync(path4.dirname(bundlePath), { recursive: true });
+    fs3.mkdirSync(path5.dirname(bundlePath), { recursive: true });
     fs3.writeFileSync(bundlePath, serialize(bundle));
     console.log(`\u0411\u0430\u043D\u0434\u043B: ${bundlePath}`);
     return 0;
   }
   const files = [
     ...Object.entries(schemas).map(([t, s]) => ({
-      file: path4.join(outputDir, `${t}.schema.json`),
+      file: path5.join(outputDir, `${t}.schema.json`),
       text: serialize(s)
     })),
     ...Object.entries(components).map(([t, s]) => ({
-      file: path4.join(componentsDir, `${t}.schema.json`),
+      file: path5.join(componentsDir, `${t}.schema.json`),
       text: serialize(s)
     })),
     ...Object.entries(sharedSchemas).map(([name, s]) => ({
-      file: path4.join(sharedDir, name),
+      file: path5.join(sharedDir, name),
       text: serialize(s)
     }))
   ];
   if (checkOnly) {
     const stale = files.filter((f) => !fs3.existsSync(f.file) || fs3.readFileSync(f.file, "utf-8") !== f.text);
-    for (const f of stale) console.error(`\u0420\u0430\u0441\u0445\u043E\u0434\u0438\u0442\u0441\u044F \u0441 \u0433\u0435\u043D\u0435\u0440\u0430\u0442\u043E\u0440\u043E\u043C: ${path4.relative(rootDir, f.file)}`);
+    for (const f of stale) console.error(`\u0420\u0430\u0441\u0445\u043E\u0434\u0438\u0442\u0441\u044F \u0441 \u0433\u0435\u043D\u0435\u0440\u0430\u0442\u043E\u0440\u043E\u043C: ${path5.relative(rootDir, f.file)}`);
     return stale.length > 0 || errors > 0 ? 1 : 0;
   }
   for (const f of files) {
-    fs3.mkdirSync(path4.dirname(f.file), { recursive: true });
+    fs3.mkdirSync(path5.dirname(f.file), { recursive: true });
     fs3.writeFileSync(f.file, f.text);
   }
-  const manifestPath = path4.resolve(pkgDir, PATHS.manifest);
+  const manifestPath = path5.resolve(pkgDir, PATHS.manifest);
   if (fs3.existsSync(manifestPath)) {
     const manifest = JSON.parse(fs3.readFileSync(manifestPath, "utf-8"));
     for (const [t, s] of Object.entries(schemas)) {
