@@ -500,7 +500,7 @@ function valueOf(node, depth = 0) {
         const v = decl.getValue();
         return v === void 0 ? decl.getName() : v;
       }
-      if (import_ts_morph2.Node.isVariableDeclaration(decl)) {
+      if (import_ts_morph2.Node.isVariableDeclaration(decl) || import_ts_morph2.Node.isPropertyAssignment(decl)) {
         const init = decl.getInitializer();
         if (init) return valueOf(init, depth + 1);
       }
@@ -1111,7 +1111,11 @@ function readEvents(options, ctx) {
     if (events[name]) continue;
     const parameters = {};
     if (valueArg) {
-      parameters.value = typeToSchema(valueArg.getType(), { ...ctx, printNode: call }, `x-events.${name}.value`);
+      parameters.value = typeToSchema(
+        valueArg.getType(),
+        { ...ctx, printNode: call },
+        `x-events.${name}.value`
+      );
     }
     events[name] = { parameters };
   }
@@ -1155,7 +1159,11 @@ function buildComponentSchema(entry, shared, diag) {
   const properties = {};
   const required = [];
   if (!propsType || propsType.isAny() || propsType.isUnknown()) {
-    diag.report("component-props-missing", "properties", `\u0442\u0438\u043F props \u043D\u0435 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0451\u043D: ${call.getText().slice(0, 80)}`);
+    diag.report(
+      "component-props-missing",
+      "properties",
+      `\u0442\u0438\u043F props \u043D\u0435 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0451\u043D: ${call.getText().slice(0, 80)}`
+    );
   } else {
     for (const symbol of propsType.getProperties()) {
       const name = symbol.getName();
@@ -1573,7 +1581,11 @@ function main() {
       };
     }
     for (const [t, s] of Object.entries(components)) {
-      manifest[t] = { path: `${COMPONENT.componentsDir}/${t}.schema.json`, title: s.title, deprecatedAliases: [] };
+      manifest[t] = {
+        path: `${COMPONENT.componentsDir}/${t}.schema.json`,
+        title: s.title,
+        deprecatedAliases: []
+      };
     }
     fs3.writeFileSync(manifestPath, serialize(manifest));
   } else {

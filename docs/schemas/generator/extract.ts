@@ -186,7 +186,8 @@ export function valueOf(node: Node, depth = 0): Extracted {
         const v = decl.getValue();
         return v === undefined ? decl.getName() : v;
       }
-      if (Node.isVariableDeclaration(decl)) {
+      // Константа или член объекта-константы: const EVENTS = { CHANGE: 'change' } as const
+      if (Node.isVariableDeclaration(decl) || Node.isPropertyAssignment(decl)) {
         const init = decl.getInitializer();
         if (init) return valueOf(init, depth + 1);
       }
