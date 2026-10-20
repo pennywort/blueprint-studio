@@ -1,12 +1,5 @@
 import { useMemo, useState } from 'react';
-import {
-  Button,
-  InputAdornment,
-  TextField,
-  Tooltip,
-  Typography,
-  makeStyles,
-} from '@blueprint-vendor/flamingo-core';
+import { Button, InputAdornment, TextField, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import { Search } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { AttributeField } from './attribute-field';
@@ -17,9 +10,18 @@ import type { PropertyEditorProps } from './property-editor-registry';
 // [owner 2026-10-20]; макет docs/design-mockups/настройка-атрибутов-элемента-listitem.png):
 // подпись «Иконка», строка поиска и сетка иконок. Значение — имя иконки из
 // enum схемы (attribute.options), повторный клик по выбранной снимает prop.
+// Без тултипов [owner 2026-10-20]: при быстром скролле они «улетали».
 
-// Свёрнутая сетка — три ряда по шесть, как на макете; «Смотреть все» — весь список.
-const COLLAPSED_COUNT = 18;
+const COLUMNS = 6;
+// Свёрнутая сетка — три ряда, как на макете; «Смотреть все» — весь список.
+const COLLAPSED_ROWS = 3;
+// Развёрнутая сетка виртуализирована по рядам [owner 2026-10-20]: в DOM —
+// только видимые ряды + запас; высота ряда фиксирована (плитка + зазор).
+const TILE = 40;
+const GAP = 4;
+const ROW = TILE + GAP;
+const VIEWPORT_ROWS = 6;
+const OVERSCAN_ROWS = 2;
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   body: {
@@ -27,20 +29,20 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     flexDirection: 'column',
     gap: theme.spacing(1.5),
   },
+  viewport: {
+    height: VIEWPORT_ROWS * ROW,
+    overflowY: 'auto',
+  },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(6, 1fr)',
-    gap: theme.spacing(0.5),
-  },
-  gridExpanded: {
-    maxHeight: 240,
-    overflowY: 'auto',
+    gridTemplateColumns: `repeat(${COLUMNS}, 1fr)`,
+    gridAutoRows: TILE,
+    gap: GAP,
   },
   tile: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 40,
     padding: 0,
     border: `1px solid transparent`,
     borderRadius: theme.shape.borderRadius * 2,
@@ -71,6 +73,7 @@ export function IconPropertyEditor({ value, onChange, attribute }: PropertyEdito
   const classes = useStyles();
   const [query, setQuery] = useState('');
   const [expanded, setExpanded] = useState(false);
+  const [firstRow, setFirstRow] = useState(0);
   const selected = typeof value === 'string' ? value : null;
 
   const names = useMemo(() => (attribute.options ?? []).map((option) => option.value), [attribute.options]);
@@ -78,7 +81,45 @@ export function IconPropertyEditor({ value, onChange, attribute }: PropertyEdito
     const needle = query.trim().toLowerCase();
     return needle ? names.filter((name) => name.toLowerCase().includes(needle)) : names;
   }, [names, query]);
-  const visible = expanded ? found : found.slice(0, COLLAPSED_COUNT);
+  const collapsedCount = COLLAPSED_ROWS * COLUMNS;
+  const virtual = expanded && found.length > collapsedCount;
+
+  const tile = (name: string) => (
+    <button
+      key={name}
+      type="button"
+      aria-label={name}
+      aria-pressed={name === selected}
+      data-testid={`icon-option-${name}`}
+      className={`${classes.tile} ${name === selected ? classes.tileSelected : ''}`}
+      onClick={() => onChange(name === selected && !attribute.required ? undefined : name)}
+    >
+      <IconStub name={name} />
+    </button>
+  );
+
+  let grid = null;
+  if (virtual) {
+    const totalRows = Math.ceil(found.length / COLUMNS);
+    const start = Math.max(0, firstRow - OVERSCAN_ROWS);
+    const end = Math.min(totalRows, firstRow + VIEWPORT_ROWS + OVERSCAN_ROWS);
+    grid = (
+      <div
+        // Новый поиск — новый вьюпорт со scrollTop 0 (согласован с firstRow = 0).
+        key={query}
+        className={classes.viewport}
+        data-testid="icon-grid-viewport"
+        // setState с тем же рядом React пропускает — перерисовка только на смене ряда.
+        onScroll={(event) => setFirstRow(Math.floor(event.currentTarget.scrollTop / ROW))}
+      >
+        <div style={{ height: totalRows * ROW - GAP, paddingTop: start * ROW, boxSizing: 'border-box' }}>
+          <div className={classes.grid}>{found.slice(start * COLUMNS, end * COLUMNS).map(tile)}</div>
+        </div>
+      </div>
+    );
+  } else if (found.length > 0) {
+    grid = <div className={classes.grid}>{found.slice(0, collapsedCount).map(tile)}</div>;
+  }
 
   return (
     <AttributeField attribute={attribute} variant="heading">
@@ -89,7 +130,10 @@ export function IconPropertyEditor({ value, onChange, attribute }: PropertyEdito
           variant="outlined"
           placeholder="Поиск"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setFirstRow(0);
+          }}
           InputProps={{
             endAdornment: (
               <InputAdornment position="end">
@@ -98,24 +142,7 @@ export function IconPropertyEditor({ value, onChange, attribute }: PropertyEdito
             ),
           }}
         />
-        {visible.length > 0 ? (
-          <div className={`${classes.grid} ${expanded ? classes.gridExpanded : ''}`}>
-            {visible.map((name) => (
-              <Tooltip key={name} title={name} placement="top">
-                <button
-                  type="button"
-                  aria-label={name}
-                  aria-pressed={name === selected}
-                  data-testid={`icon-option-${name}`}
-                  className={`${classes.tile} ${name === selected ? classes.tileSelected : ''}`}
-                  onClick={() => onChange(name === selected && !attribute.required ? undefined : name)}
-                >
-                  <IconStub name={name} />
-                </button>
-              </Tooltip>
-            ))}
-          </div>
-        ) : (
+        {grid ?? (
           <Typography variant="body2" className={classes.muted}>
             Ничего не найдено
           </Typography>
@@ -125,8 +152,16 @@ export function IconPropertyEditor({ value, onChange, attribute }: PropertyEdito
             Выбрано: {selected}
           </Typography>
         ) : null}
-        {found.length > COLLAPSED_COUNT ? (
-          <Button fullWidth size="small" className={classes.more} onClick={() => setExpanded(!expanded)}>
+        {found.length > collapsedCount ? (
+          <Button
+            fullWidth
+            size="small"
+            className={classes.more}
+            onClick={() => {
+              setExpanded(!expanded);
+              setFirstRow(0);
+            }}
+          >
             {expanded ? 'Свернуть' : `Смотреть все (${found.length})`}
           </Button>
         ) : null}
