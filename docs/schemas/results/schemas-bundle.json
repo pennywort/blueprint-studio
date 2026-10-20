@@ -726,7 +726,7 @@
       "x-format-version": 2,
       "x-element-type": "accordion",
       "x-category": "basic",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["panel"],
       "x-container": {
         "allowedChildren": null
       },
@@ -837,6 +837,7 @@
       "x-element-type": "action-button",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -868,7 +869,7 @@
       "x-format-version": 2,
       "x-element-type": "alert",
       "x-category": "basic",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["message-strip"],
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -1101,7 +1102,7 @@
       "x-format-version": 2,
       "x-element-type": "autocomplete",
       "x-category": "form",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["suggest"],
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -1482,7 +1483,7 @@
       "x-format-version": 2,
       "x-element-type": "badge",
       "x-category": "basic",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["tag"],
       "x-container": {
         "allowedChildren": null
       },
@@ -2074,6 +2075,7 @@
       "x-element-type": "button-group",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "x-container": {
         "allowedChildren": null
       },
@@ -2501,7 +2503,7 @@
       "x-format-version": 2,
       "x-element-type": "carousel",
       "x-category": "basic",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["simple-carousel"],
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -2896,6 +2898,8 @@
       "x-element-type": "chips",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "chips-group",
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -2997,7 +3001,7 @@
       "x-format-version": 2,
       "x-element-type": "chips-group",
       "x-category": "basic",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["chips"],
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -3201,6 +3205,7 @@
       "x-element-type": "color-card",
       "x-category": "form",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -3243,7 +3248,7 @@
       "x-format-version": 2,
       "x-element-type": "container",
       "x-category": "layout",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["view"],
       "x-container": {
         "allowedChildren": null
       },
@@ -3383,6 +3388,7 @@
       "x-element-type": "content-card",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -3606,7 +3612,7 @@
       "x-format-version": 2,
       "x-element-type": "date-field",
       "x-category": "form",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["date-picker"],
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -3886,6 +3892,8 @@
       "x-element-type": "date-picker",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "date-field",
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -3993,7 +4001,7 @@
       "x-format-version": 2,
       "x-element-type": "date-range-field",
       "x-category": "basic",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["date-range-selection"],
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -4238,6 +4246,8 @@
       "x-element-type": "date-range-selection",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "date-range-field",
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -4513,6 +4523,8 @@
       "x-element-type": "dialog",
       "x-category": "overlay",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "modal",
       "x-container": {
         "allowedChildren": null
       },
@@ -4766,7 +4778,7 @@
       "x-format-version": 2,
       "x-element-type": "dropdown",
       "x-category": "basic",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["menu-button"],
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -5065,6 +5077,7 @@
       "x-element-type": "file",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -5203,6 +5216,7 @@
       "x-element-type": "front-view",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "x-container": {
         "allowedChildren": null
       },
@@ -5654,6 +5668,7 @@
       "x-element-type": "grid",
       "x-category": "layout",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "x-container": {
         "allowedChildren": null
       },
@@ -5922,6 +5937,7 @@
       "x-element-type": "grid-row-view",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "x-container": {
         "allowedChildren": null
       },
@@ -6075,7 +6091,7 @@
       "x-format-version": 2,
       "x-element-type": "horizontal-scroll",
       "x-category": "basic",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["horizontal-view"],
       "x-container": {
         "allowedChildren": null
       },
@@ -6135,6 +6151,8 @@
       "x-element-type": "horizontal-step",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "stepper",
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -6178,6 +6196,8 @@
       "x-element-type": "horizontal-view",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "horizontal-scroll",
       "x-container": {
         "allowedChildren": null
       },
@@ -6600,6 +6620,8 @@
       "x-element-type": "label",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "typography",
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -6796,6 +6818,7 @@
       "x-element-type": "link",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -7651,6 +7674,7 @@
       "x-element-type": "mask-input",
       "x-category": "form",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -7722,6 +7746,7 @@
       "x-element-type": "menu",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -7775,6 +7800,8 @@
       "x-element-type": "menu-button",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "dropdown",
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -8030,6 +8057,8 @@
       "x-element-type": "message-strip",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "alert",
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -8131,7 +8160,7 @@
       "x-format-version": 2,
       "x-element-type": "modal",
       "x-category": "overlay",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["dialog"],
       "x-container": {
         "allowedChildren": null
       },
@@ -8383,6 +8412,8 @@
       "x-element-type": "panel",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "accordion",
       "x-container": {
         "allowedChildren": null
       },
@@ -8493,6 +8524,7 @@
       "x-element-type": "paragraph",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -8656,6 +8688,7 @@
       "x-element-type": "progress",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -8689,6 +8722,7 @@
       "x-element-type": "qa",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -9019,7 +9053,7 @@
       "x-format-version": 2,
       "x-element-type": "responsive-grid",
       "x-category": "basic",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["responsive-grid-view"],
       "x-container": {
         "allowedChildren": null
       },
@@ -9275,6 +9309,8 @@
       "x-element-type": "responsive-grid-view",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "responsive-grid",
       "x-container": {
         "allowedChildren": null
       },
@@ -9530,6 +9566,7 @@
       "x-element-type": "scroll-view",
       "x-category": "layout",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "x-container": {
         "allowedChildren": null
       },
@@ -9590,7 +9627,7 @@
       "x-format-version": 2,
       "x-element-type": "search",
       "x-category": "basic",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["search-field"],
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -9743,6 +9780,8 @@
       "x-element-type": "search-field",
       "x-category": "form",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "search",
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -9985,6 +10024,7 @@
       "x-element-type": "segmented-button",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -10162,6 +10202,7 @@
       "x-element-type": "selectable-card",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -10277,6 +10318,7 @@
       "x-element-type": "simple-card",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -10474,6 +10516,8 @@
       "x-element-type": "simple-carousel",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "carousel",
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -10802,6 +10846,8 @@
       "x-element-type": "social-block",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "social-group",
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -10850,7 +10896,7 @@
       "x-format-version": 2,
       "x-element-type": "social-group",
       "x-category": "basic",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["social-block"],
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -11379,6 +11425,7 @@
       "x-element-type": "step-input",
       "x-category": "form",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -11498,7 +11545,7 @@
       "x-format-version": 2,
       "x-element-type": "stepper",
       "x-category": "basic",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["horizontal-step"],
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -11648,6 +11695,8 @@
       "x-element-type": "suggest",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "autocomplete",
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -12105,6 +12154,8 @@
       "x-element-type": "tab-view",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "tabs",
       "x-container": {
         "allowedChildren": null
       },
@@ -12314,7 +12365,7 @@
       "x-format-version": 2,
       "x-element-type": "tabs",
       "x-category": "basic",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["tab-view"],
       "x-container": {
         "allowedChildren": null
       },
@@ -12395,6 +12446,8 @@
       "x-element-type": "tag",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "badge",
       "x-container": {
         "allowedChildren": null
       },
@@ -12496,6 +12549,8 @@
       "x-element-type": "text",
       "x-category": "basic",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "text-field",
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -12769,7 +12824,7 @@
       "x-format-version": 2,
       "x-element-type": "text-field",
       "x-category": "form",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["text"],
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -13178,7 +13233,7 @@
       "x-format-version": 2,
       "x-element-type": "typography",
       "x-category": "basic",
-      "x-deprecated-aliases": [],
+      "x-deprecated-aliases": ["label"],
       "allOf": [
         {
           "$ref": "../shared/base-element.schema.json#"
@@ -13317,6 +13372,8 @@
       "x-element-type": "view",
       "x-category": "layout",
       "x-deprecated-aliases": [],
+      "x-deprecated": true,
+      "x-replaced-by": "container",
       "x-container": {
         "allowedChildren": null
       },
@@ -14109,7 +14166,7 @@
       "x-category": "basic",
       "allOf": [
         {
-          "$ref": "../schemas/text.schema.json#"
+          "$ref": "../schemas/text-field.schema.json#"
         }
       ],
       "properties": {
@@ -14162,7 +14219,7 @@
       "x-category": "basic",
       "allOf": [
         {
-          "$ref": "../schemas/text.schema.json#"
+          "$ref": "../schemas/text-field.schema.json#"
         }
       ],
       "properties": {
@@ -14215,7 +14272,7 @@
       "x-category": "basic",
       "allOf": [
         {
-          "$ref": "../schemas/text.schema.json#"
+          "$ref": "../schemas/text-field.schema.json#"
         }
       ],
       "properties": {
@@ -14254,6 +14311,59 @@
         }
       ],
       "x-composition": ["text"],
+      "x-slots": []
+    },
+    "ac-autocomplete-isvsp": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "https://framework.internal/components/ac-autocomplete-isvsp.schema.json",
+      "title": "Is V S P",
+      "description": "JSON-схема для компонента \"ac-autocomplete-isvsp\"",
+      "type": "object",
+      "x-format-version": 2,
+      "x-element-type": "ac-autocomplete-isvsp",
+      "x-entity": "component",
+      "x-category": "basic",
+      "allOf": [
+        {
+          "$ref": "../schemas/checkbox.schema.json#"
+        }
+      ],
+      "properties": {
+        "tabNo": {
+          "x-declared-in": "AutocompleteComponentProps",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "x-base-defaults": {},
+      "x-events": {
+        "onChange": {
+          "parameters": {
+            "value": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "x-methods": [
+        {
+          "name": "loadData",
+          "returnType": "void",
+          "parameters": []
+        },
+        {
+          "name": "handleChange",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "value",
+              "type": "string",
+              "optional": false
+            }
+          ]
+        }
+      ],
+      "x-composition": ["checkbox"],
       "x-slots": []
     },
     "ac-autocomplete-login-sudir": {
@@ -14425,6 +14535,59 @@
       "x-composition": ["select"],
       "x-slots": []
     },
+    "ac-autocomplete-position": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "https://framework.internal/components/ac-autocomplete-position.schema.json",
+      "title": "Position",
+      "description": "JSON-схема для компонента \"ac-autocomplete-position\"",
+      "type": "object",
+      "x-format-version": 2,
+      "x-element-type": "ac-autocomplete-position",
+      "x-entity": "component",
+      "x-category": "basic",
+      "allOf": [
+        {
+          "$ref": "../schemas/text-field.schema.json#"
+        }
+      ],
+      "properties": {
+        "tabNo": {
+          "x-declared-in": "AutocompleteComponentProps",
+          "type": "string"
+        }
+      },
+      "required": [],
+      "x-base-defaults": {},
+      "x-events": {
+        "onChange": {
+          "parameters": {
+            "value": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "x-methods": [
+        {
+          "name": "loadData",
+          "returnType": "void",
+          "parameters": []
+        },
+        {
+          "name": "handleChange",
+          "returnType": "void",
+          "parameters": [
+            {
+              "name": "value",
+              "type": "string",
+              "optional": false
+            }
+          ]
+        }
+      ],
+      "x-composition": ["text"],
+      "x-slots": []
+    },
     "ac-autocomplete-user-name": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "$id": "https://framework.internal/components/ac-autocomplete-user-name.schema.json",
@@ -14437,7 +14600,7 @@
       "x-category": "basic",
       "allOf": [
         {
-          "$ref": "../schemas/text.schema.json#"
+          "$ref": "../schemas/text-field.schema.json#"
         }
       ],
       "properties": {
@@ -15079,6 +15242,636 @@
         }
       ],
       "x-composition": ["button", "container", "paragraph", "responsive-grid", "typography"],
+      "x-slots": []
+    },
+    "ac-interaction-status-card": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "https://framework.internal/components/ac-interaction-status-card.schema.json",
+      "title": "Interaction Status Card",
+      "description": "JSON-схема для компонента \"ac-interaction-status-card\"",
+      "type": "object",
+      "x-format-version": 2,
+      "x-element-type": "ac-interaction-status-card",
+      "x-entity": "component",
+      "x-category": "basic",
+      "properties": {
+        "id": {
+          "x-declared-in": "InteractionStatusCardComponentProps",
+          "type": "string"
+        },
+        "result": {
+          "x-declared-in": "InteractionStatusCardComponentProps",
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "appGuid": {
+                  "type": ["string", "null"]
+                }
+              },
+              "required": ["id", "appGuid"]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "appGuid": {
+                  "type": "string"
+                }
+              },
+              "required": ["id", "appGuid"]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "extSystem": {
+                  "type": "string",
+                  "enum": ["SM", "FRIEND"]
+                },
+                "description": {
+                  "type": "string"
+                },
+                "information": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "templateID": {
+                  "type": "string"
+                },
+                "templateName": {
+                  "type": "string"
+                },
+                "callerID": {
+                  "type": "string"
+                },
+                "callerAccountID": {
+                  "type": "string"
+                },
+                "initiatorID": {
+                  "type": "string"
+                },
+                "initiatorAccountID": {
+                  "type": "string"
+                },
+                "optionElements": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "backgroundstyle": {
+                        "type": "string"
+                      },
+                      "button": {
+                        "type": "string"
+                      },
+                      "childs": {
+                        "type": "array",
+                        "items": {
+                          "x-ts-type": "any"
+                        }
+                      },
+                      "dcstyle": {
+                        "type": "string"
+                      },
+                      "groupid": {
+                        "type": "string"
+                      },
+                      "hpcGroupByFields": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "k2": {
+                        "type": "boolean"
+                      },
+                      "image": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "logicalType": {
+                        "type": "string"
+                      },
+                      "mandatory": {
+                        "type": "boolean"
+                      },
+                      "matchField": {
+                        "type": "string"
+                      },
+                      "matchTable": {
+                        "type": "string"
+                      },
+                      "multiline": {
+                        "type": "boolean"
+                      },
+                      "objectType": {
+                        "type": "string"
+                      },
+                      "options": {
+                        "type": "array",
+                        "items": {
+                          "x-ts-type": "any"
+                        }
+                      },
+                      "query": {
+                        "type": "string"
+                      },
+                      "sbaction": {
+                        "type": "string"
+                      },
+                      "sbcommand": {
+                        "type": "string"
+                      },
+                      "sbcopyinfo": {
+                        "type": "boolean"
+                      },
+                      "sbdbfield": {
+                        "type": "string"
+                      },
+                      "sbfield": {
+                        "type": "string"
+                      },
+                      "sbmask": {
+                        "type": "string"
+                      },
+                      "sbmode": {
+                        "type": "string"
+                      },
+                      "sbmodify": {
+                        "type": "boolean"
+                      },
+                      "sbobject": {
+                        "type": "string"
+                      },
+                      "sbonload": {
+                        "type": "string"
+                      },
+                      "sbstyle": {
+                        "type": "string"
+                      },
+                      "sbtask": {
+                        "type": "string"
+                      },
+                      "sbtitle": {
+                        "type": "string"
+                      },
+                      "sbtype": {
+                        "type": "string"
+                      },
+                      "size": {
+                        "type": "string"
+                      },
+                      "style": {
+                        "type": "string"
+                      },
+                      "subjectClass": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "visible": {
+                        "type": "boolean"
+                      },
+                      "width": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "backgroundstyle",
+                      "button",
+                      "childs",
+                      "dcstyle",
+                      "groupid",
+                      "hpcGroupByFields",
+                      "id",
+                      "image",
+                      "label",
+                      "logicalType",
+                      "mandatory",
+                      "matchField",
+                      "matchTable",
+                      "multiline",
+                      "objectType",
+                      "options",
+                      "query",
+                      "sbaction",
+                      "sbcommand",
+                      "sbcopyinfo",
+                      "sbdbfield",
+                      "sbfield",
+                      "sbmask",
+                      "sbmode",
+                      "sbmodify",
+                      "sbobject",
+                      "sbonload",
+                      "sbstyle",
+                      "sbtask",
+                      "sbtitle",
+                      "sbtype",
+                      "size",
+                      "style",
+                      "subjectClass",
+                      "text",
+                      "type",
+                      "visible",
+                      "width"
+                    ]
+                  }
+                },
+                "scoringElements": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "backgroundstyle": {
+                        "type": "string"
+                      },
+                      "button": {
+                        "type": "string"
+                      },
+                      "childs": {
+                        "type": "array",
+                        "items": {
+                          "x-ts-type": "any"
+                        }
+                      },
+                      "dcstyle": {
+                        "type": "string"
+                      },
+                      "groupid": {
+                        "type": "string"
+                      },
+                      "hpcGroupByFields": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "k2": {
+                        "type": "boolean"
+                      },
+                      "image": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "logicalType": {
+                        "type": "string"
+                      },
+                      "mandatory": {
+                        "type": "boolean"
+                      },
+                      "matchField": {
+                        "type": "string"
+                      },
+                      "matchTable": {
+                        "type": "string"
+                      },
+                      "multiline": {
+                        "type": "boolean"
+                      },
+                      "objectType": {
+                        "type": "string"
+                      },
+                      "options": {
+                        "type": "array",
+                        "items": {
+                          "x-ts-type": "any"
+                        }
+                      },
+                      "query": {
+                        "type": "string"
+                      },
+                      "sbaction": {
+                        "type": "string"
+                      },
+                      "sbcommand": {
+                        "type": "string"
+                      },
+                      "sbcopyinfo": {
+                        "type": "boolean"
+                      },
+                      "sbdbfield": {
+                        "type": "string"
+                      },
+                      "sbfield": {
+                        "type": "string"
+                      },
+                      "sbmask": {
+                        "type": "string"
+                      },
+                      "sbmode": {
+                        "type": "string"
+                      },
+                      "sbmodify": {
+                        "type": "boolean"
+                      },
+                      "sbobject": {
+                        "type": "string"
+                      },
+                      "sbonload": {
+                        "type": "string"
+                      },
+                      "sbstyle": {
+                        "type": "string"
+                      },
+                      "sbtask": {
+                        "type": "string"
+                      },
+                      "sbtitle": {
+                        "type": "string"
+                      },
+                      "sbtype": {
+                        "type": "string"
+                      },
+                      "size": {
+                        "type": "string"
+                      },
+                      "style": {
+                        "type": "string"
+                      },
+                      "subjectClass": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "visible": {
+                        "type": "boolean"
+                      },
+                      "width": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "backgroundstyle",
+                      "button",
+                      "childs",
+                      "dcstyle",
+                      "groupid",
+                      "hpcGroupByFields",
+                      "id",
+                      "image",
+                      "label",
+                      "logicalType",
+                      "mandatory",
+                      "matchField",
+                      "matchTable",
+                      "multiline",
+                      "objectType",
+                      "options",
+                      "query",
+                      "sbaction",
+                      "sbcommand",
+                      "sbcopyinfo",
+                      "sbdbfield",
+                      "sbfield",
+                      "sbmask",
+                      "sbmode",
+                      "sbmodify",
+                      "sbobject",
+                      "sbonload",
+                      "sbstyle",
+                      "sbtask",
+                      "sbtitle",
+                      "sbtype",
+                      "size",
+                      "style",
+                      "subjectClass",
+                      "text",
+                      "type",
+                      "visible",
+                      "width"
+                    ]
+                  }
+                },
+                "treeID": {
+                  "type": "string"
+                },
+                "blockCancel": {
+                  "type": "boolean"
+                },
+                "blockDeny": {
+                  "type": "boolean"
+                },
+                "containCustomObjects": {
+                  "type": "boolean"
+                },
+                "relatedID": {
+                  "type": "string"
+                },
+                "relationType": {
+                  "type": ["string", "null"],
+                  "enum": ["PARENT", null]
+                },
+                "linkType": {
+                  "type": ["string", "null"],
+                  "enum": ["NONE", "WEAKLINK", null]
+                },
+                "requestType": {
+                  "type": "string"
+                },
+                "appGuid": {
+                  "type": "string"
+                },
+                "attachments": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "appName": {
+                        "type": "string"
+                      },
+                      "asyncId": {
+                        "type": "number"
+                      },
+                      "checkSumm": {
+                        "type": "string"
+                      },
+                      "containSyntheticBOM": {
+                        "type": "boolean"
+                      },
+                      "extSystem": {
+                        "type": "string"
+                      },
+                      "k2": {
+                        "type": "boolean"
+                      },
+                      "parentObjInternalId": {
+                        "type": "string"
+                      },
+                      "quality": {
+                        "type": "string"
+                      },
+                      "tabnum": {
+                        "type": "string"
+                      },
+                      "parentObjId": {
+                        "type": "string"
+                      },
+                      "parentObjTempId": {
+                        "type": "string"
+                      },
+                      "attachmentTempId": {
+                        "type": "string"
+                      },
+                      "fileName": {
+                        "type": "string"
+                      },
+                      "fileSize": {
+                        "type": "number"
+                      },
+                      "parentObjType": {
+                        "type": "string"
+                      },
+                      "templateId": {
+                        "type": "string"
+                      },
+                      "signed": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "appName",
+                      "asyncId",
+                      "checkSumm",
+                      "containSyntheticBOM",
+                      "extSystem",
+                      "k2",
+                      "parentObjInternalId",
+                      "quality",
+                      "tabnum",
+                      "parentObjId",
+                      "attachmentTempId",
+                      "fileName",
+                      "fileSize",
+                      "parentObjType",
+                      "templateId"
+                    ]
+                  }
+                },
+                "signedBuffer": {
+                  "type": "string"
+                },
+                "bufferSignature": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "extSystem",
+                "description",
+                "information",
+                "templateID",
+                "templateName",
+                "callerID",
+                "callerAccountID",
+                "initiatorID",
+                "initiatorAccountID",
+                "optionElements",
+                "scoringElements",
+                "treeID",
+                "blockCancel",
+                "blockDeny",
+                "containCustomObjects",
+                "relatedID",
+                "relationType",
+                "linkType",
+                "requestType",
+                "appGuid",
+                "attachments"
+              ]
+            }
+          ]
+        },
+        "visible": {
+          "x-declared-in": "InteractionStatusCardComponentProps",
+          "type": "boolean",
+          "default": true
+        },
+        "margin": {
+          "x-declared-in": "InteractionStatusCardComponentProps",
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          ]
+        }
+      },
+      "required": [],
+      "x-base-defaults": {},
+      "x-events": {
+        "onBack": {
+          "parameters": {
+            "value": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "x-ts-type": "any"
+                }
+              },
+              "required": ["id"]
+            }
+          }
+        },
+        "onGoToInteraction": {
+          "parameters": {
+            "value": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "x-ts-type": "any"
+                }
+              },
+              "required": ["id"]
+            }
+          }
+        }
+      },
+      "x-methods": [
+        {
+          "name": "onGoToInteraction",
+          "returnType": "void",
+          "parameters": []
+        },
+        {
+          "name": "onBack",
+          "returnType": "void",
+          "parameters": []
+        },
+        {
+          "name": "extractError",
+          "returnType": "{ message: string; }",
+          "parameters": []
+        }
+      ],
+      "x-composition": ["status-card"],
       "x-slots": []
     },
     "ac-search-modal": {
@@ -17024,7 +17817,8 @@
       "properties": {
         "to": {
           "x-declared-in": "NavButtonProps",
-          "type": "string"
+          "type": "string",
+          "default": "index"
         },
         "tooltip": {
           "x-declared-in": "NavButtonProps",
@@ -17037,11 +17831,24 @@
         "method": {
           "x-declared-in": "NavButtonProps",
           "type": "string",
-          "enum": ["navigateTo", "navigateBack", "navigateBackTo"]
+          "enum": ["navigateTo", "navigateBack", "navigateBackTo"],
+          "default": "navigateTo"
         }
       },
       "required": [],
-      "x-base-defaults": {},
+      "x-base-defaults": {
+        "label": "",
+        "disabled": false,
+        "variant": "contained",
+        "color": "primary",
+        "icon": null,
+        "isProgress": false,
+        "size": "medium",
+        "iconPosition": "left",
+        "badge": null,
+        "visible": true,
+        "margin": [0, 0, 0, 0]
+      },
       "x-events": {
         "click": {
           "parameters": {
@@ -17325,12 +18132,10 @@
   },
   "report": {
     "summary": {
-      "any-type": 80,
-      "component-duplicate": 3,
+      "any-type": 86,
       "default-null-widened": 39,
-      "default-unresolved": 20,
+      "default-unresolved": 9,
       "loose-object": 7,
-      "unclassified-type": 3,
       "unresolved-type": 5
     },
     "elements": {
@@ -17340,44 +18145,6 @@
           "severity": "warn",
           "path": "x-events.onChangeValue.value",
           "message": "any/unknown: any"
-        }
-      ],
-      "$catalog": [
-        {
-          "code": "component-duplicate",
-          "severity": "warn",
-          "path": "InteractionStatusCardComponent.ts:20",
-          "message": "компонент ac-instruction уже найден"
-        },
-        {
-          "code": "component-duplicate",
-          "severity": "warn",
-          "path": "IsVSPComponent.ts:23",
-          "message": "компонент ac-autocomplete-inner-email уже найден"
-        },
-        {
-          "code": "component-duplicate",
-          "severity": "warn",
-          "path": "PositionComponent.ts:28",
-          "message": "компонент ac-autocomplete-inner-email уже найден"
-        },
-        {
-          "code": "unclassified-type",
-          "severity": "info",
-          "path": "AUTOCOMPLETE_POSITION",
-          "message": "ac-autocomplete-position: не элемент и не компонент"
-        },
-        {
-          "code": "unclassified-type",
-          "severity": "info",
-          "path": "AUTOCOMPLETE_VSP",
-          "message": "ac-autocomplete-isvsp: не элемент и не компонент"
-        },
-        {
-          "code": "unclassified-type",
-          "severity": "info",
-          "path": "INTERACTION_STATUS_CARD",
-          "message": "ac-interaction-status-card: не элемент и не компонент"
         }
       ],
       "autocomplete": [
@@ -17840,6 +18607,14 @@
           "message": "user.getTabNo()"
         }
       ],
+      "ac-autocomplete-isvsp": [
+        {
+          "code": "default-unresolved",
+          "severity": "warn",
+          "path": "properties.tabNo.default",
+          "message": "user.getTabNo()"
+        }
+      ],
       "ac-autocomplete-login-sudir": [
         {
           "code": "any-type",
@@ -17855,6 +18630,14 @@
         }
       ],
       "ac-autocomplete-main-email": [
+        {
+          "code": "default-unresolved",
+          "severity": "warn",
+          "path": "properties.tabNo.default",
+          "message": "user.getTabNo()"
+        }
+      ],
+      "ac-autocomplete-position": [
         {
           "code": "default-unresolved",
           "severity": "warn",
@@ -18017,6 +18800,44 @@
           "code": "any-type",
           "severity": "warn",
           "path": "x-events.onCopyLinkButtonClick.value.currentStep",
+          "message": "any/unknown: any"
+        }
+      ],
+      "ac-interaction-status-card": [
+        {
+          "code": "any-type",
+          "severity": "warn",
+          "path": "properties.result.anyOf[2].optionElements[].childs[]",
+          "message": "any/unknown: any"
+        },
+        {
+          "code": "any-type",
+          "severity": "warn",
+          "path": "properties.result.anyOf[2].optionElements[].options[]",
+          "message": "any/unknown: any"
+        },
+        {
+          "code": "any-type",
+          "severity": "warn",
+          "path": "properties.result.anyOf[2].scoringElements[].childs[]",
+          "message": "any/unknown: any"
+        },
+        {
+          "code": "any-type",
+          "severity": "warn",
+          "path": "properties.result.anyOf[2].scoringElements[].options[]",
+          "message": "any/unknown: any"
+        },
+        {
+          "code": "any-type",
+          "severity": "warn",
+          "path": "x-events.onBack.value.id",
+          "message": "any/unknown: any"
+        },
+        {
+          "code": "any-type",
+          "severity": "warn",
+          "path": "x-events.onGoToInteraction.value.id",
           "message": "any/unknown: any"
         }
       ],
@@ -18187,84 +19008,6 @@
         }
       ],
       "nav-button": [
-        {
-          "code": "default-unresolved",
-          "severity": "warn",
-          "path": "defaults",
-          "message": "[PublicProps.label]: ''"
-        },
-        {
-          "code": "default-unresolved",
-          "severity": "warn",
-          "path": "defaults",
-          "message": "[PublicProps.disabled]: false"
-        },
-        {
-          "code": "default-unresolved",
-          "severity": "warn",
-          "path": "defaults",
-          "message": "[PublicProps.variant]: 'contained'"
-        },
-        {
-          "code": "default-unresolved",
-          "severity": "warn",
-          "path": "defaults",
-          "message": "[PublicProps.color]: 'primary'"
-        },
-        {
-          "code": "default-unresolved",
-          "severity": "warn",
-          "path": "defaults",
-          "message": "[PublicProps.icon]: null"
-        },
-        {
-          "code": "default-unresolved",
-          "severity": "warn",
-          "path": "defaults",
-          "message": "[PublicProps.isProgress]: false"
-        },
-        {
-          "code": "default-unresolved",
-          "severity": "warn",
-          "path": "defaults",
-          "message": "[PublicProps.visible]: true"
-        },
-        {
-          "code": "default-unresolved",
-          "severity": "warn",
-          "path": "defaults",
-          "message": "[PublicProps.size]: 'medium'"
-        },
-        {
-          "code": "default-unresolved",
-          "severity": "warn",
-          "path": "defaults",
-          "message": "[PublicProps.iconPosition]: 'left'"
-        },
-        {
-          "code": "default-unresolved",
-          "severity": "warn",
-          "path": "defaults",
-          "message": "[PublicProps.badge]: null"
-        },
-        {
-          "code": "default-unresolved",
-          "severity": "warn",
-          "path": "defaults",
-          "message": "[PublicProps.margin]: [0, 0, 0, 0]"
-        },
-        {
-          "code": "default-unresolved",
-          "severity": "warn",
-          "path": "defaults",
-          "message": "[PublicProps.to]: 'index'"
-        },
-        {
-          "code": "default-unresolved",
-          "severity": "warn",
-          "path": "defaults",
-          "message": "[PublicProps.method]: NavigateMethod.navigateTo"
-        },
         {
           "code": "loose-object",
           "severity": "info",
