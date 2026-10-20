@@ -27,6 +27,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var fs3 = __toESM(require("fs"), 1);
 var path4 = __toESM(require("path"), 1);
 
+// docs/schemas/generator/component.ts
+var import_ts_morph3 = require("ts-morph");
+
 // docs/schemas/generator/config.ts
 var ROOT_MARKER = "packages/lib/tsconfig.json";
 var PATHS = {
@@ -52,6 +55,16 @@ var BASE = {
   eventNamePattern: /^on[A-Z]/,
   fileName: "base-element.schema.json",
   title: "BaseElement"
+};
+var COMPONENT = {
+  /** Фабрика компонентов: вызов `factory<P, C, S>(ElementsTypes.X, { ... })`. */
+  factory: "ComponentFactoryImpl",
+  /** Метод отправки события в теле компонента: `$emit('имя', значение)`. */
+  emitMethod: "$emit",
+  /** Окончание имени переменной/функции-обёртки, отрезаемое в заголовке схемы. */
+  titleSuffix: /Component$/,
+  /** Каталог схем компонентов относительно schemasPackage. */
+  componentsDir: "src/components"
 };
 var SCHEMA_ID_BASE = "https://framework.internal";
 var CLI_NAME_ALIASES = {
@@ -123,49 +136,6 @@ var SHARED_ENUMS = [
   }
 ];
 var SHARED_ENUM_SUBSET_THRESHOLD = 50;
-
-// docs/schemas/generator/diagnostics.ts
-var DIAGNOSTIC_CODES = {
-  /** Тип не распознан, в схеме x-ts-type. */
-  "unresolved-type": "warn",
-  /** Явный any/unknown в исходнике. */
-  "any-type": "warn",
-  /** Объект с произвольными ключами ({[key: string]: any}). */
-  "loose-object": "info",
-  /** Тип из lib.d.ts / .d.ts — не раскрывается. */
-  "external-type": "info",
-  /** Рантайм-объект движка (интерфейс с методами) — не раскрывается. */
-  "runtime-type": "info",
-  /** Циклическая ссылка типа. */
-  "cycle-type": "info",
-  /** Значение по умолчанию — выражение, не сводимое к JSON. */
-  "default-unresolved": "warn",
-  /** default: null при типе без null — тип расширен null. */
-  "default-null-widened": "warn",
-  /** Значение по умолчанию не проходит схему свойства (ajv). */
-  "default-invalid": "error",
-  /** В defaultProps есть ключ, которого нет среди props. */
-  "default-without-prop": "info",
-  /** Схема не компилируется валидатором (ajv). */
-  "schema-invalid": "error",
-  /** Props-файл или тип <X>Props не найден. */
-  "props-missing": "error",
-  /** Не найден тип общих props или интерфейс элемента (config BASE). */
-  "base-missing": "error",
-  /** Контейнер, но список дочерних типов не извлечён. */
-  "children-unresolved": "warn",
-  /** Список дочерних типов извлечён по тексту, а не по типу. */
-  "children-by-text": "info",
-  /** Генерация элемента упала. */
-  "element-failed": "error"
-};
-var Diagnostics = class {
-  items = [];
-  report(code, path5, message) {
-    const exists = this.items.some((d) => d.code === code && d.path === path5 && d.message === message);
-    if (!exists) this.items.push({ code, severity: DIAGNOSTIC_CODES[code], path: path5, message });
-  }
-};
 
 // docs/schemas/generator/emit.ts
 var path2 = __toESM(require("path"), 1);
@@ -455,10 +425,10 @@ function readCatalog(rootDir, warn) {
   const aliases = [];
   for (const prop of mapObject.getProperties()) {
     if (!prop.isKind(import_ts_morph2.SyntaxKind.PropertyAssignment)) continue;
-    const member = memberNameOfKey(prop.getNameNode().getText());
-    const elementType = enumValues[member];
+    const member2 = memberNameOfKey(prop.getNameNode().getText());
+    const elementType = enumValues[member2];
     if (!elementType) {
-      warn(`[WARN] \u043D\u0435\u0442 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F ${PATHS.elementsTypesEnum}.${member}`);
+      warn(`[WARN] \u043D\u0435\u0442 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F ${PATHS.elementsTypesEnum}.${member2}`);
       continue;
     }
     const init = prop.getInitializer();
@@ -543,8 +513,8 @@ function valueOf(node, depth = 0) {
     const enumDecl = (sym?.getAliasedSymbol() ?? sym)?.getDeclarations().find(import_ts_morph2.Node.isEnumDeclaration);
     if (enumDecl && arg && import_ts_morph2.Node.isStringLiteral(arg)) {
       const key = arg.getLiteralValue();
-      const member = enumDecl.getMembers().find((m) => m.getName().replace(/^['"]|['"]$/g, "") === key);
-      if (member) return member.getValue() ?? member.getName();
+      const member2 = enumDecl.getMembers().find((m) => m.getName().replace(/^['"]|['"]$/g, "") === key);
+      if (member2) return member2.getValue() ?? member2.getName();
     }
     return UNRESOLVED;
   }
@@ -572,9 +542,9 @@ function valueOf(node, depth = 0) {
 }
 function readDefaults(cls, diag) {
   const out = {};
-  const member = cls.getStaticProperty("defaultProps");
-  if (!member || !import_ts_morph2.Node.isPropertyDeclaration(member)) return out;
-  const init = member.getInitializer();
+  const member2 = cls.getStaticProperty("defaultProps");
+  if (!member2 || !import_ts_morph2.Node.isPropertyDeclaration(member2)) return out;
+  const init = member2.getInitializer();
   if (!init || !import_ts_morph2.Node.isObjectLiteralExpression(init)) return out;
   for (const p of init.getProperties()) {
     if (!import_ts_morph2.Node.isPropertyAssignment(p)) continue;
@@ -706,13 +676,13 @@ function readProps(decl) {
     const owner = d?.getFirstAncestor(
       (a) => import_ts_morph2.Node.isInterfaceDeclaration(a) || import_ts_morph2.Node.isTypeAliasDeclaration(a)
     );
-    const declaredIn = owner?.getName() ?? ownName;
+    const declaredIn2 = owner?.getName() ?? ownName;
     return {
       name: symbol.getName(),
       symbol,
       optional: symbol.isOptional(),
-      declaredIn,
-      own: declaredIn === ownName
+      declaredIn: declaredIn2,
+      own: declaredIn2 === ownName
     };
   });
 }
@@ -728,6 +698,7 @@ var ELEMENT_KEY_ORDER = [
   "type",
   "x-format-version",
   "x-element-type",
+  "x-entity",
   "x-category",
   "x-deprecated-aliases",
   "x-container",
@@ -736,7 +707,9 @@ var ELEMENT_KEY_ORDER = [
   "required",
   "x-base-defaults",
   "x-events",
-  "x-methods"
+  "x-methods",
+  "x-composition",
+  "x-slots"
 ];
 var PROP_KEY_ORDER = [
   "$schema",
@@ -809,6 +782,19 @@ function canonicalElement(schema) {
     ELEMENT_KEY_ORDER
   );
 }
+function canonicalComponent(schema) {
+  return orderKeys(
+    {
+      ...schema,
+      properties: canonicalProps(schema.properties),
+      required: [...schema.required].sort(),
+      "x-events": canonicalEvents(schema["x-events"]),
+      "x-composition": [...new Set(schema["x-composition"])].sort(),
+      "x-slots": [...new Set(schema["x-slots"])].sort()
+    },
+    ELEMENT_KEY_ORDER
+  );
+}
 function canonicalBase(schema) {
   return orderKeys(
     {
@@ -834,10 +820,10 @@ function allowsNull(schema, shared) {
   return (schema.anyOf ?? schema.oneOf ?? []).some((s) => allowsNull(s, shared));
 }
 function nullable(schema) {
-  const { description, "x-declared-in": declaredIn, ...rest } = schema;
+  const { description, "x-declared-in": declaredIn2, ...rest } = schema;
   const head = {};
   if (description) head.description = description;
-  if (declaredIn) head["x-declared-in"] = declaredIn;
+  if (declaredIn2) head["x-declared-in"] = declaredIn2;
   if (typeof rest.type === "string" && !rest.anyOf && !rest.oneOf) {
     const out = { ...head, ...rest, type: [rest.type, "null"] };
     if (out.enum) out.enum = [...out.enum, null];
@@ -845,6 +831,14 @@ function nullable(schema) {
   }
   if (rest.anyOf) return { ...head, ...rest, anyOf: [...rest.anyOf, { type: "null" }] };
   return { ...head, anyOf: [rest, { type: "null" }] };
+}
+function withDefault(schema, value, name, shared, diag) {
+  let out = schema;
+  if (value === null && !allowsNull(out, shared)) {
+    diag.report("default-null-widened", `properties.${name}`, "default: null, \u0430 \u0442\u0438\u043F \u0431\u0435\u0437 null \u2014 \u0442\u0438\u043F \u0440\u0430\u0441\u0448\u0438\u0440\u0435\u043D");
+    out = nullable(out);
+  }
+  return { ...out, default: value };
 }
 function propsToSchemas(decl, ctx, skip) {
   const out = [];
@@ -939,20 +933,7 @@ function buildElementSchema(input, diag) {
       }
     }
     for (const p of propsToSchemas(decl, { elementType, diag, shared }, isBaseProp)) {
-      let schema2 = p.schema;
-      if (p.name in defaults) {
-        const value = defaults[p.name];
-        if (value === null && !allowsNull(schema2, shared)) {
-          diag.report(
-            "default-null-widened",
-            `properties.${p.name}`,
-            "default: null, \u0430 \u0442\u0438\u043F \u0431\u0435\u0437 null \u2014 \u0442\u0438\u043F \u0440\u0430\u0441\u0448\u0438\u0440\u0435\u043D"
-          );
-          schema2 = nullable(schema2);
-        }
-        schema2.default = value;
-      }
-      properties[p.name] = schema2;
+      properties[p.name] = p.name in defaults ? withDefault(p.schema, defaults[p.name], p.name, shared, diag) : p.schema;
       if (!p.optional) required.push(p.name);
     }
   }
@@ -984,15 +965,297 @@ function buildElementSchema(input, diag) {
   return canonicalElement(schema);
 }
 
+// docs/schemas/generator/component.ts
+function resolved(symbol) {
+  return symbol?.isAlias() ? symbol.getAliasedSymbol() ?? symbol : symbol;
+}
+function isFactoryCall(call) {
+  return resolved(call.getExpression().getSymbol())?.getName() === COMPONENT.factory;
+}
+function titleOf(call, fallback) {
+  const owner = call.getFirstAncestor(
+    (a) => import_ts_morph3.Node.isVariableDeclaration(a) || import_ts_morph3.Node.isFunctionDeclaration(a) || import_ts_morph3.Node.isClassDeclaration(a)
+  );
+  const name = owner && "getName" in owner ? owner.getName() : void 0;
+  if (!name) return fallback;
+  return name.replace(COMPONENT.titleSuffix, "").replace(/([A-Z])/g, " $1").trim();
+}
+function findComponents(project, diag) {
+  const out = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const sf of project.getSourceFiles()) {
+    if (!sf.getFullText().includes(COMPONENT.factory)) continue;
+    for (const call of sf.getDescendantsOfKind(import_ts_morph3.SyntaxKind.CallExpression)) {
+      if (!isFactoryCall(call)) continue;
+      const nameArg = call.getArguments()[0];
+      const where = `${sf.getBaseName()}:${call.getStartLineNumber()}`;
+      const name = nameArg ? valueOf(nameArg) : UNRESOLVED;
+      if (typeof name !== "string") {
+        diag.report("component-name-unresolved", where, nameArg?.getText() ?? "\u043D\u0435\u0442 \u0430\u0440\u0433\u0443\u043C\u0435\u043D\u0442\u0430");
+        continue;
+      }
+      if (seen.has(name)) {
+        diag.report("component-duplicate", where, `\u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442 ${name} \u0443\u0436\u0435 \u043D\u0430\u0439\u0434\u0435\u043D`);
+        continue;
+      }
+      seen.add(name);
+      out.push({ elementType: name, call, title: titleOf(call, name) });
+    }
+  }
+  return out.sort((a, b) => a.elementType.localeCompare(b.elementType));
+}
+function typeArguments(call) {
+  const explicit = call.getTypeArguments();
+  if (explicit.length > 0) return [explicit[0]?.getType(), explicit[1]?.getType()];
+  const ret = call.getReturnType();
+  const args = ret.getTypeArguments().length > 0 ? ret.getTypeArguments() : ret.getAliasTypeArguments();
+  return [args[0], args[1]];
+}
+function unwrap(node) {
+  let n = node;
+  while (n && (import_ts_morph3.Node.isParenthesizedExpression(n) || import_ts_morph3.Node.isAsExpression(n) || import_ts_morph3.Node.isSatisfiesExpression(n))) {
+    n = n.getExpression();
+  }
+  return n;
+}
+function optionsObject(call) {
+  let node = unwrap(call.getArguments()[1]);
+  if (node && import_ts_morph3.Node.isIdentifier(node)) {
+    const decl = resolved(node.getSymbol())?.getDeclarations().find(import_ts_morph3.Node.isVariableDeclaration);
+    node = unwrap(decl?.getInitializer());
+  }
+  return node && import_ts_morph3.Node.isObjectLiteralExpression(node) ? node : void 0;
+}
+function member(options, name) {
+  const prop = options?.getProperty(name);
+  if (!prop) return void 0;
+  if (import_ts_morph3.Node.isMethodDeclaration(prop)) return prop;
+  if (import_ts_morph3.Node.isPropertyAssignment(prop)) return unwrap(prop.getInitializer());
+  return void 0;
+}
+function returnedObject(fn) {
+  if (!fn) return void 0;
+  if (import_ts_morph3.Node.isArrowFunction(fn)) {
+    const body = unwrap(fn.getBody());
+    if (body && import_ts_morph3.Node.isObjectLiteralExpression(body)) return body;
+  }
+  if (import_ts_morph3.Node.isArrowFunction(fn) || import_ts_morph3.Node.isFunctionExpression(fn) || import_ts_morph3.Node.isMethodDeclaration(fn)) {
+    for (const ret of fn.getDescendantsOfKind(import_ts_morph3.SyntaxKind.ReturnStatement)) {
+      const expr = unwrap(ret.getExpression());
+      if (expr && import_ts_morph3.Node.isObjectLiteralExpression(expr)) return expr;
+    }
+  }
+  return void 0;
+}
+function propertyName(p) {
+  if (!import_ts_morph3.Node.isPropertyAssignment(p)) return null;
+  const nameNode = p.getNameNode();
+  if (import_ts_morph3.Node.isComputedPropertyName(nameNode)) {
+    const v = valueOf(nameNode.getExpression());
+    return typeof v === "string" ? v : null;
+  }
+  return p.getName().replace(/^['"]|['"]$/g, "");
+}
+function readComponentDefaults(fn, diag) {
+  const out = {};
+  const obj = returnedObject(fn);
+  if (!obj) return out;
+  for (const p of obj.getProperties()) {
+    const name = propertyName(p);
+    const valueNode = import_ts_morph3.Node.isPropertyAssignment(p) ? p.getInitializer() : void 0;
+    if (name === null || !valueNode) {
+      diag.report("default-unresolved", "defaults", p.getText());
+      continue;
+    }
+    const v = valueOf(valueNode);
+    if (v === UNRESOLVED) {
+      diag.report("default-unresolved", `properties.${name}.default`, valueNode.getText());
+      continue;
+    }
+    if (v !== void 0) out[name] = v;
+  }
+  return out;
+}
+function readControllerMethods(ctrl, at) {
+  if (!ctrl || ctrl.isAny() || ctrl.isUnknown()) return [];
+  const methods = [];
+  for (const symbol of ctrl.getProperties()) {
+    const signature = symbol.getTypeAtLocation(at).getCallSignatures()[0];
+    if (!signature) continue;
+    methods.push({
+      name: symbol.getName(),
+      returnType: typeText(signature.getReturnType(), at),
+      parameters: signature.getParameters().map((param) => {
+        const decl = param.getValueDeclaration();
+        return {
+          name: param.getName(),
+          type: typeText(param.getTypeAtLocation(at), at),
+          optional: !!decl && import_ts_morph3.Node.isParameterDeclaration(decl) && decl.isOptional()
+        };
+      })
+    });
+  }
+  return methods;
+}
+function readEvents(options, ctx) {
+  const events = {};
+  for (const call of options?.getDescendantsOfKind(import_ts_morph3.SyntaxKind.CallExpression) ?? []) {
+    const callee = call.getExpression();
+    if (!import_ts_morph3.Node.isPropertyAccessExpression(callee) || callee.getName() !== COMPONENT.emitMethod) continue;
+    const [nameArg, valueArg] = call.getArguments();
+    const name = nameArg ? valueOf(nameArg) : UNRESOLVED;
+    if (typeof name !== "string") {
+      ctx.diag.report("event-name-unresolved", "x-events", call.getText().slice(0, 120));
+      continue;
+    }
+    if (events[name]) continue;
+    const parameters = {};
+    if (valueArg) {
+      parameters.value = typeToSchema(valueArg.getType(), { ...ctx, printNode: call }, `x-events.${name}.value`);
+    }
+    events[name] = { parameters };
+  }
+  return events;
+}
+function readComposition(view) {
+  if (!view || !(import_ts_morph3.Node.isArrowFunction(view) || import_ts_morph3.Node.isFunctionExpression(view) || import_ts_morph3.Node.isMethodDeclaration(view))) {
+    return [];
+  }
+  const createElement = view.getParameters()[0];
+  if (!createElement) return [];
+  const target = createElement.getSymbol();
+  const out = [];
+  for (const call of view.getDescendantsOfKind(import_ts_morph3.SyntaxKind.CallExpression)) {
+    const callee = call.getExpression();
+    if (!import_ts_morph3.Node.isIdentifier(callee)) continue;
+    const sym = callee.getSymbol();
+    if (sym !== target && callee.getText() !== createElement.getName()) continue;
+    const typeArg = call.getArguments()[0];
+    const v = typeArg ? valueOf(typeArg) : UNRESOLVED;
+    if (typeof v === "string") out.push(v);
+  }
+  return out;
+}
+function readSlots(node) {
+  if (!node) return [];
+  const v = valueOf(node);
+  return Array.isArray(v) ? v.filter((s) => typeof s === "string") : [];
+}
+function declaredIn(symbol, props) {
+  const owner = symbol.getDeclarations()[0]?.getFirstAncestor((a) => import_ts_morph3.Node.isInterfaceDeclaration(a) || import_ts_morph3.Node.isTypeAliasDeclaration(a));
+  const ownerName = owner && (import_ts_morph3.Node.isInterfaceDeclaration(owner) || import_ts_morph3.Node.isTypeAliasDeclaration(owner)) ? owner.getName() : void 0;
+  return ownerName ?? (props.getAliasSymbol() ?? props.getSymbol())?.getName() ?? "";
+}
+function buildComponentSchema(entry, shared, diag) {
+  const { call, elementType } = entry;
+  const ctx = { elementType, diag, shared };
+  const [propsType, ctrlType] = typeArguments(call);
+  const options = optionsObject(call);
+  const defaults = readComponentDefaults(member(options, "defaultProps"), diag);
+  const properties = {};
+  const required = [];
+  if (!propsType || propsType.isAny() || propsType.isUnknown()) {
+    diag.report("component-props-missing", "properties", `\u0442\u0438\u043F props \u043D\u0435 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0451\u043D: ${call.getText().slice(0, 80)}`);
+  } else {
+    for (const symbol of propsType.getProperties()) {
+      const name = symbol.getName();
+      if (name.startsWith("_") || EXCLUDED_PROPS.includes(name)) continue;
+      const description = jsDocDescription(symbol);
+      const schema = {
+        ...description ? { description } : {},
+        "x-declared-in": declaredIn(symbol, propsType),
+        ...typeToSchema(symbol.getTypeAtLocation(call), { ...ctx, printNode: call }, `properties.${name}`)
+      };
+      properties[name] = name in defaults ? withDefault(schema, defaults[name], name, shared, diag) : schema;
+      if (!symbol.isOptional()) required.push(name);
+    }
+  }
+  for (const name of Object.keys(defaults)) {
+    if (!(name in properties)) {
+      diag.report("default-without-prop", `defaults.${name}`, "\u043A\u043B\u044E\u0447 defaultProps \u0431\u0435\u0437 \u0441\u0432\u043E\u0439\u0441\u0442\u0432\u0430 \u0432 props");
+    }
+  }
+  return canonicalComponent({
+    $schema: JSON_SCHEMA_DRAFT,
+    $id: `${SCHEMA_ID_BASE}/components/${elementType}.schema.json`,
+    title: entry.title,
+    description: `JSON-\u0441\u0445\u0435\u043C\u0430 \u0434\u043B\u044F \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u0430 "${elementType}"`,
+    type: "object",
+    "x-format-version": FORMAT_VERSION,
+    "x-element-type": elementType,
+    "x-entity": "component",
+    "x-category": CATEGORY_BY_ELEMENT[elementType] ?? "basic",
+    properties,
+    required,
+    "x-events": readEvents(options, ctx),
+    "x-methods": readControllerMethods(ctrlType, call),
+    "x-composition": readComposition(member(options, "view")),
+    "x-slots": readSlots(member(options, "slots"))
+  });
+}
+
+// docs/schemas/generator/diagnostics.ts
+var DIAGNOSTIC_CODES = {
+  /** Тип не распознан, в схеме x-ts-type. */
+  "unresolved-type": "warn",
+  /** Явный any/unknown в исходнике. */
+  "any-type": "warn",
+  /** Объект с произвольными ключами ({[key: string]: any}). */
+  "loose-object": "info",
+  /** Тип из lib.d.ts / .d.ts — не раскрывается. */
+  "external-type": "info",
+  /** Рантайм-объект движка (интерфейс с методами) — не раскрывается. */
+  "runtime-type": "info",
+  /** Циклическая ссылка типа. */
+  "cycle-type": "info",
+  /** Значение по умолчанию — выражение, не сводимое к JSON. */
+  "default-unresolved": "warn",
+  /** default: null при типе без null — тип расширен null. */
+  "default-null-widened": "warn",
+  /** Значение по умолчанию не проходит схему свойства (ajv). */
+  "default-invalid": "error",
+  /** В defaultProps есть ключ, которого нет среди props. */
+  "default-without-prop": "info",
+  /** Схема не компилируется валидатором (ajv). */
+  "schema-invalid": "error",
+  /** Props-файл или тип <X>Props не найден. */
+  "props-missing": "error",
+  /** Не найден тип общих props или интерфейс элемента (config BASE). */
+  "base-missing": "error",
+  /** Контейнер, но список дочерних типов не извлечён. */
+  "children-unresolved": "warn",
+  /** Список дочерних типов извлечён по тексту, а не по типу. */
+  "children-by-text": "info",
+  /** Генерация элемента упала. */
+  "element-failed": "error",
+  /** Первый аргумент фабрики компонента не сводится к члену ElementsTypes. */
+  "component-name-unresolved": "error",
+  /** У вызова фабрики нет типа props (P не указан и не выведен, или any). */
+  "component-props-missing": "error",
+  /** Два вызова фабрики с одним именем — взят первый. */
+  "component-duplicate": "warn",
+  /** Имя события в $emit — не строковая константа. */
+  "event-name-unresolved": "warn",
+  /** Член ElementsTypes не найден ни в ElementsMap, ни среди компонентов. */
+  "unclassified-type": "info"
+};
+var Diagnostics = class {
+  items = [];
+  report(code, path5, message) {
+    const exists = this.items.some((d) => d.code === code && d.path === path5 && d.message === message);
+    if (!exists) this.items.push({ code, severity: DIAGNOSTIC_CODES[code], path: path5, message });
+  }
+};
+
 // docs/schemas/generator/shared.ts
 var fs2 = __toESM(require("fs"), 1);
 var path3 = __toESM(require("path"), 1);
-var import_ts_morph3 = require("ts-morph");
+var import_ts_morph4 = require("ts-morph");
 function enumMemberValues(decl) {
   return decl.getMembers().map((m) => {
     const init = m.getInitializer();
-    if (init?.isKind(import_ts_morph3.SyntaxKind.StringLiteral)) return init.getLiteralValue();
-    if (init?.isKind(import_ts_morph3.SyntaxKind.NumericLiteral)) return String(init.getLiteralValue());
+    if (init?.isKind(import_ts_morph4.SyntaxKind.StringLiteral)) return init.getLiteralValue();
+    if (init?.isKind(import_ts_morph4.SyntaxKind.NumericLiteral)) return String(init.getLiteralValue());
     return m.getName();
   });
 }
@@ -1005,7 +1268,7 @@ var SharedRegistry = class {
         warn(`[WARN] shared ${config.typeName}: \u0444\u0430\u0439\u043B \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D ${config.sourceFile}`);
         continue;
       }
-      const project = new import_ts_morph3.Project({ compilerOptions: { skipLibCheck: true } });
+      const project = new import_ts_morph4.Project({ compilerOptions: { skipLibCheck: true } });
       const decl = project.addSourceFileAtPath(file).getEnum(config.enumName);
       if (!decl) {
         warn(`[WARN] shared ${config.typeName}: enum ${config.enumName} \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D`);
@@ -1080,7 +1343,10 @@ var SharedRegistry = class {
 var EXTENSION_KEYWORDS = [
   "x-format-version",
   "x-element-type",
+  "x-entity",
   "x-category",
+  "x-composition",
+  "x-slots",
   "x-deprecated-aliases",
   "x-container",
   "x-base-defaults",
@@ -1116,7 +1382,9 @@ function createValidator(shared, warn) {
   ajv.addVocabulary(EXTENSION_KEYWORDS);
   for (const s of Object.values(shared)) ajv.addSchema("required" in s ? { ...s, required: [] } : s);
   return (schema, diag) => {
-    const defaults = { ...schema["x-base-defaults"] };
+    const defaults = {
+      ..."x-base-defaults" in schema ? schema["x-base-defaults"] : {}
+    };
     for (const [name, prop] of Object.entries(schema.properties)) {
       if (prop.default !== void 0) defaults[name] = prop.default;
     }
@@ -1137,6 +1405,7 @@ function createValidator(shared, warn) {
 
 // docs/schemas/generator/cli.ts
 var BASE_KEY = "$base";
+var CATALOG_KEY = "$catalog";
 function parseArgs(argv) {
   const args = {};
   for (let i = 0; i < argv.length; i++) {
@@ -1172,6 +1441,7 @@ function main() {
   const pkgDir = path4.resolve(rootDir, PATHS.schemasPackage);
   const outputDir = typeof args.outputDir === "string" ? path4.resolve(args.outputDir) : path4.resolve(pkgDir, PATHS.schemasDir);
   const sharedDir = path4.resolve(outputDir, "..", path4.basename(PATHS.sharedDir));
+  const componentsDir = path4.resolve(outputDir, "..", path4.basename(COMPONENT.componentsDir));
   const checkOnly = !!(args.check || args.checkOnly);
   const bundlePath = typeof args.bundle === "string" ? path4.resolve(args.bundle) : null;
   const catalog = readCatalog(rootDir, warn);
@@ -1184,17 +1454,36 @@ function main() {
     console.error("\u041D\u0443\u0436\u0435\u043D --element <\u0438\u043C\u044F> \u0438\u043B\u0438 --all");
     return 1;
   }
+  console.log(`\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B \u0442\u0438\u043F\u043E\u0432...`);
+  const project = createProgram(rootDir);
+  const shared = new SharedRegistry(rootDir, warn);
+  const diagnostics = {
+    [BASE_KEY]: new Diagnostics(),
+    [CATALOG_KEY]: new Diagnostics()
+  };
+  const base = buildBase(project, rootDir, shared, diagnostics[BASE_KEY]);
+  const componentEntries = findComponents(project, diagnostics[CATALOG_KEY]);
+  const componentByType = new Map(componentEntries.map((c) => [c.elementType, c]));
+  const componentTargets = args.all ? componentEntries.map((c) => c.elementType) : targets.filter((t) => componentByType.has(t));
+  targets = targets.filter((t) => !componentByType.has(t) || catalog.elements[t]);
   for (const t of targets) {
     if (!catalog.elements[t]) {
-      console.error(`\u042D\u043B\u0435\u043C\u0435\u043D\u0442 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0432 \u0441\u043F\u0440\u0430\u0432\u043E\u0447\u043D\u0438\u043A\u0435: ${t}`);
+      console.error(`\u042D\u043B\u0435\u043C\u0435\u043D\u0442 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u043D\u0438 \u0432 \u0441\u043F\u0440\u0430\u0432\u043E\u0447\u043D\u0438\u043A\u0435, \u043D\u0438 \u0441\u0440\u0435\u0434\u0438 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432: ${t}`);
       return 1;
     }
   }
-  console.log(`\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u044B \u0442\u0438\u043F\u043E\u0432 (${targets.length} \u044D\u043B.)...`);
-  const project = createProgram(rootDir);
-  const shared = new SharedRegistry(rootDir, warn);
-  const diagnostics = { [BASE_KEY]: new Diagnostics() };
-  const base = buildBase(project, rootDir, shared, diagnostics[BASE_KEY]);
+  if (args.all) {
+    const known = /* @__PURE__ */ new Set([
+      ...Object.keys(catalog.elements),
+      ...Object.values(catalog.elements).flatMap((e) => e.deprecatedAliases),
+      ...componentByType.keys()
+    ]);
+    for (const [member2, value] of Object.entries(catalog.enumValues)) {
+      if (!known.has(value)) {
+        diagnostics[CATALOG_KEY].report("unclassified-type", member2, `${value}: \u043D\u0435 \u044D\u043B\u0435\u043C\u0435\u043D\u0442 \u0438 \u043D\u0435 \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442`);
+      }
+    }
+  }
   const schemas = {};
   for (const elementType of targets) {
     const entry = catalog.elements[elementType];
@@ -1208,27 +1497,41 @@ function main() {
       diag.report("element-failed", "$", e.message);
     }
   }
+  const components = {};
+  for (const t of componentTargets) {
+    const diag = new Diagnostics();
+    diagnostics[t] = diag;
+    try {
+      components[t] = buildComponentSchema(componentByType.get(t), shared, diag);
+    } catch (e) {
+      diag.report("element-failed", "$", e.message);
+    }
+  }
   const sharedSchemas = { ...shared.schemas() };
   if (base) sharedSchemas[BASE.fileName] = base.schema;
   const validate = createValidator(sharedSchemas, warn);
   if (validate) {
     for (const [t, s] of Object.entries(schemas)) validate(s, diagnostics[t]);
+    for (const [t, s] of Object.entries(components)) validate(s, diagnostics[t]);
   }
   const report = { summary: {}, elements: {}, sharedCandidates: shared.candidates() };
-  for (const t of [BASE_KEY, ...targets]) {
+  for (const t of [BASE_KEY, CATALOG_KEY, ...targets, ...componentTargets]) {
     const items = diagnostics[t].items;
     if (items.length > 0) report.elements[t] = items;
     for (const d of items) report.summary[d.code] = (report.summary[d.code] ?? 0) + 1;
   }
   report.summary = Object.fromEntries(Object.entries(report.summary).sort(([a], [b]) => a.localeCompare(b)));
   const errors = Object.values(report.elements).flat().filter((d) => d.severity === "error").length;
-  console.log(`\u0413\u043E\u0442\u043E\u0432\u043E: ${Object.keys(schemas).length}/${targets.length} \u0441\u0445\u0435\u043C, \u043E\u0448\u0438\u0431\u043E\u043A ${errors}`);
+  console.log(
+    `\u0413\u043E\u0442\u043E\u0432\u043E: \u044D\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u0432 ${Object.keys(schemas).length}/${targets.length}, \u043A\u043E\u043C\u043F\u043E\u043D\u0435\u043D\u0442\u043E\u0432 ${Object.keys(components).length}/${componentTargets.length}, \u043E\u0448\u0438\u0431\u043E\u043A ${errors}`
+  );
   for (const [code, n] of Object.entries(report.summary)) console.log(`  ${code}: ${n}`);
   if (bundlePath) {
     const bundle = {
       "x-format-version": FORMAT_VERSION,
       shared: sharedSchemas,
       elements: schemas,
+      components,
       report
     };
     fs3.mkdirSync(path4.dirname(bundlePath), { recursive: true });
@@ -1239,6 +1542,10 @@ function main() {
   const files = [
     ...Object.entries(schemas).map(([t, s]) => ({
       file: path4.join(outputDir, `${t}.schema.json`),
+      text: serialize(s)
+    })),
+    ...Object.entries(components).map(([t, s]) => ({
+      file: path4.join(componentsDir, `${t}.schema.json`),
       text: serialize(s)
     })),
     ...Object.entries(sharedSchemas).map(([name, s]) => ({
@@ -1264,6 +1571,9 @@ function main() {
         title: s.title,
         deprecatedAliases: s["x-deprecated-aliases"]
       };
+    }
+    for (const [t, s] of Object.entries(components)) {
+      manifest[t] = { path: `${COMPONENT.componentsDir}/${t}.schema.json`, title: s.title, deprecatedAliases: [] };
     }
     fs3.writeFileSync(manifestPath, serialize(manifest));
   } else {

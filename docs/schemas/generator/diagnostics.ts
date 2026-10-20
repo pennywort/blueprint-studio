@@ -39,6 +39,16 @@ export const DIAGNOSTIC_CODES = {
   'children-by-text': 'info',
   /** Генерация элемента упала. */
   'element-failed': 'error',
+  /** Первый аргумент фабрики компонента не сводится к члену ElementsTypes. */
+  'component-name-unresolved': 'error',
+  /** У вызова фабрики нет типа props (P не указан и не выведен, или any). */
+  'component-props-missing': 'error',
+  /** Два вызова фабрики с одним именем — взят первый. */
+  'component-duplicate': 'warn',
+  /** Имя события в $emit — не строковая константа. */
+  'event-name-unresolved': 'warn',
+  /** Член ElementsTypes не найден ни в ElementsMap, ни среди компонентов. */
+  'unclassified-type': 'info',
 } as const satisfies Record<string, Severity>;
 
 export type DiagnosticCode = keyof typeof DIAGNOSTIC_CODES;

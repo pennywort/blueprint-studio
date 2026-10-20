@@ -1,8 +1,9 @@
 /**
- * Генератор JSON-схем UI-элементов.
+ * Генератор JSON-схем UI-элементов и компонентов.
  *
- *   ts-node cli.ts --element button          одна схема → src/schemas, shared, манифест
- *   ts-node cli.ts --all                     все элементы
+ *   ts-node cli.ts --element button          одна схема (элемент или компонент) → src/schemas
+ *                                            (компонент — src/components), shared, манифест
+ *   ts-node cli.ts --all                     все элементы и компоненты
  *   ts-node cli.ts --all --check             сверить с файлами на диске, ничего не писать
  *   ts-node cli.ts --all --bundle out.json   один файл: все схемы + shared + отчёт, больше ничего не писать
  *
@@ -12,7 +13,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { BASE, CLI_NAME_ALIASES, PATHS, ROOT_MARKER } from './config';
+import { buildComponentSchema, findComponents } from './component';
+import { BASE, CLI_NAME_ALIASES, COMPONENT, PATHS, ROOT_MARKER } from './config';
 import { Diagnostics } from './diagnostics';
 import { buildBase, buildElementSchema } from './emit';
 import { createProgram, findClass, readCatalog } from './extract';
@@ -20,6 +22,7 @@ import {
   FORMAT_VERSION,
   serialize,
   type Bundle,
+  type ComponentSchema,
   type ElementSchema,
   type Manifest,
   type Report,
@@ -31,6 +34,8 @@ type Args = Record<string, string | true>;
 
 /** Ключ отчёта для диагностик общей базы. */
 const BASE_KEY = '$base';
+/** Ключ отчёта для диагностик справочника и поиска компонентов. */
+const CATALOG_KEY = '$catalog';
 
 function parseArgs(argv: string[]): Args {
   const args: Args = {};
@@ -74,6 +79,7 @@ function main(): number {
       ? path.resolve(args.outputDir)
       : path.resolve(pkgDir, PATHS.schemasDir);
   const sharedDir = path.resolve(outputDir, '..', path.basename(PATHS.sharedDir));
+  const componentsDir = path.resolve(outputDir, '..', path.basename(COMPONENT.componentsDir));
   const checkOnly = !!(args.check || args.checkOnly);
   const bundlePath = typeof args.bundle === 'string' ? path.resolve(args.bundle) : null;
 
@@ -87,18 +93,42 @@ function main(): number {
     console.error('Нужен --element <имя> или --all');
     return 1;
   }
+  console.log(`Загрузка программы типов...`);
+  const project = createProgram(rootDir);
+  const shared = new SharedRegistry(rootDir, warn);
+  const diagnostics: Record<string, Diagnostics> = {
+    [BASE_KEY]: new Diagnostics(),
+    [CATALOG_KEY]: new Diagnostics(),
+  };
+  const base = buildBase(project, rootDir, shared, diagnostics[BASE_KEY]!);
+
+  // Компоненты — по вызовам фабрики во всей программе (не по путям): нужны и для --element.
+  const componentEntries = findComponents(project, diagnostics[CATALOG_KEY]!);
+  const componentByType = new Map(componentEntries.map((c) => [c.elementType, c]));
+  const componentTargets = args.all
+    ? componentEntries.map((c) => c.elementType)
+    : targets.filter((t) => componentByType.has(t));
+  targets = targets.filter((t) => !componentByType.has(t) || catalog.elements[t]);
   for (const t of targets) {
     if (!catalog.elements[t]) {
-      console.error(`Элемент не найден в справочнике: ${t}`);
+      console.error(`Элемент не найден ни в справочнике, ни среди компонентов: ${t}`);
       return 1;
     }
   }
 
-  console.log(`Загрузка программы типов (${targets.length} эл.)...`);
-  const project = createProgram(rootDir);
-  const shared = new SharedRegistry(rootDir, warn);
-  const diagnostics: Record<string, Diagnostics> = { [BASE_KEY]: new Diagnostics() };
-  const base = buildBase(project, rootDir, shared, diagnostics[BASE_KEY]!);
+  // Члены ElementsTypes вне справочника и компонентов — в отчёт (не потерялись ли).
+  if (args.all) {
+    const known = new Set([
+      ...Object.keys(catalog.elements),
+      ...Object.values(catalog.elements).flatMap((e) => e.deprecatedAliases),
+      ...componentByType.keys(),
+    ]);
+    for (const [member, value] of Object.entries(catalog.enumValues)) {
+      if (!known.has(value)) {
+        diagnostics[CATALOG_KEY]!.report('unclassified-type', member, `${value}: не элемент и не компонент`);
+      }
+    }
+  }
 
   const schemas: Record<string, ElementSchema> = {};
   for (const elementType of targets) {
@@ -114,15 +144,27 @@ function main(): number {
     }
   }
 
+  const components: Record<string, ComponentSchema> = {};
+  for (const t of componentTargets) {
+    const diag = new Diagnostics();
+    diagnostics[t] = diag;
+    try {
+      components[t] = buildComponentSchema(componentByType.get(t)!, shared, diag);
+    } catch (e) {
+      diag.report('element-failed', '$', (e as Error).message);
+    }
+  }
+
   const sharedSchemas: Bundle['shared'] = { ...shared.schemas() };
   if (base) sharedSchemas[BASE.fileName] = base.schema;
   const validate = createValidator(sharedSchemas, warn);
   if (validate) {
     for (const [t, s] of Object.entries(schemas)) validate(s, diagnostics[t]!);
+    for (const [t, s] of Object.entries(components)) validate(s, diagnostics[t]!);
   }
 
   const report: Report = { summary: {}, elements: {}, sharedCandidates: shared.candidates() };
-  for (const t of [BASE_KEY, ...targets]) {
+  for (const t of [BASE_KEY, CATALOG_KEY, ...targets, ...componentTargets]) {
     const items = diagnostics[t]!.items;
     if (items.length > 0) report.elements[t] = items;
     for (const d of items) report.summary[d.code] = (report.summary[d.code] ?? 0) + 1;
@@ -132,7 +174,10 @@ function main(): number {
   const errors = Object.values(report.elements)
     .flat()
     .filter((d) => d.severity === 'error').length;
-  console.log(`Готово: ${Object.keys(schemas).length}/${targets.length} схем, ошибок ${errors}`);
+  console.log(
+    `Готово: элементов ${Object.keys(schemas).length}/${targets.length}, ` +
+      `компонентов ${Object.keys(components).length}/${componentTargets.length}, ошибок ${errors}`,
+  );
   for (const [code, n] of Object.entries(report.summary)) console.log(`  ${code}: ${n}`);
 
   if (bundlePath) {
@@ -140,6 +185,7 @@ function main(): number {
       'x-format-version': FORMAT_VERSION,
       shared: sharedSchemas,
       elements: schemas,
+      components,
       report,
     };
     fs.mkdirSync(path.dirname(bundlePath), { recursive: true });
@@ -151,6 +197,10 @@ function main(): number {
   const files: Array<{ file: string; text: string }> = [
     ...Object.entries(schemas).map(([t, s]) => ({
       file: path.join(outputDir, `${t}.schema.json`),
+      text: serialize(s),
+    })),
+    ...Object.entries(components).map(([t, s]) => ({
+      file: path.join(componentsDir, `${t}.schema.json`),
       text: serialize(s),
     })),
     ...Object.entries(sharedSchemas).map(([name, s]) => ({
@@ -177,6 +227,13 @@ function main(): number {
         path: `${PATHS.schemasDir}/${t}.schema.json`,
         title: s.title,
         deprecatedAliases: s['x-deprecated-aliases'],
+      };
+    }
+    for (const [t, s] of Object.entries(components)) {
+      manifest[t] = {
+        path: `${COMPONENT.componentsDir}/${t}.schema.json`,
+        title: s.title,
+        deprecatedAliases: [],
       };
     }
     fs.writeFileSync(manifestPath, serialize(manifest));

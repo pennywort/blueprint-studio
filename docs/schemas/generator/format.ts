@@ -12,6 +12,8 @@
  * 2 — общая часть в shared/base-element.schema.json (генерируется из кода): элемент
  *     подключает её через allOf + $ref, в properties — только свои props, дефолты общих
  *     props элемента — x-base-defaults; общие события — x-events базы (из BaseElement.on*).
+ *     Дополнение без смены версии (схемы элементов не меняются): секция `components` бандла
+ *     и каталог src/components — схемы компонентов (ComponentSchema, x-entity: component).
  */
 
 export const FORMAT_VERSION = 2;
@@ -98,6 +100,33 @@ export interface ElementSchema {
   'x-methods': MethodSchema[];
 }
 
+/**
+ * Компонент фреймворка: составная сущность из элементов с логикой (ComponentFactoryImpl).
+ * Имя — член ElementsTypes (первый аргумент фабрики), props и контроллер — аргументы типа
+ * фабрики. Общей базы (allOf) нет: props компонента — ровно его тип P.
+ */
+export interface ComponentSchema {
+  $schema: typeof JSON_SCHEMA_DRAFT;
+  $id: string;
+  title: string;
+  description: string;
+  type: 'object';
+  'x-format-version': number;
+  'x-element-type': string;
+  'x-entity': 'component';
+  'x-category': Category;
+  properties: Record<string, PropSchema>;
+  required: string[];
+  /** События `$emit('имя', значение)`: параметр `value` — тип значения. */
+  'x-events': Record<string, EventSchema>;
+  /** Методы контроллера (аргумент типа C фабрики). */
+  'x-methods': MethodSchema[];
+  /** Типы элементов/компонентов, из которых собран view (createElement). */
+  'x-composition': string[];
+  /** Именованные слоты компонента. */
+  'x-slots': string[];
+}
+
 export interface SharedSchema extends PropSchema {
   $schema: typeof JSON_SCHEMA_DRAFT;
   $id: string;
@@ -155,6 +184,7 @@ export interface Bundle {
   'x-format-version': number;
   shared: Record<string, SharedSchema | BaseSchema>;
   elements: Record<string, ElementSchema>;
+  components: Record<string, ComponentSchema>;
   report: Report;
 }
 
@@ -168,6 +198,7 @@ const ELEMENT_KEY_ORDER = [
   'type',
   'x-format-version',
   'x-element-type',
+  'x-entity',
   'x-category',
   'x-deprecated-aliases',
   'x-container',
@@ -177,6 +208,8 @@ const ELEMENT_KEY_ORDER = [
   'x-base-defaults',
   'x-events',
   'x-methods',
+  'x-composition',
+  'x-slots',
 ];
 
 const PROP_KEY_ORDER = [
@@ -251,6 +284,20 @@ export function canonicalElement(schema: ElementSchema): ElementSchema {
       properties: canonicalProps(schema.properties),
       required: [...schema.required].sort(),
       'x-events': canonicalEvents(schema['x-events']),
+    },
+    ELEMENT_KEY_ORDER,
+  );
+}
+
+export function canonicalComponent(schema: ComponentSchema): ComponentSchema {
+  return orderKeys(
+    {
+      ...schema,
+      properties: canonicalProps(schema.properties),
+      required: [...schema.required].sort(),
+      'x-events': canonicalEvents(schema['x-events']),
+      'x-composition': [...new Set(schema['x-composition'])].sort(),
+      'x-slots': [...new Set(schema['x-slots'])].sort(),
     },
     ELEMENT_KEY_ORDER,
   );

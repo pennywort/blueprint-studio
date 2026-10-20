@@ -43,6 +43,21 @@ export const BASE = {
   title: 'BaseElement',
 } as const;
 
+/**
+ * Компоненты: ищутся по вызовам фабрики во всей программе lib — по символу (компилятор),
+ * а не по путям и именам файлов: файлы типов называются как угодно.
+ */
+export const COMPONENT = {
+  /** Фабрика компонентов: вызов `factory<P, C, S>(ElementsTypes.X, { ... })`. */
+  factory: 'ComponentFactoryImpl',
+  /** Метод отправки события в теле компонента: `$emit('имя', значение)`. */
+  emitMethod: '$emit',
+  /** Окончание имени переменной/функции-обёртки, отрезаемое в заголовке схемы. */
+  titleSuffix: /Component$/,
+  /** Каталог схем компонентов относительно schemasPackage. */
+  componentsDir: 'src/components',
+} as const;
+
 export const SCHEMA_ID_BASE = 'https://framework.internal';
 
 /** Устаревшие имена для CLI: --element TEXT → text-field. */

@@ -62,6 +62,22 @@ function nullable(schema: PropSchema): PropSchema {
   return { ...head, anyOf: [rest, { type: 'null' }] };
 }
 
+/** Схема свойства с дефолтом; default: null при типе без null расширяет тип (план 2.4). */
+export function withDefault(
+  schema: PropSchema,
+  value: JsonValue,
+  name: string,
+  shared: SharedRegistry,
+  diag: Diagnostics,
+): PropSchema {
+  let out = schema;
+  if (value === null && !allowsNull(out, shared)) {
+    diag.report('default-null-widened', `properties.${name}`, 'default: null, а тип без null — тип расширен');
+    out = nullable(out);
+  }
+  return { ...out, default: value };
+}
+
 /** Свойства props-типа → схемы (с описанием и источником), в порядке компилятора. */
 function propsToSchemas(
   decl: PropsDecl,
@@ -195,20 +211,8 @@ export function buildElementSchema(input: BuildInput, diag: Diagnostics): Elemen
       }
     }
     for (const p of propsToSchemas(decl, { elementType, diag, shared }, isBaseProp)) {
-      let schema = p.schema;
-      if (p.name in defaults) {
-        const value = defaults[p.name]!;
-        if (value === null && !allowsNull(schema, shared)) {
-          diag.report(
-            'default-null-widened',
-            `properties.${p.name}`,
-            'default: null, а тип без null — тип расширен',
-          );
-          schema = nullable(schema);
-        }
-        schema.default = value;
-      }
-      properties[p.name] = schema;
+      properties[p.name] =
+        p.name in defaults ? withDefault(p.schema, defaults[p.name]!, p.name, shared, diag) : p.schema;
       if (!p.optional) required.push(p.name);
     }
   }

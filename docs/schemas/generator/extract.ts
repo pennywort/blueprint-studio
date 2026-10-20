@@ -158,10 +158,11 @@ export function findClass(project: Project, entry: ElementEntry): ClassDeclarati
 
 // ─── defaultProps ────────────────────────────────────────────────────────────
 
-const UNRESOLVED = Symbol('unresolved');
-type Extracted = JsonValue | undefined | typeof UNRESOLVED;
+export const UNRESOLVED = Symbol('unresolved');
+export type Extracted = JsonValue | undefined | typeof UNRESOLVED;
 
-function valueOf(node: Node, depth = 0): Extracted {
+/** Выражение → JSON-значение (литералы, константы, члены enum); иначе UNRESOLVED. */
+export function valueOf(node: Node, depth = 0): Extracted {
   if (depth > 10) return UNRESOLVED;
   if (Node.isNullLiteral(node)) return null;
   if (Node.isTrueLiteral(node)) return true;

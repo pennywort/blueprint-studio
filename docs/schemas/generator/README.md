@@ -11,6 +11,7 @@
 | `extract.ts`        | чтение кода: справочник, класс, defaultProps, методы, props      |
 | `type-to-schema.ts` | TS-тип → схема                                                   |
 | `emit.ts`           | сборка схемы элемента                                            |
+| `component.ts`      | компоненты: поиск вызовов фабрики, props/методы/события/состав   |
 | `shared.ts`         | общие типы (`$ref` на `shared/*.schema.json`)                    |
 | `diagnostics.ts`    | коды проблем для отчёта                                          |
 | `validate.ts`       | проверка ajv (если установлен)                                   |
@@ -30,9 +31,20 @@ ajv необязателен: `npm i -D -E ajv@8.17.1` в пакете схем 
 ## Что пишется
 
 - `src/schemas/<элемент>.schema.json` — свои props элемента + `allOf: [$ref base]`;
+- `src/components/<компонент>.schema.json` — схема компонента (`x-entity: component`, без `allOf`):
+  props = тип P фабрики, `x-methods` = контроллер C, `x-events` = `$emit`, `x-composition` = типы
+  из `createElement` во view, `x-slots`; в бандле — секция `components`;
 - `src/shared/base-element.schema.json` — общие props (`BaseProps`) и события (`BaseElement.on*`), из кода при каждом прогоне;
 - `src/shared/icon.schema.json` — список иконок;
 - `src/index.json` — манифест.
+
+## Как находятся компоненты
+
+Без путей и имён файлов: во всей программе lib ищутся вызовы `ComponentFactoryImpl` (по символу,
+импорт под псевдонимом тоже). Имя — значение первого аргумента (член `ElementsTypes`), типы P и C —
+аргументы типа вызова (явные или выведенные компилятором), поэтому файл с типами может называться
+как угодно. `defaultProps` — литерал, который возвращает функция (ключи `[CONST]` сводятся).
+Члены `ElementsTypes`, не ставшие ни элементом, ни компонентом, — `unclassified-type` в отчёте (`$catalog`).
 
 ## Правила стабильности
 
