@@ -22,11 +22,15 @@ export const SUPPORTED_FORMAT_VERSION = 2;
 
 type JsonSchema = Record<string, unknown>;
 
-/** Бандл схем: элементы по x-element-type и общие схемы для $ref. */
+/**
+ * Бандл схем: элементы и компоненты по x-element-type, общие схемы для $ref.
+ * Компоненты (`ComponentFactoryImpl`, этап 4) — только у фреймворка.
+ */
 export type SchemaBundle = {
   'x-format-version': number;
   shared: Record<string, JsonSchema>;
   elements: Record<string, JsonSchema>;
+  components?: Record<string, JsonSchema>;
 };
 
 export type PolicyAttribute = {
@@ -90,45 +94,59 @@ function checkBundle(raw: unknown, name: string, errors: string[]): SchemaBundle
   return raw as SchemaBundle;
 }
 
-// $ref на общую схему пакета: «../shared/icon.schema.json#» → shared['icon.schema.json'].
-function resolveRef(schema: JsonSchema, shared: Record<string, JsonSchema>): JsonSchema {
+// Схемы, на которые ссылается $ref пакета, по файлу: «../shared/icon.schema.json#»
+// → shared['icon.schema.json'], «../schemas/autocomplete.schema.json#» → схема
+// элемента autocomplete (база компонента, этап 4.1a).
+type RefTargets = {
+  shared: Record<string, JsonSchema>;
+  elements: Record<string, JsonSchema>;
+};
+
+function resolveRef(schema: JsonSchema, refs: RefTargets): JsonSchema {
   const ref = schema.$ref;
   if (typeof ref !== 'string') {
     return schema;
   }
-  const file = ref.replace(/#.*$/, '').split('/').pop() ?? '';
-  return shared[file] ?? schema;
+  const [dir, file = ''] = ref.replace(/#.*$/, '').split('/').slice(-2);
+  const target = dir === 'schemas' ? refs.elements[file.replace(/\.schema\.json$/, '')] : refs.shared[file];
+  return target ?? schema;
 }
 
-// Свойства элемента: общая база (allOf + $ref) и собственные props элемента.
-function elementProperties(
-  schema: JsonSchema,
-  shared: Record<string, JsonSchema>,
-): Record<string, JsonSchema> {
-  const base = (Array.isArray(schema.allOf) ? schema.allOf : [])
+// Части схемы с базами allOf + $ref, рекурсивно (компонент → элемент → base-element);
+// база — раньше собственных частей, чтобы свои props перекрывали унаследованные.
+function schemaParts(schema: JsonSchema, refs: RefTargets, seen = new Set<JsonSchema>()): JsonSchema[] {
+  if (seen.has(schema)) {
+    return [];
+  }
+  seen.add(schema);
+  const bases = (Array.isArray(schema.allOf) ? schema.allOf : [])
     .filter(isRecord)
-    .map((part) => resolveRef(part, shared))
-    .map((part) => (isRecord(part.properties) ? part.properties : {}));
-  return Object.assign({}, ...base, isRecord(schema.properties) ? schema.properties : {}) as Record<
-    string,
-    JsonSchema
-  >;
+    .map((part) => resolveRef(part, refs))
+    .flatMap((part) => schemaParts(part, refs, seen));
+  return [...bases, schema];
 }
 
-function elementRequired(schema: JsonSchema, shared: Record<string, JsonSchema>): Set<string> {
-  const parts = [schema, ...(Array.isArray(schema.allOf) ? schema.allOf.filter(isRecord) : [])].map((part) =>
-    resolveRef(part, shared),
+// Свойства элемента или компонента: базы (allOf + $ref) и собственные props.
+function elementProperties(schema: JsonSchema, refs: RefTargets): Record<string, JsonSchema> {
+  const parts = schemaParts(schema, refs).map((part) => (isRecord(part.properties) ? part.properties : {}));
+  return Object.assign({}, ...parts) as Record<string, JsonSchema>;
+}
+
+function elementRequired(schema: JsonSchema, refs: RefTargets): Set<string> {
+  return new Set(
+    schemaParts(schema, refs).flatMap((part) =>
+      Array.isArray(part.required) ? part.required.map(String) : [],
+    ),
   );
-  return new Set(parts.flatMap((part) => (Array.isArray(part.required) ? part.required.map(String) : [])));
 }
 
-function valueKind(raw: JsonSchema, shared: Record<string, JsonSchema>): ValueKind | null {
-  const schema = resolveRef(raw, shared);
+function valueKind(raw: JsonSchema, refs: RefTargets): ValueKind | null {
+  const schema = resolveRef(raw, refs);
   // anyOf: значение по одной из ветвей — редактор пишет первую простую
   // (строка из «строка | объект»): это сужение, тип значения остаётся допустимым.
   if (Array.isArray(schema.anyOf)) {
     for (const branch of schema.anyOf.filter(isRecord)) {
-      const kind = valueKind(branch, shared);
+      const kind = valueKind(branch, refs);
       if (kind && kind.type !== 'objectList') {
         return kind;
       }
@@ -150,7 +168,7 @@ function valueKind(raw: JsonSchema, shared: Record<string, JsonSchema>): ValueKi
         ? { type: 'enum', values: schema.enum.filter((value) => typeof value === 'string') }
         : { type: 'text' };
     case 'array': {
-      const item = isRecord(schema.items) ? resolveRef(schema.items, shared) : null;
+      const item = isRecord(schema.items) ? resolveRef(schema.items, refs) : null;
       if (!item) {
         return null;
       }
@@ -204,10 +222,10 @@ function assembleAttribute(
   policy: PolicyAttribute,
   property: JsonSchema,
   schemaRequired: boolean,
-  shared: Record<string, JsonSchema>,
+  refs: RefTargets,
   fail: (message: string) => void,
 ): ElementAttribute | null {
-  const kind = valueKind(property, shared);
+  const kind = valueKind(property, refs);
   if (!kind) {
     fail('тип значения в схеме не поддерживается редактором — уберите атрибут из политики');
     return null;
@@ -282,12 +300,12 @@ function assembleElement(
   policy: PolicyElement,
   schema: JsonSchema,
   source: ElementSchema['source'],
-  shared: Record<string, JsonSchema>,
+  refs: RefTargets,
   errors: string[],
 ): ElementSchema {
   const fail = (key: string) => (message: string) => errors.push(`${policy.kind}.${key}: ${message}`);
-  const properties = elementProperties(schema, shared);
-  const required = elementRequired(schema, shared);
+  const properties = elementProperties(schema, refs);
+  const required = elementRequired(schema, refs);
   const attributes: ElementAttribute[] = [];
   const seen = new Set<string>();
 
@@ -306,7 +324,7 @@ function assembleElement(
       attributePolicy,
       property,
       required.has(attributePolicy.key),
-      shared,
+      refs,
       fail(attributePolicy.key),
     );
     if (attribute) {
@@ -330,7 +348,7 @@ function assembleElement(
   const defaults = policy.defaults ?? {};
   for (const [key, value] of Object.entries(defaults)) {
     const property = properties[key];
-    const kind = property ? valueKind(property, shared) : null;
+    const kind = property ? valueKind(property, refs) : null;
     if (!kind || !matchesKind(kind, value)) {
       fail(`defaults.${key}`)('значения нет в схеме или оно не подходит по типу');
     }
@@ -355,9 +373,10 @@ function assembleElement(
  * (persistence), чтобы старые карты открывались актуальными элементами [owner 2026-10-20].
  */
 export function legacyKindReplacements(framework: unknown): Readonly<Record<string, string>> {
-  const elements = isRecord(framework) && isRecord(framework.elements) ? framework.elements : {};
+  const section = (key: string) =>
+    isRecord(framework) && isRecord(framework[key]) ? (framework[key] as Record<string, unknown>) : {};
   const out: Record<string, string> = {};
-  for (const [kind, schema] of Object.entries(elements)) {
+  for (const [kind, schema] of Object.entries({ ...section('elements'), ...section('components') })) {
     const replacement = isRecord(schema) ? schema['x-replaced-by'] : undefined;
     if (typeof replacement === 'string') {
       out[kind] = replacement;
@@ -382,12 +401,19 @@ export function assembleElementSchemas(sources: SchemaSources): ElementSchema[] 
     throw new Error(`Схемы элементов не загружены:\n${errors.join('\n')}`);
   }
 
+  // Компоненты фреймворка (этап 4) — тот же kind карты, что и элементы:
+  // политика ссылается на их имена, схемы проекта с ними не пересекаются.
+  const frameworkKinds = { ...framework.elements, ...framework.components };
   for (const kind of Object.keys(project.elements)) {
-    if (kind in framework.elements) {
+    if (kind in frameworkKinds) {
       errors.push(`${kind}: схема проекта совпадает по имени со схемой фреймворка`);
     }
   }
-  const shared = { ...framework.shared, ...project.shared };
+  // $ref «../schemas/…» компонента — только на элементы фреймворка.
+  const refs: RefTargets = {
+    shared: { ...framework.shared, ...project.shared },
+    elements: framework.elements,
+  };
   const kinds = new Set<string>();
   const result: ElementSchema[] = [];
 
@@ -401,7 +427,7 @@ export function assembleElementSchemas(sources: SchemaSources): ElementSchema[] 
       continue;
     }
     kinds.add(element.kind);
-    const frameworkSchema = framework.elements[element.kind];
+    const frameworkSchema = frameworkKinds[element.kind];
     const schema = frameworkSchema ?? project.elements[element.kind];
     if (!schema) {
       errors.push(`${element.kind}: нет ни в схемах фреймворка, ни в схемах проекта`);
@@ -416,7 +442,7 @@ export function assembleElementSchemas(sources: SchemaSources): ElementSchema[] 
       );
       continue;
     }
-    result.push(assembleElement(element, schema, frameworkSchema ? 'framework' : 'project', shared, errors));
+    result.push(assembleElement(element, schema, frameworkSchema ? 'framework' : 'project', refs, errors));
   }
 
   if (errors.length > 0) {

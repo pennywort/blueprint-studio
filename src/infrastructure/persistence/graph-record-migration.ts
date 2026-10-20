@@ -1,7 +1,7 @@
 // Версии формата записи карты в хранилище (ревью A11, R4). Запись без
 // номера — формат до миграции «универсальные элементы» (версия 1).
 // Каждая следующая версия добавляет шаг миграции в MIGRATIONS.
-export const GRAPH_RECORD_VERSION = 5;
+export const GRAPH_RECORD_VERSION = 6;
 
 const VERSION_FIELD = 'schemaVersion';
 
@@ -294,12 +294,72 @@ function mapGraphElements(raw: unknown, fn: (elements: unknown) => unknown): unk
   };
 }
 
+// Версия 5 → 6 (этап 4.3 docs/schemas/PLAN.md): черновые компоненты из схем
+// проекта → компоненты фреймворка (секция components бандла). Поля без пары
+// в схеме компонента (подпись поиска сотрудника и адреса, тип поиска,
+// tooltip CI picker) уходят в комментарий для разработчика.
+type ComponentMigration = (props: LegacyRecord) => { kind: string; props: LegacyRecord; lost: LegacyRecord };
+
+const COMPONENT_MIGRATIONS: Readonly<Record<string, ComponentMigration>> = {
+  configurationItemPicker: ({ multiSelect, tooltip, ...rest }) => ({
+    kind: 'ac-configuration-item',
+    props: { ...rest, multiple: multiSelect },
+    lost: { tooltip },
+  }),
+  employeeSearch: ({ label, required, searchType }) => ({
+    kind: 'ac-user-picker',
+    props: {},
+    lost: { label, required, searchType },
+  }),
+  addressPicker: ({ label, required, displayParts }) => {
+    const parts = Array.isArray(displayParts) ? displayParts : [];
+    return {
+      kind: 'ac-address-asun',
+      props: {
+        required,
+        showFloor: parts.includes('floor'),
+        showRoom: parts.includes('room'),
+        showArea: parts.includes('zone'),
+        showPlace: parts.includes('workplace'),
+      },
+      lost: { label },
+    };
+  },
+  employeeLoginField: ({ isHidden, ...rest }) => ({
+    kind: 'ac-autocomplete-login-sudir',
+    props: { ...rest, visible: isHidden === true ? false : undefined },
+    lost: {},
+  }),
+};
+
+function migrateComponent(element: unknown): unknown {
+  if (!isRecord(element) || typeof element.kind !== 'string' || !isRecord(element.props)) {
+    return element;
+  }
+  const migrate = COMPONENT_MIGRATIONS[element.kind];
+  if (!migrate) {
+    return element;
+  }
+  const { kind, props, lost } = migrate(element.props);
+  const lostText = Object.entries(defined(lost))
+    .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+    .join(', ');
+  const comment = [element.comment, lostText && `Было в ${element.kind}: ${lostText}`]
+    .filter((text) => typeof text === 'string' && text)
+    .join('\n');
+  return defined({ ...element, kind, props: defined(props), comment: comment || undefined });
+}
+
+const migrateComponentsToFramework = (raw: unknown): unknown =>
+  mapGraphElements(raw, (elements) => (Array.isArray(elements) ? elements.map(migrateComponent) : elements));
+
 /** Шаг миграции: с версии (ключ) на следующую. */
 const MIGRATIONS: Readonly<Record<number, (raw: unknown) => unknown>> = {
   1: migrateUniversalElements,
   2: migrateFormStepLevels,
   3: migrateTransitionsToLinks,
   4: migrateElementsToFrameworkSchemas,
+  5: migrateComponentsToFramework,
 };
 
 // Запись хранилища → данные для доменной схемы: шаги миграции от версии

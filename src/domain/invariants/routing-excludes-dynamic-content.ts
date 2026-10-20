@@ -16,7 +16,7 @@ export const CI_PICKER_ROUTING_RULE = 'ci-picker-routing-forbids-dynamic-content
 const RULE_BY_KIND: Readonly<Record<string, string>> = {
   select: SELECT_LIST_ROUTING_RULE,
   'radio-group': SELECT_LIST_ROUTING_RULE,
-  configurationItemPicker: CI_PICKER_ROUTING_RULE,
+  'ac-configuration-item': CI_PICKER_ROUTING_RULE,
 };
 
 function ruleForKind(kind: string): string {

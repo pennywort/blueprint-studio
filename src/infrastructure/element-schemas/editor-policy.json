@@ -250,60 +250,53 @@
       ]
     },
     {
-      "kind": "configurationItemPicker",
+      "kind": "ac-configuration-item",
+      "label": "CI picker",
       "category": "Форма",
       "description": "Выбор конфигурационной единицы",
       "card": { "title": "label" },
       "defaults": { "label": "Элемент конфигурации" },
       "attributes": [
         { "key": "label", "label": "Название", "required": true, "placeholder": "Например, Сервис" },
-        { "key": "ciTypes", "label": "Типы КЕ", "helperText": "Коды типов конфигурационных единиц" },
-        { "key": "tooltip", "label": "Текст подсказки" },
+        {
+          "key": "ciTypes",
+          "label": "Типы КЕ",
+          "helperText": "Тип на строку: as, autSystem, bizservice, environmenttype, fp, infresource"
+        },
         { "key": "emptyResult", "label": "Текст пустого результата" },
         { "key": "helperText", "label": "Подсказка под полем" },
         { "key": "required", "label": "Обязательное поле", "section": "Настройки" },
-        { "key": "multiSelect", "label": "Множественный выбор", "section": "Настройки" },
+        { "key": "multiple", "label": "Множественный выбор", "section": "Настройки" },
         { "key": "disabled", "label": "Отключено", "section": "Настройки" },
         { "key": "disableCloseOnSelect", "label": "Не закрывать при выборе", "section": "Настройки" }
       ]
     },
     {
-      "kind": "employeeSearch",
+      "kind": "ac-user-picker",
+      "label": "Search user",
       "category": "Форма",
       "description": "Поиск сотрудника",
-      "card": { "title": "label" },
-      "defaults": { "label": "Сотрудник", "searchType": "colleagues" },
       "attributes": [
-        { "key": "label", "label": "Название", "required": true, "placeholder": "Например, Ответственный" },
-        { "key": "required", "label": "Обязательное поле", "section": "Настройки" },
-        {
-          "key": "searchType",
-          "label": "Тип поиска",
-          "options": [
-            { "value": "colleagues", "label": "Коллеги" },
-            { "value": "all", "label": "Все сотрудники" }
-          ]
-        }
+        { "key": "filter", "label": "Фильтр поиска" },
+        { "key": "isReadonly", "label": "Только чтение", "section": "Настройки" }
       ]
     },
     {
-      "kind": "addressPicker",
+      "kind": "ac-address-asun",
+      "label": "Address",
       "category": "Форма",
       "description": "Выбор адреса (этаж, кабинет…)",
-      "card": { "title": "label" },
-      "defaults": { "label": "Адрес" },
       "attributes": [
-        { "key": "label", "label": "Название", "required": true, "placeholder": "Например, Адрес офиса" },
-        {
-          "key": "displayParts",
-          "label": "Отображаемые части",
-          "helperText": "Часть на строку: floor, room, zone, workplace"
-        },
+        { "key": "showFloor", "label": "Этаж" },
+        { "key": "showRoom", "label": "Кабинет" },
+        { "key": "showArea", "label": "Зона" },
+        { "key": "showPlace", "label": "Рабочее место" },
         { "key": "required", "label": "Обязательное поле", "section": "Настройки" }
       ]
     },
     {
-      "kind": "employeeLoginField",
+      "kind": "ac-autocomplete-login-sudir",
+      "label": "Login",
       "category": "Форма",
       "description": "Поле логина сотрудника",
       "card": { "title": "label" },
@@ -311,7 +304,7 @@
       "attributes": [
         { "key": "label", "label": "Название", "required": true, "placeholder": "Например, Логин заявителя" },
         { "key": "required", "label": "Обязательное поле", "section": "Настройки" },
-        { "key": "isHidden", "label": "Скрытое поле", "section": "Настройки" }
+        { "key": "visible", "label": "Видимое поле", "section": "Настройки" }
       ]
     }
   ]

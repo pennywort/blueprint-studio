@@ -7,8 +7,8 @@ import type { CanvasElementKind } from '@domain/model/canvas-element';
 import { assembleElementSchemas, type SchemaSources } from './assemble-element-schemas';
 
 // Адаптер порта IElementSchemaProvider (этап 3 docs/schemas/PLAN.md): схемы
-// фреймворка (копия пакета — `npm run schemas:import`), схемы проекта
-// (компоненты и комментарий) и политика редактора собираются в описания
+// фреймворка (копия пакета — `npm run schemas:import`: элементы и компоненты),
+// схемы проекта (комментарий) и политика редактора собираются в описания
 // элементов при старте. Сломанная политика или несовместимая версия формата
 // падают сразу, а не при первом обращении (критерий приёма 6 спеки 001).
 // Переход на npm-пакет схем меняет только источник JSON в container.ts.

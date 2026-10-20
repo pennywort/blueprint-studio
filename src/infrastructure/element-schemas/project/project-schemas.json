@@ -10,75 +10,14 @@
       "x-element-type": "comment",
       "x-category": "editor",
       "properties": {
-        "text": { "type": "string" },
-        "audience": { "type": "string" }
-      },
-      "required": ["text", "audience"]
-    },
-    "configurationItemPicker": {
-      "title": "CI picker",
-      "description": "Компонент: выбор конфигурационной единицы (схема — до описания компонентов)",
-      "type": "object",
-      "x-format-version": 2,
-      "x-element-type": "configurationItemPicker",
-      "x-category": "component",
-      "properties": {
-        "label": { "type": "string" },
-        "required": { "type": "boolean" },
-        "multiSelect": { "type": "boolean" },
-        "ciTypes": { "type": "array", "items": { "type": "string" } },
-        "disabled": { "type": "boolean" },
-        "tooltip": { "type": "string" },
-        "emptyResult": { "type": "string" },
-        "helperText": { "type": "string" },
-        "disableCloseOnSelect": { "type": "boolean" }
-      },
-      "required": []
-    },
-    "employeeSearch": {
-      "title": "Search user",
-      "description": "Компонент: поиск сотрудника (схема — до описания компонентов)",
-      "type": "object",
-      "x-format-version": 2,
-      "x-element-type": "employeeSearch",
-      "x-category": "component",
-      "properties": {
-        "label": { "type": "string" },
-        "required": { "type": "boolean" },
-        "searchType": { "type": "string", "enum": ["colleagues", "all"] }
-      },
-      "required": []
-    },
-    "addressPicker": {
-      "title": "Address",
-      "description": "Компонент: выбор адреса (схема — до описания компонентов)",
-      "type": "object",
-      "x-format-version": 2,
-      "x-element-type": "addressPicker",
-      "x-category": "component",
-      "properties": {
-        "label": { "type": "string" },
-        "required": { "type": "boolean" },
-        "displayParts": {
-          "type": "array",
-          "items": { "type": "string", "enum": ["floor", "room", "zone", "workplace"] }
+        "text": {
+          "type": "string"
+        },
+        "audience": {
+          "type": "string"
         }
       },
-      "required": []
-    },
-    "employeeLoginField": {
-      "title": "Login",
-      "description": "Компонент: поле логина сотрудника (схема — до описания компонентов)",
-      "type": "object",
-      "x-format-version": 2,
-      "x-element-type": "employeeLoginField",
-      "x-category": "component",
-      "properties": {
-        "label": { "type": "string" },
-        "required": { "type": "boolean" },
-        "isHidden": { "type": "boolean" }
-      },
-      "required": []
+      "required": ["text", "audience"]
     }
   }
 }
