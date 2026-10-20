@@ -283,7 +283,7 @@
     },
     {
       "kind": "ac-address-asun",
-      "label": "Address",
+      "label": "Address ASUN",
       "category": "Форма",
       "description": "Выбор адреса (этаж, кабинет…)",
       "attributes": [
@@ -291,6 +291,21 @@
         { "key": "showRoom", "label": "Кабинет" },
         { "key": "showArea", "label": "Зона" },
         { "key": "showPlace", "label": "Рабочее место" },
+        { "key": "required", "label": "Обязательное поле", "section": "Настройки" }
+      ]
+    },
+    {
+      "kind": "address",
+      "label": "Address",
+      "category": "Форма",
+      "description": "Адрес (город, улица)",
+      "card": { "title": "label" },
+      "defaults": { "label": "Адрес" },
+      "attributes": [
+        { "key": "label", "label": "Название", "required": true, "placeholder": "Например, Адрес доставки" },
+        { "key": "city", "label": "Город" },
+        { "key": "showCurrentLocation", "label": "Текущее местоположение", "section": "Настройки" },
+        { "key": "showLastAddress", "label": "Последний адрес", "section": "Настройки" },
         { "key": "required", "label": "Обязательное поле", "section": "Настройки" }
       ]
     },
