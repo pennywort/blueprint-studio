@@ -7,22 +7,44 @@ import type {
 import type { ElementPropsPatch } from '@application/commands/update-element-props';
 import type { CanvasElement } from '@domain/model/canvas-element';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
+import { AttributeField } from './attribute-field';
 import { resolvePropertyEditor } from './property-editor-registry';
 import './builtin-property-editors';
 import { useBufferedProps } from './use-buffered-props';
 
+// Вёрстка по макетам docs/design-mockups/настройка-атрибутов-*: шапка с
+// разделителем, поля с подписью над ними (AttributeField), секции —
+// заголовком; отступы задаёт панель, а не редакторы.
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   panel: {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing(2),
+    gap: theme.spacing(2.5),
   },
-  sectionTitle: {
-    marginTop: theme.spacing(1),
-  },
-  field: {
+  header: {
     display: 'flex',
     flexDirection: 'column',
+    gap: theme.spacing(0.5),
+    paddingBottom: theme.spacing(1.5),
+    borderBottom: `1px solid ${theme.palette.divider}`,
+  },
+  title: {
+    fontWeight: 600,
+  },
+  subtitle: {
+    color: theme.palette.text.secondary,
+  },
+  group: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.spacing(2),
+  },
+  // В секции переключатели идут плотнее: строка switch уже со своей высотой.
+  section: {
+    gap: theme.spacing(1),
+  },
+  sectionTitle: {
+    fontWeight: 600,
   },
 }));
 
@@ -72,9 +94,11 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
 
   return (
     <div className={classes.panel} data-testid="attributes-panel" onBlur={buffer.flush}>
-      <div>
-        <Typography variant="h6">{schema?.label ?? component.kind}</Typography>
-        <Typography variant="body2" color="textSecondary">
+      <div className={classes.header}>
+        <Typography variant="h6" className={classes.title}>
+          {schema?.label ?? component.kind}
+        </Typography>
+        <Typography variant="caption" className={classes.subtitle}>
           {schema
             ? `${schema.category}${schema.description ? ` · ${schema.description}` : ''}`
             : 'Элемента нет в политике редактора — атрибуты не редактируются'}
@@ -82,9 +106,12 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
       </div>
 
       {groups.map((group) => (
-        <div key={group.section ?? ''} className={classes.field}>
+        <div
+          key={group.section ?? ''}
+          className={`${classes.group} ${group.section !== null ? classes.section : ''}`}
+        >
           {group.section !== null ? (
-            <Typography className={classes.sectionTitle} variant="subtitle2" data-testid="panel-section">
+            <Typography className={classes.sectionTitle} variant="subtitle1" data-testid="panel-section">
               {group.section}
             </Typography>
           ) : null}
@@ -95,25 +122,24 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
             // или без редактора — read-only сводка: данные не портятся.
             if (!Editor || (value !== undefined && !isValueCompatible(attribute.type, value))) {
               return (
-                <TextField
-                  key={attribute.key}
-                  fullWidth
-                  size="small"
-                  variant="outlined"
-                  disabled
-                  label={attribute.label}
-                  value={formatReadonlyValue(value)}
-                />
+                <AttributeField key={attribute.key} attribute={attribute}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                    disabled
+                    value={formatReadonlyValue(value)}
+                  />
+                </AttributeField>
               );
             }
             return (
-              <div key={attribute.key} className={classes.field}>
-                <Editor
-                  value={value}
-                  attribute={attribute}
-                  onChange={(next) => buffer.change({ props: { [attribute.key]: next } })}
-                />
-              </div>
+              <Editor
+                key={attribute.key}
+                value={value}
+                attribute={attribute}
+                onChange={(next) => buffer.change({ props: { [attribute.key]: next } })}
+              />
             );
           })}
         </div>
@@ -128,6 +154,7 @@ function isValueCompatible(type: ElementAttributeType, value: unknown): boolean 
     case 'text':
     case 'radio':
     case 'select':
+    case 'icon':
       return typeof value === 'string';
     case 'bool':
       return typeof value === 'boolean';

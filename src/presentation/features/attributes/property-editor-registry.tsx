@@ -6,7 +6,7 @@ import type { ElementAttribute, ElementAttributeType } from '@application/ports/
 // атрибутов (декомпозиция, D-правило 1: никакого switch по именам элементов).
 // Встроенные маппинги: text → TextField, stringList → многострочное поле,
 // bool → Switch, number → числовое поле, radio → RadioGroup, select → Select,
-// optionList → список вариантов.
+// optionList → список вариантов, icon → поиск + сетка иконок.
 
 export type PropertyEditorProps = {
   /** Текущее значение свойства элемента (тип зависит от типа атрибута). */

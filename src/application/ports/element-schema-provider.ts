@@ -10,9 +10,10 @@ import type { CanvasElementKind } from '@domain/model/canvas-element';
 // Редактор атрибута выводится из типа значения в схеме, не задаётся
 // политикой: text — string, number — number/integer, bool — boolean,
 // select/radio — string с enum (radio — вид, выбранный политикой),
-// stringList — массив строк, optionList — массив объектов с id и подписью.
+// stringList — массив строк, optionList — массив объектов с id и подписью,
+// icon — string с enum из общей схемы иконок фреймворка (shared/icon.schema.json).
 export type ElementAttributeType =
-  'bool' | 'text' | 'number' | 'select' | 'radio' | 'stringList' | 'optionList';
+  'bool' | 'text' | 'number' | 'select' | 'radio' | 'stringList' | 'optionList' | 'icon';
 
 export type AttributeOption = {
   value: string;

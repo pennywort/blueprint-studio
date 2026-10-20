@@ -74,10 +74,28 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 // Тип значения свойства схемы, каким его редактирует панель атрибутов.
+// editor — редактор enum, заданный общей схемой (SHARED_ENUM_EDITORS).
 type ValueKind =
   | { type: 'bool' | 'number' | 'text' | 'stringList' }
-  | { type: 'enum'; values: readonly string[] }
+  | { type: 'enum'; values: readonly string[]; editor?: ElementAttributeType }
   | { type: 'objectList'; item: JsonSchema };
+
+// Общие схемы ($ref на shared/*) со своим редактором: атрибут любого
+// элемента, ссылающийся на схему, получает этот редактор [owner 2026-10-20].
+// Новый общий редактор — запись в таблице, не ветвление (§4a).
+const SHARED_ENUM_EDITORS: Readonly<Record<string, ElementAttributeType>> = {
+  'icon.schema.json': 'icon',
+};
+
+// Имя файла общей схемы из $ref («../shared/icon.schema.json#» → icon.schema.json).
+function sharedRefFile(schema: JsonSchema): string | null {
+  const ref = schema.$ref;
+  if (typeof ref !== 'string') {
+    return null;
+  }
+  const [dir, file] = ref.replace(/#.*$/, '').split('/').slice(-2);
+  return dir === 'shared' && file ? file : null;
+}
 
 function checkBundle(raw: unknown, name: string, errors: string[]): SchemaBundle | null {
   if (!isRecord(raw) || !isRecord(raw.elements) || !isRecord(raw.shared)) {
@@ -163,10 +181,15 @@ function valueKind(raw: JsonSchema, refs: RefTargets): ValueKind | null {
     case 'number':
     case 'integer':
       return Array.isArray(schema.enum) ? null : { type: 'number' };
-    case 'string':
-      return Array.isArray(schema.enum)
-        ? { type: 'enum', values: schema.enum.filter((value) => typeof value === 'string') }
-        : { type: 'text' };
+    case 'string': {
+      if (!Array.isArray(schema.enum)) {
+        return { type: 'text' };
+      }
+      const values = schema.enum.filter((value): value is string => typeof value === 'string');
+      const shared = sharedRefFile(raw);
+      const editor = shared ? SHARED_ENUM_EDITORS[shared] : undefined;
+      return editor ? { type: 'enum', values, editor } : { type: 'enum', values };
+    }
     case 'array': {
       const item = isRecord(schema.items) ? resolveRef(schema.items, refs) : null;
       if (!item) {
@@ -264,7 +287,7 @@ function assembleAttribute(
       if (extra.length > 0) {
         fail(`варианты ${extra.map((option) => option.value).join(', ')} отсутствуют в enum схемы`);
       }
-      attribute.type = policy.widget === 'radio' ? 'radio' : 'select';
+      attribute.type = kind.editor ?? (policy.widget === 'radio' ? 'radio' : 'select');
       attribute.options = options;
       return attribute;
     }

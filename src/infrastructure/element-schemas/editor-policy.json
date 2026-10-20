@@ -19,6 +19,8 @@
           "label": "Дополнительный текст",
           "placeholder": "Например, По методологии"
         },
+        { "key": "tertiaryText", "label": "Третий текст", "placeholder": "Например, Ответ за 2 дня" },
+        { "key": "leftAtom", "label": "Иконка" },
         { "key": "linkHref", "label": "Внешняя ссылка", "placeholder": "https://…" }
       ]
     },
@@ -64,6 +66,7 @@
         { "key": "placeholder", "label": "Подсказка внутри поля", "placeholder": "Например, 100 000 ₽" },
         { "key": "helperText", "label": "Подпись под полем" },
         { "key": "tooltipTextIcon", "label": "Текст подсказки" },
+        { "key": "icon", "label": "Иконка" },
         { "key": "required", "label": "Обязательное поле", "section": "Настройки" },
         { "key": "multiline", "label": "Многострочное", "section": "Настройки" }
       ]
@@ -246,7 +249,7 @@
             { "value": "default", "label": "По умолчанию" }
           ]
         },
-        { "key": "icon", "label": "Иконка", "section": "Тип" }
+        { "key": "icon", "label": "Иконка" }
       ]
     },
     {

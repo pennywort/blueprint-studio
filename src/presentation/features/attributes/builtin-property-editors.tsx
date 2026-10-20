@@ -1,9 +1,7 @@
 import {
   Button,
-  FormControl,
   FormControlLabel,
   IconButton,
-  InputLabel,
   MenuItem,
   Radio,
   RadioGroup,
@@ -15,13 +13,16 @@ import {
 } from '@blueprint-vendor/flamingo-core';
 import { Add, Delete } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
+import { AttributeField } from './attribute-field';
+import { IconPropertyEditor } from './icon-property-editor';
 import { registerPropertyEditor, type PropertyEditorProps } from './property-editor-registry';
 
 // Встроенные редакторы свойств (T-040): text → TextField, stringList →
 // многострочное поле (по строке на элемент), bool → Switch, number →
 // числовое поле, radio → RadioGroup, select → Select, optionList — список
-// вариантов. Редакторы не знают о kind'ах элементов — только об описании
-// атрибута (схема + политика редактора, этап 3 docs/schemas/PLAN.md).
+// вариантов, icon — поиск + сетка иконок. Редакторы не знают о kind'ах
+// элементов — только об описании атрибута (схема + политика редактора, этап 3
+// docs/schemas/PLAN.md). Подпись и подсказка — общий каркас AttributeField.
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   list: {
@@ -34,85 +35,112 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     alignItems: 'center',
     gap: theme.spacing(0.5),
   },
+  // Переключатель по макету: подпись слева, switch справа.
+  switchRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing(1),
+    minHeight: 40,
+  },
+  switchText: {
+    display: 'flex',
+    flexDirection: 'column',
+    minWidth: 0,
+  },
+  secondaryText: {
+    color: theme.palette.text.secondary,
+  },
+  addButton: {
+    alignSelf: 'flex-start',
+  },
 }));
 
 function TextPropertyEditor({ value, onChange, attribute }: PropertyEditorProps) {
   return (
-    <TextField
-      fullWidth
-      size="small"
-      variant="outlined"
-      required={attribute.required}
-      label={attribute.label}
-      placeholder={attribute.placeholder}
-      helperText={attribute.helperText}
-      multiline={attribute.multiline}
-      rows={attribute.multiline ? 3 : undefined}
-      value={typeof value === 'string' ? value : ''}
-      onChange={(event) => onChange(event.target.value)}
-    />
+    <AttributeField attribute={attribute}>
+      <TextField
+        fullWidth
+        size="small"
+        variant="outlined"
+        placeholder={attribute.placeholder}
+        multiline={attribute.multiline}
+        rows={attribute.multiline ? 3 : undefined}
+        value={typeof value === 'string' ? value : ''}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </AttributeField>
   );
 }
 
 function NumberPropertyEditor({ value, onChange, attribute }: PropertyEditorProps) {
   return (
-    <TextField
-      fullWidth
-      size="small"
-      variant="outlined"
-      type="number"
-      required={attribute.required}
-      label={attribute.label}
-      placeholder={attribute.placeholder}
-      helperText={attribute.helperText}
-      value={typeof value === 'number' ? String(value) : ''}
-      onChange={(event) => {
-        const next = event.target.value;
-        onChange(next === '' ? undefined : Number(next));
-      }}
-    />
+    <AttributeField attribute={attribute}>
+      <TextField
+        fullWidth
+        size="small"
+        variant="outlined"
+        type="number"
+        placeholder={attribute.placeholder}
+        value={typeof value === 'number' ? String(value) : ''}
+        onChange={(event) => {
+          const next = event.target.value;
+          onChange(next === '' ? undefined : Number(next));
+        }}
+      />
+    </AttributeField>
   );
 }
 
 function MultilinePropertyEditor({ value, onChange, attribute }: PropertyEditorProps) {
   const lines = Array.isArray(value) ? value.map((line) => String(line)).join('\n') : '';
   return (
-    <TextField
-      fullWidth
-      size="small"
-      variant="outlined"
-      multiline
-      rows={3}
-      required={attribute.required}
-      label={attribute.label}
-      placeholder={attribute.placeholder}
-      helperText={attribute.helperText}
-      value={lines}
-      onChange={(event) =>
-        onChange(
-          event.target.value
-            .split('\n')
-            .map((line) => line.trim())
-            .filter((line) => line.length > 0),
-        )
-      }
-    />
+    <AttributeField attribute={attribute}>
+      <TextField
+        fullWidth
+        size="small"
+        variant="outlined"
+        multiline
+        rows={3}
+        placeholder={attribute.placeholder}
+        value={lines}
+        onChange={(event) =>
+          onChange(
+            event.target.value
+              .split('\n')
+              .map((line) => line.trim())
+              .filter((line) => line.length > 0),
+          )
+        }
+      />
+    </AttributeField>
   );
 }
 
 function BoolPropertyEditor({ value, onChange, attribute }: PropertyEditorProps) {
+  const classes = useStyles();
   return (
-    <FormControlLabel
-      control={<Switch checked={value === true} onChange={(event) => onChange(event.target.checked)} />}
-      label={attribute.label}
-    />
+    <div className={classes.switchRow}>
+      <div className={classes.switchText}>
+        <Typography variant="body2">{attribute.label}</Typography>
+        {attribute.helperText ? (
+          <Typography variant="caption" className={classes.secondaryText}>
+            {attribute.helperText}
+          </Typography>
+        ) : null}
+      </div>
+      <Switch
+        checked={value === true}
+        inputProps={{ 'aria-label': attribute.label }}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+    </div>
   );
 }
 
 function RadioPropertyEditor({ value, onChange, attribute }: PropertyEditorProps) {
   return (
-    <FormControl component="fieldset" fullWidth>
-      <InputLabel shrink>{attribute.label}</InputLabel>
+    <AttributeField attribute={attribute}>
       <RadioGroup
         value={typeof value === 'string' ? value : ''}
         onChange={(event) => onChange(event.target.value)}
@@ -121,23 +149,24 @@ function RadioPropertyEditor({ value, onChange, attribute }: PropertyEditorProps
           <FormControlLabel
             key={option.value}
             value={option.value}
-            control={<Radio />}
-            label={option.label}
+            control={<Radio size="small" />}
+            label={<Typography variant="body2">{option.label}</Typography>}
           />
         ))}
       </RadioGroup>
-    </FormControl>
+    </AttributeField>
   );
 }
 
 // Пустое значение — «не задано» (prop снимается): берётся значение фреймворка.
 function SelectPropertyEditor({ value, onChange, attribute }: PropertyEditorProps) {
   return (
-    <FormControl fullWidth size="small" variant="outlined" required={attribute.required}>
-      <InputLabel shrink>{attribute.label}</InputLabel>
+    <AttributeField attribute={attribute}>
       <Select
+        fullWidth
+        variant="outlined"
+        margin="dense"
         value={typeof value === 'string' ? value : ''}
-        label={attribute.label}
         displayEmpty
         onChange={(event) => onChange(event.target.value === '' ? undefined : (event.target.value as string))}
       >
@@ -152,7 +181,7 @@ function SelectPropertyEditor({ value, onChange, attribute }: PropertyEditorProp
           </MenuItem>
         ))}
       </Select>
-    </FormControl>
+    </AttributeField>
   );
 }
 
@@ -179,30 +208,30 @@ function OptionListPropertyEditor({ value, onChange, attribute }: PropertyEditor
   const update = (index: number, patch: OptionItem) =>
     onChange(items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   return (
-    <div className={classes.list} data-testid="option-list-editor">
-      <Typography variant="subtitle2">{attribute.label}</Typography>
-      {items.map((item, index) => (
-        <div key={text(item, shape.idKey) || index} className={classes.row}>
-          <TextField
-            fullWidth
-            size="small"
-            variant="outlined"
-            placeholder={`Вариант ${index + 1}`}
-            value={text(item, shape.labelKey)}
-            onChange={(event) => update(index, { [shape.labelKey]: event.target.value })}
-          />
-          <IconButton
-            size="small"
-            aria-label="Удалить вариант"
-            onClick={() => onChange(items.filter((_, i) => i !== index))}
-          >
-            <Delete fontSize="small" />
-          </IconButton>
-        </div>
-      ))}
-      <div>
+    <AttributeField attribute={attribute} variant="heading">
+      <div className={classes.list} data-testid="option-list-editor">
+        {items.map((item, index) => (
+          <div key={text(item, shape.idKey) || index} className={classes.row}>
+            <TextField
+              fullWidth
+              size="small"
+              variant="outlined"
+              placeholder={`Вариант ${index + 1}`}
+              value={text(item, shape.labelKey)}
+              onChange={(event) => update(index, { [shape.labelKey]: event.target.value })}
+            />
+            <IconButton
+              size="small"
+              aria-label="Удалить вариант"
+              onClick={() => onChange(items.filter((_, i) => i !== index))}
+            >
+              <Delete fontSize="small" />
+            </IconButton>
+          </div>
+        ))}
         <Button
           size="small"
+          className={classes.addButton}
           startIcon={<Add />}
           onClick={() =>
             onChange([
@@ -218,12 +247,7 @@ function OptionListPropertyEditor({ value, onChange, attribute }: PropertyEditor
           Добавить вариант
         </Button>
       </div>
-      {attribute.helperText ? (
-        <Typography variant="caption" color="textSecondary">
-          {attribute.helperText}
-        </Typography>
-      ) : null}
-    </div>
+    </AttributeField>
   );
 }
 
@@ -234,3 +258,4 @@ registerPropertyEditor('number', NumberPropertyEditor);
 registerPropertyEditor('radio', RadioPropertyEditor);
 registerPropertyEditor('select', SelectPropertyEditor);
 registerPropertyEditor('optionList', OptionListPropertyEditor);
+registerPropertyEditor('icon', IconPropertyEditor);

@@ -66,11 +66,20 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     backgroundColor: theme.palette.background.paper,
     padding: theme.spacing(2),
   },
+  // Панель атрибутов — карточка с отступом от краёв и своим скроллом
+  // (макеты docs/design-mockups/настройка-атрибутов-*, T-041).
   attributesPanel: {
     width: 360,
     flexShrink: 0,
+    alignSelf: 'flex-start',
+    maxHeight: `calc(100% - ${theme.spacing(4)}px)`,
+    margin: theme.spacing(2, 2, 2, 0),
+    overflowY: 'auto',
+    boxSizing: 'border-box',
     backgroundColor: theme.palette.background.paper,
-    padding: theme.spacing(2),
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: 24,
+    padding: theme.spacing(2.5),
   },
 }));
 
@@ -193,16 +202,13 @@ function EditorPageLayout() {
           </div>
         </div>
         {selectedElement !== null && !pointerHeld ? (
-          <>
-            <Divider orientation="vertical" flexItem />
-            <div className={classes.attributesPanel} data-testid="attributes-panel">
-              <AttributesPanel
-                component={selectedElement.component}
-                schema={catalog.schema(selectedElement.component.kind)}
-                onUpdateProps={editorGraph.updateElementProps}
-              />
-            </div>
-          </>
+          <div className={classes.attributesPanel}>
+            <AttributesPanel
+              component={selectedElement.component}
+              schema={catalog.schema(selectedElement.component.kind)}
+              onUpdateProps={editorGraph.updateElementProps}
+            />
+          </div>
         ) : null}
       </div>
     </div>
