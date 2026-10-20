@@ -185,8 +185,9 @@ const ELEMENT_MIGRATIONS: Readonly<Record<string, ElementMigration>> = {
       tooltipTextIcon: e.tooltip,
     },
   }),
+  // message-strip устарел во фреймворке → alert [owner 2026-10-20]
   infoBlock: (e) => ({
-    kind: 'message-strip',
+    kind: 'alert',
     props: { label: `${String(e.text ?? '')}${linksMarkdown(e.links)}`, variant: 'info' },
   }),
   datePeriod: (e) => {
@@ -272,12 +273,15 @@ function migrateElement(element: unknown): unknown {
 const migrateElementList = (elements: unknown): unknown =>
   Array.isArray(elements) ? elements.map(migrateElement) : elements;
 
-function migrateElementsToFrameworkSchemas(raw: unknown): unknown {
+const migrateElementsToFrameworkSchemas = (raw: unknown): unknown =>
+  mapGraphElements(raw, migrateElementList);
+
+// Списки элементов всех блоков карты (Главная, подсценарии, шаги форм) → fn.
+function mapGraphElements(raw: unknown, fn: (elements: unknown) => unknown): unknown {
   if (!isRecord(raw)) {
     return raw;
   }
-  const page = (value: unknown) =>
-    isRecord(value) ? { ...value, elements: migrateElementList(value.elements) } : value;
+  const page = (value: unknown) => (isRecord(value) ? { ...value, elements: fn(value.elements) } : value);
   return {
     ...raw,
     ...(isRecord(raw.homePage) ? { homePage: page(raw.homePage) } : null),
@@ -316,6 +320,23 @@ export function migrateGraphRecord(raw: unknown): unknown {
     version += 1;
   }
   return migrated;
+}
+
+// Устаревшие kind элементов → актуальные (замены — из схем фреймворка,
+// x-replaced-by). Не шаг версии: таблица растёт вместе с фреймворком, поэтому
+// применяется при каждой загрузке и идемпотентна [owner 2026-10-20].
+export function replaceLegacyKinds(raw: unknown, replacements: Readonly<Record<string, string>>): unknown {
+  if (Object.keys(replacements).length === 0) {
+    return raw;
+  }
+  const replace = (element: unknown): unknown => {
+    if (!isRecord(element) || typeof element.kind !== 'string') {
+      return element;
+    }
+    const next = replacements[element.kind];
+    return next ? { ...element, kind: next } : element;
+  };
+  return mapGraphElements(raw, (elements) => (Array.isArray(elements) ? elements.map(replace) : elements));
 }
 
 // Граф → запись хранилища с номером версии формата.

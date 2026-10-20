@@ -16,6 +16,8 @@ const EXTENSION_KEYWORDS = [
   'x-composition',
   'x-slots',
   'x-deprecated-aliases',
+  'x-deprecated',
+  'x-replaced-by',
   'x-container',
   'x-base-defaults',
   'x-events',

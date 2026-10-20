@@ -18,6 +18,10 @@ export const PATHS = {
   elementsMapVariable: 'ElementsMap',
   constants: 'packages/constants/src/index.ts',
   elementsTypesEnum: 'ElementsTypes',
+  /** В constants: карта «устаревший тип → актуальный» ({ [ElementsTypes.A]: ElementsTypes.B }). */
+  legacyTypesMap: 'LegacyElementsTypesMap',
+  /** В constants: устаревшие типы без замены ([ElementsTypes.A, …]). */
+  deprecatedTypesList: 'DeprecatedElementsTypes',
   libPackage: 'packages/lib',
   schemasPackage: 'packages/element-schemas',
   /** Относительно schemasPackage. */

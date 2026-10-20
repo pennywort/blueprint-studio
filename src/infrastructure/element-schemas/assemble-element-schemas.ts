@@ -350,6 +350,23 @@ function assembleElement(
 }
 
 /**
+ * Замены устаревших типов фреймворка (`x-replaced-by` схем, источник — constants
+ * LegacyElementsTypesMap): устаревший kind → актуальный. Читает загрузка карт
+ * (persistence), чтобы старые карты открывались актуальными элементами [owner 2026-10-20].
+ */
+export function legacyKindReplacements(framework: unknown): Readonly<Record<string, string>> {
+  const elements = isRecord(framework) && isRecord(framework.elements) ? framework.elements : {};
+  const out: Record<string, string> = {};
+  for (const [kind, schema] of Object.entries(elements)) {
+    const replacement = isRecord(schema) ? schema['x-replaced-by'] : undefined;
+    if (typeof replacement === 'string') {
+      out[kind] = replacement;
+    }
+  }
+  return out;
+}
+
+/**
  * Схемы фреймворка и проекта + политика → описания элементов в порядке
  * политики. Бросает Error со списком всех расхождений.
  */
@@ -388,6 +405,15 @@ export function assembleElementSchemas(sources: SchemaSources): ElementSchema[] 
     const schema = frameworkSchema ?? project.elements[element.kind];
     if (!schema) {
       errors.push(`${element.kind}: нет ни в схемах фреймворка, ни в схемах проекта`);
+      continue;
+    }
+    // Устаревший тип фреймворка (constants: LegacyElementsTypesMap / DeprecatedElementsTypes)
+    // в редактор не попадает [owner 2026-10-20]
+    if (schema['x-deprecated'] === true) {
+      const replacement = schema['x-replaced-by'];
+      errors.push(
+        `${element.kind}: элемент устарел во фреймворке${typeof replacement === 'string' ? ` — используйте ${replacement}` : ''}`,
+      );
       continue;
     }
     result.push(assembleElement(element, schema, frameworkSchema ? 'framework' : 'project', shared, errors));

@@ -8,6 +8,8 @@ import type { IGraphFileCodec } from '@application/ports/graph-file-codec';
 import type { IKeybindingsStorage } from '@application/ports/keybindings-storage';
 import { CommandBus } from '@application/commands/command-bus';
 import { FrameworkSchemaProvider } from './element-schemas/framework-schema-provider';
+import { legacyKindReplacements } from './element-schemas/assemble-element-schemas';
+import type { LegacyKinds } from './persistence/graph-record-parse';
 import frameworkSchemasJson from './element-schemas/framework/schemas-bundle.json';
 import projectSchemasJson from './element-schemas/project/project-schemas.json';
 import editorPolicyJson from './element-schemas/editor-policy.json';
@@ -26,6 +28,7 @@ export interface Cradle {
   idGenerator: IIdGenerator;
   clock: IClock;
   elementSchemaProvider: IElementSchemaProvider;
+  legacyKinds: LegacyKinds;
   commandBus: CommandBus;
   graphRepository: IGraphRepository;
   // Экспорт/импорт файла проекта JSON [owner 2026-10-15].
@@ -59,6 +62,8 @@ export function buildContainer(options: ContainerOptions): AwilixContainer<Cradl
         sources: { framework: frameworkSchemasJson, project: projectSchemasJson, policy: editorPolicyJson },
       }))
       .singleton(),
+    // Замены устаревших kind (x-replaced-by схем фреймворка) — для загрузки карт
+    legacyKinds: asValue(legacyKindReplacements(frameworkSchemasJson)),
     commandBus: asClass(CommandBus).singleton(),
     graphRepository: asClass(IndexedDbGraphRepository).singleton(),
     graphFileCodec: asClass(JsonGraphFileCodec).singleton(),

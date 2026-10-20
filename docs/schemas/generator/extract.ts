@@ -42,6 +42,10 @@ export interface ElementCatalog {
   elements: Record<string, ElementEntry>;
   /** Имя члена ElementsTypes → строковое значение. */
   enumValues: Record<string, string>;
+  /** Устаревший тип → актуальный (LegacyElementsTypesMap). */
+  replacedBy: Record<string, string>;
+  /** Устаревшие типы: с заменой и без (DeprecatedElementsTypes). */
+  deprecated: Set<string>;
 }
 
 function findFileRecursively(dirPath: string, fileName: string): string | null {
@@ -118,12 +122,42 @@ export function readCatalog(rootDir: string, warn: (msg: string) => void): Eleme
     elements[elementType] = { elementType, className, dirPath: path.dirname(file), deprecatedAliases: [] };
   }
 
+  // Устаревшие типы из constants: карта замен и список без замены (нет — не ошибка)
+  const constants = project.getSourceFileOrThrow(constantsPath);
+  const replacedBy: Record<string, string> = {};
+  const legacyInit = constants.getVariableDeclaration(PATHS.legacyTypesMap)?.getInitializer();
+  if (legacyInit?.isKind(SyntaxKind.ObjectLiteralExpression)) {
+    for (const prop of legacyInit.getProperties()) {
+      if (!prop.isKind(SyntaxKind.PropertyAssignment)) continue;
+      const from = enumValues[memberNameOfKey(prop.getNameNode().getText())];
+      const init = prop.getInitializer();
+      const to = init?.isKind(SyntaxKind.PropertyAccessExpression) ? enumValues[init.getName()] : undefined;
+      if (from && to) {
+        replacedBy[from] = to;
+        aliases.push({ alias: from, target: to });
+      }
+    }
+  } else {
+    warn(`[WARN] ${PATHS.legacyTypesMap} не найден в ${constantsPath}`);
+  }
+  const deprecated = new Set(Object.keys(replacedBy));
+  const listInit = constants.getVariableDeclaration(PATHS.deprecatedTypesList)?.getInitializer();
+  if (listInit?.isKind(SyntaxKind.ArrayLiteralExpression)) {
+    for (const el of listInit.getElements()) {
+      const value = el.isKind(SyntaxKind.PropertyAccessExpression) ? enumValues[el.getName()] : undefined;
+      if (value) deprecated.add(value);
+    }
+  } else {
+    warn(`[WARN] ${PATHS.deprecatedTypesList} не найден в ${constantsPath}`);
+  }
+
   for (const { alias, target } of aliases) {
-    elements[target]?.deprecatedAliases.push(alias);
+    const list = elements[target]?.deprecatedAliases;
+    if (list && !list.includes(alias)) list.push(alias);
   }
   for (const e of Object.values(elements)) e.deprecatedAliases.sort();
 
-  return { elements, enumValues };
+  return { elements, enumValues, replacedBy, deprecated };
 }
 
 // ─── Программа типов ─────────────────────────────────────────────────────────

@@ -12,8 +12,9 @@
  * 2 — общая часть в shared/base-element.schema.json (генерируется из кода): элемент
  *     подключает её через allOf + $ref, в properties — только свои props, дефолты общих
  *     props элемента — x-base-defaults; общие события — x-events базы (из BaseElement.on*).
- *     Дополнение без смены версии (схемы элементов не меняются): секция `components` бандла
- *     и каталог src/components — схемы компонентов (ComponentSchema, x-entity: component).
+ *     Дополнения без смены версии (новые необязательные ключи): секция `components` бандла
+ *     и каталог src/components — схемы компонентов (ComponentSchema, x-entity: component);
+ *     x-deprecated / x-replaced-by у устаревших элементов (из constants).
  */
 
 export const FORMAT_VERSION = 2;
@@ -87,6 +88,10 @@ export interface ElementSchema {
   'x-element-type': string;
   'x-category': Category;
   'x-deprecated-aliases': string[];
+  /** Тип устарел (LegacyElementsTypesMap / DeprecatedElementsTypes в constants). */
+  'x-deprecated'?: true;
+  /** Актуальный тип вместо устаревшего (LegacyElementsTypesMap). */
+  'x-replaced-by'?: string;
   'x-container'?: ContainerInfo;
   /** Общая часть: [{ $ref: '../shared/base-element.schema.json#' }]. */
   allOf: Array<{ $ref: string }>;
@@ -206,6 +211,8 @@ const ELEMENT_KEY_ORDER = [
   'x-entity',
   'x-category',
   'x-deprecated-aliases',
+  'x-deprecated',
+  'x-replaced-by',
   'x-container',
   'allOf',
   'properties',

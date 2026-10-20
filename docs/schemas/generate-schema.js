@@ -39,6 +39,10 @@ var PATHS = {
   elementsMapVariable: "ElementsMap",
   constants: "packages/constants/src/index.ts",
   elementsTypesEnum: "ElementsTypes",
+  /** В constants: карта «устаревший тип → актуальный» ({ [ElementsTypes.A]: ElementsTypes.B }). */
+  legacyTypesMap: "LegacyElementsTypesMap",
+  /** В constants: устаревшие типы без замены ([ElementsTypes.A, …]). */
+  deprecatedTypesList: "DeprecatedElementsTypes",
   libPackage: "packages/lib",
   schemasPackage: "packages/element-schemas",
   /** Относительно schemasPackage. */
@@ -447,11 +451,39 @@ function readCatalog(rootDir, warn) {
     }
     elements[elementType] = { elementType, className, dirPath: path.dirname(file), deprecatedAliases: [] };
   }
+  const constants = project.getSourceFileOrThrow(constantsPath);
+  const replacedBy = {};
+  const legacyInit = constants.getVariableDeclaration(PATHS.legacyTypesMap)?.getInitializer();
+  if (legacyInit?.isKind(import_ts_morph2.SyntaxKind.ObjectLiteralExpression)) {
+    for (const prop of legacyInit.getProperties()) {
+      if (!prop.isKind(import_ts_morph2.SyntaxKind.PropertyAssignment)) continue;
+      const from = enumValues[memberNameOfKey(prop.getNameNode().getText())];
+      const init = prop.getInitializer();
+      const to = init?.isKind(import_ts_morph2.SyntaxKind.PropertyAccessExpression) ? enumValues[init.getName()] : void 0;
+      if (from && to) {
+        replacedBy[from] = to;
+        aliases.push({ alias: from, target: to });
+      }
+    }
+  } else {
+    warn(`[WARN] ${PATHS.legacyTypesMap} \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0432 ${constantsPath}`);
+  }
+  const deprecated = new Set(Object.keys(replacedBy));
+  const listInit = constants.getVariableDeclaration(PATHS.deprecatedTypesList)?.getInitializer();
+  if (listInit?.isKind(import_ts_morph2.SyntaxKind.ArrayLiteralExpression)) {
+    for (const el of listInit.getElements()) {
+      const value = el.isKind(import_ts_morph2.SyntaxKind.PropertyAccessExpression) ? enumValues[el.getName()] : void 0;
+      if (value) deprecated.add(value);
+    }
+  } else {
+    warn(`[WARN] ${PATHS.deprecatedTypesList} \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0432 ${constantsPath}`);
+  }
   for (const { alias, target } of aliases) {
-    elements[target]?.deprecatedAliases.push(alias);
+    const list = elements[target]?.deprecatedAliases;
+    if (list && !list.includes(alias)) list.push(alias);
   }
   for (const e of Object.values(elements)) e.deprecatedAliases.sort();
-  return { elements, enumValues };
+  return { elements, enumValues, replacedBy, deprecated };
 }
 function createProgram(rootDir) {
   const libPath = path.resolve(rootDir, PATHS.libPackage);
@@ -705,6 +737,8 @@ var ELEMENT_KEY_ORDER = [
   "x-entity",
   "x-category",
   "x-deprecated-aliases",
+  "x-deprecated",
+  "x-replaced-by",
   "x-container",
   "allOf",
   "properties",
@@ -963,6 +997,9 @@ function buildElementSchema(input, diag) {
     "x-events": {},
     "x-methods": readMethods(cls)
   };
+  if (catalog.deprecated.has(elementType)) schema["x-deprecated"] = true;
+  const replacement = catalog.replacedBy[elementType];
+  if (replacement) schema["x-replaced-by"] = replacement;
   if (isContainer(cls)) {
     schema["x-container"] = { allowedChildren: readAllowedChildren(cls, catalog.enumValues, diag) };
   }
@@ -1172,8 +1209,7 @@ function elementPropsSources(project, catalog) {
       declNodes
     });
   }
-  const legacy = new Set(Object.keys(CLI_NAME_ALIASES).map((k) => k.toLowerCase().replace(/_/g, "-")));
-  const rank = (s) => legacy.has(s.elementType) ? 1 : 0;
+  const rank = (s) => catalog.deprecated.has(s.elementType) ? 1 : 0;
   return sources.sort(
     (a, b) => b.declNodes.size - a.declNodes.size || rank(a) - rank(b) || a.elementType.localeCompare(b.elementType)
   );
@@ -1400,6 +1436,8 @@ var EXTENSION_KEYWORDS = [
   "x-composition",
   "x-slots",
   "x-deprecated-aliases",
+  "x-deprecated",
+  "x-replaced-by",
   "x-container",
   "x-base-defaults",
   "x-events",

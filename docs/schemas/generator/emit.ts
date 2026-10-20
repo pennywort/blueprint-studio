@@ -240,6 +240,9 @@ export function buildElementSchema(input: BuildInput, diag: Diagnostics): Elemen
     'x-events': {},
     'x-methods': readMethods(cls),
   };
+  if (catalog.deprecated.has(elementType)) schema['x-deprecated'] = true;
+  const replacement = catalog.replacedBy[elementType];
+  if (replacement) schema['x-replaced-by'] = replacement;
   if (isContainer(cls)) {
     schema['x-container'] = { allowedChildren: readAllowedChildren(cls, catalog.enumValues, diag) };
   }

@@ -3,7 +3,7 @@ import type { IClock } from '@application/ports/clock';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import { BlueprintIdSchema, type BlueprintId } from '@domain/model/ids';
 import { toGraphRecord } from './graph-record-migration';
-import { parseServiceGraph } from './graph-record-parse';
+import { parseServiceGraph, type LegacyKinds } from './graph-record-parse';
 
 // Адаптер IGraphRepository поверх IndexedDB (T-053): одна object store,
 // ключ — id карты. Запись хранит номер версии формата; при чтении старые
@@ -35,9 +35,11 @@ function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
 export class IndexedDbGraphRepository implements IGraphRepository {
   private database: Promise<IDBDatabase> | null = null;
   private readonly clock: IClock;
+  private readonly legacyKinds: LegacyKinds;
 
-  constructor({ clock }: { clock: IClock }) {
+  constructor({ clock, legacyKinds }: { clock: IClock; legacyKinds: LegacyKinds }) {
     this.clock = clock;
+    this.legacyKinds = legacyKinds;
   }
 
   private open(): Promise<IDBDatabase> {
@@ -62,7 +64,7 @@ export class IndexedDbGraphRepository implements IGraphRepository {
     const raw: unknown = await requestToPromise(
       database.transaction(STORE, 'readonly').objectStore(STORE).get(blueprintId),
     );
-    return raw === undefined ? null : parseServiceGraph(raw);
+    return raw === undefined ? null : parseServiceGraph(raw, this.legacyKinds);
   }
 
   async save(graph: ServiceGraph): Promise<void> {

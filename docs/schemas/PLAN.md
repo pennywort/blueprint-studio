@@ -83,7 +83,7 @@ properties/$ref/default/description`), обязательные `x-*`. Всё п
 
 - Решения владельца: элемент карты = `kind` (имя во фреймворке) + `props` по JSON-схеме, zod — только
   структура карты; компоненты (CI picker, поиск сотрудника, адрес, логин) и комментарий — схемы проекта;
-  datePeriod → `date-range-field-picker`, infoBlock → `message-strip`, Select list → `select` /
+  datePeriod → `date-range-field-picker`, infoBlock → `alert` (message-strip устарел во фреймворке [owner 2026-10-20]), Select list → `select` /
   `radio-group` (displayType radio).
 - Схемы фреймворка: `npm run schemas:import -- [бандл | папка пакета]` → копия
   `src/infrastructure/element-schemas/framework/schemas-bundle.json` (без отчёта). Переход на npm-пакет

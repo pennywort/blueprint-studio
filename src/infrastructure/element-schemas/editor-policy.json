@@ -69,8 +69,8 @@
       ]
     },
     {
-      "kind": "message-strip",
-      "label": "Message strip",
+      "kind": "alert",
+      "label": "Alert",
       "category": "Форма",
       "description": "Информационное сообщение",
       "card": { "title": "label" },

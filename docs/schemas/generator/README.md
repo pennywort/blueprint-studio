@@ -39,6 +39,13 @@ ajv необязателен: `npm i -D -E ajv@8.17.1` в пакете схем 
 - `src/shared/icon.schema.json` — список иконок;
 - `src/index.json` — манифест.
 
+## Устаревшие элементы
+
+Из constants: `LegacyElementsTypesMap` (устаревший → актуальный) и `DeprecatedElementsTypes` (без замены).
+Устаревший элемент остаётся в бандле (старые карты на него ссылаются) с `x-deprecated: true` и, если есть
+замена, `x-replaced-by`; актуальный получает его в `x-deprecated-aliases`. Редактор: устаревший элемент в
+политике — ошибка `schemas:check`, старые kind в картах при загрузке заменяются по `x-replaced-by`.
+
 ## Как находятся компоненты
 
 Без путей и имён файлов: во всей программе lib ищутся вызовы `ComponentFactoryImpl` (по символу,
