@@ -23,7 +23,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 -->
 
 > **SCHEMA_VERSION:** 2
-> **UPDATED:** 2026-10-19
+> **UPDATED:** 2026-10-20
 > **CURRENT_EPIC:** 002 (Canvas, in-progress)
 
 ---
@@ -106,7 +106,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - [T-004] ESLint flat + boundaries (4 слоя), Prettier, Husky, commitlint, lint-staged
 - [T-005] Доменная модель: Zod-схемы 12 form-компонентов (discriminated union по kind), ServiceGraph, Scenario/SubScenario, FormStep/ApplicationForm (FormStepSchema содержит components), branded IDs. Константы: ATTACHMENT_MAX_FILE_BYTES=3MB, ATTACHMENT_MAX_TOTAL_BYTES=50MB, RADIO_MAX_OPTIONS=5
 - [T-006] Инварианты #1, #2 реализованы; #3–5 реализованы (routing-excludes-dynamic-content.ts, 6 тестов, покрывает правила 3/4/5)
-- Инвариант scenario-type-fields (spec.md 5.3): реализован, 8 тестов; в таблицу §5 (ТЗ-правила 1-8) не входит
+- Инвариант scenario-type-fields (spec.md 5.3) УДАЛЁН в R-SCH-7 [a2bcac3]: поля типа сценария убраны из модели
 - [T-007] Порты IElementSchemaProvider/IIdGenerator/IClock + адаптер ManifestSchemaProvider (JSON-манифест 12 записей, валидация Zod при старте, SchemaNotFoundError), UuidIdGenerator, SystemClock
 - [T-008] Command Bus: command.ts + command-bus.ts (execute/undo/redo через produceWithPatches + enablePatches) + add-form-component.ts + errors.ts; 12 тестов [коммит af8ba3e]
 - [T-009] DI Container: infrastructure/container.ts (Awilix PROXY, strict, Cradle: idGenerator/clock/elementSchemaProvider/commandBus; манифест через .inject), buildContainer() подключён в bootstrap.tsx; 3 теста [коммит af8ba3e]
@@ -156,6 +156,11 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - Принципы [owner 2026-10-16]: обратимость решений (policy as data) и Open/Closed + Strategy — AGENTS.md §4a; промпт аудита выноса правил в конфиг — docs/refactoring/A-CFG-config-audit.md [коммиты cbfcf09, fce6aae]
 - Генератор схем элементов фреймворка готов (этапы 0–2 docs/schemas/PLAN.md): мета-схема формата, x-format-version, общая база в shared через $ref; результат docs/schemas/results/schemas-bundle.json (132 элемента) [owner 2026-10-19; коммиты a8d3c90, 66ac82b, af62b63]
 - Этап 3 docs/schemas/PLAN.md — потребление схем: элемент = kind фреймворка + props по JSON-схеме; политика редактора editor-policy.json (только сужает схему), схемы проекта для компонентов и комментария, npm run schemas:import/check, миграция карт v4→v5 [owner 2026-10-19; коммит 76da757]
+- [R-ARC-1/R-ARC-2] Undo-история сбрасывается при открытии редактора [1a0c123]; инварианты проверяет CommandBus один раз для любой команды (validateGraph внутри produceWithPatches, из 26 команд проверка убрана); отклоняется только команда, добавившая НОВОЕ нарушение — уже невалидный граф не блокируется [151ef5c, 4f75c4e]
+- [R-CFG-2] Матрица связей domain/connection-matrix.ts — единственный источник «кто, откуда и куда может строить связи» (охват источника, блок-цель напротив элемента-источника, логика на страницах флагом таблицы) [6393a49, 2fe0841, 0634b79]
+- [R-SCH-7] Переход между страницами — только стрелки: тип/поля сценария (scenario-type-fields) удалены из модели, формат записи карты v4 (миграция graph-record-migration) [a2bcac3]
+- [эпик 002, этап 3 схем] Панель атрибутов показывает только атрибуты схемы и политики редактора; прежние ручные поля убраны (attributes-panel, use-selection) [5ab897f]
+- Инструменты агентов: команда /architecture-review, скилл react-flow-advanced-best-practices [50ceb5f, caaa9ac]
 
 ### 4.2 NOT DONE (пробелы)
 
@@ -203,7 +208,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - ✅ Повторная приёмка [owner 2026-10-13, исправлено agent:claude]: N6 — Maximum update depth при выделении элемента после узла и при переходе из поиска (выделение узла теперь только onNodeClick, select-изменения react-flow игнорируются); клик по коннектору/кнопке узла не выделяет элемент/узел (canvas-events.ts); перенос формы «на место» больше не уводит её на следующий уровень с разрывом связей (ширина колонки — measured)
 - ✅ [owner 2026-10-13, agent:claude]: баг 1 — принимающие handles только во время протягивания (ADR-14), связь кликом рисует стрелку за курсором; блок без связей не прыгает на уровень 0 (ADR-15); перекликивание элемент/блок — выделение по нажатию, ложный onPaneClick от drag react-flow отсечён, перерисовываются только изменившиеся узлы. Стиль handles/рёбер — позже, косметика
 - ✅ RESOLVED [S13, owner 2026-10-13]: T-042 — сложные редакторы (иконка, ссылка по платформам, FAQ CSV) сейчас не нужны: наполнение элементов — позже, сейчас stub-схемы с минимальными данными; FAQ — один из элементов, атрибуты возьмутся из схемы. Панель атрибутов List item/Widget card сделана (T-041, коммит 6926e8c)
-- ❓ NEW [S13, agent:claude 2026-10-13]: T-043 — все команды жёстко отклоняют нарушения, поэтому подсветка видна только у графов извне (T-053). Нужно решение владельца
+- ❓ NEW [S13, agent:claude 2026-10-13]: T-043 — команды отклоняют нарушения (теперь в CommandBus, R-ARC-2, только НОВЫЕ нарушения), подсветка видна у графов извне (T-053). Нужно решение владельца
 - ❓ NEW [owner 2026-10-13]: варианты Select отдельными карточками (ADR-16) покажут заказчику — вид «оторванных» от Select вариантов может измениться (TEMPORARY, nodes/option-card.tsx)
 - ❓ NEW [owner 2026-10-13]: несколько правил на одну цель в форме отключены (L-I7, TEMPORARY) до уточнения; на канвасе страниц множественные связи разрешены
 - ✅ RESOLVED [R4 A13, owner 2026-10-14: код удалён, не просто выключен]: сжатие элементов узлов/шагов (T-033) временно выключено (ELEMENTS_COLLAPSE_ENABLED = false) до уточнения с заказчиком; код сохранён
@@ -303,3 +308,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-10-19 | agent:claude | генератор схем готов (этапы 0–2), следующий шаг — этап 3, потребление схем
 - 2026-10-19 | agent:claude | этап 3 потребления схем выполнен, stub — бандл генератора
 - 2026-10-19 | agent:claude | бэклог остатка этапа 3 схем записан в docs/schemas/PLAN.md, пункт в §7
+- 2026-10-20 | agent:claude | сверка коммитов: R-ARC-1/2 (инварианты в CommandBus), connection-matrix, R-SCH-7 (формат v4), панель атрибутов по схемам
