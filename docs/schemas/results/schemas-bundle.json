@@ -13794,6 +13794,7 @@
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "onSelectValue": {
           "parameters": {
@@ -13989,260 +13990,19 @@
       "x-element-type": "ac-autocomplete-birthday",
       "x-entity": "component",
       "x-category": "basic",
+      "allOf": [
+        {
+          "$ref": "../schemas/date-field.schema.json#"
+        }
+      ],
       "properties": {
-        "visible": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "boolean"
-        },
-        "required": {
-          "x-declared-in": "DatePickerProps",
-          "type": "boolean"
-        },
-        "id": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string"
-        },
-        "label": {
-          "x-declared-in": "DatePickerProps",
-          "type": "string"
-        },
-        "value": {
-          "x-declared-in": "DatePickerProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "string",
-              "format": "date-time"
-            }
-          ]
-        },
-        "placeholder": {
-          "x-declared-in": "DatePickerProps",
-          "type": "string"
-        },
-        "disabled": {
-          "x-declared-in": "DatePickerProps",
-          "type": "boolean"
-        },
-        "error": {
-          "x-declared-in": "DatePickerProps",
-          "type": "string"
-        },
-        "size": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string",
-          "enum": ["small", "medium", "large"]
-        },
-        "disableSpacing": {
-          "x-declared-in": "FormFieldProps",
-          "type": "boolean"
-        },
-        "subjectClass": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string"
-        },
-        "cursor": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["default", "pointer"]
-        },
-        "gravity": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["left", "right", "center"]
-        },
-        "margin": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["none", "normal"]
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            }
-          ]
-        },
-        "width": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["match_parent", "wrap_content"]
-            },
-            {
-              "type": "number"
-            }
-          ]
-        },
-        "flex": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string"
-                },
-                "sm": {
-                  "type": "string"
-                },
-                "md": {
-                  "type": "string"
-                },
-                "lg": {
-                  "type": "string"
-                },
-                "xl": {
-                  "type": "string"
-                }
-              }
-            }
-          ]
-        },
-        "alignSelf": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                }
-              }
-            }
-          ]
-        },
-        "overflow": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "visible", "hidden", "scroll"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                }
-              }
-            }
-          ]
-        },
-        "minHeight": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": ["string", "number"]
-                },
-                "sm": {
-                  "type": ["string", "number"]
-                },
-                "md": {
-                  "type": ["string", "number"]
-                },
-                "lg": {
-                  "type": ["string", "number"]
-                },
-                "xl": {
-                  "type": ["string", "number"]
-                }
-              }
-            }
-          ]
-        },
-        "mode": {
-          "x-declared-in": "DatePickerProps",
-          "type": "string",
-          "enum": ["date", "time", "datetime"]
-        },
-        "minDate": {
-          "x-declared-in": "DatePickerProps",
-          "type": ["string", "null"],
-          "format": "date-time"
-        },
-        "maxDate": {
-          "x-declared-in": "DatePickerProps",
-          "type": ["string", "null"],
-          "format": "date-time"
-        },
-        "disabledDates": {
-          "x-declared-in": "DatePickerProps",
-          "type": "array",
-          "items": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "disabledKeyboard": {
-          "x-declared-in": "DatePickerProps",
-          "type": "boolean"
-        },
         "tabNo": {
           "x-declared-in": "AutocompleteComponentProps",
           "type": "string"
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "onChange": {
           "parameters": {
@@ -14283,271 +14043,19 @@
       "x-element-type": "ac-autocomplete-boss-email",
       "x-entity": "component",
       "x-category": "basic",
+      "allOf": [
+        {
+          "$ref": "../schemas/select.schema.json#"
+        }
+      ],
       "properties": {
-        "visible": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "boolean"
-        },
-        "required": {
-          "x-declared-in": "SelectProps",
-          "type": "boolean"
-        },
-        "id": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string"
-        },
-        "label": {
-          "x-declared-in": "SelectProps",
-          "type": "string"
-        },
-        "value": {
-          "x-declared-in": "SelectProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ]
-        },
-        "options": {
-          "x-declared-in": "SelectProps",
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "label": {
-                "type": "string"
-              }
-            },
-            "required": ["id", "label"]
-          }
-        },
-        "placeholder": {
-          "x-declared-in": "SelectProps",
-          "type": "string"
-        },
-        "disabled": {
-          "x-declared-in": "SelectProps",
-          "type": "boolean"
-        },
-        "error": {
-          "x-declared-in": "SelectProps",
-          "type": "string"
-        },
-        "loading": {
-          "x-declared-in": "SelectProps",
-          "type": "boolean"
-        },
-        "helperText": {
-          "x-declared-in": "SelectProps",
-          "type": "string"
-        },
-        "readOnly": {
-          "x-declared-in": "SelectProps",
-          "type": "boolean"
-        },
-        "size": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string",
-          "enum": ["small", "medium", "large"]
-        },
-        "disableSpacing": {
-          "x-declared-in": "FormFieldProps",
-          "type": "boolean"
-        },
-        "subjectClass": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string"
-        },
-        "cursor": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["default", "pointer"]
-        },
-        "gravity": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["left", "right", "center"]
-        },
-        "margin": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["none", "normal"]
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            }
-          ]
-        },
-        "width": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["match_parent", "wrap_content"]
-            },
-            {
-              "type": "number"
-            }
-          ]
-        },
-        "flex": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string"
-                },
-                "sm": {
-                  "type": "string"
-                },
-                "md": {
-                  "type": "string"
-                },
-                "lg": {
-                  "type": "string"
-                },
-                "xl": {
-                  "type": "string"
-                }
-              }
-            }
-          ]
-        },
-        "alignSelf": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                }
-              }
-            }
-          ]
-        },
-        "overflow": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "visible", "hidden", "scroll"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                }
-              }
-            }
-          ]
-        },
-        "minHeight": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": ["string", "number"]
-                },
-                "sm": {
-                  "type": ["string", "number"]
-                },
-                "md": {
-                  "type": ["string", "number"]
-                },
-                "lg": {
-                  "type": ["string", "number"]
-                },
-                "xl": {
-                  "type": ["string", "number"]
-                }
-              }
-            }
-          ]
-        },
-        "multiselect": {
-          "x-declared-in": "SelectProps",
-          "type": "boolean"
-        },
-        "optionsWithCheckbox": {
-          "x-declared-in": "SelectProps",
-          "type": "boolean"
-        },
         "tabNo": {
           "x-declared-in": "AutocompleteComponentProps",
           "type": "string"
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "onChange": {
           "parameters": {
@@ -14599,426 +14107,19 @@
       "x-element-type": "ac-autocomplete-boss-name",
       "x-entity": "component",
       "x-category": "basic",
+      "allOf": [
+        {
+          "$ref": "../schemas/text.schema.json#"
+        }
+      ],
       "properties": {
-        "label": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "mask": {
-          "x-declared-in": "TextProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["none", "mobile", "inner_phone", "ip_address", "card_num"]
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object"
-              }
-            }
-          ]
-        },
-        "value": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "placeholder": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "required": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "disabled": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "multiline": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "multilineVertical": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "error": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "icon": {
-          "x-declared-in": "TextProps",
-          "$ref": "../shared/icon.schema.json#"
-        },
-        "tooltipTextIcon": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "rows": {
-          "x-declared-in": "TextProps",
-          "type": "number"
-        },
-        "rowsMax": {
-          "x-declared-in": "TextProps",
-          "type": "number"
-        },
-        "helperText": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "counter": {
-          "x-declared-in": "TextProps",
-          "type": "number"
-        },
-        "k2": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "loading": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "rightAction": {
-          "x-declared-in": "TextProps",
-          "anyOf": [
-            {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "const": "iconButton"
-                },
-                "id": {
-                  "type": "string"
-                },
-                "variant": {
-                  "type": "string"
-                },
-                "icon": {
-                  "$ref": "../shared/icon.schema.json#"
-                },
-                "disabled": {
-                  "type": "boolean"
-                },
-                "tooltip": {
-                  "type": ["object", "null"],
-                  "properties": {
-                    "label": {
-                      "type": "string"
-                    },
-                    "placement": {
-                      "type": "string",
-                      "enum": [
-                        "bottom-end",
-                        "bottom-start",
-                        "bottom",
-                        "left-end",
-                        "left-start",
-                        "left",
-                        "right-end",
-                        "right-start",
-                        "right",
-                        "top-end",
-                        "top-start",
-                        "top"
-                      ]
-                    }
-                  }
-                }
-              }
-            },
-            {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "const": "button"
-                },
-                "id": {
-                  "type": "string"
-                },
-                "label": {
-                  "type": "string"
-                },
-                "variant": {
-                  "type": "string",
-                  "enum": ["text", "contained"]
-                },
-                "color": {
-                  "type": "string",
-                  "enum": ["default", "primary"]
-                },
-                "tooltip": {
-                  "type": ["object", "null"],
-                  "properties": {
-                    "label": {
-                      "type": "string"
-                    },
-                    "placement": {
-                      "type": "string",
-                      "enum": [
-                        "bottom-end",
-                        "bottom-start",
-                        "bottom",
-                        "left-end",
-                        "left-start",
-                        "left",
-                        "right-end",
-                        "right-start",
-                        "right",
-                        "top-end",
-                        "top-start",
-                        "top"
-                      ]
-                    }
-                  }
-                },
-                "disabled": {
-                  "type": "boolean"
-                },
-                "noWrap": {
-                  "type": "boolean"
-                },
-                "loading": {
-                  "type": "boolean"
-                }
-              }
-            }
-          ]
-        },
-        "hasClearIconButton": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "tooltipClearIconButton": {
-          "x-declared-in": "TextProps",
-          "type": ["object", "null"],
-          "properties": {
-            "label": {
-              "type": "string"
-            },
-            "placement": {
-              "type": "string",
-              "enum": [
-                "bottom-end",
-                "bottom-start",
-                "bottom",
-                "left-end",
-                "left-start",
-                "left",
-                "right-end",
-                "right-start",
-                "right",
-                "top-end",
-                "top-start",
-                "top"
-              ]
-            }
-          }
-        },
-        "readOnly": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "disableEnterRightAction": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "size": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string",
-          "enum": ["small", "medium", "large"]
-        },
-        "disableSpacing": {
-          "x-declared-in": "FormFieldProps",
-          "type": "boolean"
-        },
-        "subjectClass": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string"
-        },
-        "id": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string"
-        },
-        "visible": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "boolean"
-        },
-        "cursor": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["default", "pointer"]
-        },
-        "gravity": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["left", "right", "center"]
-        },
-        "margin": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["none", "normal"]
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            }
-          ]
-        },
-        "width": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["match_parent", "wrap_content"]
-            },
-            {
-              "type": "number"
-            }
-          ]
-        },
-        "flex": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string"
-                },
-                "sm": {
-                  "type": "string"
-                },
-                "md": {
-                  "type": "string"
-                },
-                "lg": {
-                  "type": "string"
-                },
-                "xl": {
-                  "type": "string"
-                }
-              }
-            }
-          ]
-        },
-        "alignSelf": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                }
-              }
-            }
-          ]
-        },
-        "overflow": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "visible", "hidden", "scroll"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                }
-              }
-            }
-          ]
-        },
-        "minHeight": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": ["string", "number"]
-                },
-                "sm": {
-                  "type": ["string", "number"]
-                },
-                "md": {
-                  "type": ["string", "number"]
-                },
-                "lg": {
-                  "type": ["string", "number"]
-                },
-                "xl": {
-                  "type": ["string", "number"]
-                }
-              }
-            }
-          ]
-        },
         "tabNo": {
           "x-declared-in": "AutocompleteComponentProps",
           "type": "string"
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "onChange": {
           "parameters": {
@@ -15059,426 +14160,19 @@
       "x-element-type": "ac-autocomplete-ext-email",
       "x-entity": "component",
       "x-category": "basic",
+      "allOf": [
+        {
+          "$ref": "../schemas/text.schema.json#"
+        }
+      ],
       "properties": {
-        "visible": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "boolean"
-        },
-        "required": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "id": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string"
-        },
-        "label": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "value": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "placeholder": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "disabled": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "error": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "loading": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "helperText": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "readOnly": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "size": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string",
-          "enum": ["small", "medium", "large"]
-        },
-        "disableSpacing": {
-          "x-declared-in": "FormFieldProps",
-          "type": "boolean"
-        },
-        "subjectClass": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string"
-        },
-        "cursor": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["default", "pointer"]
-        },
-        "gravity": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["left", "right", "center"]
-        },
-        "margin": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["none", "normal"]
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            }
-          ]
-        },
-        "width": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["match_parent", "wrap_content"]
-            },
-            {
-              "type": "number"
-            }
-          ]
-        },
-        "flex": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string"
-                },
-                "sm": {
-                  "type": "string"
-                },
-                "md": {
-                  "type": "string"
-                },
-                "lg": {
-                  "type": "string"
-                },
-                "xl": {
-                  "type": "string"
-                }
-              }
-            }
-          ]
-        },
-        "alignSelf": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                }
-              }
-            }
-          ]
-        },
-        "overflow": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "visible", "hidden", "scroll"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                }
-              }
-            }
-          ]
-        },
-        "minHeight": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": ["string", "number"]
-                },
-                "sm": {
-                  "type": ["string", "number"]
-                },
-                "md": {
-                  "type": ["string", "number"]
-                },
-                "lg": {
-                  "type": ["string", "number"]
-                },
-                "xl": {
-                  "type": ["string", "number"]
-                }
-              }
-            }
-          ]
-        },
-        "icon": {
-          "x-declared-in": "TextProps",
-          "$ref": "../shared/icon.schema.json#"
-        },
-        "mask": {
-          "x-declared-in": "TextProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["none", "mobile", "inner_phone", "ip_address", "card_num"]
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object"
-              }
-            }
-          ]
-        },
-        "multiline": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "multilineVertical": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "tooltipTextIcon": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "rows": {
-          "x-declared-in": "TextProps",
-          "type": "number"
-        },
-        "rowsMax": {
-          "x-declared-in": "TextProps",
-          "type": "number"
-        },
-        "counter": {
-          "x-declared-in": "TextProps",
-          "type": "number"
-        },
-        "k2": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "rightAction": {
-          "x-declared-in": "TextProps",
-          "anyOf": [
-            {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "const": "iconButton"
-                },
-                "id": {
-                  "type": "string"
-                },
-                "variant": {
-                  "type": "string"
-                },
-                "icon": {
-                  "$ref": "../shared/icon.schema.json#"
-                },
-                "disabled": {
-                  "type": "boolean"
-                },
-                "tooltip": {
-                  "type": ["object", "null"],
-                  "properties": {
-                    "label": {
-                      "type": "string"
-                    },
-                    "placement": {
-                      "type": "string",
-                      "enum": [
-                        "bottom-end",
-                        "bottom-start",
-                        "bottom",
-                        "left-end",
-                        "left-start",
-                        "left",
-                        "right-end",
-                        "right-start",
-                        "right",
-                        "top-end",
-                        "top-start",
-                        "top"
-                      ]
-                    }
-                  }
-                }
-              }
-            },
-            {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "const": "button"
-                },
-                "id": {
-                  "type": "string"
-                },
-                "label": {
-                  "type": "string"
-                },
-                "variant": {
-                  "type": "string",
-                  "enum": ["text", "contained"]
-                },
-                "color": {
-                  "type": "string",
-                  "enum": ["default", "primary"]
-                },
-                "tooltip": {
-                  "type": ["object", "null"],
-                  "properties": {
-                    "label": {
-                      "type": "string"
-                    },
-                    "placement": {
-                      "type": "string",
-                      "enum": [
-                        "bottom-end",
-                        "bottom-start",
-                        "bottom",
-                        "left-end",
-                        "left-start",
-                        "left",
-                        "right-end",
-                        "right-start",
-                        "right",
-                        "top-end",
-                        "top-start",
-                        "top"
-                      ]
-                    }
-                  }
-                },
-                "disabled": {
-                  "type": "boolean"
-                },
-                "noWrap": {
-                  "type": "boolean"
-                },
-                "loading": {
-                  "type": "boolean"
-                }
-              }
-            }
-          ]
-        },
-        "hasClearIconButton": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "tooltipClearIconButton": {
-          "x-declared-in": "TextProps",
-          "type": ["object", "null"],
-          "properties": {
-            "label": {
-              "type": "string"
-            },
-            "placement": {
-              "type": "string",
-              "enum": [
-                "bottom-end",
-                "bottom-start",
-                "bottom",
-                "left-end",
-                "left-start",
-                "left",
-                "right-end",
-                "right-start",
-                "right",
-                "top-end",
-                "top-start",
-                "top"
-              ]
-            }
-          }
-        },
-        "disableEnterRightAction": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
         "tabNo": {
           "x-declared-in": "AutocompleteComponentProps",
           "type": "string"
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "onChange": {
           "parameters": {
@@ -15519,426 +14213,19 @@
       "x-element-type": "ac-autocomplete-inner-email",
       "x-entity": "component",
       "x-category": "basic",
+      "allOf": [
+        {
+          "$ref": "../schemas/text.schema.json#"
+        }
+      ],
       "properties": {
-        "visible": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "boolean"
-        },
-        "required": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "id": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string"
-        },
-        "label": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "value": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "placeholder": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "disabled": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "error": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "loading": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "helperText": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "readOnly": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "size": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string",
-          "enum": ["small", "medium", "large"]
-        },
-        "disableSpacing": {
-          "x-declared-in": "FormFieldProps",
-          "type": "boolean"
-        },
-        "subjectClass": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string"
-        },
-        "cursor": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["default", "pointer"]
-        },
-        "gravity": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["left", "right", "center"]
-        },
-        "margin": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["none", "normal"]
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            }
-          ]
-        },
-        "width": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["match_parent", "wrap_content"]
-            },
-            {
-              "type": "number"
-            }
-          ]
-        },
-        "flex": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string"
-                },
-                "sm": {
-                  "type": "string"
-                },
-                "md": {
-                  "type": "string"
-                },
-                "lg": {
-                  "type": "string"
-                },
-                "xl": {
-                  "type": "string"
-                }
-              }
-            }
-          ]
-        },
-        "alignSelf": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                }
-              }
-            }
-          ]
-        },
-        "overflow": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "visible", "hidden", "scroll"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                }
-              }
-            }
-          ]
-        },
-        "minHeight": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": ["string", "number"]
-                },
-                "sm": {
-                  "type": ["string", "number"]
-                },
-                "md": {
-                  "type": ["string", "number"]
-                },
-                "lg": {
-                  "type": ["string", "number"]
-                },
-                "xl": {
-                  "type": ["string", "number"]
-                }
-              }
-            }
-          ]
-        },
-        "icon": {
-          "x-declared-in": "TextProps",
-          "$ref": "../shared/icon.schema.json#"
-        },
-        "mask": {
-          "x-declared-in": "TextProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["none", "mobile", "inner_phone", "ip_address", "card_num"]
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object"
-              }
-            }
-          ]
-        },
-        "multiline": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "multilineVertical": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "tooltipTextIcon": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "rows": {
-          "x-declared-in": "TextProps",
-          "type": "number"
-        },
-        "rowsMax": {
-          "x-declared-in": "TextProps",
-          "type": "number"
-        },
-        "counter": {
-          "x-declared-in": "TextProps",
-          "type": "number"
-        },
-        "k2": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "rightAction": {
-          "x-declared-in": "TextProps",
-          "anyOf": [
-            {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "const": "iconButton"
-                },
-                "id": {
-                  "type": "string"
-                },
-                "variant": {
-                  "type": "string"
-                },
-                "icon": {
-                  "$ref": "../shared/icon.schema.json#"
-                },
-                "disabled": {
-                  "type": "boolean"
-                },
-                "tooltip": {
-                  "type": ["object", "null"],
-                  "properties": {
-                    "label": {
-                      "type": "string"
-                    },
-                    "placement": {
-                      "type": "string",
-                      "enum": [
-                        "bottom-end",
-                        "bottom-start",
-                        "bottom",
-                        "left-end",
-                        "left-start",
-                        "left",
-                        "right-end",
-                        "right-start",
-                        "right",
-                        "top-end",
-                        "top-start",
-                        "top"
-                      ]
-                    }
-                  }
-                }
-              }
-            },
-            {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "const": "button"
-                },
-                "id": {
-                  "type": "string"
-                },
-                "label": {
-                  "type": "string"
-                },
-                "variant": {
-                  "type": "string",
-                  "enum": ["text", "contained"]
-                },
-                "color": {
-                  "type": "string",
-                  "enum": ["default", "primary"]
-                },
-                "tooltip": {
-                  "type": ["object", "null"],
-                  "properties": {
-                    "label": {
-                      "type": "string"
-                    },
-                    "placement": {
-                      "type": "string",
-                      "enum": [
-                        "bottom-end",
-                        "bottom-start",
-                        "bottom",
-                        "left-end",
-                        "left-start",
-                        "left",
-                        "right-end",
-                        "right-start",
-                        "right",
-                        "top-end",
-                        "top-start",
-                        "top"
-                      ]
-                    }
-                  }
-                },
-                "disabled": {
-                  "type": "boolean"
-                },
-                "noWrap": {
-                  "type": "boolean"
-                },
-                "loading": {
-                  "type": "boolean"
-                }
-              }
-            }
-          ]
-        },
-        "hasClearIconButton": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "tooltipClearIconButton": {
-          "x-declared-in": "TextProps",
-          "type": ["object", "null"],
-          "properties": {
-            "label": {
-              "type": "string"
-            },
-            "placement": {
-              "type": "string",
-              "enum": [
-                "bottom-end",
-                "bottom-start",
-                "bottom",
-                "left-end",
-                "left-start",
-                "left",
-                "right-end",
-                "right-start",
-                "right",
-                "top-end",
-                "top-start",
-                "top"
-              ]
-            }
-          }
-        },
-        "disableEnterRightAction": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
         "tabNo": {
           "x-declared-in": "AutocompleteComponentProps",
           "type": "string"
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "onChange": {
           "parameters": {
@@ -15979,6 +14266,11 @@
       "x-element-type": "ac-autocomplete-login-sudir",
       "x-entity": "component",
       "x-category": "basic",
+      "allOf": [
+        {
+          "$ref": "../schemas/autocomplete.schema.json#"
+        }
+      ],
       "properties": {
         "tooltip": {
           "x-declared-in": "LoginSUDIRComponentProps",
@@ -16006,335 +14298,13 @@
             }
           },
           "required": ["label", "placement"]
-        },
-        "label": {
-          "x-declared-in": "SuggestProps",
-          "type": "string",
-          "default": "Логин"
-        },
-        "placeholder": {
-          "x-declared-in": "SuggestProps",
-          "type": "string"
-        },
-        "required": {
-          "x-declared-in": "SuggestProps",
-          "type": "boolean"
-        },
-        "disabled": {
-          "x-declared-in": "SuggestProps",
-          "type": "boolean"
-        },
-        "error": {
-          "x-declared-in": "SuggestProps",
-          "type": "string"
-        },
-        "options": {
-          "x-declared-in": "SuggestProps",
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "label": {
-                "type": "string"
-              }
-            },
-            "required": ["id", "label"]
-          }
-        },
-        "selectedItem": {
-          "x-declared-in": "SuggestProps",
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string"
-            },
-            "label": {
-              "type": "string"
-            }
-          },
-          "required": ["id", "label"]
-        },
-        "selectedItems": {
-          "x-declared-in": "SuggestProps",
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "label": {
-                "type": "string"
-              }
-            },
-            "required": ["id", "label"]
-          }
-        },
-        "selectedValue": {
-          "x-declared-in": "SuggestProps",
-          "anyOf": [
-            {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "label": {
-                  "type": "string"
-                }
-              },
-              "required": ["id", "label"]
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "label": {
-                    "type": "string"
-                  }
-                },
-                "required": ["id", "label"]
-              }
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "multiple": {
-          "x-declared-in": "SuggestProps",
-          "type": "boolean"
-        },
-        "emptyResult": {
-          "x-declared-in": "SuggestProps",
-          "type": "string"
-        },
-        "value": {
-          "x-declared-in": "SuggestProps",
-          "type": "string",
-          "default": ""
-        },
-        "loading": {
-          "x-declared-in": "SuggestProps",
-          "type": "boolean"
-        },
-        "helperText": {
-          "x-declared-in": "SuggestProps",
-          "type": "string"
-        },
-        "disableCloseOnSelect": {
-          "x-declared-in": "SuggestProps",
-          "type": "boolean"
-        },
-        "optionType": {
-          "x-declared-in": "SuggestProps",
-          "type": "string"
-        },
-        "readOnly": {
-          "x-declared-in": "SuggestProps",
-          "type": "boolean"
-        },
-        "limitTags": {
-          "x-declared-in": "SuggestProps",
-          "type": "number"
-        },
-        "size": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string",
-          "enum": ["small", "medium", "large"]
-        },
-        "disableSpacing": {
-          "x-declared-in": "FormFieldProps",
-          "type": "boolean"
-        },
-        "subjectClass": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string"
-        },
-        "id": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string"
-        },
-        "visible": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "boolean"
-        },
-        "cursor": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["default", "pointer"]
-        },
-        "gravity": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["left", "right", "center"]
-        },
-        "margin": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["none", "normal"]
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            }
-          ]
-        },
-        "width": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["match_parent", "wrap_content"]
-            },
-            {
-              "type": "number"
-            }
-          ]
-        },
-        "flex": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string"
-                },
-                "sm": {
-                  "type": "string"
-                },
-                "md": {
-                  "type": "string"
-                },
-                "lg": {
-                  "type": "string"
-                },
-                "xl": {
-                  "type": "string"
-                }
-              }
-            }
-          ]
-        },
-        "alignSelf": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                }
-              }
-            }
-          ]
-        },
-        "overflow": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "visible", "hidden", "scroll"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                }
-              }
-            }
-          ]
-        },
-        "minHeight": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": ["string", "number"]
-                },
-                "sm": {
-                  "type": ["string", "number"]
-                },
-                "md": {
-                  "type": ["string", "number"]
-                },
-                "lg": {
-                  "type": ["string", "number"]
-                },
-                "xl": {
-                  "type": ["string", "number"]
-                }
-              }
-            }
-          ]
         }
       },
       "required": [],
+      "x-base-defaults": {
+        "label": "Логин",
+        "value": ""
+      },
       "x-events": {
         "change": {
           "parameters": {
@@ -16401,271 +14371,19 @@
       "x-element-type": "ac-autocomplete-main-email",
       "x-entity": "component",
       "x-category": "basic",
+      "allOf": [
+        {
+          "$ref": "../schemas/select.schema.json#"
+        }
+      ],
       "properties": {
-        "visible": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "boolean"
-        },
-        "required": {
-          "x-declared-in": "SelectProps",
-          "type": "boolean"
-        },
-        "id": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string"
-        },
-        "label": {
-          "x-declared-in": "SelectProps",
-          "type": "string"
-        },
-        "value": {
-          "x-declared-in": "SelectProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          ]
-        },
-        "options": {
-          "x-declared-in": "SelectProps",
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "label": {
-                "type": "string"
-              }
-            },
-            "required": ["id", "label"]
-          }
-        },
-        "placeholder": {
-          "x-declared-in": "SelectProps",
-          "type": "string"
-        },
-        "disabled": {
-          "x-declared-in": "SelectProps",
-          "type": "boolean"
-        },
-        "error": {
-          "x-declared-in": "SelectProps",
-          "type": "string"
-        },
-        "loading": {
-          "x-declared-in": "SelectProps",
-          "type": "boolean"
-        },
-        "helperText": {
-          "x-declared-in": "SelectProps",
-          "type": "string"
-        },
-        "readOnly": {
-          "x-declared-in": "SelectProps",
-          "type": "boolean"
-        },
-        "size": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string",
-          "enum": ["small", "medium", "large"]
-        },
-        "disableSpacing": {
-          "x-declared-in": "FormFieldProps",
-          "type": "boolean"
-        },
-        "subjectClass": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string"
-        },
-        "cursor": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["default", "pointer"]
-        },
-        "gravity": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["left", "right", "center"]
-        },
-        "margin": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["none", "normal"]
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            }
-          ]
-        },
-        "width": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["match_parent", "wrap_content"]
-            },
-            {
-              "type": "number"
-            }
-          ]
-        },
-        "flex": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string"
-                },
-                "sm": {
-                  "type": "string"
-                },
-                "md": {
-                  "type": "string"
-                },
-                "lg": {
-                  "type": "string"
-                },
-                "xl": {
-                  "type": "string"
-                }
-              }
-            }
-          ]
-        },
-        "alignSelf": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                }
-              }
-            }
-          ]
-        },
-        "overflow": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "visible", "hidden", "scroll"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                }
-              }
-            }
-          ]
-        },
-        "minHeight": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": ["string", "number"]
-                },
-                "sm": {
-                  "type": ["string", "number"]
-                },
-                "md": {
-                  "type": ["string", "number"]
-                },
-                "lg": {
-                  "type": ["string", "number"]
-                },
-                "xl": {
-                  "type": ["string", "number"]
-                }
-              }
-            }
-          ]
-        },
-        "multiselect": {
-          "x-declared-in": "SelectProps",
-          "type": "boolean"
-        },
-        "optionsWithCheckbox": {
-          "x-declared-in": "SelectProps",
-          "type": "boolean"
-        },
         "tabNo": {
           "x-declared-in": "AutocompleteComponentProps",
           "type": "string"
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "onChange": {
           "parameters": {
@@ -16717,426 +14435,19 @@
       "x-element-type": "ac-autocomplete-user-name",
       "x-entity": "component",
       "x-category": "basic",
+      "allOf": [
+        {
+          "$ref": "../schemas/text.schema.json#"
+        }
+      ],
       "properties": {
-        "label": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "mask": {
-          "x-declared-in": "TextProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["none", "mobile", "inner_phone", "ip_address", "card_num"]
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object"
-              }
-            }
-          ]
-        },
-        "value": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "placeholder": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "required": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "disabled": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "multiline": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "multilineVertical": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "error": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "icon": {
-          "x-declared-in": "TextProps",
-          "$ref": "../shared/icon.schema.json#"
-        },
-        "tooltipTextIcon": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "rows": {
-          "x-declared-in": "TextProps",
-          "type": "number"
-        },
-        "rowsMax": {
-          "x-declared-in": "TextProps",
-          "type": "number"
-        },
-        "helperText": {
-          "x-declared-in": "TextProps",
-          "type": "string"
-        },
-        "counter": {
-          "x-declared-in": "TextProps",
-          "type": "number"
-        },
-        "k2": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "loading": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "rightAction": {
-          "x-declared-in": "TextProps",
-          "anyOf": [
-            {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "const": "iconButton"
-                },
-                "id": {
-                  "type": "string"
-                },
-                "variant": {
-                  "type": "string"
-                },
-                "icon": {
-                  "$ref": "../shared/icon.schema.json#"
-                },
-                "disabled": {
-                  "type": "boolean"
-                },
-                "tooltip": {
-                  "type": ["object", "null"],
-                  "properties": {
-                    "label": {
-                      "type": "string"
-                    },
-                    "placement": {
-                      "type": "string",
-                      "enum": [
-                        "bottom-end",
-                        "bottom-start",
-                        "bottom",
-                        "left-end",
-                        "left-start",
-                        "left",
-                        "right-end",
-                        "right-start",
-                        "right",
-                        "top-end",
-                        "top-start",
-                        "top"
-                      ]
-                    }
-                  }
-                }
-              }
-            },
-            {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "const": "button"
-                },
-                "id": {
-                  "type": "string"
-                },
-                "label": {
-                  "type": "string"
-                },
-                "variant": {
-                  "type": "string",
-                  "enum": ["text", "contained"]
-                },
-                "color": {
-                  "type": "string",
-                  "enum": ["default", "primary"]
-                },
-                "tooltip": {
-                  "type": ["object", "null"],
-                  "properties": {
-                    "label": {
-                      "type": "string"
-                    },
-                    "placement": {
-                      "type": "string",
-                      "enum": [
-                        "bottom-end",
-                        "bottom-start",
-                        "bottom",
-                        "left-end",
-                        "left-start",
-                        "left",
-                        "right-end",
-                        "right-start",
-                        "right",
-                        "top-end",
-                        "top-start",
-                        "top"
-                      ]
-                    }
-                  }
-                },
-                "disabled": {
-                  "type": "boolean"
-                },
-                "noWrap": {
-                  "type": "boolean"
-                },
-                "loading": {
-                  "type": "boolean"
-                }
-              }
-            }
-          ]
-        },
-        "hasClearIconButton": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "tooltipClearIconButton": {
-          "x-declared-in": "TextProps",
-          "type": ["object", "null"],
-          "properties": {
-            "label": {
-              "type": "string"
-            },
-            "placement": {
-              "type": "string",
-              "enum": [
-                "bottom-end",
-                "bottom-start",
-                "bottom",
-                "left-end",
-                "left-start",
-                "left",
-                "right-end",
-                "right-start",
-                "right",
-                "top-end",
-                "top-start",
-                "top"
-              ]
-            }
-          }
-        },
-        "readOnly": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "disableEnterRightAction": {
-          "x-declared-in": "TextProps",
-          "type": "boolean"
-        },
-        "size": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string",
-          "enum": ["small", "medium", "large"]
-        },
-        "disableSpacing": {
-          "x-declared-in": "FormFieldProps",
-          "type": "boolean"
-        },
-        "subjectClass": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string"
-        },
-        "id": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string"
-        },
-        "visible": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "boolean"
-        },
-        "cursor": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["default", "pointer"]
-        },
-        "gravity": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["left", "right", "center"]
-        },
-        "margin": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["none", "normal"]
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            }
-          ]
-        },
-        "width": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["match_parent", "wrap_content"]
-            },
-            {
-              "type": "number"
-            }
-          ]
-        },
-        "flex": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string"
-                },
-                "sm": {
-                  "type": "string"
-                },
-                "md": {
-                  "type": "string"
-                },
-                "lg": {
-                  "type": "string"
-                },
-                "xl": {
-                  "type": "string"
-                }
-              }
-            }
-          ]
-        },
-        "alignSelf": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                }
-              }
-            }
-          ]
-        },
-        "overflow": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "visible", "hidden", "scroll"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                }
-              }
-            }
-          ]
-        },
-        "minHeight": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": ["string", "number"]
-                },
-                "sm": {
-                  "type": ["string", "number"]
-                },
-                "md": {
-                  "type": ["string", "number"]
-                },
-                "lg": {
-                  "type": ["string", "number"]
-                },
-                "xl": {
-                  "type": ["string", "number"]
-                }
-              }
-            }
-          ]
-        },
         "tabNo": {
           "x-declared-in": "AutocompleteComponentProps",
           "type": "string"
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "onChange": {
           "parameters": {
@@ -17177,6 +14488,11 @@
       "x-element-type": "ac-configuration-item",
       "x-entity": "component",
       "x-category": "basic",
+      "allOf": [
+        {
+          "$ref": "../schemas/autocomplete.schema.json#"
+        }
+      ],
       "properties": {
         "tooltip": {
           "x-declared-in": "CIComponentProps",
@@ -17223,336 +14539,14 @@
         "ciId": {
           "x-declared-in": "CIComponentProps",
           "type": "string"
-        },
-        "label": {
-          "x-declared-in": "SuggestProps",
-          "type": "string",
-          "default": "КЭ"
-        },
-        "placeholder": {
-          "x-declared-in": "SuggestProps",
-          "type": "string"
-        },
-        "required": {
-          "x-declared-in": "SuggestProps",
-          "type": "boolean"
-        },
-        "disabled": {
-          "x-declared-in": "SuggestProps",
-          "type": "boolean"
-        },
-        "error": {
-          "x-declared-in": "SuggestProps",
-          "type": "string"
-        },
-        "options": {
-          "x-declared-in": "SuggestProps",
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "label": {
-                "type": "string"
-              }
-            },
-            "required": ["id", "label"]
-          }
-        },
-        "selectedItem": {
-          "x-declared-in": "SuggestProps",
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string"
-            },
-            "label": {
-              "type": "string"
-            }
-          },
-          "required": ["id", "label"]
-        },
-        "selectedItems": {
-          "x-declared-in": "SuggestProps",
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "label": {
-                "type": "string"
-              }
-            },
-            "required": ["id", "label"]
-          }
-        },
-        "selectedValue": {
-          "x-declared-in": "SuggestProps",
-          "anyOf": [
-            {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "label": {
-                  "type": "string"
-                }
-              },
-              "required": ["id", "label"]
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string"
-                  },
-                  "label": {
-                    "type": "string"
-                  }
-                },
-                "required": ["id", "label"]
-              }
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "multiple": {
-          "x-declared-in": "SuggestProps",
-          "type": "boolean"
-        },
-        "emptyResult": {
-          "x-declared-in": "SuggestProps",
-          "type": "string",
-          "default": "КЭ не найдены"
-        },
-        "value": {
-          "x-declared-in": "SuggestProps",
-          "type": "string",
-          "default": ""
-        },
-        "loading": {
-          "x-declared-in": "SuggestProps",
-          "type": "boolean"
-        },
-        "helperText": {
-          "x-declared-in": "SuggestProps",
-          "type": "string"
-        },
-        "disableCloseOnSelect": {
-          "x-declared-in": "SuggestProps",
-          "type": "boolean"
-        },
-        "optionType": {
-          "x-declared-in": "SuggestProps",
-          "type": "string"
-        },
-        "readOnly": {
-          "x-declared-in": "SuggestProps",
-          "type": "boolean"
-        },
-        "limitTags": {
-          "x-declared-in": "SuggestProps",
-          "type": "number"
-        },
-        "size": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string",
-          "enum": ["small", "medium", "large"]
-        },
-        "disableSpacing": {
-          "x-declared-in": "FormFieldProps",
-          "type": "boolean"
-        },
-        "subjectClass": {
-          "x-declared-in": "FormFieldProps",
-          "type": "string"
-        },
-        "id": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string"
-        },
-        "visible": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "boolean"
-        },
-        "cursor": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["default", "pointer"]
-        },
-        "gravity": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["left", "right", "center"]
-        },
-        "margin": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["none", "normal"]
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            }
-          ]
-        },
-        "width": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["match_parent", "wrap_content"]
-            },
-            {
-              "type": "number"
-            }
-          ]
-        },
-        "flex": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string"
-                },
-                "sm": {
-                  "type": "string"
-                },
-                "md": {
-                  "type": "string"
-                },
-                "lg": {
-                  "type": "string"
-                },
-                "xl": {
-                  "type": "string"
-                }
-              }
-            }
-          ]
-        },
-        "alignSelf": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                }
-              }
-            }
-          ]
-        },
-        "overflow": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "visible", "hidden", "scroll"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                }
-              }
-            }
-          ]
-        },
-        "minHeight": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": ["string", "number"]
-                },
-                "sm": {
-                  "type": ["string", "number"]
-                },
-                "md": {
-                  "type": ["string", "number"]
-                },
-                "lg": {
-                  "type": ["string", "number"]
-                },
-                "xl": {
-                  "type": ["string", "number"]
-                }
-              }
-            }
-          ]
         }
       },
       "required": [],
+      "x-base-defaults": {
+        "label": "КЭ",
+        "emptyResult": "КЭ не найдены",
+        "value": ""
+      },
       "x-events": {
         "change": {
           "parameters": {
@@ -17647,6 +14641,11 @@
       "x-element-type": "ac-inner-client",
       "x-entity": "component",
       "x-category": "basic",
+      "allOf": [
+        {
+          "$ref": "../shared/base-element.schema.json#"
+        }
+      ],
       "properties": {
         "fullName": {
           "x-declared-in": "InnerClientComponentProps",
@@ -17715,184 +14714,10 @@
         "tribe": {
           "x-declared-in": "InnerClientComponentProps",
           "type": "string"
-        },
-        "id": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string"
-        },
-        "visible": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "boolean"
-        },
-        "cursor": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["default", "pointer"]
-        },
-        "gravity": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["left", "right", "center"]
-        },
-        "margin": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["none", "normal"]
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            }
-          ]
-        },
-        "width": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["match_parent", "wrap_content"]
-            },
-            {
-              "type": "number"
-            }
-          ]
-        },
-        "flex": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string"
-                },
-                "sm": {
-                  "type": "string"
-                },
-                "md": {
-                  "type": "string"
-                },
-                "lg": {
-                  "type": "string"
-                },
-                "xl": {
-                  "type": "string"
-                }
-              }
-            }
-          ]
-        },
-        "alignSelf": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                }
-              }
-            }
-          ]
-        },
-        "overflow": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "visible", "hidden", "scroll"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                }
-              }
-            }
-          ]
-        },
-        "minHeight": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": ["string", "number"]
-                },
-                "sm": {
-                  "type": ["string", "number"]
-                },
-                "md": {
-                  "type": ["string", "number"]
-                },
-                "lg": {
-                  "type": ["string", "number"]
-                },
-                "xl": {
-                  "type": ["string", "number"]
-                }
-              }
-            }
-          ]
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "selectTab": {
           "parameters": {
@@ -18111,6 +14936,7 @@
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "onBackButtonClick": {
           "parameters": {
@@ -18307,6 +15133,7 @@
         }
       },
       "required": ["id"],
+      "x-base-defaults": {},
       "x-events": {
         "onClose": {
           "parameters": {}
@@ -18516,6 +15343,7 @@
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "stepperClick": {
           "parameters": {
@@ -18771,6 +15599,7 @@
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "stepperNavigate": {
           "parameters": {
@@ -19052,6 +15881,7 @@
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "onChooseUser": {
           "parameters": {}
@@ -19314,6 +16144,7 @@
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "onSelectUser": {
           "parameters": {
@@ -19604,6 +16435,7 @@
         }
       },
       "required": ["id"],
+      "x-base-defaults": {},
       "x-events": {
         "onClose": {
           "parameters": {}
@@ -19728,7 +16560,52 @@
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
+        "valueChange": {
+          "parameters": {
+            "value": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "x-ts-type": "any"
+                },
+                "fieldId": {
+                  "type": "string"
+                }
+              },
+              "required": ["value", "fieldId"]
+            }
+          }
+        },
+        "addressChange": {
+          "parameters": {
+            "value": {
+              "x-ts-type": "any"
+            }
+          }
+        },
+        "addressClear": {
+          "parameters": {
+            "value": {
+              "type": "null"
+            }
+          }
+        },
+        "cityChange": {
+          "parameters": {
+            "value": {
+              "x-ts-type": "any"
+            }
+          }
+        },
+        "cityClear": {
+          "parameters": {
+            "value": {
+              "type": "null"
+            }
+          }
+        },
         "loaded": {
           "parameters": {
             "value": {
@@ -20046,6 +16923,7 @@
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "select": {
           "parameters": {
@@ -20138,6 +17016,11 @@
       "x-element-type": "nav-button",
       "x-entity": "component",
       "x-category": "basic",
+      "allOf": [
+        {
+          "$ref": "../schemas/button.schema.json#"
+        }
+      ],
       "properties": {
         "to": {
           "x-declared-in": "NavButtonProps",
@@ -20155,261 +17038,10 @@
           "x-declared-in": "NavButtonProps",
           "type": "string",
           "enum": ["navigateTo", "navigateBack", "navigateBackTo"]
-        },
-        "label": {
-          "x-declared-in": "ButtonProps",
-          "type": "string"
-        },
-        "disabled": {
-          "x-declared-in": "ButtonProps",
-          "type": "boolean"
-        },
-        "variant": {
-          "x-declared-in": "ButtonProps",
-          "type": "string",
-          "enum": ["text", "contained"]
-        },
-        "color": {
-          "x-declared-in": "ButtonProps",
-          "type": "string",
-          "enum": ["default", "primary", "inversePrimary", "inverseDefault", "white", "secondary"]
-        },
-        "icon": {
-          "x-declared-in": "ButtonProps",
-          "$ref": "../shared/icon.schema.json#"
-        },
-        "isProgress": {
-          "x-declared-in": "ButtonProps",
-          "type": "boolean"
-        },
-        "size": {
-          "x-declared-in": "ButtonProps",
-          "type": "string",
-          "enum": ["small", "medium", "large"]
-        },
-        "iconPosition": {
-          "x-declared-in": "ButtonProps",
-          "type": "string",
-          "enum": ["left", "right"]
-        },
-        "badge": {
-          "x-declared-in": "ButtonProps",
-          "type": "object",
-          "properties": {
-            "value": {
-              "type": "number"
-            },
-            "color": {
-              "type": "string",
-              "enum": ["error", "default", "primary", "secondary"]
-            },
-            "expandedColor": {
-              "type": "string",
-              "enum": [
-                "warning",
-                "error",
-                "success",
-                "green",
-                "blue",
-                "orange",
-                "yellow",
-                "purple",
-                "pink",
-                "red",
-                "infoSecondary",
-                "infoTertiary",
-                "purple2",
-                "pink2",
-                "grey",
-                "lime",
-                "yellow2",
-                "defaultOutline",
-                "secondary"
-              ]
-            },
-            "white": {
-              "type": "boolean"
-            }
-          },
-          "required": ["value"]
-        },
-        "id": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string"
-        },
-        "visible": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "boolean"
-        },
-        "cursor": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["default", "pointer"]
-        },
-        "gravity": {
-          "x-declared-in": "BasePropsOwn",
-          "type": "string",
-          "enum": ["left", "right", "center"]
-        },
-        "margin": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["none", "normal"]
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "number"
-              }
-            }
-          ]
-        },
-        "width": {
-          "x-declared-in": "BasePropsOwn",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["match_parent", "wrap_content"]
-            },
-            {
-              "type": "number"
-            }
-          ]
-        },
-        "flex": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string"
-                },
-                "sm": {
-                  "type": "string"
-                },
-                "md": {
-                  "type": "string"
-                },
-                "lg": {
-                  "type": "string"
-                },
-                "xl": {
-                  "type": "string"
-                }
-              }
-            }
-          ]
-        },
-        "alignSelf": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "flex-start", "center", "flex-end", "stretch", "baseline"]
-                }
-              }
-            }
-          ]
-        },
-        "overflow": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": ["auto", "visible", "hidden", "scroll"]
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "sm": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "md": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "lg": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                },
-                "xl": {
-                  "type": "string",
-                  "enum": ["auto", "visible", "hidden", "scroll"]
-                }
-              }
-            }
-          ]
-        },
-        "minHeight": {
-          "x-declared-in": "FlexItemProps",
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "object",
-              "properties": {
-                "xs": {
-                  "type": ["string", "number"]
-                },
-                "sm": {
-                  "type": ["string", "number"]
-                },
-                "md": {
-                  "type": ["string", "number"]
-                },
-                "lg": {
-                  "type": ["string", "number"]
-                },
-                "xl": {
-                  "type": ["string", "number"]
-                }
-              }
-            }
-          ]
         }
       },
       "required": [],
+      "x-base-defaults": {},
       "x-events": {
         "click": {
           "parameters": {
@@ -20548,6 +17180,7 @@
         }
       },
       "required": ["hasErrors", "pageCount"],
+      "x-base-defaults": {},
       "x-events": {
         "onAdditionalButtonClick": {
           "parameters": {
@@ -20692,12 +17325,11 @@
   },
   "report": {
     "summary": {
-      "any-type": 77,
+      "any-type": 80,
       "component-duplicate": 3,
       "default-null-widened": 39,
       "default-unresolved": 20,
-      "event-name-unresolved": 6,
-      "loose-object": 11,
+      "loose-object": 7,
       "unclassified-type": 3,
       "unresolved-type": 5
     },
@@ -21190,12 +17822,6 @@
           "severity": "warn",
           "path": "properties.tabNo.default",
           "message": "user.getTabNo()"
-        },
-        {
-          "code": "loose-object",
-          "severity": "info",
-          "path": "properties.mask.anyOf[1][]",
-          "message": "произвольные ключи: Record<string, any>"
         }
       ],
       "ac-autocomplete-ext-email": [
@@ -21204,12 +17830,6 @@
           "severity": "warn",
           "path": "properties.tabNo.default",
           "message": "user.getTabNo()"
-        },
-        {
-          "code": "loose-object",
-          "severity": "info",
-          "path": "properties.mask.anyOf[1][]",
-          "message": "произвольные ключи: Record<string, any>"
         }
       ],
       "ac-autocomplete-inner-email": [
@@ -21218,12 +17838,6 @@
           "severity": "warn",
           "path": "properties.tabNo.default",
           "message": "user.getTabNo()"
-        },
-        {
-          "code": "loose-object",
-          "severity": "info",
-          "path": "properties.mask.anyOf[1][]",
-          "message": "произвольные ключи: Record<string, any>"
         }
       ],
       "ac-autocomplete-login-sudir": [
@@ -21254,12 +17868,6 @@
           "severity": "warn",
           "path": "properties.tabNo.default",
           "message": "user.getTabNo()"
-        },
-        {
-          "code": "loose-object",
-          "severity": "info",
-          "path": "properties.mask.anyOf[1][]",
-          "message": "произвольные ключи: Record<string, any>"
         }
       ],
       "ac-configuration-item": [
@@ -21516,40 +18124,22 @@
       ],
       "address": [
         {
-          "code": "event-name-unresolved",
+          "code": "any-type",
           "severity": "warn",
-          "path": "x-events",
-          "message": "controller.$emit(EVENTS.VALUE_CHANGE, {\n\t\t\t\t\t\tvalue,\n\t\t\t\t\t\tfieldId: 'city',\n\t\t\t\t\t})"
+          "path": "x-events.valueChange.value.value",
+          "message": "any/unknown: any"
         },
         {
-          "code": "event-name-unresolved",
+          "code": "any-type",
           "severity": "warn",
-          "path": "x-events",
-          "message": "controller.$emit(EVENTS.VALUE_CHANGE, {\n\t\t\t\t\t\t\tvalue,\n\t\t\t\t\t\t\tfieldId: 'address',\n\t\t\t\t\t\t})"
+          "path": "x-events.addressChange.value",
+          "message": "any/unknown: any"
         },
         {
-          "code": "event-name-unresolved",
+          "code": "any-type",
           "severity": "warn",
-          "path": "x-events",
-          "message": "controller.$emit(EVENTS.ADDRESS_CHANGE, option.label)"
-        },
-        {
-          "code": "event-name-unresolved",
-          "severity": "warn",
-          "path": "x-events",
-          "message": "controller.$emit(EVENTS.ADDRESS_CLEAR, null)"
-        },
-        {
-          "code": "event-name-unresolved",
-          "severity": "warn",
-          "path": "x-events",
-          "message": "controller.$emit(EVENTS.CITY_CHANGE, option.label)"
-        },
-        {
-          "code": "event-name-unresolved",
-          "severity": "warn",
-          "path": "x-events",
-          "message": "controller.$emit(EVENTS.CITY_CLEAR, null)"
+          "path": "x-events.cityChange.value",
+          "message": "any/unknown: any"
         }
       ],
       "bank-division": [
@@ -21801,58 +18391,14 @@
     },
     "sharedCandidates": [
       {
-        "type": "SelectOption",
-        "file": "packages/lib/src/dom/elements/SelectElement/SelectOption.ts",
-        "usedIn": [
-          "ac-autocomplete-boss-email",
-          "ac-autocomplete-login-sudir",
-          "ac-autocomplete-main-email",
-          "ac-configuration-item",
-          "autocomplete",
-          "select",
-          "suggest"
-        ]
-      },
-      {
-        "type": "Button",
-        "file": "packages/lib/src/dom/elements/TextElement/props/RightActionProps.ts",
-        "usedIn": [
-          "ac-autocomplete-boss-name",
-          "ac-autocomplete-ext-email",
-          "ac-autocomplete-inner-email",
-          "ac-autocomplete-user-name",
-          "text",
-          "text-field"
-        ]
-      },
-      {
-        "type": "IconButton",
-        "file": "packages/lib/src/dom/elements/TextElement/props/RightActionProps.ts",
-        "usedIn": [
-          "ac-autocomplete-boss-name",
-          "ac-autocomplete-ext-email",
-          "ac-autocomplete-inner-email",
-          "ac-autocomplete-user-name",
-          "text",
-          "text-field"
-        ]
-      },
-      {
-        "type": "TooltipProps",
-        "file": "packages/lib/src/dom/Tooltip/TooltipProps.ts",
-        "usedIn": [
-          "ac-autocomplete-boss-name",
-          "ac-autocomplete-ext-email",
-          "ac-autocomplete-inner-email",
-          "ac-autocomplete-user-name",
-          "text",
-          "text-field"
-        ]
-      },
-      {
         "type": "IndicatorProp",
         "file": "packages/lib/src/dom/elements/DateFieldPickerElement/DateFieldPickerConstants.ts",
         "usedIn": ["date-field-picker", "date-range-field-picker", "date-time-field"]
+      },
+      {
+        "type": "SelectOption",
+        "file": "packages/lib/src/dom/elements/SelectElement/SelectOption.ts",
+        "usedIn": ["autocomplete", "select", "suggest"]
       },
       {
         "type": "BadgeModel",
@@ -21860,9 +18406,9 @@
         "usedIn": ["accordion", "panel"]
       },
       {
-        "type": "ButtonBadgeModel",
-        "file": "packages/lib/src/dom/elements/ButtonElement/ButtonConstants.ts",
-        "usedIn": ["button", "nav-button"]
+        "type": "Button",
+        "file": "packages/lib/src/dom/elements/TextElement/props/RightActionProps.ts",
+        "usedIn": ["text", "text-field"]
       },
       {
         "type": "ChipsItemProps",
@@ -21888,6 +18434,11 @@
         "type": "HorizontalStepItemProps",
         "file": "packages/lib/src/dom/elements/HorizontalStepElement/props/HorizontalStepItemProps.ts",
         "usedIn": ["horizontal-step", "stepper"]
+      },
+      {
+        "type": "IconButton",
+        "file": "packages/lib/src/dom/elements/TextElement/props/RightActionProps.ts",
+        "usedIn": ["text", "text-field"]
       },
       {
         "type": "MarkdownOptions",
@@ -21933,6 +18484,11 @@
         "type": "TooltipModel",
         "file": "packages/lib/src/dom/Tooltip/TooltipModel.ts",
         "usedIn": ["ac-autocomplete-login-sudir", "ac-configuration-item"]
+      },
+      {
+        "type": "TooltipProps",
+        "file": "packages/lib/src/dom/Tooltip/TooltipProps.ts",
+        "usedIn": ["text", "text-field"]
       },
       {
         "type": "UserInfoFull",
