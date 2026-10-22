@@ -8,14 +8,24 @@
 /** Уровень → наибольшее число узлов на нём; уровня нет в таблице — без ограничения. */
 export type LayerCapacity = Readonly<Record<number, number>>;
 
-/** Канвас страниц: корень карты один — Главная или единственный блок-корень (ADR-15, D8). */
-export const PAGE_LAYER_CAPACITY: LayerCapacity = { 0: 1 };
+/** Ёмкость по слоёным графам редактора; действующая — EditorRules.layerCapacity (R-ADM). */
+export type LayerCapacityTable = {
+  /** Канвас страниц. */
+  readonly pages: LayerCapacity;
+  /** Шаги формы заявки. */
+  readonly formSteps: LayerCapacity;
+  /** Элементы внутри шага. */
+  readonly stepElements: LayerCapacity;
+};
 
-/** Шаги формы заявки: первый уровень — один шаг, как у страниц [owner 2026-10-16]. */
-export const FORM_STEP_LAYER_CAPACITY: LayerCapacity = { 0: 1 };
-
-/** Элементы внутри шага: колонки без ограничения (ADR-17). */
-export const STEP_ELEMENT_LAYER_CAPACITY: LayerCapacity = {};
+export const DEFAULT_LAYER_CAPACITY: LayerCapacityTable = {
+  // Корень карты один — Главная или единственный блок-корень (ADR-15, D8).
+  pages: { 0: 1 },
+  // Первый уровень формы — один шаг, как у страниц [owner 2026-10-16].
+  formSteps: { 0: 1 },
+  // Колонки элементов шага без ограничения (ADR-17).
+  stepElements: {},
+};
 
 /**
  * Узлы сверх ёмкости своего уровня. orderedIds — порядок старшинства:

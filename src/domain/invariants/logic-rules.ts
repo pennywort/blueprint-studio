@@ -2,12 +2,13 @@ import type { ServiceGraph } from '../model/service-graph';
 import { canBeLogicSource, variantLabel } from '../element-kinds';
 import { containerKey, walkElementContainers } from '../element-containers';
 import { supportsLogic } from '../connection-matrix';
+import type { EditorRules } from '../editor-rules';
 import type { CanvasElement } from '../model/canvas-element';
 import type { InvariantViolation } from './index';
 
 // Инварианты «Сложной логики» (T-037/T-063, дизайн-док §5): защита данных —
 // UI делает эти состояния недостижимыми (каскадные удаления), но инварианты
-// проверяют граф независимо. Чистая функция (graph) => violations, как
+// проверяют граф независимо. Чистая функция (graph, rules) => violations, как
 // остальные правила validateGraph.
 
 const RULE_ID = 'complex-logic';
@@ -22,10 +23,10 @@ type ComponentContext = {
   component: CanvasElement;
 };
 
-function collectComponents(graph: ServiceGraph): Map<string, ComponentContext> {
+function collectComponents(graph: ServiceGraph, rules: EditorRules): Map<string, ComponentContext> {
   const components = new Map<string, ComponentContext>();
   for (const container of walkElementContainers(graph)) {
-    if (!supportsLogic(container)) {
+    if (!supportsLogic(rules, container)) {
       continue;
     }
     for (const component of container.elements) {
@@ -35,9 +36,9 @@ function collectComponents(graph: ServiceGraph): Map<string, ComponentContext> {
   return components;
 }
 
-export function checkLogicRules(graph: ServiceGraph): InvariantViolation[] {
+export function checkLogicRules(graph: ServiceGraph, rules: EditorRules): InvariantViolation[] {
   const violations: InvariantViolation[] = [];
-  const components = collectComponents(graph);
+  const components = collectComponents(graph, rules);
   const seen = new Set<string>();
   // Цели, у которых уже есть правило (L-I7).
   const ruleTargets = new Set<string>();
@@ -60,7 +61,7 @@ export function checkLogicRules(graph: ServiceGraph): InvariantViolation[] {
     }
 
     // L-I1: источник — Select с включённой «Сложной логикой».
-    if (!canBeLogicSource(source.component) || !source.component.hasComplexLogic) {
+    if (!canBeLogicSource(rules, source.component) || !source.component.hasComplexLogic) {
       violations.push({
         rule: RULE_ID,
         path,
@@ -69,8 +70,8 @@ export function checkLogicRules(graph: ServiceGraph): InvariantViolation[] {
     }
 
     // L-I2: condition.optionId существует среди option'ов источника.
-    if (rule.condition.kind === 'optionSelected' && canBeLogicSource(source.component)) {
-      const optionExists = variantLabel(source.component, rule.condition.optionId) !== null;
+    if (rule.condition.kind === 'optionSelected' && canBeLogicSource(rules, source.component)) {
+      const optionExists = variantLabel(rules, source.component, rule.condition.optionId) !== null;
       if (!optionExists) {
         violations.push({ rule: RULE_ID, path, message: 'Правило ссылается на удалённое значение списка' });
       }

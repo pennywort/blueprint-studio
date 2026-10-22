@@ -265,6 +265,11 @@ export const EditorRulesSchema = z.object({
 
 ### R-CFG-9. Внешний конфиг правил (B) — всё из R-CFG-1…5
 
+> ✅ 2026-10-22 в составе [R-ADM-settings.md](R-ADM-settings.md) (R-ADM-1): `EditorRules` +
+> zod в `domain/editor-rules.ts`, секция `rules` в общем реестре настроек, `CommandContext`,
+> `validateGraph(graph, rules)`, `useEditorRules()`. Порт — `IAdminSettingsSource` (не
+> `IEditorConfigSource`), файл — `public/config/editor-settings.json`. Описание ниже — история.
+
 - zod-схема и `resolveEditorRules` (§3.2–3.3), порт `IEditorConfigSource`, адаптер с `editor-config.json`,
   `editorRules` в DI, `CommandBus` → `apply(draft, ctx)`, `validateGraph(graph, rules)`, хук `useEditorRules()`.
 - Самый дорогой шаг: сигнатура ~25 команд. JSON-файл с умолчаниями = сегодняшние таблицы.

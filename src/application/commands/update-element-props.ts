@@ -5,7 +5,7 @@ import { canBeLogicSource, elementVariants } from '@domain/element-kinds';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
 import { computeFormElementDepths } from '@domain/step-element-depths';
-import type { Command } from './command';
+import type { Command, CommandContext } from './command';
 import { preserveFormElementDepths, preserveFormStepDepths } from './depth-preservation';
 import { findElementLocation } from './graph-lookup';
 
@@ -29,7 +29,7 @@ export class UpdateElementProps implements Command {
     private readonly props: ElementPropsPatch,
   ) {}
 
-  apply(draft: ServiceGraph): void {
+  apply(draft: ServiceGraph, { rules }: CommandContext): void {
     // Уровни шагов до мутации: шаг, потерявший входящий переход, остаётся на месте (ADR-15).
     const stepDepthsBefore = computeAllFormStepDepths(draft);
     // Колонки элементов шагов до мутации: цель, потерявшая правило, остаётся на месте (ADR-15).
@@ -64,8 +64,8 @@ export class UpdateElementProps implements Command {
     // Каскад сложной логики при удалении вариантов источника (T-037, §6
     // дизайн-дока): правила на удалённые варианты уходят вместе с ними
     // (UI недостижимость L-I2, инвариант — защита).
-    if (canBeLogicSource(parsed.data)) {
-      const optionValues = new Set<string>(elementVariants(parsed.data).map((variant) => variant.id));
+    if (canBeLogicSource(rules, parsed.data)) {
+      const optionValues = new Set<string>(elementVariants(rules, parsed.data).map((variant) => variant.id));
       draft.logicRules = draft.logicRules.filter(
         (rule) =>
           rule.sourceElementId !== this.elementId ||
@@ -78,6 +78,6 @@ export class UpdateElementProps implements Command {
     // Каскад переходов между шагами [owner 2026-10-14]: переходы, ставшие
     // недопустимыми (удалён вариант Select'а), уходят вместе с причиной.
     preserveFormStepDepths(draft, stepDepthsBefore);
-    draft.stepTransitions = validStepTransitions(draft);
+    draft.stepTransitions = validStepTransitions(draft, rules);
   }
 }

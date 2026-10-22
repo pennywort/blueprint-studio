@@ -4,6 +4,8 @@ import { AccountTree, Code, NoteAdd, ViewColumn } from '@blueprint-vendor/flamin
 import type { ElementSchema } from '@application/ports/element-schema-provider';
 import type { CanvasElementKind } from '@domain/model/canvas-element';
 import { kindRules } from '@domain/element-kinds';
+import type { EditorRules } from '@domain/editor-rules';
+import { useEditorRules } from '@presentation/features/settings/use-settings';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import type { CanvasNodeType } from '@presentation/features/canvas/graph-flow-adapter';
 import { NODE_KIND_LABELS } from '@presentation/labels/editor-labels';
@@ -71,13 +73,14 @@ const NODE_MENU_ITEMS: ReadonlyArray<{ kind: AddableNodeKind; label: string }> =
 function elementMenuItems(
   selectedNodeType: CanvasNodeType | null,
   elementSchemas: readonly ElementSchema[],
+  rules: EditorRules,
 ): ReadonlyArray<{ kind: AddableElementKind; label: string }> {
   if (!selectedNodeType) {
     return [];
   }
   // Комментарий-элемент — отдельная кнопка тулбара, в меню его нет.
   return elementSchemas
-    .filter((schema) => kindRules(schema.kind).inAddMenu)
+    .filter((schema) => kindRules(rules, schema.kind).inAddMenu)
     .map((schema) => ({ kind: schema.kind, label: schema.label }));
 }
 
@@ -103,7 +106,8 @@ export function EditorToolbar({
     active ? `${classes.button} ${classes.buttonActive}` : classes.button;
 
   // Без выделенного узла элементу некуда попасть — кнопка меню отключена.
-  const elementItems = elementMenuItems(selectedNodeType, elementSchemas);
+  const rules = useEditorRules();
+  const elementItems = elementMenuItems(selectedNodeType, elementSchemas, rules);
 
   return (
     <Box className={classes.toolbar} data-testid="editor-toolbar">

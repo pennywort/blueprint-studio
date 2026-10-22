@@ -7,6 +7,7 @@ import { graphToFlow, type CanvasNode, type FlowGraph } from './graph-flow-adapt
 import { mapViolationsToCanvas } from './violation-markers';
 import { createCanvasInteractionStore } from './canvas-interaction';
 import { useElementCatalog } from '@presentation/features/element-catalog/element-catalog';
+import { useEditorRules } from '@presentation/features/settings/use-settings';
 
 // Узлы и рёбра канваса (ревью A3, R3): раскладка по измеренным размерам,
 // graphToFlow со структурным разделением, выделение узла и синхронизация
@@ -55,18 +56,20 @@ export function useCanvasNodes(
     [reportSizes],
   );
 
+  // Правила редактора из настроек (R-ADM): смена на лету пересобирает канвас.
+  const rules = useEditorRules();
   const layout = useMemo(
-    () => computeLayout(graph, measuredSizes, measuredRows),
-    [graph, measuredSizes, measuredRows],
+    () => computeLayout(graph, rules, measuredSizes, measuredRows),
+    [graph, rules, measuredSizes, measuredRows],
   );
   // Структурное разделение (ревью P1, R2): прошлый результат передаётся в
   // адаптер — неизменённые узлы, data, карточки и рёбра сохраняют
   // идентичность, смена позиции не пересоздаёт data.
   const flow = useMemo(() => {
-    const next = graphToFlow(graph, catalog, layout, previousFlowRef.current);
+    const next = graphToFlow(graph, rules, catalog, layout, previousFlowRef.current);
     previousFlowRef.current = next;
     return next;
-  }, [graph, catalog, layout]);
+  }, [graph, rules, catalog, layout]);
   // Нарушения инвариантов после каждой команды (T-043): подсветка узлов и
   // карточек. Команды отклоняют невалидные изменения, поэтому в обычной
   // работе список пуст; подсветка нужна для графов извне (загрузка, T-053).
@@ -74,8 +77,8 @@ export function useCanvasNodes(
   // кадра команды, а не в нём.
   const violationsGraph = useDeferredValue(graph);
   const violationMarkers = useMemo(
-    () => mapViolationsToCanvas(violationsGraph, collectViolations(violationsGraph)),
-    [violationsGraph],
+    () => mapViolationsToCanvas(violationsGraph, collectViolations(violationsGraph, rules)),
+    [violationsGraph, rules],
   );
 
   // Состояние взаимодействия — во внешний стор канваса, не в data узлов

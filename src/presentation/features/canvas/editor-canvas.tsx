@@ -41,7 +41,7 @@ import {
   type LayerColumn,
   type LayerDropDecision,
 } from './layers/layer-columns';
-import { PAGE_LAYER_POLICY } from './layers/layer-policy';
+import { useLayerPolicies } from './layers/layer-policy';
 import { LayerDropHighlight } from './layers/layer-drop-highlight';
 import { isActionTarget } from './canvas-events';
 import { EditorCanvasControls } from './editor-canvas-controls';
@@ -311,17 +311,18 @@ function CanvasInner({
   // Колонки строятся один раз на старте drag (R-PERF-2): раскладка во время
   // drag не меняется, а пересборка по всем узлам на каждый кадр стоила O(N).
   const columnsRef = useRef<LayerColumn[]>([]);
+  const pageLayerPolicy = useLayerPolicies().page;
   const handleNodeDragStart: OnNodeDrag<CanvasNode> = useCallback(() => {
     const measuredWidth = new Map(nodesRef.current.map((node) => [node.id, node.measured?.width]));
     columnsRef.current = buildLayerColumns(
       propsNodes.map((node) => ({
         depth: node.data.depth,
         x: node.position.x,
-        width: measuredWidth.get(node.id) ?? PAGE_LAYER_POLICY.columnWidth,
+        width: measuredWidth.get(node.id) ?? pageLayerPolicy.columnWidth,
       })),
-      PAGE_LAYER_POLICY,
+      pageLayerPolicy,
     );
-  }, [propsNodes]);
+  }, [propsNodes, pageLayerPolicy]);
 
   // Подсветка целевой колонки во время drag (F6) и запомненное решение —
   // в drop решение принимается по последнему кандидату.
@@ -334,10 +335,10 @@ function CanvasInner({
 
   const handleNodeDrag: OnNodeDrag<CanvasNode> = useCallback(
     (_event, draggedNode) => {
-      const width = draggedNode.measured?.width ?? PAGE_LAYER_POLICY.columnWidth;
+      const width = draggedNode.measured?.width ?? pageLayerPolicy.columnWidth;
       const candidate = nearestLayerColumn(columnsRef.current, draggedNode.position.x + width / 2);
       const decision = resolveLayerDrop(
-        PAGE_LAYER_POLICY,
+        pageLayerPolicy,
         { id: draggedNode.id, kind: draggedNode.type ?? '', depth: draggedNode.data.depth },
         candidate,
         nodeDepths,
@@ -362,7 +363,7 @@ function CanvasInner({
           : next,
       );
     },
-    [nodeDepths],
+    [nodeDepths, pageLayerPolicy],
   );
 
   const handleNodeDragStop: OnNodeDrag<CanvasNode> = useCallback(

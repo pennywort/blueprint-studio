@@ -1,9 +1,10 @@
 import type { CanvasElementKind } from './model/canvas-element';
+import type { EditorRules } from './editor-rules';
 
 // Политика доменных правил (R-CFG-5, [owner 2026-10-16]) — данные, а не
-// ветвления: изменить или снять ограничение = поправить таблицу ниже.
-// Сейчас это stub конфига редактора (R-CFG-9): при переходе на конфиг
-// значения придут из него, проверки не меняются.
+// ветвления: изменить или снять ограничение = поправить значение. Таблицы
+// ниже — умолчания; действующие значения приходят в EditorRules из
+// настроек редактора (R-ADM), проверки не меняются.
 
 /**
  * Строгость правила:
@@ -15,10 +16,10 @@ export type RuleSeverity = 'error' | 'warning' | 'off';
 
 /** Строгость по id правила (`rule` нарушения); правила нет в таблице — `error`. */
 // Пример: { 'element-count-limit': 'warning', 'radio-max-five-options': 'off' }.
-export const RULE_SEVERITY: Readonly<Record<string, RuleSeverity>> = {};
+export const DEFAULT_RULE_SEVERITY: Readonly<Record<string, RuleSeverity>> = {};
 
-export function ruleSeverity(rule: string): RuleSeverity {
-  return RULE_SEVERITY[rule] ?? 'error';
+export function ruleSeverity(rules: EditorRules, rule: string): RuleSeverity {
+  return rules.severity[rule] ?? 'error';
 }
 
 /**
@@ -29,16 +30,14 @@ export function ruleSeverity(rule: string): RuleSeverity {
  */
 export type ElementCountScope = 'home' | 'subScenario' | 'formStep' | 'form';
 
-export type ElementCountLimit = {
-  kind: CanvasElementKind;
-  scope: ElementCountScope;
-  max: number;
-};
+/**
+ * Вид блока → вид элемента → наибольшее число (решение владельца 2026-10-16,
+ * R-CFG §3.1). Нет записи — без ограничения: снять лимит = удалить запись.
+ */
+export type ElementCountLimits = Readonly<
+  Partial<Record<ElementCountScope, Readonly<Record<CanvasElementKind, number>>>>
+>;
 
-// Сколько элементов вида может лежать в блоке (конституция §4 п. 1 —
-// значение по умолчанию). Вложение — одно на шаг формы [owner 2026-10-16;
-// раньше — одно на форму]. Пример расширения:
-// { kind: 'attachment', scope: 'subScenario', max: 2 }.
-export const ELEMENT_COUNT_LIMITS: readonly ElementCountLimit[] = [
-  { kind: 'attachment', scope: 'formStep', max: 1 },
-];
+export const DEFAULT_ELEMENT_COUNT_LIMITS: ElementCountLimits = {
+  formStep: { attachment: 1 },
+};

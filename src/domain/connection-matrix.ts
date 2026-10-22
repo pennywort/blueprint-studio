@@ -1,13 +1,14 @@
 import type { CanvasElement } from './model/canvas-element';
 import type { ElementContainer } from './element-containers';
 import { canBeLogicSource } from './element-kinds';
+import type { EditorRules } from './editor-rules';
 
 // Матрица связей (R-CFG-2, [owner 2026-10-16]) — ЕДИНСТВЕННЫЙ источник
 // правды «кто, откуда и куда может строить связи». Данные, а не ветвления
 // `container.kind === 'formStep'` / `hasComplexLogic && optionId`: изменить
 // или вернуть поведение = поправить строку; новый вид источника, цели или
-// блока — новая строка/значение, проверки не меняются. Сейчас это stub
-// конфига редактора (R-CFG-9).
+// блока — новая строка/значение, проверки не меняются. Таблица ниже —
+// умолчания; действующая приходит в EditorRules из настроек редактора (R-ADM).
 //
 // Читают: подсветка целей при протягивании (connection-rules), инварианты
 // (step-transitions, invariants/logic-rules), команды и UI — через выводимые
@@ -46,27 +47,34 @@ export type ConnectionTargetKind = keyof ConnectionReach;
 // Значения = сегодняшнее поведение. Вариант с логикой — только внутри своего
 // шага [owner 2026-10-16; раньше — ещё и переход на шаг]; вариант без логики —
 // источник перехода [owner 2026-10-14]; логика и переходы — только в шаге формы.
-export const CONNECTION_MATRIX: Readonly<Record<ConnectionSourceRole, ConnectionReach>> = {
+export const DEFAULT_CONNECTION_MATRIX: Readonly<Record<ConnectionSourceRole, ConnectionReach>> = {
   element: { page: ['page', 'formStep'], step: ['formStep'] },
   option: { step: ['formStep'] },
   logicOption: { element: ['formStep'] },
 };
 
-export function connectionSourceRole(element: CanvasElement, optionId?: string): ConnectionSourceRole {
+const ROLES: readonly ConnectionSourceRole[] = ['element', 'option', 'logicOption'];
+
+export function connectionSourceRole(
+  rules: EditorRules,
+  element: CanvasElement,
+  optionId?: string,
+): ConnectionSourceRole {
   if (optionId === undefined) {
     return 'element';
   }
-  return canBeLogicSource(element) && element.hasComplexLogic === true ? 'logicOption' : 'option';
+  return canBeLogicSource(rules, element) && element.hasComplexLogic === true ? 'logicOption' : 'option';
 }
 
 /** Может ли источник роли `role` из блока вида `from` вести на цель `target`. */
 export function canConnect(
+  rules: EditorRules,
   role: ConnectionSourceRole,
   target: ConnectionTargetKind,
   from: ElementContainerKind,
 ): boolean {
   return (
-    (CONNECTION_MATRIX[role][target] as readonly ElementContainerKind[] | undefined)?.includes(from) ?? false
+    (rules.connections[role][target] as readonly ElementContainerKind[] | undefined)?.includes(from) ?? false
   );
 }
 
@@ -79,21 +87,22 @@ export interface ContainerCapabilities {
   readonly stepTransitions: boolean;
 }
 
-const ROLES = Object.keys(CONNECTION_MATRIX) as ConnectionSourceRole[];
-
-export function containerCapabilities(kind: ElementContainerKind): ContainerCapabilities {
+export function containerCapabilities(rules: EditorRules, kind: ElementContainerKind): ContainerCapabilities {
   return {
-    logic: canConnect('logicOption', 'element', kind),
-    stepTransitions: ROLES.some((role) => canConnect(role, 'step', kind)),
+    logic: canConnect(rules, 'logicOption', 'element', kind),
+    stepTransitions: ROLES.some((role) => canConnect(rules, role, 'step', kind)),
   };
 }
 
-export function supportsLogic(container: ElementContainer): boolean {
-  return containerCapabilities(container.kind).logic;
+export function supportsLogic(rules: EditorRules, container: ElementContainer): boolean {
+  return containerCapabilities(rules, container.kind).logic;
 }
 
 // Сужение до шага формы держится на типе ConnectionReach.step: цель «шаг»
 // разрешима только из блока вида formStep.
-export function supportsStepTransitions(container: ElementContainer): container is FormStepContainer {
-  return containerCapabilities(container.kind).stepTransitions;
+export function supportsStepTransitions(
+  rules: EditorRules,
+  container: ElementContainer,
+): container is FormStepContainer {
+  return containerCapabilities(rules, container.kind).stepTransitions;
 }

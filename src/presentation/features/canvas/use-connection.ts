@@ -14,6 +14,7 @@ import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/pag
 import { connectableTargets, type ConnectableTargets, type ConnectionSource } from '@domain/connection-rules';
 import type { Command } from '@application/commands/command';
 import type { IIdGenerator } from '@application/ports/id-generator';
+import { useEditorRules } from '@presentation/features/settings/use-settings';
 import { ConnectElements } from '@application/commands/connect-elements';
 import { ReconnectElements } from '@application/commands/reconnect-elements';
 import { DisconnectElements } from '@application/commands/disconnect-elements';
@@ -158,35 +159,43 @@ export function useConnection(
   // target-handle (невидимый, во всю сущность) принимает drop/клик курсора;
   // в покое принимающих handles нет. Тот же расчёт проверяет связь
   // (isConnectionAllowed).
+  // Правила — те же, что у команд (настройки редактора, R-ADM).
+  const rules = useEditorRules();
   const [connectionTargets, setConnectionTargets] = useState<ConnectableTargets | null>(null);
-  const startConnection = useCallback((handleId: string | null | undefined) => {
-    const source = parseConnectionSource(handleId);
-    setConnectionTargets(source ? connectableTargets(graphRef.current, source) : null);
-  }, []);
+  const startConnection = useCallback(
+    (handleId: string | null | undefined) => {
+      const source = parseConnectionSource(handleId);
+      setConnectionTargets(source ? connectableTargets(graphRef.current, rules, source) : null);
+    },
+    [graphRef, rules],
+  );
   const endConnection = useCallback(() => setConnectionTargets(null), []);
-  const isConnectionAllowed = useCallback((connection: Connection | CanvasEdge): boolean => {
-    const source = parseConnectionSource(connection.sourceHandle);
-    if (!source) {
-      return false;
-    }
-    const targets = connectableTargets(graphRef.current, source);
-    // Переход между шагами — в handle шага, от элемента или варианта [owner 2026-10-14].
-    const targetStepId = connection.targetHandle ? parseStepTargetHandle(connection.targetHandle) : null;
-    if (targetStepId !== null) {
-      return targets.steps.has(targetStepId);
-    }
-    if (source.kind === 'logic') {
-      const targetElementId = connection.targetHandle
-        ? parseLogicTargetHandle(connection.targetHandle)
-        : null;
-      return targetElementId !== null && targets.elements.has(targetElementId);
-    }
-    // Навигационная связь приходит в target-handle блока, не в logic-handle элемента.
-    if (connection.targetHandle && parseLogicTargetHandle(connection.targetHandle) !== null) {
-      return false;
-    }
-    return targets.pages.has(connection.target);
-  }, []);
+  const isConnectionAllowed = useCallback(
+    (connection: Connection | CanvasEdge): boolean => {
+      const source = parseConnectionSource(connection.sourceHandle);
+      if (!source) {
+        return false;
+      }
+      const targets = connectableTargets(graphRef.current, rules, source);
+      // Переход между шагами — в handle шага, от элемента или варианта [owner 2026-10-14].
+      const targetStepId = connection.targetHandle ? parseStepTargetHandle(connection.targetHandle) : null;
+      if (targetStepId !== null) {
+        return targets.steps.has(targetStepId);
+      }
+      if (source.kind === 'logic') {
+        const targetElementId = connection.targetHandle
+          ? parseLogicTargetHandle(connection.targetHandle)
+          : null;
+        return targetElementId !== null && targets.elements.has(targetElementId);
+      }
+      // Навигационная связь приходит в target-handle блока, не в logic-handle элемента.
+      if (connection.targetHandle && parseLogicTargetHandle(connection.targetHandle) !== null) {
+        return false;
+      }
+      return targets.pages.has(connection.target);
+    },
+    [graphRef, rules],
+  );
 
   return {
     connect,

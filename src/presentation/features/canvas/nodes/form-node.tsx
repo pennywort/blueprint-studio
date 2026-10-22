@@ -38,7 +38,7 @@ import {
   type LayerColumn,
   type LayerDropDecision,
 } from '../layers/layer-columns';
-import { FORM_STEPS_LAYER_POLICY } from '../layers/layer-policy';
+import { useLayerPolicies } from '../layers/layer-policy';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { FormStepLayers } from './form-step-layers';
 import { useHandlesSync } from './use-handles-sync';
@@ -166,6 +166,7 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
   const nodeClasses = useNodeStyles();
   const classes = useStyles();
   const actions = useCanvasActions();
+  const stepsLayerPolicy = useLayerPolicies().formSteps;
   const highlightClasses = useHighlightStyles();
   // Подсветка — единый механизм (R-PERF-6).
   const highlight = useEntityHighlight({ entity: 'node', id });
@@ -227,7 +228,7 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
               width: rect.width / scale,
             };
           }),
-          FORM_STEPS_LAYER_POLICY,
+          stepsLayerPolicy,
         ),
         (event.clientX - zoneRect.left) / scale,
       );
@@ -239,7 +240,7 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
       // Обмен ёмкость уровней не меняет; перенос — по политике (ёмкость уровня).
       const own = data.steps.find((step) => step.id === draggedId);
       const decision = resolveLayerDrop(
-        FORM_STEPS_LAYER_POLICY,
+        stepsLayerPolicy,
         { id: draggedId, kind: 'formStep', depth: own ? own.depth : null },
         column,
         new Map(data.steps.map((step) => [step.id, step.depth])),
@@ -255,7 +256,7 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
       );
       return { column, decision, anchor, swapStepId: null };
     },
-    [data.steps, id, stepLevels],
+    [data.steps, id, stepLevels, stepsLayerPolicy],
   );
   const dropStep = useCallback(
     (dragged: StepDragPayload, state: StepDropState) => {

@@ -7,6 +7,7 @@ import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
 import { groupByLayer } from '@domain/layer-depths';
 import { elementVariants } from '@domain/element-kinds';
+import type { EditorRules } from '@domain/editor-rules';
 import { logicRulesToAnchorLinks, logicSourceHandleId } from './graph-flow-adapter';
 import {
   buildAnchorForest,
@@ -112,7 +113,11 @@ function estimateScenarioNodeHeight(elementCount: number): number {
 // корней друг под другом; строка варианта — по большему из карточки
 // варианта и стопки зависящих от него элементов — общее ядро «цель напротив
 // якоря» (layers/anchored-rows, якорь — вариант).
-function estimateStepHeight(step: FormStep, logicRules: ServiceGraph['logicRules']): number {
+function estimateStepHeight(
+  step: FormStep,
+  logicRules: ServiceGraph['logicRules'],
+  rules: EditorRules,
+): number {
   const S = FORM_STEP_LAYOUT;
   const ids = new Set<string>(step.elements.map((component) => component.id));
   const { childrenOf, parentOf } = buildAnchorForest(logicRulesToAnchorLinks(logicRules), (link) =>
@@ -130,7 +135,7 @@ function estimateStepHeight(step: FormStep, logicRules: ServiceGraph['logicRules
     // Строки элемента: карточка, затем варианты элемента выбора — карточки
     // всегда (переходы на шаги, [owner 2026-10-14]).
     const rows: AnchorRow<string>[] = [{ top: 0, height: S.elementHeight, children: [] }];
-    for (const variant of elementVariants(component)) {
+    for (const variant of elementVariants(rules, component)) {
       const previous = rows.at(-1)!;
       rows.push({
         top: previous.top + previous.height + S.optionGap,
@@ -150,6 +155,7 @@ function estimateStepHeight(step: FormStep, logicRules: ServiceGraph['logicRules
 function estimateFormSize(
   form: ServiceGraph['applicationForms'][number],
   graph: Pick<ServiceGraph, 'logicRules' | 'stepTransitions'>,
+  rules: EditorRules,
 ): {
   width: number;
   height: number;
@@ -173,7 +179,7 @@ function estimateFormSize(
         width,
         elementColumns * (S.elementWidth + S.columnGap) - S.columnGap + 2 * S.stepPadding,
       );
-      height += L.formStepGap + L.formStepHeaderHeight + estimateStepHeight(step, graph.logicRules);
+      height += L.formStepGap + L.formStepHeaderHeight + estimateStepHeight(step, graph.logicRules, rules);
     }
     return { width, height };
   });
@@ -228,6 +234,7 @@ export type CanvasLayout = {
 // оценка — только для ещё не измеренного (первый рендер).
 export function computeLayout(
   graph: ServiceGraph,
+  rules: EditorRules,
   measured?: MeasuredNodeSizes,
   rows?: MeasuredElementRows,
 ): CanvasLayout {
@@ -250,7 +257,7 @@ export function computeLayout(
   for (const form of graph.applicationForms) {
     // Оценка — только для ещё не измеренной формы (R-PERF-5): она обходит
     // шаги и правила логики и была половиной стоимости раскладки на команду.
-    const size = measured?.[form.id] ?? estimateFormSize(form, graph);
+    const size = measured?.[form.id] ?? estimateFormSize(form, graph, rules);
     nodes.push({
       id: form.id,
       orderIndex: form.orderIndex,

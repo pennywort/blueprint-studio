@@ -4,7 +4,7 @@ import { computeGraphDepths } from '@domain/graph-depths';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
 import { computeFormElementDepths } from '@domain/step-element-depths';
-import type { Command } from './command';
+import type { Command, CommandContext } from './command';
 import { preserveFormElementDepths, preservePageDepths, preserveFormStepDepths } from './depth-preservation';
 import { findElementLocation } from './graph-lookup';
 
@@ -17,7 +17,7 @@ export class RemoveElement implements Command {
 
   constructor(private readonly elementId: ElementId) {}
 
-  apply(draft: ServiceGraph): void {
+  apply(draft: ServiceGraph, { rules }: CommandContext): void {
     // Уровни шагов до мутации: шаг, потерявший входящий переход, остаётся на месте (ADR-15).
     const stepDepthsBefore = computeAllFormStepDepths(draft);
     // Колонки элементов шагов до мутации: цель, потерявшая правило, остаётся на месте (ADR-15).
@@ -44,6 +44,6 @@ export class RemoveElement implements Command {
     // Каскад переходов между шагами [owner 2026-10-14]: переходы, ставшие
     // недопустимыми (удалён элемент-источник), уходят вместе с причиной.
     preserveFormStepDepths(draft, stepDepthsBefore);
-    draft.stepTransitions = validStepTransitions(draft);
+    draft.stepTransitions = validStepTransitions(draft, rules);
   }
 }
