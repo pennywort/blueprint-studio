@@ -1,6 +1,14 @@
 import { Panel, useReactFlow, useStore, type ReactFlowState } from '@xyflow/react';
 import { Box, IconButton, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
-import { Map as MapIcon, Redo, Undo, ZoomIn, ZoomOut, ZoomOutMap } from '@blueprint-vendor/flamingo-icons';
+import {
+  Map as MapIcon,
+  PanTool,
+  Redo,
+  Undo,
+  ZoomIn,
+  ZoomOut,
+  ZoomOutMap,
+} from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 const useStyles = makeStyles<EditorTheme>((theme) => {
@@ -27,6 +35,11 @@ const useStyles = makeStyles<EditorTheme>((theme) => {
         backgroundColor: canvas.controlsHoverBackground,
       },
     },
+    // Включённый инструмент «Рука» (editor-config canvas.panTool).
+    pressed: {
+      color: canvas.edgeActive,
+      backgroundColor: canvas.controlsHoverBackground,
+    },
     zoomLabel: {
       minWidth: 56,
       textAlign: 'center',
@@ -43,6 +56,9 @@ export type EditorCanvasControlsProps = {
   onRedo?: () => void;
   miniMapVisible: boolean;
   onToggleMiniMap: () => void;
+  /** Режим «Рука»; без onTogglePanMode кнопки нет (editor-config canvas.panTool). */
+  panMode?: boolean;
+  onTogglePanMode?: () => void;
 };
 
 // Нижняя панель канваса по макету (T-011): undo/redo — отдельной группой
@@ -55,6 +71,8 @@ export function EditorCanvasControls({
   onRedo,
   miniMapVisible,
   onToggleMiniMap,
+  panMode = false,
+  onTogglePanMode,
 }: EditorCanvasControlsProps) {
   const classes = useStyles();
   const { zoomIn, zoomOut, fitView } = useReactFlow();
@@ -85,6 +103,19 @@ export function EditorCanvasControls({
       </Panel>
       <Panel position="bottom-right">
         <Box className={classes.row}>
+          {onTogglePanMode ? (
+            <div className={classes.group} data-testid="pan-tool-group">
+              <IconButton
+                className={panMode ? `${classes.button} ${classes.pressed}` : classes.button}
+                size="small"
+                aria-label="Рука (H)"
+                aria-pressed={panMode}
+                onClick={onTogglePanMode}
+              >
+                <PanTool fontSize="small" />
+              </IconButton>
+            </div>
+          ) : null}
           <Box className={classes.group} data-testid="zoom-group">
             <IconButton
               className={classes.button}

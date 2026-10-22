@@ -8,5 +8,6 @@
   { "key": "mod+v", "command": "edit.paste" },
   { "key": "delete", "command": "edit.delete" },
   { "key": "backspace", "command": "edit.delete" },
-  { "key": "escape", "command": "canvas.cancelConnection" }
+  { "key": "escape", "command": "canvas.cancelConnection" },
+  { "key": "h", "command": "canvas.togglePanMode" }
 ]

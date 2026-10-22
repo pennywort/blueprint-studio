@@ -16,6 +16,8 @@ export { default as ExpandMore } from '@material-ui/icons/ExpandMore';
 export { default as ExpandLess } from '@material-ui/icons/ExpandLess';
 export { default as ZoomOutMap } from '@material-ui/icons/ZoomOutMap';
 export { default as Map } from '@material-ui/icons/Map';
+// Инструмент «Рука» панели канваса (editor-config canvas.panTool).
+export { default as PanTool } from '@material-ui/icons/PanTool';
 // T-021: кнопки 1–2 левого тулбара. ViewColumn — меню добавления узлов
 // (узлы раскладываются колонками, D7); NoteAdd — меню добавления элементов.
 export { default as ViewColumn } from '@material-ui/icons/ViewColumn';

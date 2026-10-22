@@ -18,6 +18,8 @@ export const HOTKEY_COMMANDS = {
   // Единое удаление (F5): элемент или шаг, иначе выделенные блоки и связи.
   'edit.delete': { title: 'Удалить выделенное', allowInInput: false, repeat: false },
   'canvas.cancelConnection': { title: 'Отменить протягивание связи', allowInInput: false, repeat: false },
+  // Инструмент «Рука» (editor-config canvas.panTool): только перемещение по полотну.
+  'canvas.togglePanMode': { title: 'Инструмент «Рука»', allowInInput: false, repeat: false },
 } as const satisfies Record<string, HotkeyCommandMeta>;
 
 export type HotkeyCommandId = keyof typeof HOTKEY_COMMANDS;

@@ -120,6 +120,20 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
         {
           cursor: 'crosshair',
         },
+      // Инструмент «Рука» (editor-config canvas.panTool): блоки, связи и
+      // handles прозрачны для мыши — нажатие попадает в полотно, и react-flow
+      // двигает его (pan), а не выделяет/тащит сущность. Перечислены только
+      // элементы со СВОИМ pointer-events (без «*», R-PERF-7).
+      '&.editor-pan-mode :is(.react-flow__node, .react-flow__edge, .react-flow__handle, .react-flow__nodesselection-rect)':
+        {
+          pointerEvents: 'none',
+        },
+      '&.editor-pan-mode .react-flow__pane': {
+        cursor: 'grab',
+      },
+      '&.editor-pan-mode .react-flow__pane.dragging': {
+        cursor: 'grabbing',
+      },
       // Рёбра поверх узлов (F4) не перехватывают drop курсора на блок.
       '&.editor-connecting .react-flow__edge': {
         pointerEvents: 'none',

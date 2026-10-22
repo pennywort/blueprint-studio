@@ -32,6 +32,7 @@ import {
 // style.css почти целиком перебивалась своей (react-flow-theme-styles).
 import '@xyflow/react/dist/base.css';
 import { useEditorTheme } from '@presentation/theme/editor-theme';
+import { EDITOR_CONFIG } from '@presentation/app/editor-config';
 import { useHotkeyHandlers } from '@presentation/features/hotkeys/hotkeys-provider';
 import { useReactFlowThemeStyles } from './react-flow-theme-styles';
 import {
@@ -175,6 +176,9 @@ function CanvasInner({
   const styles = useReactFlowThemeStyles();
   // По макетам миникарта выключена по умолчанию, включается кнопкой панели.
   const [miniMapVisible, setMiniMapVisible] = useState(false);
+  // Инструмент «Рука» (editor-config canvas.panTool): выделение заблокировано,
+  // drag по канвасу (и по блокам) только двигает полотно.
+  const [panMode, setPanMode] = useState(false);
   const canvas = theme.editor.canvas;
 
   // Измеренные react-flow размеры узлов (ревью P2/P4, R2): узел из
@@ -437,6 +441,12 @@ function CanvasInner({
     }
   }, [store, onConnectionEnd]);
 
+  // Вход в «Руку» обрывает начатую клик-связь: её цели станут недоступны мыши.
+  const togglePanMode = useCallback(() => {
+    cancelClickConnection();
+    setPanMode((enabled) => !enabled);
+  }, [cancelClickConnection]);
+
   // Клавиатурные команды канваса — только обработчики, комбинации задаёт
   // система хоткеев. Escape без клик-связи не обрабатывается (false).
   useHotkeyHandlers({
@@ -446,6 +456,13 @@ function CanvasInner({
         return false;
       }
       cancelClickConnection();
+      return true;
+    },
+    'canvas.togglePanMode': () => {
+      if (!EDITOR_CONFIG.canvas.panTool) {
+        return false;
+      }
+      togglePanMode();
       return true;
     },
   });
@@ -558,16 +575,21 @@ function CanvasInner({
   const handleNodesDelete = useCallback((deleted: CanvasNode[]) => onDeleteNodes?.(deleted), [onDeleteNodes]);
   const handleEdgeClick = useCallback(() => onClearSelection?.(), [onClearSelection]);
   const handlePaneClick = useCallback(() => {
-    if (pointerDownOnNodeRef.current) {
+    // В режиме «Рука» узлы прозрачны для мыши: клик по блоку попадает в
+    // полотно и не должен снимать выделение.
+    if (panMode || pointerDownOnNodeRef.current) {
       return; // click «унаследован» от нажатия на узле — не клик по полотну
     }
     cancelClickConnection();
     onClearSelection?.();
-  }, [cancelClickConnection, onClearSelection]);
+  }, [panMode, cancelClickConnection, onClearSelection]);
 
+  const rootClassName = [styles.root, connecting && 'editor-connecting', panMode && 'editor-pan-mode']
+    .filter(Boolean)
+    .join(' ');
   return (
     <div
-      className={connecting ? `${styles.root} editor-connecting` : styles.root}
+      className={rootClassName}
       data-testid="editor-canvas"
       onPointerDownCapture={handlePointerDownCapture}
       onPointerDown={handlePointerDown}
@@ -603,6 +625,12 @@ function CanvasInner({
         // по умолчанию поднимает выделенный узел на z-index 1000 — выше слоя
         // рёбер. Узлы на канвасе не перекрываются, подъём не нужен.
         elevateNodesOnSelect={false}
+        // Режим «Рука»: ни выделения (в т.ч. рамкой Shift+drag), ни drag и
+        // связей — мышь только двигает полотно (стили editor-pan-mode).
+        elementsSelectable={!panMode}
+        nodesDraggable={!panMode}
+        nodesConnectable={!panMode}
+        selectionKeyCode={panMode ? null : 'Shift'}
         // Удаление — команда edit.delete системы хоткеев (deleteSelection выше).
         deleteKeyCode={null}
         // Штатный порог drag react-flow: микросдвиг мыши при клике по блоку
@@ -639,6 +667,8 @@ function CanvasInner({
           onRedo={onRedo}
           miniMapVisible={miniMapVisible}
           onToggleMiniMap={() => setMiniMapVisible((visible) => !visible)}
+          panMode={panMode}
+          onTogglePanMode={EDITOR_CONFIG.canvas.panTool ? togglePanMode : undefined}
         />
       </ReactFlow>
     </div>
