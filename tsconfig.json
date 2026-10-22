@@ -20,7 +20,11 @@
       "@domain/*": ["src/domain/*"],
       "@application/*": ["src/application/*"],
       "@infrastructure/*": ["src/infrastructure/*"],
-      "@presentation/*": ["src/presentation/*"]
+      "@presentation/*": ["src/presentation/*"],
+      "@local/editor-icons": [
+        "src/presentation/icons/editor-icons.local.tsx",
+        "src/presentation/icons/editor-icons.none.ts"
+      ]
     }
   },
   "include": ["src", "rsbuild.config.ts", "vitest.config.ts", "vitest.setup.ts"]

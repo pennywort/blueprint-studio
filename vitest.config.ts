@@ -14,6 +14,10 @@ export default defineConfig({
       { find: '@application', replacement: path.resolve(__dirname, 'src/application') },
       { find: '@infrastructure', replacement: path.resolve(__dirname, 'src/infrastructure') },
       { find: '@presentation', replacement: path.resolve(__dirname, 'src/presentation') },
+      {
+        find: /^@local\/editor-icons$/,
+        replacement: path.resolve(__dirname, 'src/presentation/icons/editor-icons.none.ts'),
+      },
     ],
   },
   test: {

@@ -1,7 +1,7 @@
 import { memo, useCallback, useLayoutEffect, useRef, type DragEvent } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import { Card, IconButton, Typography, makeStyles } from '@material-ui/core';
-import { Delete } from '@material-ui/icons';
+import { editorIcons } from '@presentation/icons/editor-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
 import { CANVAS_LAYOUT, FORM_STEP_LAYOUT, type MeasuredElementRows } from '../canvas-layout';
@@ -119,7 +119,7 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
           aria-label="Удалить узел"
           onClick={() => type && actions?.removeNode(id, type)}
         >
-          <Delete fontSize="small" />
+          <editorIcons.delete fontSize="small" />
         </IconButton>
       </div>
       {data.elements.length > 0 ? (

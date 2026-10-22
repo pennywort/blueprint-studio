@@ -11,7 +11,7 @@ import {
   Typography,
   makeStyles,
 } from '@material-ui/core';
-import { Add, Delete } from '@material-ui/icons';
+import { editorIcons } from '@presentation/icons/editor-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { AttributeField } from './attribute-field';
 import { IconPropertyEditor } from './icon-property-editor';
@@ -225,14 +225,14 @@ function OptionListPropertyEditor({ value, onChange, attribute }: PropertyEditor
               aria-label="Удалить вариант"
               onClick={() => onChange(items.filter((_, i) => i !== index))}
             >
-              <Delete fontSize="small" />
+              <editorIcons.delete fontSize="small" />
             </IconButton>
           </div>
         ))}
         <Button
           size="small"
           className={classes.addButton}
-          startIcon={<Add />}
+          startIcon={<editorIcons.add />}
           onClick={() =>
             onChange([
               ...items,

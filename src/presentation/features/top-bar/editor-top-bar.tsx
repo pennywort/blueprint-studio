@@ -13,7 +13,7 @@ import {
   Typography,
   makeStyles,
 } from '@material-ui/core';
-import { Search } from '@material-ui/icons';
+import { editorIcons } from '@presentation/icons/editor-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
@@ -157,7 +157,7 @@ export function EditorTopBar({
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
-                  <Search fontSize="small" />
+                  <editorIcons.search fontSize="small" />
                 </InputAdornment>
               ),
             }}

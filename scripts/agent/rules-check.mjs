@@ -31,6 +31,11 @@ for (const file of changed) {
 
 const RULES = [
   {
+    re: /['"]@material-ui\/icons/,
+    msg: 'иконка мимо таблицы — только editorIcons из presentation/icons/editor-icons.ts',
+    skip: (file) => file === 'src/presentation/icons/editor-icons.ts',
+  },
+  {
     re: /(?<![\w&])#[0-9a-fA-F]{3,8}\b/,
     msg: 'литеральный hex-цвет (цвета только из темы editor-theme.ts)',
     skip: (file) => file.startsWith('src/presentation/theme/'),

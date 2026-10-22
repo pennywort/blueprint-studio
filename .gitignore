@@ -6,3 +6,7 @@ coverage/
 .husky/_
 .idea
 .agent-logs/
+# Локальные переопределения рабочей машины (docs/local-overrides.md) — не в git
+*.local.ts
+*.local.tsx
+.env.local

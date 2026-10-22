@@ -1,6 +1,6 @@
 import { Panel, useReactFlow, useStore, type ReactFlowState } from '@xyflow/react';
 import { Box, IconButton, Typography, makeStyles } from '@material-ui/core';
-import { Map as MapIcon, PanTool, Redo, Undo, ZoomIn, ZoomOut, ZoomOutMap } from '@material-ui/icons';
+import { editorIcons } from '@presentation/icons/editor-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 const useStyles = makeStyles<EditorTheme>((theme) => {
@@ -80,7 +80,7 @@ export function EditorCanvasControls({
             disabled={!canUndo}
             onClick={onUndo}
           >
-            <Undo fontSize="small" />
+            <editorIcons.undo fontSize="small" />
           </IconButton>
           <IconButton
             className={classes.button}
@@ -89,7 +89,7 @@ export function EditorCanvasControls({
             disabled={!canRedo}
             onClick={onRedo}
           >
-            <Redo fontSize="small" />
+            <editorIcons.redo fontSize="small" />
           </IconButton>
         </Box>
       </Panel>
@@ -104,7 +104,7 @@ export function EditorCanvasControls({
                 aria-pressed={panMode}
                 onClick={onTogglePanMode}
               >
-                <PanTool fontSize="small" />
+                <editorIcons.panTool fontSize="small" />
               </IconButton>
             </div>
           ) : null}
@@ -115,7 +115,7 @@ export function EditorCanvasControls({
               aria-label="Вместить карту"
               onClick={() => void fitView()}
             >
-              <ZoomOutMap fontSize="small" />
+              <editorIcons.fitView fontSize="small" />
             </IconButton>
             <IconButton
               className={classes.button}
@@ -123,7 +123,7 @@ export function EditorCanvasControls({
               aria-label="Уменьшить масштаб"
               onClick={() => void zoomOut()}
             >
-              <ZoomOut fontSize="small" />
+              <editorIcons.zoomOut fontSize="small" />
             </IconButton>
             <ZoomLabel className={classes.zoomLabel} />
             <IconButton
@@ -132,7 +132,7 @@ export function EditorCanvasControls({
               aria-label="Увеличить масштаб"
               onClick={() => void zoomIn()}
             >
-              <ZoomIn fontSize="small" />
+              <editorIcons.zoomIn fontSize="small" />
             </IconButton>
           </Box>
           <Box className={classes.group} data-testid="minimap-toggle-group">
@@ -143,7 +143,7 @@ export function EditorCanvasControls({
               aria-pressed={miniMapVisible}
               onClick={onToggleMiniMap}
             >
-              <MapIcon fontSize="small" />
+              <editorIcons.minimap fontSize="small" />
             </IconButton>
           </Box>
         </Box>

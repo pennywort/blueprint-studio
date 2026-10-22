@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Button, InputAdornment, TextField, Typography, makeStyles } from '@material-ui/core';
-import { Search } from '@material-ui/icons';
+import { editorIcons } from '@presentation/icons/editor-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { AttributeField } from './attribute-field';
 import { IconStub } from './icon-stub';
@@ -137,7 +137,7 @@ export function IconPropertyEditor({ value, onChange, attribute }: PropertyEdito
           InputProps={{
             endAdornment: (
               <InputAdornment position="end">
-                <Search fontSize="small" className={classes.muted} />
+                <editorIcons.search fontSize="small" className={classes.muted} />
               </InputAdornment>
             ),
           }}

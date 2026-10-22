@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo, useRef, useState, type DragEvent } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import { Card, Chip, IconButton, Menu, MenuItem, Typography, makeStyles } from '@material-ui/core';
-import { Add, Delete } from '@material-ui/icons';
+import { editorIcons } from '@presentation/icons/editor-icons';
 import type { CanvasElementKind } from '@domain/model/canvas-element';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { NODE_KIND_LABELS } from '@presentation/labels/editor-labels';
@@ -308,7 +308,7 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
           aria-label="Удалить форму"
           onClick={() => actions?.removeNode(id, 'form')}
         >
-          <Delete fontSize="small" />
+          <editorIcons.delete fontSize="small" />
         </IconButton>
       </div>
       <div ref={stepsRowRef} className={classes.stepsRow} data-testid="form-steps-row" {...stepDropHandlers}>
@@ -361,7 +361,7 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
           data-testid="add-form-step"
           onClick={() => actions?.addFormStep(id)}
         >
-          <Add fontSize="small" />
+          <editorIcons.add fontSize="small" />
           <Typography variant="body2">Добавить шаг</Typography>
         </div>
       </div>
@@ -505,7 +505,7 @@ const FormStepColumn = memo(function FormStepColumn({
             aria-label="Удалить шаг"
             onClick={() => actions?.removeStep(formId, step.id)}
           >
-            <Delete fontSize="small" />
+            <editorIcons.delete fontSize="small" />
           </IconButton>
           <IconButton
             className={`${nodeClasses.iconButton} nodrag`}
@@ -513,7 +513,7 @@ const FormStepColumn = memo(function FormStepColumn({
             aria-label="Добавить элемент в шаг"
             onClick={(event) => onOpenAddMenu(event.currentTarget, step.id)}
           >
-            <Add fontSize="small" />
+            <editorIcons.add fontSize="small" />
           </IconButton>
         </div>
       </div>
