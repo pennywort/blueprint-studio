@@ -39,6 +39,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     display: 'flex',
     flexGrow: 1,
     minHeight: 0,
+    position: 'relative',
   },
   canvasArea: {
     flexGrow: 1,
@@ -68,13 +69,17 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     padding: theme.spacing(2),
   },
   // Панель атрибутов — карточка с отступом от краёв и своим скроллом
-  // (макеты docs/design-mockups/настройка-атрибутов-*, T-041).
+  // (макеты docs/design-mockups/настройка-атрибутов-*, T-041). Висит поверх
+  // полотна, а не колонкой рядом: иначе за карточкой виден непрозрачный фон
+  // страницы.
   attributesPanel: {
+    position: 'absolute',
+    top: theme.spacing(2),
+    right: theme.spacing(2),
+    zIndex: 5,
     width: 360,
-    flexShrink: 0,
-    alignSelf: 'flex-start',
-    maxHeight: `calc(100% - ${theme.spacing(4)}px)`,
-    margin: theme.spacing(2, 2, 2, 0),
+    // Снизу — место под панель масштаба полотна, карточка её не перекрывает.
+    maxHeight: `calc(100% - ${theme.spacing(13)}px)`,
     overflowY: 'auto',
     boxSizing: 'border-box',
     backgroundColor: theme.palette.background.paper,
