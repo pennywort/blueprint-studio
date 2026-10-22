@@ -9,7 +9,7 @@ export const useNodeStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
     // Не обрезать target-handle узла на левой границе (N7/N11).
     overflow: 'visible',
-    borderRadius: 16,
+    borderRadius: theme.editor.shape.block,
     backgroundColor: theme.palette.background.paper,
     padding: CANVAS_LAYOUT.nodePadding,
     display: 'flex',

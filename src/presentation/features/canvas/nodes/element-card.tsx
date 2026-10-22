@@ -1,6 +1,6 @@
-import { memo, useRef } from 'react';
+import { memo, useRef, type CSSProperties } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Card, CardContent, Chip, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Chip, makeStyles } from '@blueprint-vendor/flamingo-core';
 import { ShowChart, Visibility } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { logicAnchorHandleId, logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
@@ -14,34 +14,60 @@ import { useHighlightStyles } from '../highlight/highlight-styles';
 import { useEntityHighlight } from '../highlight/use-entity-highlight';
 import { TargetHandle } from './target-handle';
 
+// TEMPORARY (R-PERF-10, [owner 2026-10-22]): карточка элемента — div + классы,
+// а не Card/CardContent/Typography/Chip ДС: на стенде ~1100 карточек, и 4
+// компонента MUI на каждую были основной ценой рендера и размера DOM. Вид —
+// тот же, токены — из темы. Сравнить с карточкой Flamingo замером на стенде
+// (scripts/agent/perf-bench.mjs, docs/refactoring/R-PERF-canvas.md §4c);
+// реестр — docs/temporary-registry.md.
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
-    borderRadius: 12,
-    borderColor: theme.editor.canvas.elementBorder,
-    boxShadow: 'none',
-    // Handle позиционируется относительно карточки элемента (D9).
+    // Как Card variant="outlined": фон бумаги и рамка 1px.
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.editor.canvas.elementBorder}`,
+    borderRadius: theme.editor.shape.card,
+    color: theme.palette.text.primary,
+    // Handle позиционируется относительно карточки элемента (D9); handle на
+    // границе не обрезается (N7/N11).
     position: 'relative',
-    // Card MUI обрезает содержимое (overflow: hidden) — handle на границе
-    // карточки был виден наполовину, ребро «не доходило» до него (N7/N11).
     overflow: 'visible',
-    // Без анимации тени Paper (300 мс): выделение должно меняться мгновенно,
-    // иначе перекликивание воспринимается как лаг (повторная приёмка).
-    transition: 'none',
   },
   content: {
     display: 'flex',
     alignItems: 'flex-start',
     gap: theme.spacing(1.5),
     padding: theme.spacing(2),
-    '&:last-child': {
-      paddingBottom: theme.spacing(2),
-    },
+  },
+  title: {
+    ...theme.typography.body2,
+  },
+  caption: {
+    ...theme.typography.caption,
+    color: theme.palette.text.secondary,
+  },
+  // Ярлык (как Chip size="small"): тип элемента, «скрыт», адресат комментария.
+  chip: {
+    ...theme.typography.body2,
+    fontSize: theme.typography.pxToRem(13),
+    display: 'inline-flex',
+    alignItems: 'center',
+    height: 24,
+    padding: theme.spacing(0, 1),
+    borderRadius: theme.editor.shape.chip,
+    whiteSpace: 'nowrap',
+    boxSizing: 'border-box',
+    backgroundColor: theme.palette.grey[300],
+    color: theme.palette.getContrastText(theme.palette.grey[300]),
+  },
+  chipAccent: {
+    backgroundColor: theme.editor.chipAccent,
+    color: theme.editor.chipAccentContrastText,
   },
   iconWrap: {
     width: 40,
     height: 40,
     flexShrink: 0,
-    borderRadius: 8,
+    borderRadius: theme.editor.shape.icon,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -83,11 +109,9 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     gap: theme.spacing(1.5),
     minHeight: FORM_STEP_LAYOUT.elementHeight,
     padding: theme.spacing(2),
-    '&:last-child': {
-      paddingBottom: theme.spacing(2),
-    },
   },
   commentText: {
+    ...theme.typography.body2,
     whiteSpace: 'pre-wrap',
     overflowWrap: 'anywhere',
   },
@@ -108,10 +132,23 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     padding: theme.spacing(3, 2, 2),
     border: `1px solid ${theme.editor.canvas.commentBorder}`,
     borderTop: 'none',
-    borderRadius: '0 0 12px 12px',
+    borderRadius: `0 0 ${theme.editor.shape.card}px ${theme.editor.shape.card}px`,
     backgroundColor: theme.editor.canvas.commentBackground,
   },
 }));
+
+// Якорь входа рёбер правил: нулевой размер — ребро упирается ровно в край
+// карточки, а не за полширины handle до неё [owner 2026-10-13]. Inline-стиль
+// перебивает scoped-стили handles; константа — без нового объекта на рендер (R-PERF-8).
+const LOGIC_ANCHOR_STYLE: CSSProperties = {
+  top: FORM_STEP_LAYOUT.logicHandleTop,
+  width: 0,
+  height: 0,
+  minWidth: 0,
+  minHeight: 0,
+  opacity: 0,
+  pointerEvents: 'none',
+};
 
 export type ElementCardProps = {
   element: CanvasElementData;
@@ -178,10 +215,9 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
       }}
       onClick={(event) => event.stopPropagation()}
     >
-      <Card
+      <div
         className={[classes.card, isComment ? classes.commentCard : '', highlightClasses.card].join(' ')}
         data-highlight={highlight ?? undefined}
-        variant="outlined"
       >
         {/* Цель правил «Сложной логики» (T-037): рёбра видимости приходят
           на левый край карточки элемента, не шага и не формы. Только у
@@ -199,42 +235,26 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
             position={Position.Left}
             id={logicAnchorHandleId(element.id)}
             isConnectable={false}
-            // Нулевой размер: ребро упирается ровно в край карточки, а не за
-            // полширины handle до неё [owner 2026-10-13].
-            style={{
-              top: FORM_STEP_LAYOUT.logicHandleTop,
-              width: 0,
-              height: 0,
-              minWidth: 0,
-              minHeight: 0,
-              opacity: 0,
-              pointerEvents: 'none',
-            }}
+            style={LOGIC_ANCHOR_STYLE}
           />
         ) : null}
         {isComment ? (
-          <CardContent className={classes.commentContent}>
-            <Typography className={classes.commentText} variant="body2">
-              {element.title}
-            </Typography>
-            <Chip className={classes.commentBadge} size="small" label={element.commentAudience} />
-          </CardContent>
+          <div className={classes.commentContent}>
+            <div className={classes.commentText}>{element.title}</div>
+            <span className={`${classes.chip} ${classes.commentBadge}`}>{element.commentAudience}</span>
+          </div>
         ) : (
-          <CardContent className={classes.content}>
+          <div className={classes.content}>
             <div className={classes.iconWrap}>
               {/* Иконки элементов платформы придут с пакетом element-schemas;
               пока — единый плейсхолдер из дизайн-системы. */}
               <ShowChart fontSize="small" />
             </div>
             <div className={classes.texts}>
-              <Typography variant="body2">{element.title}</Typography>
-              {element.secondaryText ? (
-                <Typography variant="caption" color="textSecondary">
-                  {element.secondaryText}
-                </Typography>
-              ) : null}
+              <div className={classes.title}>{element.title}</div>
+              {element.secondaryText ? <div className={classes.caption}>{element.secondaryText}</div> : null}
               <div className={classes.chips}>
-                <Chip size="small" color="secondary" label={element.kindLabel} />
+                <span className={`${classes.chip} ${classes.chipAccent}`}>{element.kindLabel}</span>
                 {element.complexLogic ? (
                   <Chip
                     className={classes.logicChip}
@@ -249,9 +269,7 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
                 ) : null}
                 {/* Демонстрация семантики видимости (T-062): цель правил скрыта
                 по умолчанию (L3) — до появления /preview это видно бейджем. */}
-                {element.hiddenByLogic ? (
-                  <Chip size="small" color="default" label="Скрыт в предпросмотре" />
-                ) : null}
+                {element.hiddenByLogic ? <span className={classes.chip}>Скрыт в предпросмотре</span> : null}
                 {/* Индикатор «элемент кому-то подчинён» (L-Q1): виден даже при
                 выключенной логике у источника. */}
                 {violations ? <ViolationBadge messages={violations} /> : null}
@@ -260,17 +278,15 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
                 ) : null}
               </div>
             </div>
-          </CardContent>
+          </div>
         )}
         {/* Комментарий-элемент вне связей: ни источника, ни цели. */}
         {isComment ? null : <Handle type="source" position={Position.Right} id={element.id} />}
-      </Card>
+      </div>
       {element.note ? (
         <div className={classes.note} data-testid={`element-note-${element.id}`}>
-          <Typography className={classes.commentText} variant="body2">
-            {element.note.text}
-          </Typography>
-          <Chip className={classes.commentBadge} size="small" label={element.note.audience} />
+          <div className={classes.commentText}>{element.note.text}</div>
+          <span className={`${classes.chip} ${classes.commentBadge}`}>{element.note.audience}</span>
         </div>
       ) : null}
     </div>

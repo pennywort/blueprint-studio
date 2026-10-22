@@ -22,7 +22,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     maxWidth: 520,
     '& .MuiOutlinedInput-root': {
       backgroundColor: theme.palette.background.paper,
-      borderRadius: 24,
+      borderRadius: theme.editor.shape.pill,
       '& fieldset': {
         borderColor: theme.palette.divider,
       },
@@ -45,19 +45,23 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   previewButton: {
     backgroundColor: theme.editor.secondaryButtonBackground,
     color: theme.palette.text.primary,
-    borderRadius: 24,
+    borderRadius: theme.editor.shape.pill,
     textTransform: 'none',
     padding: theme.spacing(1, 3),
     '&:hover': {
       backgroundColor: theme.editor.secondaryButtonHoverBackground,
     },
   },
+  // Результаты поиска — над панелями и канвасом, слой модальных окон темы (R-PERF-8).
+  resultsPopper: {
+    zIndex: theme.zIndex.modal,
+  },
   results: {
     width: 520,
     maxHeight: 360,
     overflowY: 'auto',
     marginTop: theme.spacing(0.5),
-    borderRadius: 12,
+    borderRadius: theme.editor.shape.card,
   },
   resultItem: {
     display: 'flex',
@@ -65,7 +69,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     alignItems: 'flex-start',
   },
   approvalButton: {
-    borderRadius: 24,
+    borderRadius: theme.editor.shape.pill,
     textTransform: 'none',
     padding: theme.spacing(1, 3),
   },
@@ -162,7 +166,7 @@ export function EditorTopBar({
             open={resultsOpen && query.length > 0}
             anchorEl={searchAnchorRef.current}
             placement="bottom-start"
-            style={{ zIndex: 1300 }}
+            className={classes.resultsPopper}
           >
             <Paper className={classes.results} data-testid="canvas-search-results">
               {results.length > 0 ? (

@@ -38,12 +38,12 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   success: {
     backgroundColor: theme.palette.primary.main,
     color: theme.palette.primary.contrastText,
-    borderRadius: 12,
+    borderRadius: theme.editor.shape.card,
   },
   error: {
     backgroundColor: theme.palette.error.main,
     color: theme.palette.error.contrastText,
-    borderRadius: 12,
+    borderRadius: theme.editor.shape.card,
   },
 }));
 

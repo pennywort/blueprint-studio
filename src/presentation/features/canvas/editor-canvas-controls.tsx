@@ -10,7 +10,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => {
       display: 'flex',
       alignItems: 'center',
       backgroundColor: canvas.controlsBackground,
-      borderRadius: 24,
+      borderRadius: theme.editor.shape.pill,
       padding: theme.spacing(0.5),
       // Соседние пилюли правой группы идут с зазором.
       '& + &': {

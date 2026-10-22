@@ -1,12 +1,14 @@
+import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Card, Chip, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { isActionTarget } from '../canvas-events';
+import { useCanvasActions } from '../canvas-interaction';
 import { CANVAS_LAYOUT, FORM_STEP_LAYOUT } from '../canvas-layout';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
-    borderRadius: 12,
+    borderRadius: theme.editor.shape.card,
     borderColor: theme.editor.canvas.elementBorder,
     boxShadow: 'none',
     // Source-handle на правом краю карточки — не обрезать (N7/N11).
@@ -30,8 +32,8 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
 
 export type OptionCardProps = {
   option: { handleId: string; label: string; value: string; isDefault: boolean };
-  /** Нажатие выделяет Select-владелец (вариант — его часть, не отдельный элемент). */
-  onSelect?: () => void;
+  /** Select-владелец: нажатие выделяет его (вариант — часть Select'а, не отдельный элемент). */
+  elementId: string;
 };
 
 // Вариант Select'а — отдельная карточка под Select'ом: в шаге формы — в той
@@ -41,8 +43,11 @@ export type OptionCardProps = {
 // переход на следующий шаг [owner 2026-10-14] — source-handle справа.
 // TEMPORARY: макет покажут заказчику — вид «оторванных» от Select'а вариантов
 // может измениться (PROJECT_STATE, ADR-16).
-export function OptionCard({ option, onSelect }: OptionCardProps) {
+// memo + действие из контекста (R-PERF-10): пропсы стабильны, вариант не
+// перерисовывается вместе с узлом.
+export const OptionCard = memo(function OptionCard({ option, elementId }: OptionCardProps) {
   const classes = useStyles();
+  const actions = useCanvasActions();
   return (
     <Card
       // nodrag: нажатие на варианте не начинает drag узла react-flow — иначе
@@ -55,7 +60,7 @@ export function OptionCard({ option, onSelect }: OptionCardProps) {
       data-option-card={option.handleId}
       onPointerDown={(event) => {
         if (!isActionTarget(event.target)) {
-          onSelect?.();
+          actions?.selectElement(elementId);
         }
       }}
       onClick={(event) => event.stopPropagation()}
@@ -77,4 +82,4 @@ export function OptionCard({ option, onSelect }: OptionCardProps) {
       />
     </Card>
   );
-}
+});

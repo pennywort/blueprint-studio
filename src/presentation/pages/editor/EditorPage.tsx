@@ -78,7 +78,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     boxSizing: 'border-box',
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.divider}`,
-    borderRadius: 24,
+    borderRadius: theme.editor.shape.pill,
     padding: theme.spacing(2.5),
   },
 }));

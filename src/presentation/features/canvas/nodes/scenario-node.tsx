@@ -139,11 +139,7 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
               {element.complexLogic?.enabled ? (
                 <div className={classes.options}>
                   {element.complexLogic.options.map((option) => (
-                    <OptionCard
-                      key={option.handleId}
-                      option={option}
-                      onSelect={() => actions?.selectElement(element.id)}
-                    />
+                    <OptionCard key={option.handleId} option={option} elementId={element.id} />
                   ))}
                 </div>
               ) : null}

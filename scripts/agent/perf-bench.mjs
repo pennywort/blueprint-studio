@@ -100,6 +100,33 @@ const PROBE = () => {
       return { fps: (probe.frames.length / duration) * 1000, worst, tbt: probe.longTasks };
     },
     // Тишина DOM: resolve через quiet мс после последней мутации; возвращает время от вызова до последней мутации.
+    // Замер действия: watch() — до действия (наблюдатель уже стоит, гонки с
+    // нажатием нет), settle() — после: время от watch до последней мутации,
+    // когда DOM затих на quietMs (0 — мутаций не было за 2 с).
+    watch() {
+      const state = { start: performance.now(), last: null };
+      const observer = new MutationObserver(() => {
+        state.last = performance.now();
+      });
+      observer.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
+      window.__benchWatch = { state, observer };
+    },
+    settle(quietMs) {
+      const { state, observer } = window.__benchWatch;
+      return new Promise((resolve) => {
+        const poll = () => {
+          const now = performance.now();
+          const quietEnough = state.last !== null && now - state.last >= quietMs;
+          if (quietEnough || (state.last === null && now - state.start > 2000)) {
+            observer.disconnect();
+            resolve(state.last === null ? 0 : state.last - state.start);
+            return;
+          }
+          setTimeout(poll, 10);
+        };
+        poll();
+      });
+    },
     quiet(quietMs) {
       return new Promise((resolve) => {
         const started = performance.now();
@@ -183,12 +210,12 @@ async function main() {
     if (!cardPoint) throw new Error('нет видимой карточки элемента');
     await page.mouse.click(cardPoint.x, cardPoint.y);
     await page.evaluate(() => window.__bench.quiet(150));
-    let pending = page.evaluate(() => window.__bench.quiet(150));
+    await page.evaluate(() => window.__bench.watch());
     await page.keyboard.press('Delete');
-    result.cmdDelete.push(await pending);
-    pending = page.evaluate(() => window.__bench.quiet(150));
+    result.cmdDelete.push(await page.evaluate(() => window.__bench.settle(150)));
+    await page.evaluate(() => window.__bench.watch());
     await page.keyboard.press('ControlOrMeta+z');
-    result.cmdUndo.push(await pending);
+    result.cmdUndo.push(await page.evaluate(() => window.__bench.settle(150)));
 
     const point = (await panePoint()) ?? { x: 800, y: 500 };
     await page.mouse.move(point.x, point.y);

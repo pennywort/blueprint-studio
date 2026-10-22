@@ -13,7 +13,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     justifyContent: 'center',
     width: 24,
     height: 24,
-    borderRadius: 6,
+    borderRadius: theme.editor.shape.small,
     border: `1.5px solid ${theme.palette.text.secondary}`,
     color: theme.palette.text.secondary,
     fontSize: 9,

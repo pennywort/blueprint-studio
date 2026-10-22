@@ -15,7 +15,6 @@ import { FORM_STEP_LAYER_POLICY } from '../layers/layer-policy';
 import { packLayerBands } from '../layers/layer-bands';
 import { ElementCard } from './element-card';
 import { OptionCard } from './option-card';
-import { useCanvasActions } from '../canvas-interaction';
 import {
   ColumnDropBar,
   columnBarX,
@@ -105,7 +104,6 @@ export type FormStepLayersProps = {
 // шага/формы — перенос в колонку-кандидат.
 export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps) {
   const classes = useStyles();
-  const actions = useCanvasActions();
   const layersRef = useRef<HTMLDivElement>(null);
   // Лес правил: корни — элементы без варианта-источника в этом шаге,
   // дети — по option-handle варианта (порядок — порядок элементов шага).
@@ -234,7 +232,7 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
             return (
               <div key={option.handleId} className={classes.optionRow}>
                 <div className={classes.cell}>
-                  <OptionCard option={option} onSelect={() => actions?.selectElement(element.id)} />
+                  <OptionCard option={option} elementId={element.id} />
                 </div>
                 {dependents.length > 0 ? (
                   <div className={classes.subtrees}>{dependents.map(renderTree)}</div>

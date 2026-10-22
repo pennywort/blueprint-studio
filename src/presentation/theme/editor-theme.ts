@@ -37,6 +37,8 @@ export interface EditorCanvasPalette {
   nodeHoverBackground: string;
   /** Рамка узла при hover-подсветке цели связи. */
   nodeHoverBorder: string;
+  /** Заливка рамки группового выделения (Shift+drag), рамка — edgeActive (R-PERF-9). */
+  selectionBackground: string;
   /** Фон колонки, куда бросить нельзя (уровень заполнен); линии — palette.error.main. */
   dropBlockedBackground: string;
   /** Рамка карточки элемента внутри узла. */
@@ -83,6 +85,24 @@ export interface EditorThemeDefinition {
   canvas: EditorCanvasPalette;
   /** Подсветка сущностей канваса: приоритет и вид рамок (R-PERF-6). */
   highlight: HighlightPolicyDefinition;
+  /** Радиусы скругления, px (R-PERF-8): при переходе на токены ДС — правка здесь. */
+  shape: EditorShape;
+}
+
+/** Радиусы скругления редактора по роли элемента. */
+export interface EditorShape {
+  /** Блок канваса (узел страницы/формы). */
+  block: number;
+  /** Карточка: элемент, шаг, вариант, уведомление, миникарта. */
+  card: number;
+  /** Пилюля: панели, тулбар, кнопки-пилюли. */
+  pill: number;
+  /** Ярлык (chip). */
+  chip: number;
+  /** Плашка иконки в карточке. */
+  icon: number;
+  /** Мелкая плашка (заглушка иконки). */
+  small: number;
 }
 
 // Реестр тем: вторая тема добавляется новой записью сюда и расширением
@@ -120,6 +140,7 @@ const lightTheme: EditorThemeDefinition = {
     minimapBorder: '#d7d9df',
     nodeHoverBackground: '#e8e9ee',
     nodeHoverBorder: '#d6d7db',
+    selectionBackground: 'rgba(89, 108, 224, 0.08)',
     dropBlockedBackground: 'rgba(244, 67, 54, 0.08)',
     elementBorder: '#d6d7db',
     commentBackground: '#ebf5fc',
@@ -146,6 +167,7 @@ const lightTheme: EditorThemeDefinition = {
     // Карточка с рамкой 1px (variant outlined): подсветка ложится поверх неё.
     inset: { node: 0, step: 0, card: -1 },
   },
+  shape: { block: 16, card: 12, pill: 24, chip: 16, icon: 8, small: 6 },
 };
 
 const editorThemeDefinitions: Record<EditorThemeName, EditorThemeDefinition> = {
@@ -165,6 +187,7 @@ export type EditorTheme = Theme & {
     secondaryButtonHoverBackground: string;
     canvas: EditorCanvasPalette;
     highlight: HighlightPolicy;
+    shape: EditorShape;
   };
 };
 
@@ -254,6 +277,7 @@ export function createEditorTheme(name: EditorThemeName = 'light'): EditorTheme 
       secondaryButtonHoverBackground: definition.secondaryButtonHoverBackground,
       canvas: { ...definition.canvas },
       highlight: resolveHighlightPolicy(definition, muiTheme.palette.error.main),
+      shape: { ...definition.shape },
     },
   });
 }

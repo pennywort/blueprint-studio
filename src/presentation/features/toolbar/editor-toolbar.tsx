@@ -42,7 +42,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => {
       display: 'flex',
       flexDirection: 'column',
       backgroundColor: canvas.controlsBackground,
-      borderRadius: 24,
+      borderRadius: theme.editor.shape.pill,
       padding: theme.spacing(0.5),
     },
     button: {

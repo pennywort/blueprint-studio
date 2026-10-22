@@ -44,7 +44,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   },
   card: {
     width: 260,
-    borderRadius: 12,
+    borderRadius: theme.editor.shape.card,
     cursor: 'pointer',
     backgroundColor: theme.palette.background.paper,
   },

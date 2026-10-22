@@ -111,17 +111,29 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
       // Идёт протягивание связи — курсор «прицел» на всём канвасе. !important:
       // курсоры react-flow (grab полотна, pointer узлов) той же специфичности
       // и иначе перебивают прицел, стоит курсору уйти с handle (5.1).
-      '&.editor-connecting, &.editor-connecting *': {
-        cursor: 'crosshair !important',
-      },
+      // Курсор наследуется: прицел ставится корню и только элементам со
+      // СВОИМ курсором (полотно, узлы, рёбра, nodrag-зоны шагов и карточек,
+      // кнопки и чипы). Правило «* !important» пересчитывало стили всех ~25 тыс.
+      // элементов стенда на старте и конце каждой связи (R-PERF-7).
+      // Специфичность (3 класса) выше курсоров react-flow и makeStyles.
+      '&.editor-connecting, &.editor-connecting :is(.react-flow__pane, .react-flow__node, .react-flow__edge, .nodrag, .MuiButtonBase-root, .MuiChip-root)':
+        {
+          cursor: 'crosshair',
+        },
       // Рёбра поверх узлов (F4) не перехватывают drop курсора на блок.
       '&.editor-connecting .react-flow__edge': {
         pointerEvents: 'none',
       },
+      // Рамка группового выделения (Shift+drag): base.css даёт только
+      // геометрию, вид — токенами темы (R-PERF-9).
+      '& .react-flow__selection, & .react-flow__nodesselection-rect': {
+        backgroundColor: canvas.selectionBackground,
+        border: `1px dotted ${canvas.edgeActive}`,
+      },
       '& .react-flow__minimap': {
         backgroundColor: canvas.minimapBackground,
         border: `1px solid ${canvas.minimapBorder}`,
-        borderRadius: 12,
+        borderRadius: theme.editor.shape.card,
         overflow: 'hidden',
       },
       // Attribution скрывать нельзя (лицензия @xyflow/react) — только

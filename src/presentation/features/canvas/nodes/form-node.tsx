@@ -95,7 +95,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     // formStepWidth — внешняя ширина с полем шага ([owner 2026-10-16]).
     boxSizing: 'border-box',
     flexShrink: 0,
-    borderRadius: 12,
+    borderRadius: theme.editor.shape.card,
     backgroundColor: theme.palette.background.default,
     padding: FORM_STEP_LAYOUT.stepPadding,
     display: 'flex',
@@ -113,7 +113,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     width: CANVAS_LAYOUT.formStepWidth,
     boxSizing: 'border-box', // ширина — как у шага, с рамкой
     minHeight: CANVAS_LAYOUT.formEmptyLevelHeight,
-    borderRadius: 12,
+    borderRadius: theme.editor.shape.card,
     border: `2px dashed ${theme.editor.canvas.elementBorder}`,
     display: 'flex',
     alignItems: 'center',
@@ -125,7 +125,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     boxSizing: 'border-box', // ширина — как у шага, с рамкой
     flexShrink: 0,
     minHeight: 96,
-    borderRadius: 12,
+    borderRadius: theme.editor.shape.card,
     border: `2px dashed ${theme.editor.canvas.elementBorder}`,
     display: 'flex',
     alignItems: 'center',

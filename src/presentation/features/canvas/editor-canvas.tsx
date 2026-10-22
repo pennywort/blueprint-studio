@@ -28,7 +28,9 @@ import {
   type NodeChange,
   type OnNodeDrag,
 } from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
+// Только структурные стили react-flow (R-PERF-9): тема по умолчанию из
+// style.css почти целиком перебивалась своей (react-flow-theme-styles).
+import '@xyflow/react/dist/base.css';
 import { useEditorTheme } from '@presentation/theme/editor-theme';
 import { useHotkeyHandlers } from '@presentation/features/hotkeys/hotkeys-provider';
 import { useReactFlowThemeStyles } from './react-flow-theme-styles';
