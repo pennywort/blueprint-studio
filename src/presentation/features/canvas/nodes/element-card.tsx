@@ -303,9 +303,6 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
                   Сложная логика
                 </button>
               ) : null}
-              {/* Демонстрация семантики видимости (T-062): цель правил скрыта
-              по умолчанию (L3) — до появления /preview это видно бейджем. */}
-              {element.hiddenByLogic ? <span className={classes.chip}>Скрыт в предпросмотре</span> : null}
               {/* Индикатор «элемент кому-то подчинён» (L-Q1): виден даже при
               выключенной логике у источника. */}
               {violations ? <ViolationBadge messages={violations} /> : null}

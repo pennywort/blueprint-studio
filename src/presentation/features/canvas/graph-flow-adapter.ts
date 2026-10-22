@@ -8,7 +8,6 @@ import { computeGraphDepths } from '@domain/graph-depths';
 import { walkSubScenarios } from '@domain/graph-walk';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
-import { evaluateVisibility } from '@domain/logic-visibility';
 import { canBeLogicSource, elementVariants, isCommentElement, kindRules } from '@domain/element-kinds';
 import { containerCapabilities, type ContainerCapabilities } from '@domain/connection-matrix';
 import type { ElementCatalog } from '@presentation/features/element-catalog/element-catalog';
@@ -125,12 +124,6 @@ export type CanvasElementData = {
   /** На элемент есть входящие правила видимости — индикатор зависимости (L-Q1). */
   hasIncomingLogic?: boolean;
   /**
-   * Элемент скрыт в предпросмотре по правилам видимости при пустом состоянии
-   * формы (evaluateVisibility, T-062): цель с правилами скрыта по умолчанию
-   * (L3). Бейдж на карточке — демонстрация семантики до появления /preview.
-   */
-  hiddenByLogic?: boolean;
-  /**
    * Карточка может быть целью правил «Сложной логики» — target-handle на
    * левом краю. Только элементы шагов форм (источник — Select того же шага,
    * L-I5), любого вида [owner 2026-10-13]; у элементов страниц handle не
@@ -205,7 +198,6 @@ export type FlowGraph = {
 // Контекст маппинга элементов: связи и правила графа, описания элементов.
 type ElementMapContext = {
   logicTargets: ReadonlySet<string>;
-  logicHidden: ReadonlySet<string>;
   catalog: ElementCatalog;
   /** Правила редактора (настройки, R-ADM): что умеет вид и блок. */
   rules: EditorRules;
@@ -261,13 +253,11 @@ function elementToElementData(
   if (capabilities.logic) {
     data.logicTarget = kindRules(rules, element.kind).logicTarget;
     data.hasIncomingLogic = context.logicTargets.has(element.id);
-    data.hiddenByLogic = context.logicHidden.has(element.id);
     return data;
   }
   // В блоке без логики правил нет: ни цели, ни отметок видимости.
   data.logicTarget = false;
   delete data.hasIncomingLogic;
-  delete data.hiddenByLogic;
   if (!capabilities.stepTransitions) {
     // Варианты Select'а — источники и правил, и переходов: без обеих
     // возможностей у него нет ни option-handle'ов, ни переключателя режима.
@@ -321,18 +311,14 @@ function buildFlow(
   const depths = computeGraphDepths(graph);
   // Цели правил видимости — индикатор зависимости на карточке (T-037, L-Q1).
   const logicTargets = new Set<string>(graph.logicRules.map((rule) => rule.targetElementId));
-  // Скрытые по умолчанию цели (L3): оценка при пустом состоянии формы —
-  // демонстрация семантики видимости до появления /preview (T-062).
-  const visibleTargets = evaluateVisibility(graph.logicRules, new Map());
-  const logicHidden = new Set<string>(
-    [...logicTargets].filter((elementId) => !visibleTargets.has(toElementId(elementId))),
-  );
+  // Бейдж «Скрыт в предпросмотре» (T-062) убран [owner 2026-10-22] — нужен ли
+  // он, решат дизайнеры и заказчик (docs/открытые-вопросы.md, ОВ-1).
 
   // Цель правила → option-handle варианта-источника (L-I7: источник один;
   // при битых данных берётся первое правило) — общий лес якорей.
   const logicParents = buildAnchorForest(logicRulesToAnchorLinks(graph.logicRules)).parentOf;
 
-  const elementContext: ElementMapContext = { logicTargets, logicHidden, catalog, rules };
+  const elementContext: ElementMapContext = { logicTargets, catalog, rules };
 
   const nodes: CanvasNode[] = [];
   // Владелец элемента → id узла: нужен, чтобы ребро вышло из узла страницы,
