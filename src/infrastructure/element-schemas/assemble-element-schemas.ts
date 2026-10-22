@@ -23,15 +23,31 @@ export const SUPPORTED_FORMAT_VERSION = 2;
 type JsonSchema = Record<string, unknown>;
 
 /**
+ * Надстройки проекта над схемой [owner 2026-10-22]: свои атрибуты для всех
+ * элементов (all) и для одного kind (byKind) — объектные схемы
+ * { properties, required }. Только добавляют: ключ, совпавший со свойством
+ * элемента или между all и byKind, — ошибка. Значения хранятся в ext элемента.
+ */
+export type SchemaExtensions = {
+  all?: JsonSchema;
+  byKind?: Record<string, JsonSchema>;
+};
+
+/**
  * Бандл схем: элементы и компоненты по x-element-type, общие схемы для $ref.
- * Компоненты (`ComponentFactoryImpl`, этап 4) — только у фреймворка.
+ * Компоненты (`ComponentFactoryImpl`, этап 4) — только у фреймворка,
+ * надстройки (extensions) — только у схем проекта.
  */
 export type SchemaBundle = {
   'x-format-version': number;
   shared: Record<string, JsonSchema>;
   elements: Record<string, JsonSchema>;
   components?: Record<string, JsonSchema>;
+  extensions?: SchemaExtensions;
 };
+
+/** Вид поля ввода enum в панели — ключ `editor` политики. */
+export type PolicyEditor = 'select' | 'radio' | 'chips';
 
 export type PolicyAttribute = {
   key: string;
@@ -41,8 +57,8 @@ export type PolicyAttribute = {
   helperText?: string;
   multiline?: boolean;
   section?: string;
-  /** Вид редактора enum: переключатели вместо выпадающего списка. */
-  widget?: 'radio';
+  /** Поле ввода enum: выпадающий список (по умолчанию), переключатели или чипы. */
+  editor?: PolicyEditor;
   /** Подмножество enum схемы с подписями; без него — весь enum. */
   options?: AttributeOption[];
   /** Ключи id и подписи элемента массива объектов (optionList). */
@@ -61,6 +77,11 @@ export type PolicyElement = {
 };
 
 export type EditorPolicy = {
+  /**
+   * Атрибуты надстроек extensions.all у всех элементов политики — после своих
+   * атрибутов элемента; элемент, указавший такой ключ сам, задаёт ему место.
+   */
+  common?: { attributes: PolicyAttribute[] };
   elements: PolicyElement[];
 };
 
@@ -78,7 +99,26 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 type ValueKind =
   | { type: 'bool' | 'number' | 'text' | 'stringList' }
   | { type: 'enum'; values: readonly string[]; editor?: ElementAttributeType }
+  | { type: 'enumList'; values: readonly string[] }
   | { type: 'objectList'; item: JsonSchema };
+
+// Поле ввода значения с вариантами по ключу `editor` политики: вид значения →
+// допустимые editor и редактор по умолчанию. Новый способ выбора — запись в
+// таблице (§4a), несовместимый editor — ошибка `schemas:check`.
+const CHOICE_EDITORS: Readonly<
+  Record<
+    'enum' | 'enumList',
+    { fallback: ElementAttributeType; editors: Readonly<Partial<Record<PolicyEditor, ElementAttributeType>>> }
+  >
+> = {
+  enum: { fallback: 'select', editors: { select: 'select', radio: 'radio', chips: 'chips' } },
+  enumList: { fallback: 'multiChips', editors: { chips: 'multiChips' } },
+};
+
+const stringEnum = (schema: JsonSchema): string[] | null =>
+  Array.isArray(schema.enum)
+    ? schema.enum.filter((value): value is string => typeof value === 'string')
+    : null;
 
 // Общие схемы ($ref на shared/*) со своим редактором: атрибут любого
 // элемента, ссылающийся на схему, получает этот редактор [owner 2026-10-20].
@@ -195,6 +235,11 @@ function valueKind(raw: JsonSchema, refs: RefTargets): ValueKind | null {
       if (!item) {
         return null;
       }
+      // Массив значений enum — выбор нескольких вариантов (чипы).
+      const values = stringEnum(item);
+      if (values && (item.type === undefined || item.type === 'string')) {
+        return { type: 'enumList', values };
+      }
       if (item.type === 'string') {
         return { type: 'stringList' };
       }
@@ -234,6 +279,10 @@ function matchesKind(kind: ValueKind, value: unknown): boolean {
       return typeof value === 'string';
     case 'enum':
       return typeof value === 'string' && kind.values.includes(value);
+    case 'enumList':
+      return (
+        Array.isArray(value) && value.every((item) => typeof item === 'string' && kind.values.includes(item))
+      );
     case 'stringList':
       return Array.isArray(value) && value.every((item) => typeof item === 'string');
     case 'objectList':
@@ -245,6 +294,7 @@ function assembleAttribute(
   policy: PolicyAttribute,
   property: JsonSchema,
   schemaRequired: boolean,
+  store: ElementAttribute['store'],
   refs: RefTargets,
   fail: (message: string) => void,
 ): ElementAttribute | null {
@@ -259,6 +309,7 @@ function assembleAttribute(
   const attribute: ElementAttribute = {
     key: policy.key,
     type: 'text',
+    store,
     required: schemaRequired || policy.required === true,
     label: policy.label ?? policy.key,
   };
@@ -273,21 +324,30 @@ function assembleAttribute(
   if (policy.multiline && kind.type !== 'text') {
     fail('multiline — только у строкового атрибута');
   }
-  if ((policy.options || policy.widget) && kind.type !== 'enum') {
-    fail('options/widget — только у атрибута с enum в схеме');
+  if ((policy.options || policy.editor) && kind.type !== 'enum' && kind.type !== 'enumList') {
+    fail('options/editor — только у атрибута с enum в схеме');
   }
   if (policy.item && kind.type !== 'objectList') {
     fail('item — только у массива объектов');
   }
 
   switch (kind.type) {
-    case 'enum': {
+    case 'enum':
+    case 'enumList': {
       const options = policy.options ?? kind.values.map((value) => ({ value, label: value }));
       const extra = options.filter((option) => !kind.values.includes(option.value));
       if (extra.length > 0) {
         fail(`варианты ${extra.map((option) => option.value).join(', ')} отсутствуют в enum схемы`);
       }
-      attribute.type = kind.editor ?? (policy.widget === 'radio' ? 'radio' : 'select');
+      const choice = CHOICE_EDITORS[kind.type];
+      const editor = policy.editor ? choice.editors[policy.editor] : choice.fallback;
+      if (!editor) {
+        fail(
+          `editor ${String(policy.editor)} не подходит значению — допустимо: ${Object.keys(choice.editors).join(', ')}`,
+        );
+      }
+      // Редактор общей схемы (иконки) важнее вида из политики.
+      attribute.type = (kind.type === 'enum' ? kind.editor : undefined) ?? editor ?? choice.fallback;
       attribute.options = options;
       return attribute;
     }
@@ -319,37 +379,81 @@ function assembleAttribute(
   }
 }
 
+// Свойства и обязательные ключи объектной схемы надстройки.
+function extensionPart(schema: JsonSchema | undefined): {
+  properties: Record<string, JsonSchema>;
+  required: string[];
+} {
+  return {
+    properties: isRecord(schema?.properties) ? (schema.properties as Record<string, JsonSchema>) : {},
+    required: Array.isArray(schema?.required) ? schema.required.map(String) : [],
+  };
+}
+
 function assembleElement(
   policy: PolicyElement,
+  common: readonly PolicyAttribute[],
   schema: JsonSchema,
   source: ElementSchema['source'],
+  extensions: SchemaExtensions,
   refs: RefTargets,
   errors: string[],
 ): ElementSchema {
   const fail = (key: string) => (message: string) => errors.push(`${policy.kind}.${key}: ${message}`);
   const properties = elementProperties(schema, refs);
   const required = elementRequired(schema, refs);
+
+  // Надстройки: общие (all) и этого kind (byKind) — только новые ключи.
+  const all = extensionPart(extensions.all);
+  const own = extensionPart(extensions.byKind?.[policy.kind]);
+  for (const key of [...Object.keys(all.properties), ...Object.keys(own.properties)]) {
+    if (properties[key]) {
+      fail(key)('надстройка совпадает со свойством схемы элемента');
+    }
+  }
+  for (const key of Object.keys(own.properties)) {
+    if (all.properties[key]) {
+      fail(key)('надстройка kind совпадает с общей надстройкой (extensions.all)');
+    }
+  }
+  const extProperties = { ...all.properties, ...own.properties };
+  const extRequired = new Set([...all.required, ...own.required]);
+
   const attributes: ElementAttribute[] = [];
   const seen = new Set<string>();
+  const ownKeys = new Set(policy.attributes.map((attribute) => attribute.key));
+  // Общие атрибуты политики — после своих, если элемент не задал им место сам.
+  const listed = [...policy.attributes, ...common.filter((attribute) => !ownKeys.has(attribute.key))];
 
-  for (const attributePolicy of policy.attributes) {
-    const property = properties[attributePolicy.key];
+  for (const attributePolicy of listed) {
     if (seen.has(attributePolicy.key)) {
       fail(attributePolicy.key)('атрибут указан в политике дважды');
       continue;
     }
     seen.add(attributePolicy.key);
-    if (!property) {
-      fail(attributePolicy.key)('нет в схеме элемента');
+    const property = properties[attributePolicy.key];
+    const extProperty = property ? undefined : extProperties[attributePolicy.key];
+    if (!property && !extProperty) {
+      fail(attributePolicy.key)('нет ни в схеме элемента, ни в надстройках проекта');
       continue;
     }
-    const attribute = assembleAttribute(
-      attributePolicy,
-      property,
-      required.has(attributePolicy.key),
-      refs,
-      fail(attributePolicy.key),
-    );
+    const attribute = property
+      ? assembleAttribute(
+          attributePolicy,
+          property,
+          required.has(attributePolicy.key),
+          'props',
+          refs,
+          fail(attributePolicy.key),
+        )
+      : assembleAttribute(
+          attributePolicy,
+          extProperty!,
+          extRequired.has(attributePolicy.key),
+          'ext',
+          refs,
+          fail(attributePolicy.key),
+        );
     if (attribute) {
       attributes.push(attribute);
     }
@@ -437,6 +541,29 @@ export function assembleElementSchemas(sources: SchemaSources): ElementSchema[] 
     shared: { ...framework.shared, ...project.shared },
     elements: framework.elements,
   };
+
+  // Надстройки проекта (extensions) и общие атрибуты политики (common).
+  const extensions: SchemaExtensions = isRecord(project.extensions) ? project.extensions : {};
+  if (project.extensions !== undefined && !isRecord(project.extensions)) {
+    errors.push('схемы проекта: extensions — объект { all?, byKind? }');
+  }
+  for (const kind of Object.keys(isRecord(extensions.byKind) ? extensions.byKind : {})) {
+    if (!(kind in frameworkKinds) && !(kind in project.elements)) {
+      errors.push(`extensions.byKind.${kind}: нет ни в схемах фреймворка, ни в схемах проекта`);
+    }
+  }
+  const { common } = policy as EditorPolicy;
+  const commonAttributes = isRecord(common) && Array.isArray(common.attributes) ? common.attributes : [];
+  if (common !== undefined && !(isRecord(common) && Array.isArray(common.attributes))) {
+    errors.push('политика: common — объект { attributes: [...] }');
+  }
+  const allProperties = extensionPart(extensions.all).properties;
+  for (const attribute of commonAttributes) {
+    if (!isRecord(attribute) || typeof attribute.key !== 'string' || !allProperties[attribute.key]) {
+      errors.push(`common.${String(attribute?.key)}: общий атрибут — только из extensions.all схем проекта`);
+    }
+  }
+
   const kinds = new Set<string>();
   const result: ElementSchema[] = [];
 
@@ -465,7 +592,17 @@ export function assembleElementSchemas(sources: SchemaSources): ElementSchema[] 
       );
       continue;
     }
-    result.push(assembleElement(element, schema, frameworkSchema ? 'framework' : 'project', refs, errors));
+    result.push(
+      assembleElement(
+        element,
+        commonAttributes,
+        schema,
+        frameworkSchema ? 'framework' : 'project',
+        extensions,
+        refs,
+        errors,
+      ),
+    );
   }
 
   if (errors.length > 0) {

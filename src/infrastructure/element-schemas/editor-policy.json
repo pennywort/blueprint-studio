@@ -1,4 +1,5 @@
 {
+  "common": { "attributes": [] },
   "elements": [
     {
       "kind": "list-item",

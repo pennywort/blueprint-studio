@@ -10,11 +10,27 @@ import { preserveFormElementDepths, preserveFormStepDepths } from './depth-prese
 import { findElementLocation } from './graph-lookup';
 
 // Частичное обновление элемента; id и kind исключены — идентичность и вид
-// менять нельзя (для смены kind элемент пересоздаётся). props сливаются с
-// текущими по ключам, ключ со значением undefined удаляется.
-export type ElementPropsPatch = Partial<Omit<CanvasElement, 'id' | 'kind' | 'props'>> & {
+// менять нельзя (для смены kind элемент пересоздаётся). props и ext
+// (надстройки проекта) сливаются с текущими по ключам, ключ со значением
+// undefined удаляется.
+export type ElementPropsPatch = Partial<Omit<CanvasElement, 'id' | 'kind' | 'props' | 'ext'>> & {
   props?: Readonly<ElementProps>;
+  ext?: Readonly<ElementProps>;
 };
+
+// Слияние значений по ключам; undefined снимает ключ.
+function mergeValues(
+  current: ElementProps | undefined,
+  patch: Readonly<ElementProps> | undefined,
+): ElementProps {
+  const merged: ElementProps = { ...current, ...patch };
+  for (const key of Object.keys(merged)) {
+    if (merged[key] === undefined) {
+      delete merged[key];
+    }
+  }
+  return merged;
+}
 
 // Команда обновления атрибутов элемента (Epic 002, T-035): ей пользуется
 // панель атрибутов (T-043) — любое изменение поля идёт через CommandBus и
@@ -47,14 +63,16 @@ export class UpdateElementProps implements Command {
     // их тип задаёт редактор атрибута, выведенный из схемы; zod проверяет
     // только структуру элемента карты.
     const current = location.list[location.index]!;
-    const { props: propsPatch, ...metaPatch } = this.props;
-    const props: ElementProps = { ...current.props, ...propsPatch };
-    for (const key of Object.keys(props)) {
-      if (props[key] === undefined) {
-        delete props[key];
-      }
-    }
-    const parsed = CanvasElementSchema.safeParse({ ...current, ...metaPatch, props });
+    const { props: propsPatch, ext: extPatch, ...metaPatch } = this.props;
+    const props = mergeValues(current.props, propsPatch);
+    // Пустые надстройки не храним: элемент без ext — как до надстроек.
+    const ext = mergeValues(current.ext, extPatch);
+    const parsed = CanvasElementSchema.safeParse({
+      ...current,
+      ...metaPatch,
+      props,
+      ext: Object.keys(ext).length > 0 ? ext : undefined,
+    });
     if (!parsed.success) {
       throw new Error(`Недопустимые атрибуты элемента ${this.elementId}: ${parsed.error.message}`);
     }

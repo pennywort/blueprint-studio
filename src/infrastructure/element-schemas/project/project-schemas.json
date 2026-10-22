@@ -19,5 +19,9 @@
       },
       "required": ["text", "audience"]
     }
+  },
+  "extensions": {
+    "all": { "type": "object", "properties": {} },
+    "byKind": {}
   }
 }

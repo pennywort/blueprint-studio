@@ -35,6 +35,11 @@ export const CanvasElementSchema = z.object({
   id: ElementIdSchema,
   kind: CanvasElementKindSchema,
   props: ElementPropsSchema,
+  // Надстройки проекта над схемой [owner 2026-10-22]: значения атрибутов из
+  // extensions схем проекта (для всех элементов или для одного kind). Отдельно
+  // от props: props остаются валидными по схеме фреймворка, генератор отличает
+  // данные фреймворка от своих (§4b AGENTS.md).
+  ext: ElementPropsSchema.optional(),
   // Ниже — метаданные редактора, не атрибуты элемента фреймворка (D4).
   // Комментарий-часть элемента для разработчика (US-05).
   comment: z.string().optional(),

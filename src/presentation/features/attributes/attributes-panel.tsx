@@ -63,17 +63,25 @@ export type AttributesPanelProps = {
 // Schema-driven панель атрибутов (T-041, этап 3 docs/schemas/PLAN.md): в панели
 // только атрибуты элемента по схеме + политике редактора — состав, порядок,
 // подписи, секции и редакторы из описания элемента; ничего сверх них
-// [owner 2026-10-19]. Значения — props элемента по ключу атрибута.
+// [owner 2026-10-19]. Значения — props элемента или надстройки ext (store
+// атрибута) по ключу атрибута.
 export function AttributesPanel({ component, schema, onUpdateProps }: AttributesPanelProps) {
   const classes = useStyles();
   // Буфер ввода (R2): поля показывают черновик поверх значений графа.
   const buffer = useBufferedProps<CanvasElement['id']>(component.id, onUpdateProps);
-  const props = { ...component.props, ...buffer.draft?.props };
+  // Значения по ключу атрибута: props элемента и надстройки ext — ключи не
+  // пересекаются (проверка сборки схем), поэтому одна таблица на оба хранилища.
+  const values = {
+    ...component.props,
+    ...component.ext,
+    ...buffer.draft?.props,
+    ...buffer.draft?.ext,
+  };
 
   // Атрибут виден, если выполнено его условие видимости (политика).
   const attributes = (schema?.attributes ?? []).filter(
     (attribute) =>
-      !attribute.visibleWhen || props[attribute.visibleWhen.key] === attribute.visibleWhen.equals,
+      !attribute.visibleWhen || values[attribute.visibleWhen.key] === attribute.visibleWhen.equals,
   );
 
   // Группировка по секциям: поля без секции — первыми, далее — каждая
@@ -116,7 +124,7 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
             </Typography>
           ) : null}
           {group.attributes.map((attribute) => {
-            const value = props[attribute.key];
+            const value = values[attribute.key];
             const Editor = resolvePropertyEditor(attribute.type);
             // Значение иной ветви схемы (например, объект в «строка | объект»)
             // или без редактора — read-only сводка: данные не портятся.
@@ -138,7 +146,7 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
                 key={attribute.key}
                 value={value}
                 attribute={attribute}
-                onChange={(next) => buffer.change({ props: { [attribute.key]: next } })}
+                onChange={(next) => buffer.change({ [attribute.store]: { [attribute.key]: next } })}
               />
             );
           })}
@@ -154,6 +162,7 @@ function isValueCompatible(type: ElementAttributeType, value: unknown): boolean 
     case 'text':
     case 'radio':
     case 'select':
+    case 'chips':
     case 'icon':
       return typeof value === 'string';
     case 'bool':
@@ -161,6 +170,7 @@ function isValueCompatible(type: ElementAttributeType, value: unknown): boolean 
     case 'number':
       return typeof value === 'number';
     case 'stringList':
+    case 'multiChips':
       return Array.isArray(value) && value.every((item) => typeof item === 'string');
     case 'optionList':
       return Array.isArray(value) && value.every((item) => typeof item === 'object' && item !== null);

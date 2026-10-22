@@ -7,13 +7,27 @@ import type { CanvasElementKind } from '@domain/model/canvas-element';
 // обязательность, порядок, подписи. UI строит форму атрибутов только по
 // описанию, без ветвлений по kind (§4b AGENTS.md).
 
-// Редактор атрибута выводится из типа значения в схеме, не задаётся
-// политикой: text — string, number — number/integer, bool — boolean,
-// select/radio — string с enum (radio — вид, выбранный политикой),
-// stringList — массив строк, optionList — массив объектов с id и подписью,
-// icon — string с enum из общей схемы иконок фреймворка (shared/icon.schema.json).
+// Редактор атрибута (поле ввода в панели) выводится из типа значения в
+// схеме: text — string, number — number/integer, bool — boolean,
+// select/radio/chips — string с enum (вид выбирает ключ `editor` политики),
+// multiChips — массив значений enum, stringList — массив строк,
+// optionList — массив объектов с id и подписью, icon — string с enum из
+// общей схемы иконок фреймворка (shared/icon.schema.json).
 export type ElementAttributeType =
-  'bool' | 'text' | 'number' | 'select' | 'radio' | 'stringList' | 'optionList' | 'icon';
+  | 'bool'
+  | 'text'
+  | 'number'
+  | 'select'
+  | 'radio'
+  | 'chips'
+  | 'multiChips'
+  | 'stringList'
+  | 'optionList'
+  | 'icon';
+
+// Где лежит значение атрибута в элементе карты: props — атрибуты элемента
+// фреймворка, ext — надстройки проекта над схемой (extensions схем проекта).
+export type ElementAttributeStore = 'props' | 'ext';
 
 export type AttributeOption = {
   value: string;
@@ -37,6 +51,7 @@ export type AttributeVisibilityRule = {
 export type ElementAttribute = {
   key: string;
   type: ElementAttributeType;
+  store: ElementAttributeStore;
   required: boolean;
   label: string;
   placeholder?: string;
@@ -44,7 +59,7 @@ export type ElementAttribute = {
   multiline?: boolean;
   /** Секция панели («Настройки»); без секции поле идёт в общий поток. */
   section?: string;
-  /** Варианты select/radio: подмножество enum схемы с подписями политики. */
+  /** Варианты select/radio/chips/multiChips: подмножество enum схемы с подписями политики. */
   options?: readonly AttributeOption[];
   /** Форма элемента для optionList. */
   item?: OptionListItemShape;

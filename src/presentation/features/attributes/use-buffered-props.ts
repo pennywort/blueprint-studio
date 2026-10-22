@@ -43,13 +43,14 @@ export function useBufferedProps<Id extends string>(
       if (previous && previous.elementId !== elementId) {
         flush();
       }
-      // props сливаются по ключам: правки разных атрибутов копятся в одном патче.
+      // props и ext сливаются по ключам: правки разных атрибутов копятся в одном патче.
       const before = pendingRef.current?.patch;
       const merged: ElementPropsPatch = before
         ? {
             ...before,
             ...patch,
             ...(before.props || patch.props ? { props: { ...before.props, ...patch.props } } : null),
+            ...(before.ext || patch.ext ? { ext: { ...before.ext, ...patch.ext } } : null),
           }
         : patch;
       pendingRef.current = { elementId, patch: merged };

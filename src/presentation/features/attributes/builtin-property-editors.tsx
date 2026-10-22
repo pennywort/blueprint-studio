@@ -1,5 +1,6 @@
 import {
   Button,
+  Chip,
   FormControlLabel,
   IconButton,
   MenuItem,
@@ -19,7 +20,8 @@ import { registerPropertyEditor, type PropertyEditorProps } from './property-edi
 
 // Встроенные редакторы свойств (T-040): text → TextField, stringList →
 // многострочное поле (по строке на элемент), bool → Switch, number →
-// числовое поле, radio → RadioGroup, select → Select, optionList — список
+// числовое поле, radio → RadioGroup, select → Select, chips/multiChips —
+// чипы (один или несколько вариантов), optionList — список
 // вариантов, icon — поиск + сетка иконок. Редакторы не знают о kind'ах
 // элементов — только об описании атрибута (схема + политика редактора, этап 3
 // docs/schemas/PLAN.md). Подпись и подсказка — общий каркас AttributeField.
@@ -53,6 +55,11 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   },
   addButton: {
     alignSelf: 'flex-start',
+  },
+  chips: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: theme.spacing(1),
   },
 }));
 
@@ -185,6 +192,45 @@ function SelectPropertyEditor({ value, onChange, attribute }: PropertyEditorProp
   );
 }
 
+// Выбор чипами [owner 2026-10-22]: выбранный — заливка цветом темы, остальные —
+// контур. Один из вариантов (chips): повторный клик снимает выбор у
+// необязательного атрибута. Несколько (multiChips): клик переключает вариант,
+// порядок значений — порядок вариантов; пустой выбор снимает значение.
+function ChipsPropertyEditor({ value, onChange, attribute }: PropertyEditorProps) {
+  const classes = useStyles();
+  const multiple = attribute.type === 'multiChips';
+  const selected = new Set<unknown>(multiple ? (Array.isArray(value) ? value : []) : [value]);
+  const options = attribute.options ?? [];
+  const toggle = (option: string) => {
+    if (!multiple) {
+      onChange(selected.has(option) && !attribute.required ? undefined : option);
+      return;
+    }
+    const next = options
+      .map((item) => item.value)
+      .filter((item) => (item === option ? !selected.has(item) : selected.has(item)));
+    onChange(next.length > 0 ? next : undefined);
+  };
+  return (
+    <AttributeField attribute={attribute}>
+      <div className={classes.chips} data-testid="chips-editor">
+        {options.map((option) => (
+          <Chip
+            key={option.value}
+            size="small"
+            clickable
+            label={option.label}
+            color={selected.has(option.value) ? 'primary' : 'default'}
+            variant={selected.has(option.value) ? 'default' : 'outlined'}
+            aria-pressed={selected.has(option.value)}
+            onClick={() => toggle(option.value)}
+          />
+        ))}
+      </div>
+    </AttributeField>
+  );
+}
+
 type OptionItem = Record<string, unknown>;
 
 const asItems = (value: unknown): OptionItem[] =>
@@ -257,5 +303,7 @@ registerPropertyEditor('bool', BoolPropertyEditor);
 registerPropertyEditor('number', NumberPropertyEditor);
 registerPropertyEditor('radio', RadioPropertyEditor);
 registerPropertyEditor('select', SelectPropertyEditor);
+registerPropertyEditor('chips', ChipsPropertyEditor);
+registerPropertyEditor('multiChips', ChipsPropertyEditor);
 registerPropertyEditor('optionList', OptionListPropertyEditor);
 registerPropertyEditor('icon', IconPropertyEditor);
