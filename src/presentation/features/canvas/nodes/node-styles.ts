@@ -15,6 +15,9 @@ export const useNodeStyles = makeStyles<EditorTheme>((theme) => ({
     display: 'flex',
     flexDirection: 'column',
     gap: CANVAS_LAYOUT.nodeContentGap,
+    // Без тени elevation Card: рамка выделения/ошибки — единственная граница
+    // блока (F7, [owner 2026-10-20]).
+    boxShadow: 'none',
   },
   // Рамки состояний (выделение, ошибка, цели связи и dnd) — единая подсветка
   // highlight/ (R-PERF-6), не классы здесь.
