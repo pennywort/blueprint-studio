@@ -1,7 +1,7 @@
 import { memo, useRef, type CSSProperties } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Chip, makeStyles } from '@material-ui/core';
-import { ShowChart, Visibility } from '@material-ui/icons';
+import { editorIcons } from '@presentation/icons/editor-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { logicAnchorHandleId, logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
 import { FORM_STEP_LAYOUT } from '../canvas-layout';
@@ -248,7 +248,7 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
             <div className={classes.iconWrap}>
               {/* Иконки элементов платформы придут с пакетом element-schemas;
               пока — единый плейсхолдер из дизайн-системы. */}
-              <ShowChart fontSize="small" />
+              <editorIcons.elementPlaceholder fontSize="small" />
             </div>
             <div className={classes.texts}>
               <div className={classes.title}>{element.title}</div>
@@ -274,7 +274,7 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
                 выключенной логике у источника. */}
                 {violations ? <ViolationBadge messages={violations} /> : null}
                 {element.hasIncomingLogic ? (
-                  <Visibility className={classes.dependencyIcon} fontSize="small" />
+                  <editorIcons.visibilityDependency className={classes.dependencyIcon} fontSize="small" />
                 ) : null}
               </div>
             </div>

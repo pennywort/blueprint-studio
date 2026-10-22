@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Box, IconButton, Menu, MenuItem, makeStyles } from '@material-ui/core';
-import { AccountTree, Code, NoteAdd, ViewColumn } from '@material-ui/icons';
+import { editorIcons } from '@presentation/icons/editor-icons';
 import type { ElementSchema } from '@application/ports/element-schema-provider';
 import type { CanvasElementKind } from '@domain/model/canvas-element';
 import { kindRules } from '@domain/element-kinds';
@@ -88,7 +88,7 @@ function elementMenuItems(
 // (пятая иконка AI-ассистента удалена решением владельца). Кнопки 1–2 открывают
 // меню добавления (узлы / элементы выбранного узла), кнопка 3 («код») сразу
 // добавляет комментарий-элемент для разработчика [owner 2026-10-15], кнопка 4
-// переключает панель-заглушку. Иконки — только из @material-ui/icons, самописных нет.
+// переключает панель-заглушку. Иконки — только из таблицы editorIcons, самописных нет.
 export function EditorToolbar({
   elementSchemas,
   activePanel,
@@ -118,7 +118,7 @@ export function EditorToolbar({
         aria-pressed={nodeMenuAnchor !== null}
         onClick={(event) => setNodeMenuAnchor(event.currentTarget)}
       >
-        <ViewColumn fontSize="small" />
+        <editorIcons.addNode fontSize="small" />
       </IconButton>
       <IconButton
         className={buttonClass(elementMenuAnchor !== null)}
@@ -128,7 +128,7 @@ export function EditorToolbar({
         disabled={selectedNodeType === null}
         onClick={(event) => setElementMenuAnchor(event.currentTarget)}
       >
-        <NoteAdd fontSize="small" />
+        <editorIcons.addElement fontSize="small" />
       </IconButton>
       <IconButton
         className={classes.button}
@@ -137,7 +137,7 @@ export function EditorToolbar({
         disabled={selectedNodeType === null}
         onClick={() => onAddElement?.('comment')}
       >
-        <Code fontSize="small" />
+        <editorIcons.addComment fontSize="small" />
       </IconButton>
       <IconButton
         className={buttonClass(activePanel === 'navigation')}
@@ -146,7 +146,7 @@ export function EditorToolbar({
         aria-pressed={activePanel === 'navigation'}
         onClick={() => onPanelChange(activePanel === 'navigation' ? null : 'navigation')}
       >
-        <AccountTree fontSize="small" />
+        <editorIcons.structurePanel fontSize="small" />
       </IconButton>
 
       <Menu

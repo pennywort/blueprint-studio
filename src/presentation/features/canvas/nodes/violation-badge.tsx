@@ -1,5 +1,5 @@
 import { Tooltip, makeStyles } from '@material-ui/core';
-import { ErrorOutline } from '@material-ui/icons';
+import { editorIcons } from '@presentation/icons/editor-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
@@ -32,7 +32,7 @@ export function ViolationBadge({ messages, inHeader }: { messages: readonly stri
         </ul>
       }
     >
-      <ErrorOutline
+      <editorIcons.violation
         className={inHeader ? `${classes.icon} ${classes.inHeader}` : classes.icon}
         fontSize="small"
         data-testid="violation-badge"
