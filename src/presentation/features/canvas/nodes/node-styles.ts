@@ -1,4 +1,4 @@
-import { makeStyles } from '@blueprint-vendor/flamingo-core';
+import { makeStyles } from '@material-ui/core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { CANVAS_LAYOUT } from '../canvas-layout';
 

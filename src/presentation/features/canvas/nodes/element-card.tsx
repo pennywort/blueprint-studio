@@ -1,7 +1,7 @@
 import { memo, useRef, type CSSProperties } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Chip, makeStyles } from '@blueprint-vendor/flamingo-core';
-import { ShowChart, Visibility } from '@blueprint-vendor/flamingo-icons';
+import { Chip, makeStyles } from '@material-ui/core';
+import { ShowChart, Visibility } from '@material-ui/icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { logicAnchorHandleId, logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
 import { FORM_STEP_LAYOUT } from '../canvas-layout';
@@ -17,7 +17,7 @@ import { TargetHandle } from './target-handle';
 // TEMPORARY (R-PERF-10, [owner 2026-10-22]): карточка элемента — div + классы,
 // а не Card/CardContent/Typography/Chip ДС: на стенде ~1100 карточек, и 4
 // компонента MUI на каждую были основной ценой рендера и размера DOM. Вид —
-// тот же, токены — из темы. Сравнить с карточкой Flamingo замером на стенде
+// тот же, токены — из темы. Сравнить с карточкой MUI замером на стенде
 // (scripts/agent/perf-bench.mjs, docs/refactoring/R-PERF-canvas.md §4c);
 // реестр — docs/temporary-registry.md.
 const useStyles = makeStyles<EditorTheme>((theme) => ({

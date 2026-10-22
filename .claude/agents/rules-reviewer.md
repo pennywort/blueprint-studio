@@ -9,7 +9,7 @@ model: sonnet
 
 Порядок:
 
-1. `npm run rules` — механические нарушения (hex, `@material-ui`, `window`, тесты).
+1. `npm run rules` — механические нарушения (hex, `window`, тесты).
 2. `git diff --stat HEAD` и `git status -sb`; затем `git diff HEAD -- <файл>` по одному
    файлу (только `src/`, `vendor/`, `scripts/`).
 3. По каждому изменению проверь правила, которые не ловит скрипт:
@@ -19,7 +19,6 @@ model: sonnet
      внешние контракты — за портами `application/ports`;
    - домен без React/инфраструктуры;
    - новые комментарии — по-русски и со ссылкой (T-xxx, D-x, ADR-xx, Nx);
-   - в шимах `vendor/flamingo/*` — только реэкспорты, без логики;
    - не ослаблены `tsconfig.json` / `eslint.config.js`; нет новых тестов;
    - решения D1–D13 и ADR не нарушены (если сомневаешься — укажи как вопрос).
 

@@ -56,10 +56,9 @@ awilix 13 (только `InjectionMode.PROXY`), react-router-dom 7 (`createHashR
 tinykeys 4 (хоткеи — только через `features/hotkeys`, [owner 2026-10-15]), ESLint flat + eslint-plugin-boundaries, Prettier, Husky, commitlint, lint-staged.
 Версии точные (`npm install -E`). Effector и xstate — запланированы, НЕ установлены.
 
-**TEMPORARY-подмена UI:** `@blueprint-vendor/flamingo-*` — шимы `vendor/flamingo/*`
-поверх настоящего MUI v4 (`@material-ui/core` 4.12.4). В шимах — только
-реэкспорты, без логики; недостающее добавляй реэкспортом в `index.js` + `index.d.ts`.
-Всё помечено словом `TEMPORARY` (grep). Реестр подмен и условия удаления — `docs/temporary-registry.md`.
+**UI-кит — MUI v4 напрямую** (`@material-ui/core` 4.12.4, `@material-ui/icons` 4.11.3 —
+финальные версии v4) [owner 2026-10-22]: шимы Flamingo удалены, переход на Flamingo отложен.
+Временные обходы помечены словом `TEMPORARY` (grep). Реестр и условия удаления — `docs/temporary-registry.md`.
 
 ## 4. Железные правила
 
@@ -70,7 +69,7 @@ tinykeys 4 (хоткеи — только через `features/hotkeys`, [owner 
   UI не мутирует состояние напрямую.
 - 4 слоя `domain → application → infrastructure → presentation` (enforced lint).
   Внешние контракты — только за портами `application/ports`.
-- UI только из `@blueprint-vendor/*`; импорт `@material-ui/*` в `src` запрещён.
+- UI только из `@material-ui/core` / `@material-ui/icons`; другие UI-библиотеки — только по решению владельца.
 - Цвета только из темы `src/presentation/theme/editor-theme.ts`; hex в компонентах запрещён.
 - Вёрстка — `div` + `makeStyles`; `Box` не использовать (пересчёт стилей на каждый рендер
   тормозит UI) [owner 2026-10-15]. Старые `Box` убирает план `docs/refactoring/R-BOX-layout.md`.
@@ -140,7 +139,7 @@ react-flow, позиции/цвете или тексте лейбла; ввод
 | Команда                                | Зачем                                                                        |
 | -------------------------------------- | ---------------------------------------------------------------------------- |
 | `npm run verify`                       | lint + build (сам — в pre-commit). Ошибка — только ошибки + путь к логу      |
-| `npm run rules`                        | правила §4, не ловимые eslint (hex, `@material-ui`, `window`; в pre-commit)  |
+| `npm run rules`                        | правила §4, не ловимые eslint (hex, `window`; в pre-commit)                  |
 | `npm run ui -- <шаги>`                 | ручная проверка UI текстом (сам поднимет dev-сервер); шаги — в шапке скрипта |
 | `node scripts/agent/lint-file.mjs <f>` | eslint одного файла сразу после правки                                       |
 | `npm run state:summary`                | что открыто в PROJECT_STATE и нужно ли его обновлять                         |

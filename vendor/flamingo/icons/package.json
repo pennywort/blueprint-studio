@@ -1,8 +1,0 @@
-{
-  "name": "@blueprint-vendor/flamingo-icons",
-  "version": "4.9.17",
-  "description": "TEMPORARY SHIM: MUI v4-backed replacement until internal @blueprint-vendor registry is available (owner decision 2026-10-09). Do not add logic here — re-exports only.",
-  "type": "module",
-  "main": "./index.js",
-  "types": "./index.d.ts"
-}

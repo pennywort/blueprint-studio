@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Button, InputAdornment, TextField, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
-import { Search } from '@blueprint-vendor/flamingo-icons';
+import { Button, InputAdornment, TextField, Typography, makeStyles } from '@material-ui/core';
+import { Search } from '@material-ui/icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { AttributeField } from './attribute-field';
 import { IconStub } from './icon-stub';

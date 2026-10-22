@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Chip, Paper, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Button, Chip, Paper, Typography, makeStyles } from '@material-ui/core';
 import type { AnySettingsSection } from '@application/settings/settings-section';
 import type { SettingsSnapshot } from '@application/settings/editor-settings';
 import type { SettingsIssue } from '@application/settings/resolve-settings';

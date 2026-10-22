@@ -1,4 +1,4 @@
-import { Typography } from '@blueprint-vendor/flamingo-core';
+import { Typography } from '@material-ui/core';
 
 // Заглушка предпросмотра: эмулятор МИПа появится в поздних эпиках (БТ 5.1).
 export function PreviewPage() {

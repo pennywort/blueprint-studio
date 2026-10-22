@@ -1,4 +1,4 @@
-import { Box, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Box, Typography, makeStyles } from '@material-ui/core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import illustration from '@presentation/assets/empty-canvas-illustration.png';
 

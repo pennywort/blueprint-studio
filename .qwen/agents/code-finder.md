@@ -15,7 +15,7 @@ description: Находит, где в коде blueprint-studio реализо�
 - `src/infrastructure/` — адаптеры портов, DI-контейнер `container.ts`, схемы элементов.
 - `src/presentation/` — React: страницы, канвас (@xyflow/react), панели, тема
   `theme/editor-theme.ts`.
-- `vendor/flamingo/` — шимы UI (TEMPORARY), `scripts/` — утилиты.
+- `vendor/react-dom-find-dom-node/` — полифилл для MUI v4 (TEMPORARY), `scripts/` — утилиты.
 
 Как искать:
 

@@ -31,10 +31,6 @@ for (const file of changed) {
 
 const RULES = [
   {
-    re: /['"]@material-ui\//,
-    msg: 'прямой импорт @material-ui/* (только @blueprint-vendor/*)',
-  },
-  {
     re: /(?<![\w&])#[0-9a-fA-F]{3,8}\b/,
     msg: 'литеральный hex-цвет (цвета только из темы editor-theme.ts)',
     skip: (file) => file.startsWith('src/presentation/theme/'),

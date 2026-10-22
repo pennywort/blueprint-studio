@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Box, IconButton, Menu, MenuItem, makeStyles } from '@blueprint-vendor/flamingo-core';
-import { AccountTree, Code, NoteAdd, ViewColumn } from '@blueprint-vendor/flamingo-icons';
+import { Box, IconButton, Menu, MenuItem, makeStyles } from '@material-ui/core';
+import { AccountTree, Code, NoteAdd, ViewColumn } from '@material-ui/icons';
 import type { ElementSchema } from '@application/ports/element-schema-provider';
 import type { CanvasElementKind } from '@domain/model/canvas-element';
 import { kindRules } from '@domain/element-kinds';
@@ -88,7 +88,7 @@ function elementMenuItems(
 // (пятая иконка AI-ассистента удалена решением владельца). Кнопки 1–2 открывают
 // меню добавления (узлы / элементы выбранного узла), кнопка 3 («код») сразу
 // добавляет комментарий-элемент для разработчика [owner 2026-10-15], кнопка 4
-// переключает панель-заглушку. Иконки — только из flamingo-icons, самописных нет.
+// переключает панель-заглушку. Иконки — только из @material-ui/icons, самописных нет.
 export function EditorToolbar({
   elementSchemas,
   activePanel,

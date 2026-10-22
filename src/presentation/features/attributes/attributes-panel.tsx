@@ -1,4 +1,4 @@
-import { TextField, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { TextField, Typography, makeStyles } from '@material-ui/core';
 import type {
   ElementAttribute,
   ElementAttributeType,

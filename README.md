@@ -14,7 +14,7 @@ npm run lint     # ESLint + tsc --noEmit
 npm run build    # production-сборка (Rsbuild)
 ```
 
-Требования: Node.js 22+, npm 10+. Пакеты `@blueprint-vendor/*` берутся из внутреннего registry — без доступа к нему `npm install` не пройдёт.
+Требования: Node.js 22+, npm 10+. Все пакеты — из публичного npm.
 
 ## Структура слоёв
 

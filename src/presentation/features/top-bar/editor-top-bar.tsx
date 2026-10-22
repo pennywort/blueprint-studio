@@ -12,8 +12,8 @@ import {
   Tooltip,
   Typography,
   makeStyles,
-} from '@blueprint-vendor/flamingo-core';
-import { Search } from '@blueprint-vendor/flamingo-icons';
+} from '@material-ui/core';
+import { Search } from '@material-ui/icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
