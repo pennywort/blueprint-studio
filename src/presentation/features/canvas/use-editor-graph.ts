@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useRef } from 'react';
 import type { CanvasElement, CanvasElementKind } from '@domain/model/canvas-element';
 import { canBeLogicSource, kindRules } from '@domain/element-kinds';
+import type { EditorRules } from '@domain/editor-rules';
+import { useEditorRules } from '@presentation/features/settings/use-settings';
 import {
   toApplicationFormId,
   toElementId,
@@ -61,9 +63,10 @@ export type { SelectedElementInfo } from './use-selection';
 // добавляется отдельной кнопкой тулбара [owner 2026-10-15].
 function elementKindOptions(
   catalog: ElementCatalog,
+  rules: EditorRules,
 ): ReadonlyArray<{ kind: CanvasElementKind; label: string }> {
   return catalog.schemas
-    .filter((schema) => kindRules(schema.kind).inAddMenu)
+    .filter((schema) => kindRules(rules, schema.kind).inAddMenu)
     .map((schema) => ({ kind: schema.kind, label: schema.label }));
 }
 
@@ -73,6 +76,8 @@ function elementKindOptions(
 // для EditorPage не изменился. TEMPORARY до effector (см. editor-store.ts).
 export function useEditorGraph() {
   const container = useContainer();
+  // Правила редактора из настроек (R-ADM) — те же, что у команд.
+  const rules = useEditorRules();
   const notifications = useEditorNotifications();
   const idGenerator = container.cradle.idGenerator;
   const catalog = useElementCatalog();
@@ -440,10 +445,10 @@ export function useEditorGraph() {
       // (connection-matrix, R-CFG-2); выключить можно в любом блоке.
       const found = findElementInGraph(graphRef.current, elementId);
       const component = found?.element;
-      if (!found || !component || !canBeLogicSource(component)) {
+      if (!found || !component || !canBeLogicSource(rules, component)) {
         return;
       }
-      if (!component.hasComplexLogic && !supportsLogic(found.container)) {
+      if (!component.hasComplexLogic && !supportsLogic(rules, found.container)) {
         return;
       }
       const componentId = component.id;
@@ -475,7 +480,7 @@ export function useEditorGraph() {
         runCommand(new EnableComplexLogic(componentId));
       }
     },
-    [runCommand],
+    [runCommand, rules],
   );
 
   // Действия узлов и карточек — стабильный объект в контексте канваса
@@ -492,10 +497,11 @@ export function useEditorGraph() {
       swapSteps,
       moveElement,
       reportElementRows,
-      elementKindOptions: elementKindOptions(catalog),
+      elementKindOptions: elementKindOptions(catalog, rules),
     }),
     [
       catalog,
+      rules,
       reportElementRows,
       selectElement,
       toggleComplexLogic,

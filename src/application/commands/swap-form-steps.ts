@@ -2,7 +2,7 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ApplicationFormId, FormStepId } from '@domain/model/ids';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
-import type { Command } from './command';
+import type { Command, CommandContext } from './command';
 import { findFormById } from './graph-lookup';
 import { preserveFormStepDepths } from './depth-preservation';
 import { removeNonAdjacentStepTransitions, touchesStep } from './step-placement';
@@ -23,7 +23,7 @@ export class SwapFormSteps implements Command {
     private readonly otherStepId: FormStepId,
   ) {}
 
-  apply(draft: ServiceGraph): void {
+  apply(draft: ServiceGraph, { rules }: CommandContext): void {
     const depthsBefore = computeAllFormStepDepths(draft);
     const form = findFormById(draft, this.formId);
     if (!form) {
@@ -44,13 +44,14 @@ export class SwapFormSteps implements Command {
     form.steps[index] = other;
     form.steps[otherIndex] = step;
 
-    const touchesStepA = touchesStep(draft, step.id);
-    const touchesStepB = touchesStep(draft, other.id);
+    const touchesStepA = touchesStep(draft, rules, step.id);
+    const touchesStepB = touchesStep(draft, rules, other.id);
     removeNonAdjacentStepTransitions(
       draft,
+      rules,
       (transition) => touchesStepA(transition) || touchesStepB(transition),
     );
     preserveFormStepDepths(draft, depthsBefore, new Set([step.id, other.id]));
-    draft.stepTransitions = validStepTransitions(draft);
+    draft.stepTransitions = validStepTransitions(draft, rules);
   }
 }

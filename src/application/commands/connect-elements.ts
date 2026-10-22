@@ -1,7 +1,7 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { PageLink } from '@domain/model/page-link';
 import { computeGraphDepths } from '@domain/graph-depths';
-import type { Command } from './command';
+import type { Command, CommandContext } from './command';
 import { findElementLocation, isLinkTargetPresent } from './graph-lookup';
 import { assertConnectableTarget, placeLinkTargetIntoNextLayer } from './layer-placement';
 
@@ -18,7 +18,7 @@ export class ConnectElements implements Command {
 
   constructor(private readonly link: PageLink) {}
 
-  apply(draft: ServiceGraph): void {
+  apply(draft: ServiceGraph, { rules }: CommandContext): void {
     if (!findElementLocation(draft, this.link.sourceElementId)) {
       throw new Error(`Элемент-источник связи не найден: ${this.link.sourceElementId}`);
     }
@@ -33,7 +33,7 @@ export class ConnectElements implements Command {
     if (duplicate) {
       throw new Error('Связь между этими элементами уже существует');
     }
-    assertConnectableTarget(draft, this.link.sourceElementId, this.link.targetId);
+    assertConnectableTarget(draft, rules, this.link.sourceElementId, this.link.targetId);
 
     // Глубины до мутации — чтобы отличить перенос колонки от связи в тот же слой.
     const depthsBefore = computeGraphDepths(draft);

@@ -13,7 +13,8 @@
 | [R-ENT-entities.md](R-ENT-entities.md)               | R-ENT-1…5   | Сущности канваса × возможности: одно ядро вместо дублей         | ⏳ ожидает                              |
 | [R-BOX-layout.md](R-BOX-layout.md)                   | R-BOX-1…4   | `Box` MUI v4 → `div` + `makeStyles` (производительность)        | ⏳ ожидает                              |
 | [R-HK-hotkeys.md](R-HK-hotkeys.md)                   | R-HK-1…5    | Доводка системы хоткеев и буфера элементов по итогам ревью      | ⏳ ожидает                              |
-| [R-CFG-config.md](R-CFG-config.md)                   | R-CFG-1…11  | Правила редактора — таблицы и конфиг вместо ветвлений           | ⏳ ожидает                              |
+| [R-CFG-config.md](R-CFG-config.md)                   | R-CFG-1…11  | Правила редактора — таблицы и конфиг вместо ветвлений           | 🔄 9 ✅ (в R-ADM-1)                     |
+| [R-ADM-settings.md](R-ADM-settings.md)               | R-ADM-1…6   | Настройки: администратор (для всех) и пользователь, одно ядро   | 🔄 1 ✅; 2 — задача на бэкенд           |
 | [R-ARC-architecture.md](R-ARC-architecture.md)       | R-ARC-1…7   | Находки архитектурного ревью 2026-10-19 (баг undo, §4b, слои)   | 🔄 1, 2 ✅                              |
 | [R-SCH-element-schemas.md](R-SCH-element-schemas.md) | R-SCH-1…9   | Один источник атрибутов элемента и переходов (R-ARC-3, R-ARC-4) | ⏳ ждёт решений владельца               |
 | [R-PERF-canvas.md](R-PERF-canvas.md)                 | R-PERF-0…12 | Производительность канваса и CSS на больших картах (ревью RF)   | ⏳ ожидает (решения 2026-10-22 приняты) |

@@ -2,7 +2,7 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import type { PageLinkTargetId } from '@domain/model/page-link';
 import type { ElementId, PageLinkId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
-import type { Command } from './command';
+import type { Command, CommandContext } from './command';
 import { findElementLocation, isLinkTargetPresent } from './graph-lookup';
 import { assertConnectableTarget, placeLinkTargetIntoNextLayer } from './layer-placement';
 
@@ -21,7 +21,7 @@ export class ReconnectElements implements Command {
     private readonly patch: { sourceElementId?: ElementId; targetId?: PageLinkTargetId },
   ) {}
 
-  apply(draft: ServiceGraph): void {
+  apply(draft: ServiceGraph, { rules }: CommandContext): void {
     if (this.patch.sourceElementId === undefined && this.patch.targetId === undefined) {
       throw new Error(`ReconnectElements без новых концов связи: ${this.linkId}`);
     }
@@ -49,7 +49,7 @@ export class ReconnectElements implements Command {
 
     // Правило подсветки (R1): проверка на графе без самой переназначаемой связи.
     const others = { ...draft, links: draft.links.filter((candidate) => candidate.id !== this.linkId) };
-    assertConnectableTarget(others, link.sourceElementId, link.targetId);
+    assertConnectableTarget(others, rules, link.sourceElementId, link.targetId);
     placeLinkTargetIntoNextLayer(draft, link.sourceElementId, link.targetId, depthsBefore);
   }
 }

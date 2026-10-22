@@ -11,7 +11,7 @@ import {
   type LayerColumn,
   type LayerDropDecision,
 } from '../layers/layer-columns';
-import { FORM_STEP_LAYER_POLICY } from '../layers/layer-policy';
+import { useLayerPolicies } from '../layers/layer-policy';
 import { packLayerBands } from '../layers/layer-bands';
 import { ElementCard } from './element-card';
 import { OptionCard } from './option-card';
@@ -105,6 +105,7 @@ export type FormStepLayersProps = {
 export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps) {
   const classes = useStyles();
   const layersRef = useRef<HTMLDivElement>(null);
+  const layerPolicy = useLayerPolicies().formStep;
   // Лес правил: корни — элементы без варианта-источника в этом шаге,
   // дети — по option-handle варианта (порядок — порядок элементов шага).
   const { rows, children, maxDepth, elementDepths } = useMemo(() => {
@@ -151,10 +152,10 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
       const rect = container.getBoundingClientRect();
       const scale = container.offsetWidth > 0 ? rect.width / container.offsetWidth : 1;
       const localX = (event.clientX - rect.left) / scale;
-      const column = nearestLayerColumn(gridLayerColumns(maxDepth, FORM_STEP_LAYER_POLICY), localX);
+      const column = nearestLayerColumn(gridLayerColumns(maxDepth, layerPolicy), localX);
       const own = elements.find((element) => element.id === dragged.elementId);
       const decision = resolveLayerDrop(
-        FORM_STEP_LAYER_POLICY,
+        layerPolicy,
         // Вид не важен: политика шага переносит любой элемент (ADR-17).
         { id: dragged.elementId, kind: 'element', depth: own ? (own.layerDepth ?? 0) : null },
         column,
@@ -172,7 +173,7 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
       }
       return { column, decision, anchor, layersWidth: container.offsetWidth };
     },
-    [elementDepths, elements, maxDepth],
+    [elementDepths, elements, maxDepth, layerPolicy],
   );
 
   const dropElement = useCallback(

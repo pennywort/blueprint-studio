@@ -2,6 +2,8 @@ import { applyPatches, enablePatches, produceWithPatches, type Patch } from 'imm
 import type { ServiceGraph } from '@domain/model/service-graph';
 import { validateGraph, type InvariantViolation } from '@domain/invariants';
 import type { IClock } from '@application/ports/clock';
+import type { EditorSettings } from '@application/settings/editor-settings';
+import { rulesSettings } from '@application/settings/rules-settings';
 import type { Command } from './command';
 import { InvariantViolationError } from './errors';
 
@@ -44,9 +46,12 @@ export class CommandBus {
 
   // Деструктуризация в конструкторе обязательна: Awilix PROXY + минификация
   // production-сборки (конституция, железное правило 7).
-  constructor(private readonly deps: { clock: IClock }) {}
+  constructor(private readonly deps: { clock: IClock; editorSettings: EditorSettings }) {}
 
   execute(current: ServiceGraph, command: Command): ServiceGraph {
+    // Правила — действующие на момент команды (настройки редактора, R-ADM):
+    // администратор поменял правило — следующая команда проверяется по новому.
+    const rules = this.deps.editorSettings.get(rulesSettings);
     // Инварианты (конституция §4) проверяются здесь, один раз для любой
     // команды (R-ARC-2, AGENTS.md §4a): исключение до записи в историю —
     // граф и история не меняются. Отклоняется только команда, добавившая
@@ -55,11 +60,11 @@ export class CommandBus {
     // граф, а не черновик (R-PERF-5): обход черновика идёт через прокси immer
     // и на большой карте стоил заметную часть команды.
     const [next, patches, inversePatches] = produceWithPatches(current, (draft) => {
-      command.apply(draft);
+      command.apply(draft, { rules });
     });
-    const violations = validateGraph(next);
+    const violations = validateGraph(next, rules);
     if (violations.length > 0) {
-      const added = newViolations(validateGraph(current), violations);
+      const added = newViolations(validateGraph(current, rules), violations);
       if (added.length > 0) {
         throw new InvariantViolationError(added);
       }

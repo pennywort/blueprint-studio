@@ -1,12 +1,14 @@
 import type { CanvasElement, CanvasElementKind } from './model/canvas-element';
 import { toOptionId, type OptionId } from './model/ids';
+import type { EditorRules } from './editor-rules';
 
 // Реестр видов элементов (R-CFG-1, F01/F02/F13, [owner 2026-10-16]): что умеет
 // вид элемента — данные, а не ветвления `kind === 'select' / 'comment'`.
 // Изменить возможность вида = поправить строку таблицы; новый вид — новая
 // строка, проверки не меняются. Вид без строки — обычный элемент (ELEMENT):
 // состав видов задаёт политика редактора (этап 3 docs/schemas/PLAN.md),
-// здесь — только отличия поведения. Сейчас это stub конфига редактора (R-CFG-9).
+// здесь — только отличия поведения. Таблица ниже — умолчания; действующая
+// приходит в EditorRules из настроек редактора (R-ADM).
 
 /** Семейство вида: элемент или комментарий-элемент (вне связей и логики). */
 export type ElementKindFamily = 'element' | 'comment';
@@ -38,7 +40,8 @@ export interface ElementKindRules {
   readonly variants?: ElementVariantsRule;
 }
 
-const ELEMENT: ElementKindRules = {
+/** Обычный элемент — вид без строки в таблице. */
+export const DEFAULT_ELEMENT_KIND: ElementKindRules = {
   family: 'element',
   connectable: true,
   logicTarget: true,
@@ -49,41 +52,44 @@ const ELEMENT: ElementKindRules = {
 // комментарий — вне связей, логики и меню (кнопка тулбара) [owner 2026-10-15].
 // Ключи вариантов — поля элемента массива в схеме фреймворка (select.options,
 // radio-group.items).
-export const ELEMENT_KIND_RULES: Readonly<Record<string, ElementKindRules>> = {
+export const DEFAULT_ELEMENT_KIND_RULES: Readonly<Record<string, ElementKindRules>> = {
   comment: {
     family: 'comment',
     connectable: false,
     logicTarget: false,
     inAddMenu: false,
   },
-  select: { ...ELEMENT, variants: { prop: 'options', idKey: 'id', labelKey: 'label', defaultProp: 'value' } },
+  select: {
+    ...DEFAULT_ELEMENT_KIND,
+    variants: { prop: 'options', idKey: 'id', labelKey: 'label', defaultProp: 'value' },
+  },
   'radio-group': {
-    ...ELEMENT,
+    ...DEFAULT_ELEMENT_KIND,
     variants: { prop: 'items', idKey: 'value', labelKey: 'label', defaultProp: 'value', max: 5 },
   },
 };
 
-export function kindRules(kind: CanvasElementKind): ElementKindRules {
-  return ELEMENT_KIND_RULES[kind] ?? ELEMENT;
+export function kindRules(rules: EditorRules, kind: CanvasElementKind): ElementKindRules {
+  return rules.elementKinds[kind] ?? DEFAULT_ELEMENT_KIND;
 }
 
 /** Вид комментария-элемента (kind со строкой family: 'comment'). */
 export const COMMENT_KIND = 'comment';
 
-export function isCommentElement(element: CanvasElement): boolean {
-  return kindRules(element.kind).family === 'comment';
+export function isCommentElement(rules: EditorRules, element: CanvasElement): boolean {
+  return kindRules(rules, element.kind).family === 'comment';
 }
 
 /** Элемент может включить «Сложную логику»: у вида есть варианты (L5). */
-export function canBeLogicSource(element: CanvasElement): boolean {
-  return kindRules(element.kind).variants !== undefined;
+export function canBeLogicSource(rules: EditorRules, element: CanvasElement): boolean {
+  return kindRules(rules, element.kind).variants !== undefined;
 }
 
 export type ElementVariant = { id: OptionId; label: string; isDefault: boolean };
 
 /** Варианты элемента по таблице вида; у вида без вариантов — пусто. */
-export function elementVariants(element: CanvasElement): readonly ElementVariant[] {
-  const rule = kindRules(element.kind).variants;
+export function elementVariants(rules: EditorRules, element: CanvasElement): readonly ElementVariant[] {
+  const rule = kindRules(rules, element.kind).variants;
   const items = rule ? element.props[rule.prop] : undefined;
   if (!rule || !Array.isArray(items)) {
     return [];
@@ -104,6 +110,6 @@ export function elementVariants(element: CanvasElement): readonly ElementVariant
 }
 
 /** Подпись варианта по id; null — варианта нет. */
-export function variantLabel(element: CanvasElement, optionId: string): string | null {
-  return elementVariants(element).find((variant) => variant.id === optionId)?.label ?? null;
+export function variantLabel(rules: EditorRules, element: CanvasElement, optionId: string): string | null {
+  return elementVariants(rules, element).find((variant) => variant.id === optionId)?.label ?? null;
 }

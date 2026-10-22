@@ -1,11 +1,12 @@
 import type { ServiceGraph } from '../model/service-graph';
 import { elementViolationPath, walkElementContainers, type ElementContainer } from '../element-containers';
-import { ELEMENT_COUNT_LIMITS, type ElementCountScope } from '../rule-policy';
+import type { ElementCountScope } from '../rule-policy';
+import type { EditorRules } from '../editor-rules';
 import type { InvariantViolation } from './index';
 
 // Лимиты числа элементов вида в блоке (конституция §4 п. 1 — по умолчанию,
 // R-CFG-5, [owner 2026-10-16]): одно правило вместо частного «одно вложение
-// на форму». Сколько и где — таблица ELEMENT_COUNT_LIMITS (rule-policy.ts).
+// на форму». Сколько и где — EditorRules.elementCountLimits (R-ADM).
 // Нарушение ставится на каждый лишний элемент (первые по порядку остаются),
 // чтобы канвас подсветил именно его.
 
@@ -31,9 +32,16 @@ function scopeKey(graph: ServiceGraph, container: ElementContainer, scope: Eleme
   return null;
 }
 
-export function checkElementCountLimits(graph: ServiceGraph): InvariantViolation[] {
+// Таблица «блок → вид → число» (EditorRules) → список лимитов для обхода.
+function limitList(rules: EditorRules): { scope: ElementCountScope; kind: string; max: number }[] {
+  return Object.entries(rules.elementCountLimits).flatMap(([scope, kinds]) =>
+    Object.entries(kinds ?? {}).map(([kind, max]) => ({ scope: scope as ElementCountScope, kind, max })),
+  );
+}
+
+export function checkElementCountLimits(graph: ServiceGraph, rules: EditorRules): InvariantViolation[] {
   const violations: InvariantViolation[] = [];
-  for (const limit of ELEMENT_COUNT_LIMITS) {
+  for (const limit of limitList(rules)) {
     const counts = new Map<string, number>();
     for (const container of walkElementContainers(graph)) {
       const key = scopeKey(graph, container, limit.scope);

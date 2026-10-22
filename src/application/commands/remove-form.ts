@@ -2,7 +2,7 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ApplicationFormId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { validStepTransitions } from '@domain/step-transitions';
-import type { Command } from './command';
+import type { Command, CommandContext } from './command';
 import { preservePageDepths } from './depth-preservation';
 
 // Команда удаления формы заявки (Epic 002, T-035) с каскадом связей:
@@ -14,7 +14,7 @@ export class RemoveForm implements Command {
 
   constructor(private readonly formId: ApplicationFormId) {}
 
-  apply(draft: ServiceGraph): void {
+  apply(draft: ServiceGraph, { rules }: CommandContext): void {
     // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
     const depthsBeforeRemoval = computeGraphDepths(draft);
     const index = draft.applicationForms.findIndex((form) => form.id === this.formId);
@@ -45,6 +45,6 @@ export class RemoveForm implements Command {
 
     // Каскад переходов между шагами [owner 2026-10-14]: переходы, ставшие
     // недопустимыми (удалена форма), уходят вместе с причиной.
-    draft.stepTransitions = validStepTransitions(draft);
+    draft.stepTransitions = validStepTransitions(draft, rules);
   }
 }

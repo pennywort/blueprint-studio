@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { ElementSchema } from '@application/ports/element-schema-provider';
 import type { CanvasElement, CanvasElementKind } from '@domain/model/canvas-element';
 import { useContainer } from '@presentation/app/App';
+import { useSettingsSnapshot } from '@presentation/features/settings/use-settings';
 
 // Каталог элементов редактора (этап 3 docs/schemas/PLAN.md): описания из
 // IElementSchemaProvider (схема + политика) — единственный источник подписей
@@ -41,14 +42,15 @@ export function createElementCatalog(schemas: readonly ElementSchema[]): Element
 
 const ElementCatalogContext = createContext<ElementCatalog>(createElementCatalog([]));
 
-// Провайдер на корне редактора: описания собираются один раз (провайдер
-// схем — singleton контейнера).
+// Провайдер на корне редактора: описания — от провайдера схем (singleton
+// контейнера). Политика элементов — секция настроек (R-ADM): подписка на
+// снимок настроек перечитывает список, каталог пересоздаётся только при
+// смене описаний (провайдер отдаёт тот же массив, пока политика прежняя).
 export function ElementCatalogProvider({ children }: { children: ReactNode }) {
-  const container = useContainer();
-  const catalog = useMemo(
-    () => createElementCatalog(container.cradle.elementSchemaProvider.listSchemas()),
-    [container],
-  );
+  const provider = useContainer().cradle.elementSchemaProvider;
+  useSettingsSnapshot();
+  const schemas = provider.listSchemas();
+  const catalog = useMemo(() => createElementCatalog(schemas), [schemas]);
   return <ElementCatalogContext.Provider value={catalog}>{children}</ElementCatalogContext.Provider>;
 }
 

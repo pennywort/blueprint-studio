@@ -2,7 +2,7 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ElementId } from '@domain/model/ids';
 import { canBeLogicSource } from '@domain/element-kinds';
 import { computeFormElementDepths } from '@domain/step-element-depths';
-import type { Command } from './command';
+import type { Command, CommandContext } from './command';
 import { preserveFormElementDepths } from './depth-preservation';
 import { findElementInGraph } from '@domain/element-containers';
 
@@ -15,7 +15,7 @@ export class DisableComplexLogic implements Command {
 
   constructor(private readonly componentId: ElementId) {}
 
-  apply(draft: ServiceGraph): void {
+  apply(draft: ServiceGraph, { rules }: CommandContext): void {
     // Колонки элементов шагов до мутации: цель, потерявшая правило, остаётся на месте (ADR-15).
     const elementDepthsBefore = computeFormElementDepths(draft);
     // Выключить можно в любом блоке (R-CFG-2): снятие флага только убирает правила.
@@ -23,7 +23,7 @@ export class DisableComplexLogic implements Command {
     if (!found) {
       throw new Error(`Элемент не найден: ${this.componentId}`);
     }
-    if (!canBeLogicSource(found.element)) {
+    if (!canBeLogicSource(rules, found.element)) {
       throw new Error(
         `Сложная логика v1 поддерживает только Select (элемент ${this.componentId}: ${found.element.kind})`,
       );

@@ -15,8 +15,9 @@
 | `hotkeys-registry.ts`      | чистый TS без React: таблица + обработчики, `attach(root)` — один слушатель `keydown`                                                    |
 | `hotkeys-provider.tsx`     | `HotkeysProvider` (без разметки, значение не меняется), `useHotkeysRoot`, `useHotkeyHandlers`                                            |
 
-Пользовательские переопределения — порт `application/ports/keybindings-storage.ts`, адаптер
-`infrastructure/persistence/local-storage-keybindings-storage.ts` (DI: `keybindingsStorage`).
+Переопределения — секция настроек `keybindings` (`features/hotkeys/keybindings-settings.ts`):
+умолчания ← администратор ← пользователь, см. [R-ADM-settings.md](R-ADM-settings.md) [2026-10-22].
+Отдельный порт `keybindings-storage` удалён: личные настройки — `IUserSettingsStorage`.
 Регистрируют обработчики: `pages/editor/EditorPage.tsx` (save/undo/redo/copy/cut/paste) и
 `features/canvas/editor-canvas.tsx` (`edit.delete`, `canvas.cancelConnection`).
 Буфер элементов — `features/canvas/use-editor-graph.ts` (`copySelectedElement`,
@@ -82,11 +83,11 @@ npm run ui -- --wait "$C" --count "$C" --click "$C" --key Control+c --click "$N"
 
 ## R-HK-5. Живое применение пользовательских хоткеев (по запросу, перед панелью настроек)
 
-**Сейчас:** `HotkeysProvider` читает `keybindingsStorage.load()` один раз; `save` никто не зовёт.
-**Сделать, когда начнётся панель настроек:** в реестре — `setTable(table)` (слушатели
-пересобирают keymap без переподключения компонентов); хук `useKeybindings()` →
-`{ entries, commands: HOTKEY_COMMANDS, save(entries) }`: `save` пишет в порт и обновляет
-таблицу. Формат JSON не меняется. Без запроса владельца не делать.
+**Частично сделано (R-ADM, 2026-10-22):** `HotkeysProvider` читает секцию `keybindings` через
+`useSettingsSection` — смена настроек на лету пересобирает реестр (переподключение слушателя).
+Запись пользователем — `editorSettings.setUserOverride(keybindingsSettings, entries)`.
+**Осталось (по запросу):** `setTable(table)` в реестре без переподключения; UI редактирования
+хоткеев — раздел панели настроек (R-ADM-4).
 
 ## Изменения поведения, принятые при введении системы (не баги)
 

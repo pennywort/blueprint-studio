@@ -14,6 +14,8 @@ export type EditorNotificationsFacade = {
   showSaveError: (message: string) => void;
   /** Критический отказ команды (команда не смогла примениться). */
   showCommandFailure: (message: string) => void;
+  /** Настройки редактора не применены (ошибка в документе слоя, R-ADM). */
+  showSettingsIssue: (message: string) => void;
 };
 
 type Notification = {
@@ -64,6 +66,7 @@ export function EditorNotificationsProvider({ children }: { children: ReactNode 
       showSaveSuccess: () => show({ severity: 'success', message: SAVE_SUCCESS_MESSAGE }),
       showSaveError: (message) => show({ severity: 'error', message }),
       showCommandFailure: (message) => show({ severity: 'error', message }),
+      showSettingsIssue: (message) => show({ severity: 'error', message }),
     }),
     [show],
   );

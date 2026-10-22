@@ -1,5 +1,6 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { StepTransition } from '@domain/model/step-transition';
+import type { EditorRules } from '@domain/editor-rules';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { moveByAnchor } from '@domain/ordered-move';
 import { stepTransitionSourceStepId } from '@domain/step-transitions';
@@ -15,6 +16,7 @@ import { preserveFormStepDepths } from './depth-preservation';
 // источника и цели перестали быть смежными.
 export function removeNonAdjacentStepTransitions(
   draft: ServiceGraph,
+  rules: EditorRules,
   affects: (transition: StepTransition) => boolean,
 ): void {
   const depths = computeAllFormStepDepths(draft);
@@ -22,7 +24,7 @@ export function removeNonAdjacentStepTransitions(
     if (!affects(transition)) {
       return true;
     }
-    const sourceStepId = stepTransitionSourceStepId(draft, transition);
+    const sourceStepId = stepTransitionSourceStepId(draft, rules, transition);
     const sourceDepth = sourceStepId !== null ? depths.get(sourceStepId) : undefined;
     const targetDepth = depths.get(transition.targetStepId);
     if (sourceDepth === undefined || targetDepth === undefined) {
@@ -34,14 +36,15 @@ export function removeNonAdjacentStepTransitions(
 
 // Переходы, касающиеся шага (входящие и исходящие).
 export const touchesStep =
-  (draft: ServiceGraph, stepId: string) =>
+  (draft: ServiceGraph, rules: EditorRules, stepId: string) =>
   (transition: StepTransition): boolean =>
-    transition.targetStepId === stepId || stepTransitionSourceStepId(draft, transition) === stepId;
+    transition.targetStepId === stepId || stepTransitionSourceStepId(draft, rules, transition) === stepId;
 
 // Шаг встаёт на уровень depth; если уровень изменился и якоря нет — в конец
 // новой колонки (порядок внутри уровня — порядок массива шагов, D7).
 export function placeFormStepIntoLayer(
   draft: ServiceGraph,
+  rules: EditorRules,
   stepId: string,
   depth: number,
   depthsBefore: ReadonlyMap<string, number>,
@@ -53,7 +56,7 @@ export function placeFormStepIntoLayer(
     return; // существование шага проверяют команды до вызова
   }
   step.layerDepth = depth;
-  removeNonAdjacentStepTransitions(draft, touchesStep(draft, stepId));
+  removeNonAdjacentStepTransitions(draft, rules, touchesStep(draft, rules, stepId));
   preserveFormStepDepths(draft, depthsBefore, new Set([stepId]));
 
   if (anchor) {
@@ -74,13 +77,14 @@ export function placeFormStepIntoLayer(
 // Цель перехода — на уровень «источник + 1» (как placeLinkTargetIntoNextLayer).
 export function placeStepTransitionTarget(
   draft: ServiceGraph,
+  rules: EditorRules,
   transition: StepTransition,
   depthsBefore: ReadonlyMap<string, number>,
 ): void {
-  const sourceStepId = stepTransitionSourceStepId(draft, transition);
+  const sourceStepId = stepTransitionSourceStepId(draft, rules, transition);
   const sourceDepth = sourceStepId !== null ? depthsBefore.get(sourceStepId) : undefined;
   if (sourceDepth === undefined) {
     return; // переход не из шага формы — решает инвариант
   }
-  placeFormStepIntoLayer(draft, transition.targetStepId, sourceDepth + 1, depthsBefore);
+  placeFormStepIntoLayer(draft, rules, transition.targetStepId, sourceDepth + 1, depthsBefore);
 }

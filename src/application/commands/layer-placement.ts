@@ -2,6 +2,7 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import type { PageLink } from '@domain/model/page-link';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { connectableTargets } from '@domain/connection-rules';
+import type { EditorRules } from '@domain/editor-rules';
 import { moveByAnchor } from '@domain/ordered-move';
 import { preservePageDepths } from './depth-preservation';
 import { findOwnerPageId, findPageEntry, setPageLayerDepth, walkPages } from './graph-lookup';
@@ -31,10 +32,11 @@ export function removeNonAdjacentLinks(draft: ServiceGraph, affects: (link: Page
 // граф без проверяемой связи (для reconnect — без неё самой).
 export function assertConnectableTarget(
   graph: ServiceGraph,
+  rules: EditorRules,
   sourceElementId: string,
   targetId: string,
 ): void {
-  const allowed = connectableTargets(graph, { kind: 'navigation', elementId: sourceElementId });
+  const allowed = connectableTargets(graph, rules, { kind: 'navigation', elementId: sourceElementId });
   if (!allowed.pages.has(targetId)) {
     throw new Error('Связь возможна только на блок колонки правее источника');
   }

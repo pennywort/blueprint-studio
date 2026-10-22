@@ -1,5 +1,6 @@
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
+import type { EditorRules } from '@domain/editor-rules';
 import { DEFAULT_COMMENT_AUDIENCE, type CanvasElement } from '@domain/model/canvas-element';
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
 import { toElementId, toPageEntityId, type ElementId, type PageEntityId } from '@domain/model/ids';
@@ -206,6 +207,8 @@ type ElementMapContext = {
   logicTargets: ReadonlySet<string>;
   logicHidden: ReadonlySet<string>;
   catalog: ElementCatalog;
+  /** Правила редактора (настройки, R-ADM): что умеет вид и блок. */
+  rules: EditorRules;
 };
 
 // Любой элемент — в любом блоке [owner 2026-10-13]: текст карточки задаёт
@@ -217,8 +220,8 @@ function elementToElementData(
   context: ElementMapContext,
   capabilities: ContainerCapabilities,
 ): CanvasElementData {
-  const { catalog } = context;
-  if (isCommentElement(element)) {
+  const { catalog, rules } = context;
+  if (isCommentElement(rules, element)) {
     // Комментарий-элемент — вне связей и «Сложной логики» в любом блоке.
     return {
       id: element.id,
@@ -238,13 +241,13 @@ function elementToElementData(
   if (subtitle) {
     data.secondaryText = subtitle;
   }
-  if (canBeLogicSource(element)) {
+  if (canBeLogicSource(rules, element)) {
     // Элемент выбора — потенциальный источник «Сложной логики» (L5) и,
     // вариантами, переходов между шагами [owner 2026-10-14]: option-handle'ы
     // есть всегда, правило видимости из них — только при включённом режиме (L4).
     data.complexLogic = {
       enabled: element.hasComplexLogic === true,
-      options: elementVariants(element).map((variant) => ({
+      options: elementVariants(rules, element).map((variant) => ({
         handleId: logicSourceHandleId(element.id, variant.id),
         label: variant.label,
         value: variant.id,
@@ -256,7 +259,7 @@ function elementToElementData(
     data.note = { text: element.comment, audience: DEFAULT_COMMENT_AUDIENCE };
   }
   if (capabilities.logic) {
-    data.logicTarget = kindRules(element.kind).logicTarget;
+    data.logicTarget = kindRules(rules, element.kind).logicTarget;
     data.hasIncomingLogic = context.logicTargets.has(element.id);
     data.hiddenByLogic = context.logicHidden.has(element.id);
     return data;
@@ -292,19 +295,26 @@ function elementToElementData(
 // перерисовывают только то, что действительно изменилось.
 export function graphToFlow(
   graph: ServiceGraph,
+  rules: EditorRules,
   catalog: ElementCatalog,
   layout?: CanvasLayout,
   previous?: FlowGraph,
 ): FlowGraph {
-  const next = buildFlow(graph, catalog, layout);
+  const next = buildFlow(graph, rules, catalog, layout);
   return previous ? shareFlow(next, previous) : next;
 }
 
-function buildFlow(graph: ServiceGraph, catalog: ElementCatalog, layout?: CanvasLayout): FlowGraph {
+function buildFlow(
+  graph: ServiceGraph,
+  rules: EditorRules,
+  catalog: ElementCatalog,
+  layout?: CanvasLayout,
+): FlowGraph {
   const positionOf = (id: string): XYPosition => layout?.positions[id] ?? { x: 0, y: 0 };
+  const pageCapabilities = containerCapabilities(rules, 'page');
   // Карточка элемента страницы с отступом строки (цель напротив якоря).
   const pageElementData = (element: CanvasElement, context: ElementMapContext): CanvasElementData => {
-    const data = elementToElementData(element, context, containerCapabilities('page'));
+    const data = elementToElementData(element, context, pageCapabilities);
     const rowOffset = layout?.rowOffsets[element.id];
     return rowOffset ? { ...data, rowOffset } : data;
   };
@@ -322,7 +332,7 @@ function buildFlow(graph: ServiceGraph, catalog: ElementCatalog, layout?: Canvas
   // при битых данных берётся первое правило) — общий лес якорей.
   const logicParents = buildAnchorForest(logicRulesToAnchorLinks(graph.logicRules)).parentOf;
 
-  const elementContext: ElementMapContext = { logicTargets, logicHidden, catalog };
+  const elementContext: ElementMapContext = { logicTargets, logicHidden, catalog, rules };
 
   const nodes: CanvasNode[] = [];
   // Владелец элемента → id узла: нужен, чтобы ребро вышло из узла страницы,
@@ -378,14 +388,15 @@ function buildFlow(graph: ServiceGraph, catalog: ElementCatalog, layout?: Canvas
   for (const form of graph.applicationForms) {
     const depth = depths.get(form.id) ?? 0;
     // Данные формы зависят только от неё самой, правил логики, переходов,
-    // каталога и глубины (R-PERF-5): immer сохраняет объекты неизменённых
-    // частей графа, поэтому неизменённая форма берёт data из кэша.
+    // каталога, правил редактора и глубины (R-PERF-5): immer сохраняет объекты
+    // неизменённых частей графа, поэтому неизменённая форма берёт data из кэша.
     const cached = formDataCache.get(form);
     const data =
       cached &&
       cached.logicRules === graph.logicRules &&
       cached.stepTransitions === graph.stepTransitions &&
       cached.catalog === catalog &&
+      cached.rules === rules &&
       cached.depth === depth
         ? cached.data
         : formNodeData(form, depth, graph, elementContext, logicParents);
@@ -393,6 +404,7 @@ function buildFlow(graph: ServiceGraph, catalog: ElementCatalog, layout?: Canvas
       logicRules: graph.logicRules,
       stepTransitions: graph.stepTransitions,
       catalog,
+      rules,
       depth,
       data,
     });
@@ -501,6 +513,7 @@ const formDataCache = new WeakMap<
     logicRules: ServiceGraph['logicRules'];
     stepTransitions: ServiceGraph['stepTransitions'];
     catalog: ElementCatalog;
+    rules: EditorRules;
     depth: number;
     data: CanvasNodeData;
   }
@@ -534,7 +547,11 @@ function formNodeData(
         title: step.title ?? formStepLabel(stepLevels.indexOf(stepDepth) + 1),
         depth: stepDepth,
         elements: step.elements.map((component) => ({
-          ...elementToElementData(component, elementContext, containerCapabilities('formStep')),
+          ...elementToElementData(
+            component,
+            elementContext,
+            containerCapabilities(elementContext.rules, 'formStep'),
+          ),
           layerDepth: stepDepths.get(component.id) ?? 0,
           ...(logicParents.has(component.id)
             ? { logicParentHandleId: logicParents.get(component.id)! }

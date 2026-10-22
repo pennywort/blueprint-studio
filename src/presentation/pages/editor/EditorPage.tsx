@@ -12,6 +12,7 @@ import { useEditorGraph } from '@presentation/features/canvas/use-editor-graph';
 import { useCanvasPointerHeld } from '@presentation/features/canvas/use-selection';
 import { AttributesPanel } from '@presentation/features/attributes/attributes-panel';
 import { EditorNotificationsProvider } from '@presentation/features/notifications/editor-notifications';
+import { SettingsIssuesNotifier } from '@presentation/features/settings/settings-issues-notifier';
 import {
   HotkeysProvider,
   useHotkeyHandlers,
@@ -91,8 +92,10 @@ export function EditorPage() {
       {/* Единый Snackbar-фасад страницы (T-023): уведомления живут в одном
           провайдере, а не размазаны по компонентам. */}
       <EditorNotificationsProvider>
+        {/* Ошибки настроек администратора/пользователя — уведомлением (R-ADM). */}
+        <SettingsIssuesNotifier />
         {/* Хоткеи редактора [owner 2026-10-15]: провайдер без разметки,
-            значение не меняется — перерисовок не вызывает. */}
+            значение меняется только со сменой настроек хоткеев (R-ADM). */}
         <HotkeysProvider>
           {/* Описания элементов (схема + политика редактора) — для канваса,
               меню и панели атрибутов (этап 3 docs/schemas/PLAN.md). */}

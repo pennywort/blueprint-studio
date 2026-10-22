@@ -8,29 +8,25 @@ import {
   type ReactNode,
   type RefCallback,
 } from 'react';
-import { useContainer } from '@presentation/app/App';
+import { useSettingsSection } from '@presentation/features/settings/use-settings';
 import type { HotkeyHandlers } from './hotkey-commands';
 import { createHotkeysRegistry, type HotkeysRegistry } from './hotkeys-registry';
-import { DEFAULT_KEYBINDINGS, detectPlatform, parseUserKeybindings, resolveKeybindings } from './keybindings';
+import { detectPlatform, resolveKeybindings } from './keybindings';
+import { keybindingsSettings } from './keybindings-settings';
 
 // React-обвязка системы хоткеев [owner 2026-10-15]. Провайдер без разметки;
 // значение контекста — реестр, создаётся один раз и не меняется, поэтому
-// потребители из-за него не перерисовываются. Таблица — умолчания
-// (default-keybindings.json) + пользовательские записи IKeybindingsStorage.
+// потребители из-за него не перерисовываются. Таблица — секция настроек
+// keybindings (умолчания ← администратор ← пользователь, R-ADM); смена
+// настроек на лету пересобирает реестр.
 
 const HotkeysContext = createContext<HotkeysRegistry | null>(null);
 
 export function HotkeysProvider({ children }: { children: ReactNode }) {
-  const storage = useContainer().cradle.keybindingsStorage;
+  const entries = useSettingsSection(keybindingsSettings);
   const registry = useMemo(
-    () =>
-      createHotkeysRegistry(
-        resolveKeybindings(
-          [...DEFAULT_KEYBINDINGS, ...parseUserKeybindings(storage.load())],
-          detectPlatform(),
-        ),
-      ),
-    [storage],
+    () => createHotkeysRegistry(resolveKeybindings(entries, detectPlatform())),
+    [entries],
   );
   return <HotkeysContext.Provider value={registry}>{children}</HotkeysContext.Provider>;
 }

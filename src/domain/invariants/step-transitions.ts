@@ -1,6 +1,7 @@
 import type { ServiceGraph } from '../model/service-graph';
 import { elementViolationPath, findElementInGraph } from '../element-containers';
 import { stepTransitionProblem, stepTransitionSourceKey } from '../step-transitions';
+import type { EditorRules } from '../editor-rules';
 import type { InvariantViolation } from './index';
 
 // Инвариант переходов между шагами формы [owner 2026-10-14]: переход — от
@@ -9,7 +10,7 @@ import type { InvariantViolation } from './index';
 export const STEP_TRANSITION_RULE = 'step-transition-forward-same-form';
 export const STEP_TRANSITION_UNIQUE_RULE = 'step-transition-single-per-source';
 
-export function checkStepTransitions(graph: ServiceGraph): InvariantViolation[] {
+export function checkStepTransitions(graph: ServiceGraph, rules: EditorRules): InvariantViolation[] {
   const violations: InvariantViolation[] = [];
   const seen = new Set<string>();
   graph.stepTransitions.forEach((transition, index) => {
@@ -17,7 +18,7 @@ export function checkStepTransitions(graph: ServiceGraph): InvariantViolation[] 
     const path = found
       ? elementViolationPath(found.container, transition.sourceElementId)
       : `stepTransitions[${index}]`;
-    const problem = stepTransitionProblem(graph, transition);
+    const problem = stepTransitionProblem(graph, rules, transition);
     if (problem !== null) {
       violations.push({ rule: STEP_TRANSITION_RULE, path, message: problem });
     }

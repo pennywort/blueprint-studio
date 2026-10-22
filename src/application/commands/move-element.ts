@@ -4,7 +4,7 @@ import { computeGraphDepths } from '@domain/graph-depths';
 import { computeFormElementDepths } from '@domain/step-element-depths';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
-import type { Command } from './command';
+import type { Command, CommandContext } from './command';
 import { preserveFormElementDepths, preservePageDepths, preserveFormStepDepths } from './depth-preservation';
 import { removeNonAdjacentLinks } from './layer-placement';
 import { resolveElementTarget, type CanvasElementTarget } from './add-element';
@@ -42,7 +42,7 @@ export class MoveElement implements Command {
     private readonly layerDepth?: number,
   ) {}
 
-  apply(draft: ServiceGraph): void {
+  apply(draft: ServiceGraph, { rules }: CommandContext): void {
     // Уровни шагов до мутации: шаг, потерявший входящий переход, остаётся на месте (ADR-15).
     const stepDepthsBefore = computeAllFormStepDepths(draft);
     // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
@@ -108,6 +108,6 @@ export class MoveElement implements Command {
     // Каскад переходов между шагами [owner 2026-10-14]: переходы, ставшие
     // недопустимыми (элемент перенесён в другой шаг/блок), уходят вместе с причиной.
     preserveFormStepDepths(draft, stepDepthsBefore);
-    draft.stepTransitions = validStepTransitions(draft);
+    draft.stepTransitions = validStepTransitions(draft, rules);
   }
 }

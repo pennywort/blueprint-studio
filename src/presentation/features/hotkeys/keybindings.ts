@@ -9,7 +9,7 @@ import { isHotkeyCommandId, type HotkeyCommandId } from './hotkey-commands';
 // - mac/win/linux: своя комбинация для платформы; пустая строка — на этой
 //   платформе хоткея нет.
 // - command «-edit.undo»: снять хоткей по умолчанию (с key — только его).
-// Пользовательские записи (IKeybindingsStorage) применяются после умолчаний;
+// Записи администратора и пользователя (секция настроек keybindings, R-ADM) применяются после умолчаний;
 // при совпадении комбинации побеждает последняя запись.
 export const KeybindingEntrySchema = z.object({
   key: z.string(),

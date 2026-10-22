@@ -4,6 +4,7 @@ import { findElementInGraph } from './element-containers';
 import { walkSubScenarios } from './graph-walk';
 import { stepTransitionTargets } from './step-transitions';
 import { kindRules } from './element-kinds';
+import type { EditorRules } from './editor-rules';
 import { canConnect, connectionSourceRole } from './connection-matrix';
 
 // Правила «с чем можно соединиться» (повторная приёмка Epic 002, [owner
@@ -37,14 +38,14 @@ export type ConnectableTargets = {
 
 const NONE: ConnectableTargets = { pages: new Set(), elements: new Set(), steps: new Set() };
 
-function navigationTargets(graph: ServiceGraph, elementId: string): ConnectableTargets {
+function navigationTargets(graph: ServiceGraph, rules: EditorRules, elementId: string): ConnectableTargets {
   const found = findElementInGraph(graph, elementId);
   if (!found) {
     return NONE;
   }
   const sourcePageId = found.container.pageId;
-  const steps = stepTransitionTargets(graph, elementId);
-  if (!canConnect('element', 'page', found.container.kind)) {
+  const steps = stepTransitionTargets(graph, rules, elementId);
+  if (!canConnect(rules, 'element', 'page', found.container.kind)) {
     return { pages: new Set(), elements: new Set(), steps };
   }
   const depths = computeGraphDepths(graph);
@@ -84,7 +85,12 @@ function wouldCreateCycle(graph: ServiceGraph, sourceId: string, targetId: strin
   return false;
 }
 
-function logicTargets(graph: ServiceGraph, elementId: string, optionId: string): ConnectableTargets {
+function logicTargets(
+  graph: ServiceGraph,
+  rules: EditorRules,
+  elementId: string,
+  optionId: string,
+): ConnectableTargets {
   // Логика — только внутри блока с этой возможностью (R-CFG-2: шаг формы,
   // L-I5/ADR-14): Select на странице источником правила не бывает; цель —
   // любой элемент того же блока [owner 2026-10-13]. Шаги-цели переходов
@@ -96,8 +102,9 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
   // Шаги и элементы — если роль варианта до них дотягивается из этого блока
   // (connection-matrix): с «Сложной логикой» вариант связывается только
   // внутри шага [owner 2026-10-16].
-  const steps = stepTransitionTargets(graph, elementId, optionId);
-  if (!canConnect(connectionSourceRole(found.element, optionId), 'element', found.container.kind)) {
+  const steps = stepTransitionTargets(graph, rules, elementId, optionId);
+  const role = connectionSourceRole(rules, found.element, optionId);
+  if (!canConnect(rules, role, 'element', found.container.kind)) {
     return { pages: new Set(), elements: new Set(), steps };
   }
   // У цели — не больше одного правила видимости (L-I7, временно [owner
@@ -105,7 +112,7 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
   const ruleTargets = new Set<string>(graph.logicRules.map((rule) => rule.targetElementId));
   const elements = new Set<string>();
   for (const element of found.container.elements) {
-    if (ruleTargets.has(element.id) || !kindRules(element.kind).logicTarget) {
+    if (ruleTargets.has(element.id) || !kindRules(rules, element.kind).logicTarget) {
       continue;
     }
     const duplicate = graph.logicRules.some(
@@ -122,13 +129,17 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
   return { pages: new Set(), elements, steps };
 }
 
-export function connectableTargets(graph: ServiceGraph, source: ConnectionSource): ConnectableTargets {
+export function connectableTargets(
+  graph: ServiceGraph,
+  rules: EditorRules,
+  source: ConnectionSource,
+): ConnectableTargets {
   // Комментарий-элемент не источник и не цель связей [owner 2026-10-15].
   const element = findElementInGraph(graph, source.elementId)?.element;
-  if (element && !kindRules(element.kind).connectable) {
+  if (element && !kindRules(rules, element.kind).connectable) {
     return NONE;
   }
   return source.kind === 'navigation'
-    ? navigationTargets(graph, source.elementId)
-    : logicTargets(graph, source.elementId, source.optionId);
+    ? navigationTargets(graph, rules, source.elementId)
+    : logicTargets(graph, rules, source.elementId, source.optionId);
 }

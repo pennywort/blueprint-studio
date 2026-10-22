@@ -3,7 +3,7 @@ import type { ApplicationFormId, FormStepId } from '@domain/model/ids';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { moveByAnchor } from '@domain/ordered-move';
 import { validStepTransitions } from '@domain/step-transitions';
-import type { Command } from './command';
+import type { Command, CommandContext } from './command';
 import { findFormById } from './graph-lookup';
 import { placeFormStepIntoLayer } from './step-placement';
 
@@ -32,7 +32,7 @@ export class MoveFormStep implements Command {
     private readonly layerDepth?: number,
   ) {}
 
-  apply(draft: ServiceGraph): void {
+  apply(draft: ServiceGraph, { rules }: CommandContext): void {
     const depthsBefore = computeAllFormStepDepths(draft);
     const form = findFormById(draft, this.formId);
     if (!form) {
@@ -49,10 +49,10 @@ export class MoveFormStep implements Command {
       if (!Number.isInteger(this.layerDepth) || this.layerDepth < 0) {
         throw new Error(`Недопустимый уровень шага: ${this.layerDepth}`);
       }
-      placeFormStepIntoLayer(draft, this.stepId, this.layerDepth, depthsBefore, anchor);
+      placeFormStepIntoLayer(draft, rules, this.stepId, this.layerDepth, depthsBefore, anchor);
     } else if (anchor) {
       moveByAnchor(form.steps, this.stepId, anchor);
     }
-    draft.stepTransitions = validStepTransitions(draft);
+    draft.stepTransitions = validStepTransitions(draft, rules);
   }
 }
