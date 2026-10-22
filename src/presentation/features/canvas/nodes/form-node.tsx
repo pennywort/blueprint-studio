@@ -1,15 +1,7 @@
 import { memo, useCallback, useMemo, useRef, useState, type DragEvent } from 'react';
 import type { NodeProps } from '@xyflow/react';
-import {
-  Card,
-  Chip,
-  IconButton,
-  Menu,
-  MenuItem,
-  Typography,
-  makeStyles,
-} from '@blueprint-vendor/flamingo-core';
-import { Add, Delete } from '@blueprint-vendor/flamingo-icons';
+import { Card, Chip, IconButton, Menu, MenuItem, Typography, makeStyles } from '@material-ui/core';
+import { Add, Delete } from '@material-ui/icons';
 import type { CanvasElementKind } from '@domain/model/canvas-element';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { NODE_KIND_LABELS } from '@presentation/labels/editor-labels';

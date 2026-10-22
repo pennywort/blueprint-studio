@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Typography, makeStyles } from '@material-ui/core';
 import type { ElementAttribute } from '@application/ports/element-schema-provider';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 

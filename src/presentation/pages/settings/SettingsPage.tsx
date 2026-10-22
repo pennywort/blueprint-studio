@@ -1,4 +1,4 @@
-import { Button, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Button, Typography, makeStyles } from '@material-ui/core';
 import { useNavigate } from 'react-router-dom';
 import { SettingsOverview } from '@presentation/features/settings/settings-overview';
 import { EditorThemeProvider } from '@presentation/theme/editor-theme-provider';

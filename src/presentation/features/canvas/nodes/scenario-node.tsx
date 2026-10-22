@@ -1,7 +1,7 @@
 import { memo, useCallback, useLayoutEffect, useRef, type DragEvent } from 'react';
 import type { NodeProps } from '@xyflow/react';
-import { Card, IconButton, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
-import { Delete } from '@blueprint-vendor/flamingo-icons';
+import { Card, IconButton, Typography, makeStyles } from '@material-ui/core';
+import { Delete } from '@material-ui/icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
 import { CANVAS_LAYOUT, FORM_STEP_LAYOUT, type MeasuredElementRows } from '../canvas-layout';

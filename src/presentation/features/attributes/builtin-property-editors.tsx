@@ -10,8 +10,8 @@ import {
   TextField,
   Typography,
   makeStyles,
-} from '@blueprint-vendor/flamingo-core';
-import { Add, Delete } from '@blueprint-vendor/flamingo-icons';
+} from '@material-ui/core';
+import { Add, Delete } from '@material-ui/icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { AttributeField } from './attribute-field';
 import { IconPropertyEditor } from './icon-property-editor';

@@ -1,4 +1,4 @@
-import { makeStyles } from '@blueprint-vendor/flamingo-core';
+import { makeStyles } from '@material-ui/core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 // TEMPORARY: заглушка иконки фреймворка [owner 2026-10-20] — набора иконок

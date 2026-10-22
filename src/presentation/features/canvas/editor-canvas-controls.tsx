@@ -1,14 +1,6 @@
 import { Panel, useReactFlow, useStore, type ReactFlowState } from '@xyflow/react';
-import { Box, IconButton, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
-import {
-  Map as MapIcon,
-  PanTool,
-  Redo,
-  Undo,
-  ZoomIn,
-  ZoomOut,
-  ZoomOutMap,
-} from '@blueprint-vendor/flamingo-icons';
+import { Box, IconButton, Typography, makeStyles } from '@material-ui/core';
+import { Map as MapIcon, PanTool, Redo, Undo, ZoomIn, ZoomOut, ZoomOutMap } from '@material-ui/icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 const useStyles = makeStyles<EditorTheme>((theme) => {

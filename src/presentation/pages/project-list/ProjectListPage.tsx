@@ -12,7 +12,7 @@ import {
   TextField,
   Typography,
   makeStyles,
-} from '@blueprint-vendor/flamingo-core';
+} from '@material-ui/core';
 import { useNavigate } from 'react-router-dom';
 import type { GraphSummary } from '@application/ports/graph-repository';
 import { createEmptyServiceGraph, type ServiceGraph } from '@domain/model/service-graph';

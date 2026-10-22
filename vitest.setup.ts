@@ -3,7 +3,7 @@
 // ResizeObserver сразу вызывает callback с contentRect 800x600, чтобы
 // ReactFlow смонтировался без реальных измерений layout.
 
-// TEMPORARY (пока живёт vendor/flamingo): MUI v4 — CJS-пакет и в тестах
+// TEMPORARY (пока UI на MUI v4): MUI v4 — CJS-пакет и в тестах
 // ходит в react-dom нативным require, минуя vite-alias 'react-dom$' на
 // vendor-полифилл. Поэтому здесь findDOMNode из того же полифилла
 // проставляется в живой модуль react-dom (общий с @material-ui

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { Snackbar, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Snackbar, makeStyles } from '@material-ui/core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 // Единый сервис уведомлений редактора (T-023): один <Snackbar> живёт здесь и

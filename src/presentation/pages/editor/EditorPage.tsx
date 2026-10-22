@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Divider, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Divider, Typography, makeStyles } from '@material-ui/core';
 import {
   ElementCatalogProvider,
   useElementCatalog,

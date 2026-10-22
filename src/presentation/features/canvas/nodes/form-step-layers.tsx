@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, type DragEvent, type ReactNode } from 'react';
-import { makeStyles } from '@blueprint-vendor/flamingo-core';
+import { makeStyles } from '@material-ui/core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { FORM_STEP_LAYOUT } from '../canvas-layout';
 import type { CanvasElementData } from '../graph-flow-adapter';

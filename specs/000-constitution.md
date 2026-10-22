@@ -92,19 +92,19 @@ _Лимиты п. 1–2 — значения по умолчанию: меняю
 
 Менять состав стека запрещено без решения владельца (пользователя). Версии фиксируются точно (`--save-exact`), без `^`.
 
-| Назначение       | Пакет                                                                                                                                                  |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Сборка           | Rsbuild (`@rsbuild/core`, `@rsbuild/plugin-react`)                                                                                                     |
-| UI-фреймворк     | React 19* + TypeScript (strict)                                                                                                                        |
-| UI-кит           | `@blueprint-vendor/flamingo-components`, `flamingo-core`, `flamingo-icons`, `flamingo-pickers`, `flamingo-animations` (версия 4.9.17, единая для всех) |
-| Canvas/диаграммы | `@xyflow/react` (reactflow)                                                                                                                            |
-| Состояние        | Effector + patronum                                                                                                                                    |
-| Workflow-статусы | XState (эпик workflow, не foundation)                                                                                                                  |
-| DI               | Awilix (PROXY-режим)                                                                                                                                   |
-| Схемы/валидация  | Zod                                                                                                                                                    |
-| Патчи            | Immer (`produceWithPatches`)                                                                                                                           |
-| Тесты            | Vitest + @testing-library/react                                                                                                                        |
-| Качество         | ESLint (flat config) + eslint-plugin-boundaries, Prettier, Husky + lint-staged + commitlint                                                            |
+| Назначение       | Пакет                                                                                                            |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Сборка           | Rsbuild (`@rsbuild/core`, `@rsbuild/plugin-react`)                                                               |
+| UI-фреймворк     | React 19* + TypeScript (strict)                                                                                  |
+| UI-кит           | `@material-ui/core` 4.12.4, `@material-ui/icons` 4.11.3 (MUI v4) [owner 2026-10-22]; переход на Flamingo отложен |
+| Canvas/диаграммы | `@xyflow/react` (reactflow)                                                                                      |
+| Состояние        | Effector + patronum                                                                                              |
+| Workflow-статусы | XState (эпик workflow, не foundation)                                                                            |
+| DI               | Awilix (PROXY-режим)                                                                                             |
+| Схемы/валидация  | Zod                                                                                                              |
+| Патчи            | Immer (`produceWithPatches`)                                                                                     |
+| Тесты            | Vitest + @testing-library/react                                                                                  |
+| Качество         | ESLint (flat config) + eslint-plugin-boundaries, Prettier, Husky + lint-staged + commitlint                      |
 
 \* React 19 — при условии прохождения проверки T-000 (peer deps Flamingo). Результат проверки фиксируется в `001-foundation/tasks.md`.
 

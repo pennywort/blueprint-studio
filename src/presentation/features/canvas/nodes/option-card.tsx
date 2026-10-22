@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Card, Chip, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Card, Chip, Typography, makeStyles } from '@material-ui/core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { isActionTarget } from '../canvas-events';
 import { useCanvasActions } from '../canvas-interaction';

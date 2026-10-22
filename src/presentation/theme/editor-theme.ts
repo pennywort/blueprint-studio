@@ -1,4 +1,4 @@
-import { createMuiTheme, useTheme, type Theme } from '@blueprint-vendor/flamingo-core';
+import { createMuiTheme, useTheme, type Theme } from '@material-ui/core';
 import type { HighlightColorToken, HighlightPolicy, HighlightPolicyDefinition } from './highlight-policy';
 
 // Цветовые токены canvas/react-flow. Все значения — из макетов
@@ -54,7 +54,7 @@ export interface EditorCanvasPalette {
 }
 
 // Полная палитра темы редактора: canvas-токены + цвета, уходящие в palette
-// MUI v4 (Flamingo — форк MUI v4, механика темы та же, D6).
+// MUI v4 (UI-кит — @material-ui напрямую [owner 2026-10-22]).
 export interface EditorThemeDefinition {
   /** Фон страницы/канваса. */
   background: string;
@@ -175,9 +175,9 @@ const editorThemeDefinitions: Record<EditorThemeName, EditorThemeDefinition> = {
 };
 
 // Тема редактора = MUI v4 тема + наши токены в поле `editor`.
-// Собственное поле (а не module augmentation) выбрано сознательно: временный
-// шим Flamingo поверх @material-ui уйдёт, и augmentation целевых модулей
-// MUI пришлось бы переписывать; поле `editor` переживёт замену кита.
+// Собственное поле (а не module augmentation) выбрано сознательно: при замене
+// UI-кита augmentation модулей MUI пришлось бы переписывать; поле `editor`
+// переживёт замену кита.
 export type EditorTheme = Theme & {
   editor: {
     chipAccent: string;

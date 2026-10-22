@@ -23,11 +23,6 @@
     "agents:sync": "node scripts/agent/sync-agents.mjs"
   },
   "dependencies": {
-    "@blueprint-vendor/flamingo-animations": "file:vendor/flamingo/animations",
-    "@blueprint-vendor/flamingo-components": "file:vendor/flamingo/components",
-    "@blueprint-vendor/flamingo-core": "file:vendor/flamingo/core",
-    "@blueprint-vendor/flamingo-icons": "file:vendor/flamingo/icons",
-    "@blueprint-vendor/flamingo-pickers": "file:vendor/flamingo/pickers",
     "@material-ui/core": "4.12.4",
     "@material-ui/icons": "4.11.3",
     "@xyflow/react": "12.12.0",
