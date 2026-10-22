@@ -93,8 +93,10 @@ export interface EditorThemeDefinition {
 export interface EditorShape {
   /** Блок канваса (узел страницы/формы). */
   block: number;
-  /** Карточка: элемент, шаг, вариант, уведомление, миникарта. */
+  /** Карточка: шаг, вариант, уведомление, миникарта. */
   card: number;
+  /** Карточка элемента и комментария на канвасе [owner 2026-10-22]. */
+  element: number;
   /** Пилюля: панели, тулбар, кнопки-пилюли. */
   pill: number;
   /** Ярлык (chip). */
@@ -167,7 +169,7 @@ const lightTheme: EditorThemeDefinition = {
     // Карточка с рамкой 1px (variant outlined): подсветка ложится поверх неё.
     inset: { node: 0, step: 0, card: -1 },
   },
-  shape: { block: 16, card: 12, pill: 24, chip: 16, icon: 8, small: 6 },
+  shape: { block: 16, card: 12, element: 24, pill: 24, chip: 16, icon: 8, small: 6 },
 };
 
 const editorThemeDefinitions: Record<EditorThemeName, EditorThemeDefinition> = {

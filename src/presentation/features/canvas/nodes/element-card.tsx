@@ -25,7 +25,8 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     // Как Card variant="outlined": фон бумаги и рамка 1px.
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.editor.canvas.elementBorder}`,
-    borderRadius: theme.editor.shape.card,
+    // Радиус элемента и комментария — 24 [owner 2026-10-22].
+    borderRadius: theme.editor.shape.element,
     color: theme.palette.text.primary,
     // Handle позиционируется относительно карточки элемента (D9); handle на
     // границе не обрезается (N7/N11).
@@ -153,11 +154,13 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     display: 'flex',
     flexDirection: 'column',
     gap: theme.spacing(1.5),
-    marginTop: -12,
-    padding: theme.spacing(3, 2, 2),
+    // Заход под карточку = её радиусу: фон виден ровно в скруглениях.
+    marginTop: -theme.editor.shape.element,
+    padding: theme.spacing(0, 2, 2),
+    paddingTop: theme.editor.shape.element + theme.spacing(1.5),
     border: `1px solid ${theme.editor.canvas.commentBorder}`,
     borderTop: 'none',
-    borderRadius: `0 0 ${theme.editor.shape.card}px ${theme.editor.shape.card}px`,
+    borderRadius: `0 0 ${theme.editor.shape.element}px ${theme.editor.shape.element}px`,
     backgroundColor: theme.editor.canvas.commentBackground,
   },
 }));
