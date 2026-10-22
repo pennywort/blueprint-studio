@@ -201,9 +201,19 @@ function CanvasInner({
   const [edges, setEdges] = useState<CanvasEdge[]>(propsEdges);
   // Граф — источник правды: любой пересчёт из команды заменяет локальное
   // состояние целиком (позиции drag'а при этом либо зафиксированы командой,
-  // либо отброшены).
-  useEffect(() => setNodes(withMeasured(propsNodes)), [propsNodes, withMeasured]);
-  useEffect(() => setEdges(propsEdges), [propsEdges]);
+  // либо отброшены). Синхронизация в рендере, а не в эффекте (R-PERF-4):
+  // эффект давал второй рендер react-flow на каждую команду и кадр со
+  // старыми узлами между ними.
+  const [syncedNodes, setSyncedNodes] = useState(propsNodes);
+  if (syncedNodes !== propsNodes) {
+    setSyncedNodes(propsNodes);
+    setNodes(withMeasured(propsNodes));
+  }
+  const [syncedEdges, setSyncedEdges] = useState(propsEdges);
+  if (syncedEdges !== propsEdges) {
+    setSyncedEdges(propsEdges);
+    setEdges(propsEdges);
+  }
   // Выделение взаимоисключающее (F5): выбран узел или элемент — выделение
   // рёбер (оно у react-flow) снимается. До R2 его сбрасывал пересчёт рёбер
   // при каждом выделении; после структурного разделения рёбра те же
@@ -296,21 +306,20 @@ function CanvasInner({
   // Ширина — фактическая (measured из локального состояния): у формы она
   // больше nodeWidth, и по оценке центр её колонки «уезжал» — узел,
   // брошенный на место, уходил на следующий уровень и терял связи.
-  const findColumnCandidate = useCallback(
-    (x: number): LayerColumn | null => {
-      const measuredWidth = new Map(nodesRef.current.map((node) => [node.id, node.measured?.width]));
-      const columns = buildLayerColumns(
-        propsNodes.map((node) => ({
-          depth: node.data.depth,
-          x: node.position.x,
-          width: measuredWidth.get(node.id) ?? PAGE_LAYER_POLICY.columnWidth,
-        })),
-        PAGE_LAYER_POLICY,
-      );
-      return nearestLayerColumn(columns, x);
-    },
-    [propsNodes],
-  );
+  // Колонки строятся один раз на старте drag (R-PERF-2): раскладка во время
+  // drag не меняется, а пересборка по всем узлам на каждый кадр стоила O(N).
+  const columnsRef = useRef<LayerColumn[]>([]);
+  const handleNodeDragStart: OnNodeDrag<CanvasNode> = useCallback(() => {
+    const measuredWidth = new Map(nodesRef.current.map((node) => [node.id, node.measured?.width]));
+    columnsRef.current = buildLayerColumns(
+      propsNodes.map((node) => ({
+        depth: node.data.depth,
+        x: node.position.x,
+        width: measuredWidth.get(node.id) ?? PAGE_LAYER_POLICY.columnWidth,
+      })),
+      PAGE_LAYER_POLICY,
+    );
+  }, [propsNodes]);
 
   // Подсветка целевой колонки во время drag (F6) и запомненное решение —
   // в drop решение принимается по последнему кандидату.
@@ -324,7 +333,7 @@ function CanvasInner({
   const handleNodeDrag: OnNodeDrag<CanvasNode> = useCallback(
     (_event, draggedNode) => {
       const width = draggedNode.measured?.width ?? PAGE_LAYER_POLICY.columnWidth;
-      const candidate = findColumnCandidate(draggedNode.position.x + width / 2);
+      const candidate = nearestLayerColumn(columnsRef.current, draggedNode.position.x + width / 2);
       const decision = resolveLayerDrop(
         PAGE_LAYER_POLICY,
         { id: draggedNode.id, kind: draggedNode.type ?? '', depth: draggedNode.data.depth },
@@ -334,18 +343,30 @@ function CanvasInner({
       decisionRef.current = decision;
       // Своя колонка не подсвечивается — переноса нет, будет reorder по Y;
       // заполненная — подсвечивается запретом сразу, до броска ([owner 2026-10-16]).
-      setDropZone(
+      const next =
         decision.kind !== 'reorder' && candidate
           ? { x: candidate.x, width: candidate.width, blocked: decision.kind === 'blocked' }
-          : null,
+          : null;
+      // Новое состояние — только при смене колонки или решения (R-PERF-2): иначе
+      // канвас перерисовывался на каждый кадр drag.
+      setDropZone((current) =>
+        current === next ||
+        (current &&
+          next &&
+          current.x === next.x &&
+          current.width === next.width &&
+          current.blocked === next.blocked)
+          ? current
+          : next,
       );
     },
-    [findColumnCandidate, nodeDepths],
+    [nodeDepths],
   );
 
   const handleNodeDragStop: OnNodeDrag<CanvasNode> = useCallback(
     (_event, draggedNode) => {
       setDropZone(null);
+      columnsRef.current = [];
       const decision = decisionRef.current;
       decisionRef.current = null;
       // Возврат к раскладке: результат drag'а фиксирует команда, пересчитанные
@@ -395,25 +416,31 @@ function CanvasInner({
   // клик по блоку/элементу-цели): react-flow в этом режиме линию не рисует —
   // рисуем сами (ClickConnectionLine) в координатах полотна, чтобы линия не
   // зависела от позиционирования обёртки и pan/zoom (повторная приёмка, 5.1).
+  // Начало клик-связи — состояние (рисует линию), признак активности — ref:
+  // обработчики не зависят от него и стабильны (R-PERF-1). Конец линии за
+  // курсором ведёт сама ClickConnectionLine — канвас на движение мыши не
+  // перерисовывается и не отдаёт react-flow новые пропсы каждый кадр.
   const store = useStoreApi();
-  const [clickLine, setClickLine] = useState<{ from: XYPosition; to: XYPosition } | null>(null);
+  const [clickFrom, setClickFrom] = useState<XYPosition | null>(null);
+  const clickActiveRef = useRef(false);
   const cancelClickConnection = useCallback(() => {
-    if (clickLine) {
+    if (clickActiveRef.current) {
       // Публичного API отмены клик-связи нет: cancelConnection режим не
       // сбрасывает (ревью A9, R4) — решение владельца оставить запись в стор;
       // реестр подмен, п.7 (проверять при обновлении react-flow).
       store.setState({ connectionClickStartHandle: null });
-      setClickLine(null);
+      clickActiveRef.current = false;
+      setClickFrom(null);
       onConnectionEnd?.();
     }
-  }, [clickLine, store, onConnectionEnd]);
+  }, [store, onConnectionEnd]);
 
   // Клавиатурные команды канваса — только обработчики, комбинации задаёт
   // система хоткеев. Escape без клик-связи не обрабатывается (false).
   useHotkeyHandlers({
     'edit.delete': deleteSelection,
     'canvas.cancelConnection': () => {
-      if (!clickLine) {
+      if (!clickActiveRef.current) {
         return false;
       }
       cancelClickConnection();
@@ -429,8 +456,8 @@ function CanvasInner({
           : null;
       if (handle) {
         // Линия выходит из правого края source-handle — как рёбра (Position.Right).
-        const from = screenToFlowPosition({ x: handle.right, y: handle.top + handle.height / 2 });
-        setClickLine({ from, to: from });
+        clickActiveRef.current = true;
+        setClickFrom(screenToFlowPosition({ x: handle.right, y: handle.top + handle.height / 2 }));
       }
     },
     [onConnectionStart, screenToFlowPosition],
@@ -440,12 +467,15 @@ function CanvasInner({
   // ни выделения, ни pan полотна.
   const handlePointerDownCapture = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
-      if (clickLine && !(event.target instanceof Element && event.target.closest('.react-flow__handle'))) {
+      if (
+        clickActiveRef.current &&
+        !(event.target instanceof Element && event.target.closest('.react-flow__handle'))
+      ) {
         event.stopPropagation();
         cancelClickConnection();
       }
     },
-    [clickLine, cancelClickConnection],
+    [cancelClickConnection],
   );
 
   // Выделение — по нажатию мыши, а не по click (повторная приёмка: «лаг» и
@@ -477,6 +507,33 @@ function CanvasInner({
     [onSelectedNodeChange],
   );
 
+  // Цель связи под курсором (R-PERF-6): один делегированный обработчик на
+  // канвас для обоих режимов (drag и клик) пишет ключ сущности в стор —
+  // подсветку рисует сама сущность (useEntityHighlight), без :hover в CSS и
+  // без подписки каждого узла на стор react-flow.
+  const highlightStore = interactionStore ?? STANDALONE_STORE;
+  const handlePointerOver = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (!connecting) {
+        return;
+      }
+      const target =
+        event.target instanceof Element ? event.target.closest('.editor-target-available') : null;
+      highlightStore.setState({ connectHover: target?.getAttribute('data-highlight-key') ?? null });
+    },
+    [connecting, highlightStore],
+  );
+  // Курсор ушёл с канваса — цели под ним нет.
+  const handlePointerLeave = useCallback(
+    () => highlightStore.setState({ connectHover: null }),
+    [highlightStore],
+  );
+  useEffect(() => {
+    if (!connecting) {
+      highlightStore.setState({ connectHover: null });
+    }
+  }, [connecting, highlightStore]);
+
   // Обработчики react-flow стабильны (ревью P3, R2): новая функция в пропсе
   // ReactFlow обновляет его стор, и все подписчики (тысячи handles стенда)
   // перепроверяют селекторы.
@@ -487,7 +544,8 @@ function CanvasInner({
   );
   const handleConnectEnd = useCallback(() => onConnectionEnd?.(), [onConnectionEnd]);
   const handleClickConnectEnd = useCallback(() => {
-    setClickLine(null);
+    clickActiveRef.current = false;
+    setClickFrom(null);
     onConnectionEnd?.();
   }, [onConnectionEnd]);
   const handleReconnect = useCallback(
@@ -511,14 +569,8 @@ function CanvasInner({
       data-testid="editor-canvas"
       onPointerDownCapture={handlePointerDownCapture}
       onPointerDown={handlePointerDown}
-      onPointerMove={(event) => {
-        if (clickLine) {
-          setClickLine({
-            from: clickLine.from,
-            to: screenToFlowPosition({ x: event.clientX, y: event.clientY }),
-          });
-        }
-      }}
+      onPointerOver={handlePointerOver}
+      onPointerLeave={handlePointerLeave}
     >
       <ReactFlow
         nodes={nodes}
@@ -538,6 +590,7 @@ function CanvasInner({
         onReconnect={handleReconnect}
         onEdgesDelete={handleEdgesDelete}
         onNodesDelete={handleNodesDelete}
+        onNodeDragStart={handleNodeDragStart}
         onNodeDrag={handleNodeDrag}
         onNodeDragStop={handleNodeDragStop}
         // Клик по связи выделяет только её (выделение рёбер — у react-flow).
@@ -560,7 +613,7 @@ function CanvasInner({
       >
         <EdgeArrowMarkerDefs />
         {dropZone ? <DropZoneHighlight zone={dropZone} /> : null}
-        {clickLine ? <ClickConnectionLine from={clickLine.from} to={clickLine.to} /> : null}
+        {clickFrom ? <ClickConnectionLine from={clickFrom} /> : null}
         <Background
           variant={BackgroundVariant.Dots}
           gap={24}
@@ -593,7 +646,17 @@ function CanvasInner({
 // Линия связи в клик-режиме: тот же путь и тот же класс, что у линии
 // протягивания (EditorConnectionLine), — визуально режимы не отличаются.
 // ViewportPortal — слой полотна: координаты flow, pan/zoom применяются сами.
-function ClickConnectionLine({ from, to }: { from: XYPosition; to: XYPosition }) {
+// Конец линии за курсором — своё состояние (R-PERF-1): на движение мыши
+// перерисовывается только линия.
+function ClickConnectionLine({ from }: { from: XYPosition }) {
+  const { screenToFlowPosition } = useReactFlow();
+  const [to, setTo] = useState(from);
+  useEffect(() => {
+    const follow = (event: PointerEvent) =>
+      setTo(screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+    window.addEventListener('pointermove', follow);
+    return () => window.removeEventListener('pointermove', follow);
+  }, [screenToFlowPosition]);
   const path = editorEdgePath({
     sourceX: from.x,
     sourceY: from.y,

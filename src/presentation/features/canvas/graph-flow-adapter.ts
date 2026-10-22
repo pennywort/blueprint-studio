@@ -376,41 +376,27 @@ function buildFlow(graph: ServiceGraph, catalog: ElementCatalog, layout?: Canvas
   }
 
   for (const form of graph.applicationForms) {
-    // Уровни шагов формы; номер в подписи — номер занятой колонки (пустые
-    // уровни после удаления шага не дают пропусков в нумерации).
-    const formStepDepths = computeFormStepDepths(form, graph.stepTransitions);
-    const stepLevels = [...new Set(formStepDepths.values())].sort((left, right) => left - right);
-    nodes.push({
-      id: form.id,
-      type: 'form',
-      position: positionOf(form.id),
-      data: {
-        title: form.title,
-        orderIndex: form.orderIndex,
-        depth: depths.get(form.id) ?? 0,
-        subtitle: NODE_SUBTITLES.form,
-        elements: [],
-        steps: form.steps.map((step) => {
-          const depth = formStepDepths.get(step.id) ?? 0;
-          // Колонки элементов шага и варианты-источники для раскладки
-          // «цель напротив варианта» [owner 2026-10-13].
-          const stepDepths = computeStepElementDepths(step, graph.logicRules);
-          return {
-            id: step.id,
-            title: step.title ?? formStepLabel(stepLevels.indexOf(depth) + 1),
-            depth,
-            elements: step.elements.map((component) => ({
-              ...elementToElementData(component, elementContext, containerCapabilities('formStep')),
-              layerDepth: stepDepths.get(component.id) ?? 0,
-              ...(logicParents.has(component.id)
-                ? { logicParentHandleId: logicParents.get(component.id)! }
-                : null),
-            })),
-          };
-        }),
-        formKindLabel: form.steps.length > 1 ? 'Степперная' : 'Одностраничная',
-      },
+    const depth = depths.get(form.id) ?? 0;
+    // Данные формы зависят только от неё самой, правил логики, переходов,
+    // каталога и глубины (R-PERF-5): immer сохраняет объекты неизменённых
+    // частей графа, поэтому неизменённая форма берёт data из кэша.
+    const cached = formDataCache.get(form);
+    const data =
+      cached &&
+      cached.logicRules === graph.logicRules &&
+      cached.stepTransitions === graph.stepTransitions &&
+      cached.catalog === catalog &&
+      cached.depth === depth
+        ? cached.data
+        : formNodeData(form, depth, graph, elementContext, logicParents);
+    formDataCache.set(form, {
+      logicRules: graph.logicRules,
+      stepTransitions: graph.stepTransitions,
+      catalog,
+      depth,
+      data,
     });
+    nodes.push({ id: form.id, type: 'form', position: positionOf(form.id), data });
     for (const step of form.steps) {
       for (const component of step.elements) {
         elementOwnerNodeId.set(component.id, form.id);
@@ -503,6 +489,61 @@ function buildFlow(graph: ServiceGraph, catalog: ElementCatalog, layout?: Canvas
   }
 
   return { nodes, edges };
+}
+
+type ApplicationForm = ServiceGraph['applicationForms'][number];
+
+// Кэш data узлов форм по объекту формы (R-PERF-5); WeakMap — старые версии
+// графа отпускаются сборщиком мусора.
+const formDataCache = new WeakMap<
+  ApplicationForm,
+  {
+    logicRules: ServiceGraph['logicRules'];
+    stepTransitions: ServiceGraph['stepTransitions'];
+    catalog: ElementCatalog;
+    depth: number;
+    data: CanvasNodeData;
+  }
+>();
+
+// Data узла формы: шаги, их уровни и карточки полей (D12, S10).
+function formNodeData(
+  form: ApplicationForm,
+  depth: number,
+  graph: ServiceGraph,
+  elementContext: ElementMapContext,
+  logicParents: ReadonlyMap<string, string>,
+): CanvasNodeData {
+  // Уровни шагов формы; номер в подписи — номер занятой колонки (пустые
+  // уровни после удаления шага не дают пропусков в нумерации).
+  const formStepDepths = computeFormStepDepths(form, graph.stepTransitions);
+  const stepLevels = [...new Set(formStepDepths.values())].sort((left, right) => left - right);
+  return {
+    title: form.title,
+    orderIndex: form.orderIndex,
+    depth,
+    subtitle: NODE_SUBTITLES.form,
+    elements: [],
+    steps: form.steps.map((step) => {
+      const stepDepth = formStepDepths.get(step.id) ?? 0;
+      // Колонки элементов шага и варианты-источники для раскладки
+      // «цель напротив варианта» [owner 2026-10-13].
+      const stepDepths = computeStepElementDepths(step, graph.logicRules);
+      return {
+        id: step.id,
+        title: step.title ?? formStepLabel(stepLevels.indexOf(stepDepth) + 1),
+        depth: stepDepth,
+        elements: step.elements.map((component) => ({
+          ...elementToElementData(component, elementContext, containerCapabilities('formStep')),
+          layerDepth: stepDepths.get(component.id) ?? 0,
+          ...(logicParents.has(component.id)
+            ? { logicParentHandleId: logicParents.get(component.id)! }
+            : null),
+        })),
+      };
+    }),
+    formKindLabel: form.steps.length > 1 ? 'Степперная' : 'Одностраничная',
+  };
 }
 
 // Структурное разделение: значение, равное прошлому по содержимому,

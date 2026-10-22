@@ -1,4 +1,4 @@
-import { Panel, useReactFlow, useViewport } from '@xyflow/react';
+import { Panel, useReactFlow, useStore, type ReactFlowState } from '@xyflow/react';
 import { Box, IconButton, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import { Map as MapIcon, Redo, Undo, ZoomIn, ZoomOut, ZoomOutMap } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
@@ -58,7 +58,6 @@ export function EditorCanvasControls({
 }: EditorCanvasControlsProps) {
   const classes = useStyles();
   const { zoomIn, zoomOut, fitView } = useReactFlow();
-  const { zoom } = useViewport();
 
   return (
     <>
@@ -103,9 +102,7 @@ export function EditorCanvasControls({
             >
               <ZoomOut fontSize="small" />
             </IconButton>
-            <Typography className={classes.zoomLabel} variant="body2" aria-label="Текущий масштаб">
-              {Math.round(zoom * 100)}%
-            </Typography>
+            <ZoomLabel className={classes.zoomLabel} />
             <IconButton
               className={classes.button}
               size="small"
@@ -129,5 +126,19 @@ export function EditorCanvasControls({
         </Box>
       </Panel>
     </>
+  );
+}
+
+// Текущий масштаб — отдельный компонент с подпиской на округлённый процент
+// (R-PERF): useViewport перерисовывал всю панель на каждый кадр pan, хотя
+// процент при pan не меняется.
+const selectZoomPercent = (state: ReactFlowState) => Math.round(state.transform[2] * 100);
+
+function ZoomLabel({ className }: { className?: string }) {
+  const percent = useStore(selectZoomPercent);
+  return (
+    <Typography className={className} variant="body2" aria-label="Текущий масштаб">
+      {percent}%
+    </Typography>
   );
 }

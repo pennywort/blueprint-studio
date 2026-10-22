@@ -16,23 +16,8 @@ export const useNodeStyles = makeStyles<EditorTheme>((theme) => ({
     flexDirection: 'column',
     gap: CANVAS_LAYOUT.nodeContentGap,
   },
-  // Нарушение инвариантов узла или его элементов (T-043).
-  invalid: {
-    // Одна рамка: та же внутренняя (inset), что у выделения, цветом ошибки;
-    // выделение важнее — его селектор специфичнее (T-043, [owner 2026-10-14]).
-    boxShadow: `${theme.shadows[1]}, inset 0 0 0 2px ${theme.palette.error.main}`,
-  },
-  // Hover-подсветка целевого узла при перетаскивании связи (T-032, макет
-  // «связь-…-переход-к-подсценарию»): серый фон + рамка, цвета из темы.
-  dropTarget: {
-    backgroundColor: theme.editor.canvas.nodeHoverBackground,
-    outline: `2px solid ${theme.editor.canvas.nodeHoverBorder}`,
-  },
-  // Зона приёма dnd карточек (N2): drag карточки над узлом.
-  dndActive: {
-    outline: `2px dashed ${theme.editor.canvas.nodeHoverBorder}`,
-    outlineOffset: 2,
-  },
+  // Рамки состояний (выделение, ошибка, цели связи и dnd) — единая подсветка
+  // highlight/ (R-PERF-6), не классы здесь.
   // Полоса-индикатор вставки внутри узла (N2, [owner 2026-10-15]): толщина
   // как у связи, на концах серые точки как handle — не выходит за границы
   // блока (в отличие от подсветки колонки на канвасе, LayerDropHighlight).

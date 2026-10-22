@@ -10,6 +10,9 @@ import { endElementDrag, writeElementDrag } from '../element-dnd';
 import { isActionTarget } from '../canvas-events';
 import { ViolationBadge } from './violation-badge';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
+import { useHighlightStyles } from '../highlight/highlight-styles';
+import { useEntityHighlight } from '../highlight/use-entity-highlight';
+import { TargetHandle } from './target-handle';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
@@ -24,18 +27,6 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     // Без анимации тени Paper (300 мс): выделение должно меняться мгновенно,
     // иначе перекликивание воспринимается как лаг (повторная приёмка).
     transition: 'none',
-  },
-  // Выделение элемента (F7): чёрная рамка цвета стрелок — как у узлов и связей.
-  // Вторая половина рамки — внутренней (inset) тенью, а не толщиной border:
-  // размер карточки не меняется, handles/рёбра не сдвигаются (N10), рамка не
-  // выходит наружу и не пересекает входящие рёбра [owner 2026-10-14].
-  // Нарушение инварианта (T-043): рамка цвета ошибки; выделение важнее.
-  cardInvalid: {
-    borderColor: theme.palette.error.main,
-  },
-  cardSelected: {
-    borderColor: theme.editor.canvas.edge,
-    boxShadow: `inset 0 0 0 1px ${theme.editor.canvas.edge}`,
   },
   content: {
     display: 'flex',
@@ -140,10 +131,9 @@ export type ElementCardProps = {
 export const ElementCard = memo(function ElementCard({ element }: ElementCardProps) {
   const classes = useStyles();
   const actions = useCanvasActions();
-  const selected = useCanvasInteraction((state) => state.selectedElementId === element.id);
-  const connectTarget = useCanvasInteraction(
-    (state) => state.connectionTargets?.elements.has(element.id) ?? false,
-  );
+  const highlightClasses = useHighlightStyles();
+  // Подсветка — единый механизм (R-PERF-6): выделение (F7), ошибка (T-043), цель связи.
+  const highlight = useEntityHighlight({ entity: 'card', id: element.id });
   const violations = useCanvasInteraction((state) => state.violations.elements.get(element.id));
   // Нажатие пришлось на коннектор/кнопку: нативный dnd карточки (N2) не
   // начинается — иначе браузер забирал жест протягивания связи у source-handle
@@ -189,12 +179,8 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
       onClick={(event) => event.stopPropagation()}
     >
       <Card
-        className={[
-          classes.card,
-          isComment ? classes.commentCard : '',
-          violations ? classes.cardInvalid : '',
-          selected ? classes.cardSelected : '',
-        ].join(' ')}
+        className={[classes.card, isComment ? classes.commentCard : '', highlightClasses.card].join(' ')}
+        data-highlight={highlight ?? undefined}
         variant="outlined"
       >
         {/* Цель правил «Сложной логики» (T-037): рёбра видимости приходят
@@ -202,12 +188,7 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
           компонентов форм (N5); невидим, накрывает карточку и принимает связь, только пока
           тянется правило и элемент — допустимая цель (повторная приёмка). */}
         {element.logicTarget ? (
-          <Handle
-            type="target"
-            position={Position.Left}
-            id={logicTargetHandleId(element.id)}
-            className={connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
-          />
+          <TargetHandle entity="card" id={element.id} handleId={logicTargetHandleId(element.id)} />
         ) : null}
         {/* Якорь входа рёбер правил [owner 2026-10-13]: на высоте варианта-
           источника (logicHandleTop) — ребро идёт прямой горизонталью. Только

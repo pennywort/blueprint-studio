@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ConnectableTargets } from '@domain/connection-rules';
 import { collectViolations } from '@domain/invariants';
@@ -43,8 +43,10 @@ export function useCanvasNodes(
   const reportNodeSizes = useCallback(
     (sizes: MeasuredNodeSizes) => {
       const natural: Record<string, { width: number; height: number }> = {};
+      // Индекс по id (R-PERF-3): пачка замеров на загрузке — все узлы, find в цикле давал O(N²).
+      const byId = new Map(previousFlowRef.current?.nodes.map((node) => [node.id, node]));
       for (const [id, size] of Object.entries(sizes)) {
-        const node = previousFlowRef.current?.nodes.find((candidate) => candidate.id === id);
+        const node = byId.get(id);
         const offsets = node?.data.elements.reduce((sum, element) => sum + (element.rowOffset ?? 0), 0) ?? 0;
         natural[id] = { width: size.width, height: size.height - offsets };
       }
@@ -68,7 +70,13 @@ export function useCanvasNodes(
   // Нарушения инвариантов после каждой команды (T-043): подсветка узлов и
   // карточек. Команды отклоняют невалидные изменения, поэтому в обычной
   // работе список пуст; подсветка нужна для графов извне (загрузка, T-053).
-  const violationMarkers = useMemo(() => mapViolationsToCanvas(graph, collectViolations(graph)), [graph]);
+  // Отложенный граф (R-PERF-5): полная проверка идёт фоновым рендером после
+  // кадра команды, а не в нём.
+  const violationsGraph = useDeferredValue(graph);
+  const violationMarkers = useMemo(
+    () => mapViolationsToCanvas(violationsGraph, collectViolations(violationsGraph)),
+    [violationsGraph],
+  );
 
   // Состояние взаимодействия — во внешний стор канваса, не в data узлов
   // (ревью A4/P3, R2): узлы и карточки подписаны селектором и перерисовываются

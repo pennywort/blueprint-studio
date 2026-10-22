@@ -248,7 +248,9 @@ export function computeLayout(
     });
   }
   for (const form of graph.applicationForms) {
-    const size = estimateFormSize(form, graph);
+    // Оценка — только для ещё не измеренной формы (R-PERF-5): она обходит
+    // шаги и правила логики и была половиной стоимости раскладки на команду.
+    const size = measured?.[form.id] ?? estimateFormSize(form, graph);
     nodes.push({
       id: form.id,
       orderIndex: form.orderIndex,

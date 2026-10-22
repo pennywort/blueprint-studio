@@ -1,4 +1,5 @@
 import { createMuiTheme, useTheme, type Theme } from '@blueprint-vendor/flamingo-core';
+import type { HighlightColorToken, HighlightPolicy, HighlightPolicyDefinition } from './highlight-policy';
 
 // Цветовые токены canvas/react-flow. Все значения — из макетов
 // docs/design-mockups (сняты пипеткой); в компонентах литеральные hex
@@ -80,6 +81,8 @@ export interface EditorThemeDefinition {
   /** Фон hover нейтральной кнопки-пилюли. */
   secondaryButtonHoverBackground: string;
   canvas: EditorCanvasPalette;
+  /** Подсветка сущностей канваса: приоритет и вид рамок (R-PERF-6). */
+  highlight: HighlightPolicyDefinition;
 }
 
 // Реестр тем: вторая тема добавляется новой записью сюда и расширением
@@ -124,6 +127,25 @@ const lightTheme: EditorThemeDefinition = {
     commentBadgeBackground: '#5d616f',
     commentBadgeForeground: '#ffffff',
   },
+  highlight: {
+    // Первый активный вид побеждает [owner 2026-10-22]: смена порядка —
+    // перестановка здесь; вид, убранный из списка, не рисуется.
+    priority: ['connectHover', 'dropTarget', 'dropZone', 'selected', 'invalid'],
+    frames: {
+      // Цель связи под курсором (ADR-14, [owner 2026-10-15]).
+      connectHover: { color: 'edgeActive', style: 'solid', width: 2 },
+      // Цель dnd / обмена шагов (T-032, [owner 2026-10-14]).
+      dropTarget: { color: 'nodeHoverBorder', style: 'solid', width: 2, fill: 'nodeHoverBackground' },
+      // Зона приёма карточек во время dnd (N2).
+      dropZone: { color: 'nodeHoverBorder', style: 'dashed', width: 2 },
+      // Выделение (F7, S10): узел и шаг — 2px, карточка — 2px поверх своей рамки 1px.
+      selected: { color: 'edge', style: 'solid', width: 2 },
+      // Нарушение инварианта (T-043): узел 2px, карточка — цвет своей рамки 1px.
+      invalid: { color: 'error', style: 'solid', width: { node: 2, step: 2, card: 1 } },
+    },
+    // Карточка с рамкой 1px (variant outlined): подсветка ложится поверх неё.
+    inset: { node: 0, step: 0, card: -1 },
+  },
 };
 
 const editorThemeDefinitions: Record<EditorThemeName, EditorThemeDefinition> = {
@@ -142,8 +164,28 @@ export type EditorTheme = Theme & {
     secondaryButtonBackground: string;
     secondaryButtonHoverBackground: string;
     canvas: EditorCanvasPalette;
+    highlight: HighlightPolicy;
   };
 };
+
+// Токены цвета подсветки → значения темы (цвет ошибки — из palette MUI).
+function resolveHighlightPolicy(definition: EditorThemeDefinition, errorColor: string): HighlightPolicy {
+  const { canvas, highlight } = definition;
+  const colors: Record<HighlightColorToken, string> = {
+    edge: canvas.edge,
+    edgeActive: canvas.edgeActive,
+    nodeHoverBorder: canvas.nodeHoverBorder,
+    nodeHoverBackground: canvas.nodeHoverBackground,
+    error: errorColor,
+  };
+  const frames = Object.fromEntries(
+    Object.entries(highlight.frames).map(([kind, frame]) => [
+      kind,
+      { ...frame, color: colors[frame.color], fill: frame.fill ? colors[frame.fill] : undefined },
+    ]),
+  ) as unknown as HighlightPolicy['frames'];
+  return { priority: highlight.priority, frames, inset: highlight.inset };
+}
 
 export function getEditorThemeDefinition(name: EditorThemeName = 'light'): EditorThemeDefinition {
   return editorThemeDefinitions[name];
@@ -211,6 +253,7 @@ export function createEditorTheme(name: EditorThemeName = 'light'): EditorTheme 
       secondaryButtonBackground: definition.secondaryButtonBackground,
       secondaryButtonHoverBackground: definition.secondaryButtonHoverBackground,
       canvas: { ...definition.canvas },
+      highlight: resolveHighlightPolicy(definition, muiTheme.palette.error.main),
     },
   });
 }

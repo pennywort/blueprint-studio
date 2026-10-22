@@ -36,15 +36,8 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
       '& .react-flow__connectionline': {
         zIndex: 10,
       },
-      // Выделение узла (F7): чёрная рамка цвета стрелок — общее правило
-      // выделения всех сущностей проекта. Рамка внутри блока (inset-тень):
-      // размер не меняется ни на пиксель, рёбра входят в границу блока без
-      // пересечения с рамкой [owner 2026-10-14]. Тень elevation Card сохраняется.
-      // Выделен шаг формы (S10) — рамка только у шага, не у формы: одна
-      // рамка на одно выделение (F5) [owner 2026-10-14].
-      '& .react-flow__node.selected [data-testid^="canvas-node-"]:not(:has([data-step-selected]))': {
-        boxShadow: `${theme.shadows[1]}, inset 0 0 0 2px ${canvas.edge}`,
-      },
+      // Рамка выделения узла (F7, F5, S10) — единая подсветка highlight/
+      // (R-PERF-6): без селектора по data-testid и :has().
       // Рёбра «Сложной логики» рисуются в общем стиле навигации (решение
       // владельца по N1: отличие предложит дизайнер).
       // Handle (N7/N11, замечание владельца 2026-10-13): плоский круг 12px
@@ -107,21 +100,14 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
         backgroundColor: theme.palette.background.paper,
         transform: 'translate(-50%, -50%)',
       },
-      // Рамка цели — внутри сущности, ровно на месте рамки выделения (F7/S10:
-      // inset 2px; handle шире карточки на 1px → −3px): у выделенной цели
-      // рамка выделения заменяется рамкой цели, а не стоит рядом второй
-      // [owner 2026-10-15]. Поверх рамки карточки.
-      '& .react-flow__handle.editor-target.editor-target-available:hover': {
-        outline: `2px solid ${canvas.edgeActive}`,
-        outlineOffset: -3,
+      // Рамка цели под курсором — единая подсветка highlight/ (вид
+      // connectHover, R-PERF-6): у выделенной цели рамка выделения
+      // заменяется рамкой цели по приоритету политики [owner 2026-10-15].
+      // Исходящие handles сущности-цели (у блока — и его элементов) — в цвет
+      // рамки цели, подсветка единообразна [owner 2026-10-13].
+      '& [data-highlight="connectHover"] .react-flow__handle.source': {
+        backgroundColor: canvas.edgeActive,
       },
-      // Курсор над целью во время протягивания: исходящие handles той же
-      // сущности (у блока — и его элементов) — в цвет рамки цели, подсветка
-      // единообразна [owner 2026-10-13].
-      '& .react-flow__handle.editor-target.editor-target-available:hover ~ .react-flow__handle.source, & .react-flow__handle.editor-target.editor-target-available:hover ~ * .react-flow__handle.source':
-        {
-          backgroundColor: canvas.edgeActive,
-        },
       // Идёт протягивание связи — курсор «прицел» на всём канвасе. !important:
       // курсоры react-flow (grab полотна, pointer узлов) той же специфичности
       // и иначе перебивают прицел, стоит курсору уйти с handle (5.1).
@@ -147,13 +133,6 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
       '& .react-flow__attribution a': {
         color: canvas.controlsForeground,
       },
-      // Hover-подсветка целевого узла связи (макет «связь-…-переход-к-подсценарию»,
-      // D9): серый фон + рамка. Класс вешается на узел в T-032.
-      '& .react-flow__node.editor-drop-target .react-flow__node-default, & .react-flow__node.editor-drop-target':
-        {
-          backgroundColor: canvas.nodeHoverBackground,
-          borderColor: canvas.nodeHoverBorder,
-        },
     },
   };
 });

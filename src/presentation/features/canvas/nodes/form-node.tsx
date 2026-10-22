@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, useRef, useState, type DragEvent } from 'react';
-import { Handle, Position, useConnection, type NodeProps } from '@xyflow/react';
+import type { NodeProps } from '@xyflow/react';
 import {
   Card,
   Chip,
@@ -43,6 +43,13 @@ import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { FormStepLayers } from './form-step-layers';
 import { useHandlesSync } from './use-handles-sync';
 import { useNodeStyles } from './node-styles';
+import type { HighlightFlags } from '@presentation/theme/highlight-policy';
+import { useHighlightStyles } from '../highlight/highlight-styles';
+import { useEntityHighlight } from '../highlight/use-entity-highlight';
+import { TargetHandle } from './target-handle';
+
+const NO_FLAGS: HighlightFlags = {};
+const DROP_TARGET: HighlightFlags = { dropTarget: true };
 import { ColumnDropBar, columnBarX, DROP_BAR_INSET, DropBar, useDropZone } from './use-element-drop-zone';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
@@ -98,11 +105,6 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     gap: FORM_STEP_LAYOUT.rowGap,
     // Весь шаг — ручка dnd шага [owner 2026-10-15].
     cursor: 'grab',
-  },
-  // Выделенный шаг (S10): рамка цвета выделения внутри шага (inset-тень) —
-  // размер не меняется, рёбра у границы не перекрываются [owner 2026-10-14].
-  stepSelected: {
-    boxShadow: `inset 0 0 0 2px ${theme.editor.canvas.edge}`,
   },
   // «+ Добавить шаг» (N3): новый шаг на следующий уровень — колонкой справа.
   // Пустой уровень шагов [owner 2026-10-16]: место сохраняется (groupByLayer),
@@ -164,8 +166,9 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
   const nodeClasses = useNodeStyles();
   const classes = useStyles();
   const actions = useCanvasActions();
-  const isDropTarget = useConnection((connection) => connection.inProgress && connection.toNode?.id === id);
-  const connectTarget = useCanvasInteraction((state) => state.connectionTargets?.pages.has(id) ?? false);
+  const highlightClasses = useHighlightStyles();
+  // Подсветка — единый механизм (R-PERF-6).
+  const highlight = useEntityHighlight({ entity: 'node', id });
   const violations = useCanvasInteraction((state) => state.violations.nodes.get(id));
 
   // Меню «+» шага: якорь + шаг, в который добавляем. Варианты kind приходят
@@ -280,20 +283,13 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
 
   return (
     <Card
-      className={[
-        nodeClasses.card,
-        violations ? nodeClasses.invalid : '',
-        isDropTarget ? nodeClasses.dropTarget : '',
-      ].join(' ')}
+      className={[nodeClasses.card, highlightClasses.node].join(' ')}
+      data-highlight={highlight ?? undefined}
       data-testid={`canvas-node-${id}`}
     >
       {/* Форма — цель связей на общих основаниях (D12): точка входа на краю блока (D9). */}
       {/* Принимающий handle невидим и накрывает блок: принимает связь, только пока блок — допустимая цель. */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        className={connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
-      />
+      <TargetHandle entity="node" id={id} />
       <div className={nodeClasses.header}>
         <div>
           <div className={classes.titleRow}>
@@ -437,12 +433,14 @@ const FormStepColumn = memo(function FormStepColumn({
   const classes = useStyles();
   const actions = useCanvasActions();
   // Выделенный шаг (S10): форма выделена целиком, элемент — нет.
-  const selected = useCanvasInteraction(
-    (state) =>
-      state.selectedElementId === null && state.selectedNodeId === formId && state.selectedStepId === step.id,
+  const highlightClasses = useHighlightStyles();
+  // Подсветка шага — единый механизм (R-PERF-6): выделение (S10) и цель связи —
+  // из стора, цель обмена местами при dnd шага — локальный жест формы.
+  const highlight = useEntityHighlight(
+    { entity: 'step', id: step.id, nodeId: formId },
+    swapTarget ? DROP_TARGET : NO_FLAGS,
   );
   // Шаг — допустимая цель протягиваемого перехода [owner 2026-10-14].
-  const connectTarget = useCanvasInteraction((state) => state.connectionTargets?.steps.has(step.id) ?? false);
   // Нажатие пришлось на кнопку/handle — жест не dnd шага.
   const pressedOnActionRef = useRef(false);
   const onDropElement = useCallback(
@@ -457,12 +455,11 @@ const FormStepColumn = memo(function FormStepColumn({
         classes.stepColumn,
         // nodrag — нажатие на шаге тащит шаг, а не узел react-flow.
         'nodrag',
-        selected ? classes.stepSelected : '',
-        swapTarget ? nodeClasses.dropTarget : '',
+        highlightClasses.step,
       ].join(' ')}
+      data-highlight={highlight ?? undefined}
       data-testid={`form-step-${step.id}`}
       data-form-step-id={step.id}
-      data-step-selected={selected || undefined}
       data-step-swap-target={swapTarget || undefined}
       // Dnd шага за весь блок [owner 2026-10-15] — та же зона, что выделяет шаг
       // кликом (S10): карточки элементов тащатся сами (их dragstart не
@@ -486,12 +483,7 @@ const FormStepColumn = memo(function FormStepColumn({
       {/* Цель перехода между шагами [owner 2026-10-14]: невидимый handle во весь
           шаг, принимает связь, только пока шаг — допустимая цель (шаг следующих
           уровней той же формы). */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        id={stepTargetHandleId(step.id)}
-        className={connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
-      />
+      <TargetHandle entity="step" id={step.id} nodeId={formId} handleId={stepTargetHandleId(step.id)} />
       {/* Индикатор вставки шага — посередине зазора между шагами уровня, у
           края уровня — посередине поля узла (formStepsEdge);
           абсолютный — раскладка формы при drag не меняется (как ADR-16). */}

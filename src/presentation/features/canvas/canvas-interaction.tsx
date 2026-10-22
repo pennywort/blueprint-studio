@@ -23,6 +23,8 @@ export type CanvasInteractionState = {
   connectionTargets: ConnectableTargets | null;
   /** Нарушения инвариантов узлов и элементов (T-043). */
   violations: ViolationMarkers;
+  /** Цель связи под курсором — ключ сущности (highlightKey), подсветка R-PERF-6. */
+  connectHover: string | null;
 };
 
 export type CanvasInteractionStore = {
@@ -39,6 +41,7 @@ export const INITIAL_CANVAS_INTERACTION: CanvasInteractionState = {
   selectedStepId: null,
   connectionTargets: null,
   violations: NO_VIOLATIONS,
+  connectHover: null,
 };
 
 export function createCanvasInteractionStore(): CanvasInteractionStore {

@@ -1,5 +1,5 @@
 import { memo, useCallback, useLayoutEffect, useRef, type DragEvent } from 'react';
-import { Handle, Position, useConnection, type NodeProps } from '@xyflow/react';
+import type { NodeProps } from '@xyflow/react';
 import { Card, IconButton, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
 import { Delete } from '@blueprint-vendor/flamingo-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
@@ -13,6 +13,13 @@ import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { useNodeStyles } from './node-styles';
 import { useHandlesSync } from './use-handles-sync';
 import { DropIndicator, useElementDropZone } from './use-element-drop-zone';
+import type { HighlightFlags } from '@presentation/theme/highlight-policy';
+import { useHighlightStyles } from '../highlight/highlight-styles';
+import { useEntityHighlight } from '../highlight/use-entity-highlight';
+import { TargetHandle } from './target-handle';
+
+const NO_FLAGS: HighlightFlags = {};
+const DROP_ZONE: HighlightFlags = { dropZone: true };
 
 /** Зазор между карточками элементов страницы. */
 const ELEMENTS_GAP = 24;
@@ -58,9 +65,7 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
   const nodeClasses = useNodeStyles();
   const classes = useStyles();
   const actions = useCanvasActions();
-  // Подсветка цели связи: узел под курсором во время drag рёбер (D9/T-032).
-  const isDropTarget = useConnection((connection) => connection.inProgress && connection.toNode?.id === id);
-  const connectTarget = useCanvasInteraction((state) => state.connectionTargets?.pages.has(id) ?? false);
+  const highlightClasses = useHighlightStyles();
   const violations = useCanvasInteraction((state) => state.violations.nodes.get(id));
 
   // Зона приёма карточек: подсветка во время drag + линия-индикатор якоря.
@@ -84,30 +89,22 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
     onDrop: dropElement,
   });
   const anchor = drop?.anchor ?? null;
+  // Подсветка — единый механизм (R-PERF-6): выделение, ошибка, цель связи —
+  // из стора; зона приёма dnd карточек — локальный жест узла.
+  const highlight = useEntityHighlight({ entity: 'node', id }, drop ? DROP_ZONE : NO_FLAGS);
   const elementsRef = useElementRowsReport(data.elements, actions?.reportElementRows);
 
   return (
     <Card
-      className={[
-        nodeClasses.card,
-        classes.card,
-        violations ? nodeClasses.invalid : '',
-        isDropTarget ? nodeClasses.dropTarget : '',
-        drop ? nodeClasses.dndActive : '',
-      ].join(' ')}
+      className={[nodeClasses.card, classes.card, highlightClasses.node].join(' ')}
+      data-highlight={highlight ?? undefined}
       data-testid={`canvas-node-${id}`}
       {...dropHandlers}
     >
       {/* Точка входа рёбер — одна на левом краю блока-узла (D9). Только у
           подсценариев: Главная целью связи быть не может (домен, N5). */}
       {/* Принимающий handle невидим и накрывает блок: принимает связь, только пока блок — допустимая цель. */}
-      {type === 'home' ? null : (
-        <Handle
-          type="target"
-          position={Position.Left}
-          className={connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
-        />
-      )}
+      {type === 'home' ? null : <TargetHandle entity="node" id={id} />}
       <div className={nodeClasses.header}>
         <div className={classes.titles}>
           <Typography variant="subtitle1">{data.title}</Typography>

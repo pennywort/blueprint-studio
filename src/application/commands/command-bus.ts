@@ -48,20 +48,22 @@ export class CommandBus {
 
   execute(current: ServiceGraph, command: Command): ServiceGraph {
     // Инварианты (конституция §4) проверяются здесь, один раз для любой
-    // команды (R-ARC-2, AGENTS.md §4a): исключение внутри produceWithPatches
-    // отменяет черновик — граф и история не меняются. Отклоняется только
-    // команда, добавившая НОВОЕ нарушение: граф, уже невалидный (старый файл,
-    // ужесточённое правило), не блокируется (конституция §4a п. 6).
+    // команды (R-ARC-2, AGENTS.md §4a): исключение до записи в историю —
+    // граф и история не меняются. Отклоняется только команда, добавившая
+    // НОВОЕ нарушение: граф, уже невалидный (старый файл, ужесточённое
+    // правило), не блокируется (конституция §4a п. 6). Проверяется готовый
+    // граф, а не черновик (R-PERF-5): обход черновика идёт через прокси immer
+    // и на большой карте стоил заметную часть команды.
     const [next, patches, inversePatches] = produceWithPatches(current, (draft) => {
       command.apply(draft);
-      const violations = validateGraph(draft);
-      if (violations.length > 0) {
-        const added = newViolations(validateGraph(current), violations);
-        if (added.length > 0) {
-          throw new InvariantViolationError(added);
-        }
-      }
     });
+    const violations = validateGraph(next);
+    if (violations.length > 0) {
+      const added = newViolations(validateGraph(current), violations);
+      if (added.length > 0) {
+        throw new InvariantViolationError(added);
+      }
+    }
 
     this.undoStack.push({ command, patches, inversePatches, executedAt: this.deps.clock.now() });
     // Новая команда очищает redo-стек — иначе история перестаёт быть линейной.
