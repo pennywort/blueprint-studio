@@ -1,6 +1,6 @@
 import { memo, useRef, type CSSProperties } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Chip, makeStyles } from '@material-ui/core';
+import { makeStyles } from '@material-ui/core';
 import { ShowChart, Visibility } from '@material-ui/icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { logicAnchorHandleId, logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
@@ -31,28 +31,50 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     // границе не обрезается (N7/N11).
     position: 'relative',
     overflow: 'visible',
+    // Размер строго по макету «пример-подсценариев-с-элементами» [owner 2026-10-22]:
+    // одинаков у элемента и комментария-элемента; раскладка берёт его из FORM_STEP_LAYOUT.
+    width: FORM_STEP_LAYOUT.elementWidth,
+    height: FORM_STEP_LAYOUT.elementHeight,
+    boxSizing: 'border-box',
   },
+  // Колонка карточки: содержимое сверху, чипы всегда внизу слева [owner 2026-10-22].
   content: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.spacing(1.5),
+    height: '100%',
+    boxSizing: 'border-box',
+    padding: theme.spacing(2),
+  },
+  // Иконка + тексты; лишний текст обрезается — высота карточки фиксирована.
+  head: {
     display: 'flex',
     alignItems: 'flex-start',
     gap: theme.spacing(1.5),
-    padding: theme.spacing(2),
+    flexGrow: 1,
+    minHeight: 0,
+    overflow: 'hidden',
   },
   title: {
     ...theme.typography.body2,
+    overflowWrap: 'anywhere',
   },
   caption: {
     ...theme.typography.caption,
     color: theme.palette.text.secondary,
+    overflowWrap: 'anywhere',
   },
-  // Ярлык (как Chip size="small"): тип элемента, «скрыт», адресат комментария.
+  // Ярлык: тип элемента, «Сложная логика», «скрыт», адресат комментария.
+  // Высота не больше 16px [owner 2026-10-22].
   chip: {
-    ...theme.typography.body2,
-    fontSize: theme.typography.pxToRem(13),
+    ...theme.typography.caption,
+    fontSize: theme.typography.pxToRem(11),
+    lineHeight: '16px',
     display: 'inline-flex',
     alignItems: 'center',
-    height: 24,
-    padding: theme.spacing(0, 1),
+    height: 16,
+    padding: theme.spacing(0, 0.75),
+    border: 'none',
     borderRadius: theme.editor.shape.chip,
     whiteSpace: 'nowrap',
     boxSizing: 'border-box',
@@ -62,6 +84,10 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   chipAccent: {
     backgroundColor: theme.editor.chipAccent,
     color: theme.editor.chipAccentContrastText,
+  },
+  chipPrimary: {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
   },
   iconWrap: {
     width: 40,
@@ -81,17 +107,24 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     flexDirection: 'column',
     gap: theme.spacing(0.5),
   },
+  // Ряд чипов внизу слева; иконки в ряду — не выше чипа (16px).
   chips: {
     display: 'flex',
     flexWrap: 'wrap',
+    alignItems: 'center',
     gap: theme.spacing(0.5),
-    marginTop: theme.spacing(1),
+    flexShrink: 0,
+    '& svg': {
+      fontSize: theme.typography.pxToRem(16),
+    },
   },
   // Чип-переключатель «Сложная логика» (T-037, L4): кликабелен; активный —
   // залитый, как на макете «сложная-логика-госб-…» (T-067 перенесёт
-  // переключатель в инспектор, чип останется индикатором).
+  // переключатель в инспектор, чип останется индикатором). Кнопка — нажатие
+  // не меняет выделение (isActionTarget).
   logicChip: {
     cursor: 'pointer',
+    fontFamily: 'inherit',
   },
   dependencyIcon: {
     color: theme.palette.text.secondary,
@@ -101,14 +134,6 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   commentCard: {
     backgroundColor: theme.editor.canvas.commentBackground,
     borderColor: theme.editor.canvas.commentBorder,
-  },
-  commentContent: {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    gap: theme.spacing(1.5),
-    minHeight: FORM_STEP_LAYOUT.elementHeight,
-    padding: theme.spacing(2),
   },
   commentText: {
     ...theme.typography.body2,
@@ -239,44 +264,54 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
           />
         ) : null}
         {isComment ? (
-          <div className={classes.commentContent}>
-            <div className={classes.commentText}>{element.title}</div>
-            <span className={`${classes.chip} ${classes.commentBadge}`}>{element.commentAudience}</span>
+          <div className={classes.content}>
+            <div className={`${classes.head} ${classes.commentText}`}>{element.title}</div>
+            <div className={classes.chips}>
+              <span className={`${classes.chip} ${classes.commentBadge}`}>{element.commentAudience}</span>
+            </div>
           </div>
         ) : (
           <div className={classes.content}>
-            <div className={classes.iconWrap}>
-              {/* Иконки элементов платформы придут с пакетом element-schemas;
-              пока — единый плейсхолдер из дизайн-системы. */}
-              <ShowChart fontSize="small" />
-            </div>
-            <div className={classes.texts}>
-              <div className={classes.title}>{element.title}</div>
-              {element.secondaryText ? <div className={classes.caption}>{element.secondaryText}</div> : null}
-              <div className={classes.chips}>
-                <span className={`${classes.chip} ${classes.chipAccent}`}>{element.kindLabel}</span>
-                {element.complexLogic ? (
-                  <Chip
-                    className={classes.logicChip}
-                    size="small"
-                    color={element.complexLogic.enabled ? 'primary' : 'default'}
-                    label="Сложная логика"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      actions?.toggleComplexLogic(element.id);
-                    }}
-                  />
-                ) : null}
-                {/* Демонстрация семантики видимости (T-062): цель правил скрыта
-                по умолчанию (L3) — до появления /preview это видно бейджем. */}
-                {element.hiddenByLogic ? <span className={classes.chip}>Скрыт в предпросмотре</span> : null}
-                {/* Индикатор «элемент кому-то подчинён» (L-Q1): виден даже при
-                выключенной логике у источника. */}
-                {violations ? <ViolationBadge messages={violations} /> : null}
-                {element.hasIncomingLogic ? (
-                  <Visibility className={classes.dependencyIcon} fontSize="small" />
+            <div className={classes.head}>
+              <div className={classes.iconWrap}>
+                {/* Иконки элементов платформы придут с пакетом element-schemas;
+                пока — единый плейсхолдер из дизайн-системы. */}
+                <ShowChart fontSize="small" />
+              </div>
+              <div className={classes.texts}>
+                <div className={classes.title}>{element.title}</div>
+                {element.secondaryText ? (
+                  <div className={classes.caption}>{element.secondaryText}</div>
                 ) : null}
               </div>
+            </div>
+            <div className={classes.chips}>
+              <span className={`${classes.chip} ${classes.chipAccent}`}>{element.kindLabel}</span>
+              {element.complexLogic ? (
+                <button
+                  type="button"
+                  className={[
+                    classes.chip,
+                    classes.logicChip,
+                    element.complexLogic.enabled ? classes.chipPrimary : '',
+                  ].join(' ')}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    actions?.toggleComplexLogic(element.id);
+                  }}
+                >
+                  Сложная логика
+                </button>
+              ) : null}
+              {/* Демонстрация семантики видимости (T-062): цель правил скрыта
+              по умолчанию (L3) — до появления /preview это видно бейджем. */}
+              {element.hiddenByLogic ? <span className={classes.chip}>Скрыт в предпросмотре</span> : null}
+              {/* Индикатор «элемент кому-то подчинён» (L-Q1): виден даже при
+              выключенной логике у источника. */}
+              {violations ? <ViolationBadge messages={violations} /> : null}
+              {element.hasIncomingLogic ? (
+                <Visibility className={classes.dependencyIcon} fontSize="small" />
+              ) : null}
             </div>
           </div>
         )}
