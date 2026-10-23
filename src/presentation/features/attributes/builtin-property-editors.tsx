@@ -1,5 +1,6 @@
 import {
   Button,
+  Checkbox,
   Chip,
   FormControlLabel,
   IconButton,
@@ -20,8 +21,8 @@ import { registerPropertyEditor, type PropertyEditorProps } from './property-edi
 
 // Встроенные редакторы свойств (T-040): text → TextField, stringList →
 // многострочное поле (по строке на элемент), bool → Switch, number →
-// числовое поле, radio → RadioGroup, select → Select, chips/multiChips —
-// чипы (один или несколько вариантов), optionList — список
+// числовое поле, radio → RadioGroup, select → Select, chips — чипы
+// (select и chips — один или несколько вариантов по attribute.multiple), optionList — список
 // вариантов, icon — поиск + сетка иконок. Редакторы не знают о kind'ах
 // элементов — только об описании атрибута (схема + политика редактора, этап 3
 // docs/schemas/PLAN.md). Подпись и подсказка — общий каркас AttributeField.
@@ -165,8 +166,44 @@ function RadioPropertyEditor({ value, onChange, attribute }: PropertyEditorProps
   );
 }
 
+const asStrings = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+
 // Пустое значение — «не задано» (prop снимается): берётся значение фреймворка.
 function SelectPropertyEditor({ value, onChange, attribute }: PropertyEditorProps) {
+  const options = attribute.options ?? [];
+  if (attribute.multiple) {
+    // Несколько вариантов: список с отметками, значения — в порядке вариантов.
+    const selected = asStrings(value);
+    const label = (item: string) => options.find((option) => option.value === item)?.label ?? item;
+    return (
+      <AttributeField attribute={attribute}>
+        <Select
+          fullWidth
+          multiple
+          variant="outlined"
+          margin="dense"
+          value={selected}
+          displayEmpty
+          renderValue={(items) =>
+            (items as string[]).length > 0 ? (items as string[]).map(label).join(', ') : <em>Не задано</em>
+          }
+          onChange={(event) => {
+            const chosen = new Set(event.target.value as string[]);
+            const next = options.map((option) => option.value).filter((item) => chosen.has(item));
+            onChange(next.length > 0 ? next : undefined);
+          }}
+        >
+          {options.map((option) => (
+            <MenuItem key={option.value} value={option.value}>
+              <Checkbox size="small" checked={selected.includes(option.value)} />
+              {option.label}
+            </MenuItem>
+          ))}
+        </Select>
+      </AttributeField>
+    );
+  }
   return (
     <AttributeField attribute={attribute}>
       <Select
@@ -193,16 +230,15 @@ function SelectPropertyEditor({ value, onChange, attribute }: PropertyEditorProp
 }
 
 // Выбор чипами [owner 2026-10-22]: выбранный — заливка цветом темы, остальные —
-// контур. Один из вариантов (chips): повторный клик снимает выбор у
-// необязательного атрибута. Несколько (multiChips): клик переключает вариант,
+// контур. Один вариант: повторный клик снимает выбор у необязательного
+// атрибута. Несколько (attribute.multiple): клик переключает вариант,
 // порядок значений — порядок вариантов; пустой выбор снимает значение.
 function ChipsPropertyEditor({ value, onChange, attribute }: PropertyEditorProps) {
   const classes = useStyles();
-  const multiple = attribute.type === 'multiChips';
-  const selected = new Set<unknown>(multiple ? (Array.isArray(value) ? value : []) : [value]);
+  const selected = new Set<unknown>(attribute.multiple ? asStrings(value) : [value]);
   const options = attribute.options ?? [];
   const toggle = (option: string) => {
-    if (!multiple) {
+    if (!attribute.multiple) {
       onChange(selected.has(option) && !attribute.required ? undefined : option);
       return;
     }
@@ -304,6 +340,5 @@ registerPropertyEditor('number', NumberPropertyEditor);
 registerPropertyEditor('radio', RadioPropertyEditor);
 registerPropertyEditor('select', SelectPropertyEditor);
 registerPropertyEditor('chips', ChipsPropertyEditor);
-registerPropertyEditor('multiChips', ChipsPropertyEditor);
 registerPropertyEditor('optionList', OptionListPropertyEditor);
 registerPropertyEditor('icon', IconPropertyEditor);

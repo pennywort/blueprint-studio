@@ -1,9 +1,5 @@
 import { TextField, Typography, makeStyles } from '@material-ui/core';
-import type {
-  ElementAttribute,
-  ElementAttributeType,
-  ElementSchema,
-} from '@application/ports/element-schema-provider';
+import type { ElementAttribute, ElementSchema } from '@application/ports/element-schema-provider';
 import type { ElementPropsPatch } from '@application/commands/update-element-props';
 import type { CanvasElement } from '@domain/model/canvas-element';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
@@ -128,7 +124,7 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
             const Editor = resolvePropertyEditor(attribute.type);
             // Значение иной ветви схемы (например, объект в «строка | объект»)
             // или без редактора — read-only сводка: данные не портятся.
-            if (!Editor || (value !== undefined && !isValueCompatible(attribute.type, value))) {
+            if (!Editor || (value !== undefined && !isValueCompatible(attribute, value))) {
               return (
                 <AttributeField key={attribute.key} attribute={attribute}>
                   <TextField
@@ -157,7 +153,11 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
 }
 
 // Совместимость значения props с типом атрибута (тип — из схемы элемента).
-function isValueCompatible(type: ElementAttributeType, value: unknown): boolean {
+// Множественный выбор (multiple) — массив строк при любом поле ввода.
+function isValueCompatible({ type, multiple }: ElementAttribute, value: unknown): boolean {
+  if (multiple) {
+    return Array.isArray(value) && value.every((item) => typeof item === 'string');
+  }
   switch (type) {
     case 'text':
     case 'radio':
@@ -170,7 +170,6 @@ function isValueCompatible(type: ElementAttributeType, value: unknown): boolean 
     case 'number':
       return typeof value === 'number';
     case 'stringList':
-    case 'multiChips':
       return Array.isArray(value) && value.every((item) => typeof item === 'string');
     case 'optionList':
       return Array.isArray(value) && value.every((item) => typeof item === 'object' && item !== null);

@@ -9,21 +9,12 @@ import type { CanvasElementKind } from '@domain/model/canvas-element';
 
 // Редактор атрибута (поле ввода в панели) выводится из типа значения в
 // схеме: text — string, number — number/integer, bool — boolean,
-// select/radio/chips — string с enum (вид выбирает ключ `editor` политики),
-// multiChips — массив значений enum, stringList — массив строк,
+// select/radio/chips — string с enum (вид выбирает ключ `editor` политики;
+// массив значений enum — select/chips с multiple), stringList — массив строк,
 // optionList — массив объектов с id и подписью, icon — string с enum из
 // общей схемы иконок фреймворка (shared/icon.schema.json).
 export type ElementAttributeType =
-  | 'bool'
-  | 'text'
-  | 'number'
-  | 'select'
-  | 'radio'
-  | 'chips'
-  | 'multiChips'
-  | 'stringList'
-  | 'optionList'
-  | 'icon';
+  'bool' | 'text' | 'number' | 'select' | 'radio' | 'chips' | 'stringList' | 'optionList' | 'icon';
 
 // Где лежит значение атрибута в элементе карты: props — атрибуты элемента
 // фреймворка, ext — надстройки проекта над схемой (extensions схем проекта).
@@ -59,7 +50,13 @@ export type ElementAttribute = {
   multiline?: boolean;
   /** Секция панели («Настройки»); без секции поле идёт в общий поток. */
   section?: string;
-  /** Варианты select/radio/chips/multiChips: подмножество enum схемы с подписями политики. */
+  /**
+   * Множественный выбор: значение — массив вариантов (схема: массив enum,
+   * в надстройке — `"multiple": true`). Без флага — одно значение-строка.
+   * Один признак для панели и генератора UI [owner 2026-10-23].
+   */
+  multiple?: boolean;
+  /** Варианты select/radio/chips: подмножество enum схемы с подписями политики. */
   options?: readonly AttributeOption[];
   /** Форма элемента для optionList. */
   item?: OptionListItemShape;

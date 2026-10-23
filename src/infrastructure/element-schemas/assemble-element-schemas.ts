@@ -112,7 +112,8 @@ const CHOICE_EDITORS: Readonly<
   >
 > = {
   enum: { fallback: 'select', editors: { select: 'select', radio: 'radio', chips: 'chips' } },
-  enumList: { fallback: 'multiChips', editors: { chips: 'multiChips' } },
+  // Несколько вариантов: переключатели не подходят — для них нужны флажки.
+  enumList: { fallback: 'chips', editors: { chips: 'chips', select: 'select' } },
 };
 
 const stringEnum = (schema: JsonSchema): string[] | null =>
@@ -348,6 +349,9 @@ function assembleAttribute(
       }
       // Редактор общей схемы (иконки) важнее вида из политики.
       attribute.type = (kind.type === 'enum' ? kind.editor : undefined) ?? editor ?? choice.fallback;
+      if (kind.type === 'enumList') {
+        attribute.multiple = true;
+      }
       attribute.options = options;
       return attribute;
     }
@@ -377,6 +381,42 @@ function assembleAttribute(
       attribute.type = kind.type as ElementAttributeType;
       return attribute;
   }
+}
+
+// Сокращение надстройки [owner 2026-10-23]: `"multiple": true` рядом с enum —
+// множественный выбор, развёртывается в JSON-схему массива значений enum;
+// `"multiple": false` или без флага — одно значение. Флаг без enum — ошибка.
+function expandMultiple(property: JsonSchema, fail: (message: string) => void): JsonSchema {
+  if (!('multiple' in property)) {
+    return property;
+  }
+  const { multiple, ...rest } = property;
+  const values = stringEnum(rest);
+  if (typeof multiple !== 'boolean' || !values) {
+    fail('multiple (true/false) — только у атрибута с enum строк');
+    return rest;
+  }
+  if (!multiple) {
+    return rest;
+  }
+  const { enum: _values, type: _type, ...meta } = rest;
+  return { ...meta, type: 'array', items: { type: 'string', enum: values } };
+}
+
+// Надстройка с развёрнутыми сокращениями свойств (expandMultiple).
+function expandExtension(schema: unknown, path: string, errors: string[]): JsonSchema | undefined {
+  if (!isRecord(schema) || !isRecord(schema.properties)) {
+    return isRecord(schema) ? schema : undefined;
+  }
+  const properties = Object.fromEntries(
+    Object.entries(schema.properties).map(([key, property]) => [
+      key,
+      isRecord(property)
+        ? expandMultiple(property, (message) => errors.push(`${path}.${key}: ${message}`))
+        : property,
+    ]),
+  );
+  return { ...schema, properties };
 }
 
 // Свойства и обязательные ключи объектной схемы надстройки.
@@ -543,10 +583,20 @@ export function assembleElementSchemas(sources: SchemaSources): ElementSchema[] 
   };
 
   // Надстройки проекта (extensions) и общие атрибуты политики (common).
-  const extensions: SchemaExtensions = isRecord(project.extensions) ? project.extensions : {};
+  const rawExtensions: SchemaExtensions = isRecord(project.extensions) ? project.extensions : {};
   if (project.extensions !== undefined && !isRecord(project.extensions)) {
     errors.push('схемы проекта: extensions — объект { all?, byKind? }');
   }
+  const rawByKind = isRecord(rawExtensions.byKind) ? rawExtensions.byKind : {};
+  const extensions: SchemaExtensions = {
+    all: expandExtension(rawExtensions.all, 'extensions.all', errors),
+    byKind: Object.fromEntries(
+      Object.entries(rawByKind).map(([kind, schema]) => [
+        kind,
+        expandExtension(schema, `extensions.byKind.${kind}`, errors) ?? {},
+      ]),
+    ),
+  };
   for (const kind of Object.keys(isRecord(extensions.byKind) ? extensions.byKind : {})) {
     if (!(kind in frameworkKinds) && !(kind in project.elements)) {
       errors.push(`extensions.byKind.${kind}: нет ни в схемах фреймворка, ни в схемах проекта`);
