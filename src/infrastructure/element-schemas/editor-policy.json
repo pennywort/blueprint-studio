@@ -1,5 +1,7 @@
 {
-  "common": { "attributes": [] },
+  "common": {
+    "attributes": [{ "key": "availability", "label": "Доступность", "editor": "chips" }]
+  },
   "elements": [
     {
       "kind": "list-item",

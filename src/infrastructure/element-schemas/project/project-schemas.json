@@ -21,7 +21,12 @@
     }
   },
   "extensions": {
-    "all": { "type": "object", "properties": {} },
+    "all": {
+      "type": "object",
+      "properties": {
+        "availability": { "type": "string", "enum": ["Sigma", "Delta", "Alpha"] }
+      }
+    },
     "byKind": {}
   }
 }
