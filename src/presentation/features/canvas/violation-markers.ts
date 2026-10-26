@@ -1,7 +1,7 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { SubScenario } from '@domain/model/scenario';
 import type { InvariantViolation } from '@domain/invariants';
-import { findFormElement } from '@application/commands/graph-lookup';
+import { findElementInGraph } from '@domain/element-containers';
 
 // Подсветка нарушений инвариантов на канвасе (T-043): violation.path
 // (формат инвариантов домена) → id узла и, если путь указывает на элемент,
@@ -21,17 +21,10 @@ function push(target: Map<string, string[]>, id: string, message: string): void 
   target.set(id, messages);
 }
 
-// subScenarios[i].children[j]… → сценарий по цепочке индексов.
+// subScenarios[i]… → сценарий по индексу (список плоский, R-SCH-7).
 function resolveScenarioPath(graph: ServiceGraph, path: string): SubScenario | null {
-  const match = /^subScenarios\[(\d+)\]((?:\.children\[\d+\])*)/.exec(path);
-  if (!match) {
-    return null;
-  }
-  let scenario: SubScenario | undefined = graph.subScenarios[Number(match[1])];
-  for (const child of match[2]!.matchAll(/\[(\d+)\]/g)) {
-    scenario = scenario?.children?.[Number(child[1])];
-  }
-  return scenario ?? null;
+  const match = /^subScenarios\[(\d+)\]/.exec(path);
+  return match ? (graph.subScenarios[Number(match[1])] ?? null) : null;
 }
 
 export function mapViolationsToCanvas(
@@ -78,10 +71,11 @@ export function mapViolationsToCanvas(
     const logicRule = rule ? graph.logicRules[Number(rule[1])] : undefined;
     if (logicRule) {
       for (const elementId of [logicRule.sourceElementId, logicRule.targetElementId]) {
-        const found = findFormElement(graph, elementId);
+        // Блок-владелец — любой (R-CFG-2): у шага это форма, у страницы — сама страница.
+        const found = findElementInGraph(graph, elementId);
         if (found) {
           push(elements, elementId, message);
-          push(nodes, found.form.id, message);
+          push(nodes, found.container.pageId, message);
         }
       }
     }

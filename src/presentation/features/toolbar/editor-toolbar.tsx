@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { Box, IconButton, Menu, MenuItem, makeStyles } from '@blueprint-vendor/flamingo-core';
-import { AccountTree, Code, NoteAdd, ViewColumn } from '@blueprint-vendor/flamingo-icons';
+import { Box, IconButton, Menu, MenuItem, makeStyles } from '@material-ui/core';
+import { editorIcons } from '@presentation/icons/editor-icons';
 import type { ElementSchema } from '@application/ports/element-schema-provider';
 import type { CanvasElementKind } from '@domain/model/canvas-element';
+import { kindRules } from '@domain/element-kinds';
+import type { EditorRules } from '@domain/editor-rules';
+import { useEditorRules } from '@presentation/features/settings/use-settings';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
-import { ELEMENT_KIND_LABELS, type CanvasNodeType } from '@presentation/features/canvas/graph-flow-adapter';
+import type { CanvasNodeType } from '@presentation/features/canvas/graph-flow-adapter';
+import { NODE_KIND_LABELS } from '@presentation/labels/editor-labels';
 
 // Панель-заглушка кнопки 4: назначение не подтверждено владельцем (Q-1),
 // поэтому панель только переключается, содержимое не выдумываем.
@@ -14,8 +18,8 @@ export type EditorSidePanel = 'navigation';
 export type AddableNodeKind = 'home' | 'subScenario' | 'applicationForm';
 
 // Элемент из меню кнопки 2 (T-034): любой элемент — в любой выделенный узел
-// [owner 2026-10-13, ADR-17]: List item, Widget card и компоненты формы —
-// все из listSchemas() провайдера (T-041: у List item/Widget card — stub-схемы).
+// [owner 2026-10-13, ADR-17]: все элементы политики редактора из listSchemas()
+// провайдера (этап 3 docs/schemas/PLAN.md).
 export type AddableElementKind = CanvasElementKind;
 
 export type EditorToolbarProps = {
@@ -40,7 +44,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => {
       display: 'flex',
       flexDirection: 'column',
       backgroundColor: canvas.controlsBackground,
-      borderRadius: 24,
+      borderRadius: theme.editor.shape.pill,
       padding: theme.spacing(0.5),
     },
     button: {
@@ -58,32 +62,33 @@ const useStyles = makeStyles<EditorTheme>((theme) => {
 });
 
 const NODE_MENU_ITEMS: ReadonlyArray<{ kind: AddableNodeKind; label: string }> = [
-  { kind: 'home', label: 'Главная' },
-  { kind: 'subScenario', label: 'Подсценарий' },
-  { kind: 'applicationForm', label: 'Форма заявки' },
+  { kind: 'home', label: NODE_KIND_LABELS.home },
+  { kind: 'subScenario', label: NODE_KIND_LABELS.subScenario },
+  { kind: 'applicationForm', label: NODE_KIND_LABELS.form },
 ];
 
 // Меню элементов (T-034): одинаково для любого выделенного узла — вид блока
-// вид элемента не ограничивает [owner 2026-10-13, ADR-17]. Подписи — из
-// маппинга адаптера: манифест схем хранит только machine-kind.
+// вид элемента не ограничивает [owner 2026-10-13, ADR-17]. Состав, порядок
+// и подписи — из описаний элементов (политика редактора).
 function elementMenuItems(
   selectedNodeType: CanvasNodeType | null,
   elementSchemas: readonly ElementSchema[],
+  rules: EditorRules,
 ): ReadonlyArray<{ kind: AddableElementKind; label: string }> {
   if (!selectedNodeType) {
     return [];
   }
   // Комментарий-элемент — отдельная кнопка тулбара, в меню его нет.
   return elementSchemas
-    .filter((schema) => schema.kind !== 'comment')
-    .map((schema) => ({ kind: schema.kind, label: ELEMENT_KIND_LABELS[schema.kind] }));
+    .filter((schema) => kindRules(rules, schema.kind).inAddMenu)
+    .map((schema) => ({ kind: schema.kind, label: schema.label }));
 }
 
 // Левый вертикальный тулбар (T-021): ровно 4 IconButton с active-состоянием
 // (пятая иконка AI-ассистента удалена решением владельца). Кнопки 1–2 открывают
 // меню добавления (узлы / элементы выбранного узла), кнопка 3 («код») сразу
 // добавляет комментарий-элемент для разработчика [owner 2026-10-15], кнопка 4
-// переключает панель-заглушку. Иконки — только из flamingo-icons, самописных нет.
+// переключает панель-заглушку. Иконки — только из таблицы editorIcons, самописных нет.
 export function EditorToolbar({
   elementSchemas,
   activePanel,
@@ -101,7 +106,8 @@ export function EditorToolbar({
     active ? `${classes.button} ${classes.buttonActive}` : classes.button;
 
   // Без выделенного узла элементу некуда попасть — кнопка меню отключена.
-  const elementItems = elementMenuItems(selectedNodeType, elementSchemas);
+  const rules = useEditorRules();
+  const elementItems = elementMenuItems(selectedNodeType, elementSchemas, rules);
 
   return (
     <Box className={classes.toolbar} data-testid="editor-toolbar">
@@ -112,7 +118,7 @@ export function EditorToolbar({
         aria-pressed={nodeMenuAnchor !== null}
         onClick={(event) => setNodeMenuAnchor(event.currentTarget)}
       >
-        <ViewColumn fontSize="small" />
+        <editorIcons.addNode fontSize="small" />
       </IconButton>
       <IconButton
         className={buttonClass(elementMenuAnchor !== null)}
@@ -122,7 +128,7 @@ export function EditorToolbar({
         disabled={selectedNodeType === null}
         onClick={(event) => setElementMenuAnchor(event.currentTarget)}
       >
-        <NoteAdd fontSize="small" />
+        <editorIcons.addElement fontSize="small" />
       </IconButton>
       <IconButton
         className={classes.button}
@@ -131,7 +137,7 @@ export function EditorToolbar({
         disabled={selectedNodeType === null}
         onClick={() => onAddElement?.('comment')}
       >
-        <Code fontSize="small" />
+        <editorIcons.addComment fontSize="small" />
       </IconButton>
       <IconButton
         className={buttonClass(activePanel === 'navigation')}
@@ -140,7 +146,7 @@ export function EditorToolbar({
         aria-pressed={activePanel === 'navigation'}
         onClick={() => onPanelChange(activePanel === 'navigation' ? null : 'navigation')}
       >
-        <AccountTree fontSize="small" />
+        <editorIcons.structurePanel fontSize="small" />
       </IconButton>
 
       <Menu

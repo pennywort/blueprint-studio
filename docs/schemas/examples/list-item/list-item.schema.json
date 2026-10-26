@@ -1,0 +1,460 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://framework.internal/schemas/list-item.schema.json",
+  "title": "List Item",
+  "description": "JSON-схема для UI-элемента \"list-item\"",
+  "type": "object",
+  "elementType": "list-item",
+  "x-category": "basic",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Уникальный идентификатор элемента"
+    },
+    "visible": {
+      "type": "boolean",
+      "description": "Видимость элемента",
+      "default": true
+    },
+    "cursor": {
+      "type": "string",
+      "enum": ["default", "pointer"],
+      "description": "Тип курсора",
+      "default": "default"
+    },
+    "gravity": {
+      "type": "string",
+      "enum": ["left", "right", "center"],
+      "description": "Выравнивание внутри родителя",
+      "default": "left"
+    },
+    "margin": {
+      "description": "Внешние отступы",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        {
+          "enum": ["none", "normal"]
+        }
+      ],
+      "default": 0
+    },
+    "width": {
+      "description": "Ширина элемента",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "enum": ["match_parent", "wrap_content"]
+        }
+      ],
+      "default": "match_parent"
+    },
+    "flex": {
+      "type": "string",
+      "description": "Flex-свойство"
+    },
+    "alignSelf": {
+      "type": "string",
+      "description": "Выравнивание по собственной оси"
+    },
+    "overflow": {
+      "type": "string",
+      "description": "Поведение при переполнении"
+    },
+    "minHeight": {
+      "description": "Минимальная высота",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "maxHeight": {
+      "description": "Максимальная высота",
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "leftAtom": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "boolean"
+            },
+            "basic": {
+              "type": "boolean"
+            },
+            "onChange": {}
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "boolean"
+            },
+            "basic": {
+              "type": "boolean"
+            },
+            "onChange": {}
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "boolean"
+            },
+            "onChange": {}
+          }
+        },
+        {
+          "$ref": "../shared/icon.schema.json#"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "src": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "size": {
+              "type": "string",
+              "enum": ["smaller", "small", "default", "medium", "big", "bigger", "large"]
+            },
+            "variant": {
+              "type": "string",
+              "enum": ["rounded", "circular"]
+            },
+            "color": {
+              "type": "string",
+              "enum": [
+                "default",
+                "primary",
+                "green",
+                "blue",
+                "orange",
+                "yellow",
+                "purple",
+                "pink",
+                "red",
+                "white",
+                "ai",
+                "info"
+              ]
+            },
+            "icon": {
+              "$ref": "../shared/icon.schema.json#"
+            },
+            "onClick": {}
+          }
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "rightAtom": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "boolean"
+            },
+            "basic": {
+              "type": "boolean"
+            },
+            "onChange": {}
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "boolean"
+            },
+            "basic": {
+              "type": "boolean"
+            },
+            "onChange": {}
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "boolean"
+            },
+            "onChange": {}
+          }
+        },
+        {
+          "$ref": "../shared/icon.schema.json#"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "onClick": {},
+            "disabled": {
+              "type": "boolean"
+            },
+            "color": {
+              "type": "string",
+              "enum": ["primary", "default", "white", "secondary"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "disabled": {
+              "type": "boolean"
+            },
+            "dateText": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "placement": {
+              "type": "string",
+              "enum": [
+                "top",
+                "right",
+                "left",
+                "bottom",
+                "bottom-end",
+                "bottom-start",
+                "left-end",
+                "left-start",
+                "right-end",
+                "right-start",
+                "top-end",
+                "top-start"
+              ]
+            },
+            "icon": {
+              "$ref": "../shared/icon.schema.json#"
+            },
+            "size": {
+              "type": "string",
+              "enum": ["small", "medium", "large"]
+            },
+            "color": {
+              "type": "string",
+              "enum": ["default", "primary", "secondary", "error", "warning", "white"]
+            },
+            "disabled": {
+              "type": "boolean"
+            },
+            "MenuItems": {},
+            "onChange": {}
+          }
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "primaryText": {
+      "default": ""
+    },
+    "secondaryText": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "noWrap": {
+              "type": "boolean"
+            },
+            "html": {
+              "type": "boolean"
+            }
+          }
+        }
+      ],
+      "default": ""
+    },
+    "tertiaryText": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "noWrap": {
+              "type": "boolean"
+            },
+            "html": {
+              "type": "boolean"
+            }
+          }
+        }
+      ],
+      "default": ""
+    },
+    "buttons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "onClick": {}
+        }
+      }
+    },
+    "direction": {
+      "type": "string",
+      "enum": ["row", "row-reverse"]
+    },
+    "size": {
+      "type": "string",
+      "enum": ["small", "medium"]
+    },
+    "reversePrimaryText": {
+      "type": "boolean"
+    },
+    "withPadding": {
+      "type": "boolean"
+    },
+    "divider": {
+      "type": "boolean"
+    },
+    "isLoading": {
+      "type": "boolean"
+    },
+    "disabled": {
+      "type": "boolean"
+    },
+    "isButton": {
+      "type": "boolean"
+    },
+    "selected": {
+      "type": "boolean"
+    },
+    "noWrap": {
+      "type": "boolean"
+    },
+    "actionTitle": {},
+    "actionSubtitle": {},
+    "clipBadge": {
+      "type": "boolean"
+    },
+    "iconHover": {
+      "type": "boolean"
+    },
+    "paddingDense": {
+      "type": "boolean"
+    },
+    "alignItems": {
+      "type": "string",
+      "enum": ["flex-start", "center"]
+    },
+    "bgColor": {
+      "type": "string",
+      "enum": ["default", "quinary", "primary", "secondary", "tertiary", "quaternary", "quinary2"]
+    },
+    "borderRadius": {
+      "type": "boolean"
+    },
+    "disabledActionTitle": {
+      "type": "boolean"
+    },
+    "white": {
+      "type": "boolean"
+    },
+    "linkHref": {
+      "type": "string"
+    },
+    "linkTarget": {
+      "type": "string",
+      "enum": ["_blank", "_self"]
+    }
+  },
+  "x-events": {
+    "onChangeValue": {
+      "description": "Событие изменения значения элемента",
+      "parameters": {
+        "value": {
+          "description": "Новое значение",
+          "type": "any"
+        },
+        "options": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Необязательный идентификатор"
+            }
+          }
+        }
+      }
+    },
+    "onClick": {
+      "description": "Событие клика по элементу",
+      "parameters": {
+        "event": {
+          "description": "Объект события",
+          "type": "object"
+        }
+      }
+    }
+  },
+  "x-methods": [],
+  "x-defaults": {
+    "leftAtom": null,
+    "rightAtom": null,
+    "primaryText": "",
+    "secondaryText": "",
+    "tertiaryText": ""
+  },
+  "required": [],
+  "deprecatedAliases": []
+}

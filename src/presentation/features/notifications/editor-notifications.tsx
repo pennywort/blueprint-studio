@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { Snackbar, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Snackbar, makeStyles } from '@material-ui/core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 // Единый сервис уведомлений редактора (T-023): один <Snackbar> живёт здесь и
@@ -14,6 +14,8 @@ export type EditorNotificationsFacade = {
   showSaveError: (message: string) => void;
   /** Критический отказ команды (команда не смогла примениться). */
   showCommandFailure: (message: string) => void;
+  /** Настройки редактора не применены (ошибка в документе слоя, R-ADM). */
+  showSettingsIssue: (message: string) => void;
 };
 
 type Notification = {
@@ -38,12 +40,12 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   success: {
     backgroundColor: theme.palette.primary.main,
     color: theme.palette.primary.contrastText,
-    borderRadius: 12,
+    borderRadius: theme.editor.shape.card,
   },
   error: {
     backgroundColor: theme.palette.error.main,
     color: theme.palette.error.contrastText,
-    borderRadius: 12,
+    borderRadius: theme.editor.shape.card,
   },
 }));
 
@@ -64,6 +66,7 @@ export function EditorNotificationsProvider({ children }: { children: ReactNode 
       showSaveSuccess: () => show({ severity: 'success', message: SAVE_SUCCESS_MESSAGE }),
       showSaveError: (message) => show({ severity: 'error', message }),
       showCommandFailure: (message) => show({ severity: 'error', message }),
+      showSettingsIssue: (message) => show({ severity: 'error', message }),
     }),
     [show],
   );

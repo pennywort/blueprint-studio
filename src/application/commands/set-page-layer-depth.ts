@@ -1,10 +1,8 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { PageEntityId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
-import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
 import { preservePageDepths } from './depth-preservation';
-import { InvariantViolationError } from './errors';
 import { removeNonAdjacentLinks } from './layer-placement';
 import { findOwnerPageId, findPageEntry, setPageLayerDepth } from './graph-lookup';
 
@@ -55,10 +53,5 @@ export class SetPageLayerDepth implements Command {
     );
 
     preservePageDepths(draft, depthsBeforeRemoval, new Set([page.id]));
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

@@ -1,13 +1,23 @@
 import { useState } from 'react';
-import { Box, Divider, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
-import { useContainer } from '@presentation/app/App';
+import { Divider, Typography, makeStyles } from '@material-ui/core';
+import {
+  ElementCatalogProvider,
+  useElementCatalog,
+} from '@presentation/features/element-catalog/element-catalog';
 import { EditorThemeProvider } from '@presentation/theme/editor-theme-provider';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { EditorCanvas } from '@presentation/features/canvas/editor-canvas';
 import { EmptyCanvasState } from '@presentation/features/canvas/empty-canvas-state';
 import { useEditorGraph } from '@presentation/features/canvas/use-editor-graph';
+import { useCanvasPointerHeld } from '@presentation/features/canvas/use-selection';
 import { AttributesPanel } from '@presentation/features/attributes/attributes-panel';
 import { EditorNotificationsProvider } from '@presentation/features/notifications/editor-notifications';
+import { SettingsIssuesNotifier } from '@presentation/features/settings/settings-issues-notifier';
+import {
+  HotkeysProvider,
+  useHotkeyHandlers,
+  useHotkeysRoot,
+} from '@presentation/features/hotkeys/hotkeys-provider';
 import { EditorTopBar } from '@presentation/features/top-bar/editor-top-bar';
 import { EditorToolbar, type EditorSidePanel } from '@presentation/features/toolbar/editor-toolbar';
 
@@ -15,18 +25,67 @@ const SIDE_PANEL_TITLES: Record<EditorSidePanel, string> = {
   navigation: 'Навигация',
 };
 
+// Вёрстка — div + makeStyles, а не Box (R-BOX, docs/refactoring): Box MUI v4
+// пересчитывает стили на каждый рендер, а страница перерисовывается на
+// каждую команду графа; классы makeStyles создаются один раз.
 const useStyles = makeStyles<EditorTheme>((theme) => ({
+  root: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100vh',
+    backgroundColor: theme.palette.background.default,
+  },
+  body: {
+    display: 'flex',
+    flexGrow: 1,
+    minHeight: 0,
+    position: 'relative',
+  },
+  canvasArea: {
+    flexGrow: 1,
+    minWidth: 0,
+    position: 'relative',
+  },
+  // Полоса на всю высоту только центрирует тулбар: события мыши пропускает
+  // (pointer-events: none) — иначе перекрывала undo/redo в левом нижнем углу
+  // и полотно под собой.
+  toolbarRail: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    display: 'flex',
+    alignItems: 'center',
+    paddingLeft: theme.spacing(2),
+    pointerEvents: 'none',
+  },
+  toolbarSlot: {
+    pointerEvents: 'auto',
+  },
   sidePanel: {
     width: 320,
     flexShrink: 0,
     backgroundColor: theme.palette.background.paper,
     padding: theme.spacing(2),
   },
+  // Панель атрибутов — карточка с отступом от краёв и своим скроллом
+  // (макеты docs/design-mockups/настройка-атрибутов-*, T-041). Висит поверх
+  // полотна, а не колонкой рядом: иначе за карточкой виден непрозрачный фон
+  // страницы.
   attributesPanel: {
+    position: 'absolute',
+    top: theme.spacing(2),
+    right: theme.spacing(2),
+    zIndex: 5,
     width: 360,
-    flexShrink: 0,
+    // Снизу — место под панель масштаба полотна, карточка её не перекрывает.
+    maxHeight: `calc(100% - ${theme.spacing(13)}px)`,
+    overflowY: 'auto',
+    boxSizing: 'border-box',
     backgroundColor: theme.palette.background.paper,
-    padding: theme.spacing(2),
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: theme.editor.shape.pill,
+    padding: theme.spacing(2.5),
   },
 }));
 
@@ -38,22 +97,28 @@ export function EditorPage() {
       {/* Единый Snackbar-фасад страницы (T-023): уведомления живут в одном
           провайдере, а не размазаны по компонентам. */}
       <EditorNotificationsProvider>
-        <EditorPageLayout />
+        {/* Ошибки настроек администратора/пользователя — уведомлением (R-ADM). */}
+        <SettingsIssuesNotifier />
+        {/* Хоткеи редактора [owner 2026-10-15]: провайдер без разметки,
+            значение меняется только со сменой настроек хоткеев (R-ADM). */}
+        <HotkeysProvider>
+          {/* Описания элементов (схема + политика редактора) — для канваса,
+              меню и панели атрибутов (этап 3 docs/schemas/PLAN.md). */}
+          <ElementCatalogProvider>
+            <EditorPageLayout />
+          </ElementCatalogProvider>
+        </HotkeysProvider>
       </EditorNotificationsProvider>
     </EditorThemeProvider>
   );
 }
 
-// Каркас страницы (T-022) собран полностью из компонентов дизайн-системы
-// (Box/Divider, самописной вёрстки нет): TopBar сверху, левый тулбар —
-// плавающая пилюля поверх канваса по левому краю (как на макетах), панель
-// атрибутов справа скрыта, пока нет выделения (D10). Канвас и нижние
-// контролы не меняются (T-011).
+// Каркас страницы (T-022): TopBar сверху, левый тулбар — плавающая пилюля
+// поверх канваса по левому краю (как на макетах), панель атрибутов справа
+// скрыта, пока нет выделения (D10). Канвас и нижние контролы не меняются (T-011).
 function EditorPageLayout() {
   const classes = useStyles();
-  const container = useContainer();
-  const elementSchemas = container.cradle.elementSchemaProvider.listSchemas();
-  const schemaByKind = new Map(elementSchemas.map((schema) => [schema.kind, schema]));
+  const catalog = useElementCatalog();
   // TEMPORARY (до effector): граф в React state, мутации только через
   // CommandBus — см. use-editor-graph.ts.
   const editorGraph = useEditorGraph();
@@ -62,27 +127,43 @@ function EditorPageLayout() {
   const [sidePanel, setSidePanel] = useState<EditorSidePanel | null>(null);
   // Инспектор: выделенный компонент формы + его правила видимости (T-067).
   const selectedElement = editorGraph.selectedElement;
+  // Панель открывается по отпусканию ЛКМ, а не по нажатию: пока кнопка
+  // удержана, это попытка переноса, и сужение канваса её срывает (баг drag).
+  const pointerHeld = useCanvasPointerHeld();
+
+  // Корень страницы — граница хоткеев; команды страницы — только
+  // «команда → действие», комбинации — в keybindings (features/hotkeys).
+  const hotkeysRoot = useHotkeysRoot();
+  useHotkeyHandlers({
+    'project.save': editorGraph.save,
+    'edit.undo': editorGraph.undo,
+    'edit.redo': editorGraph.redo,
+    'edit.copy': editorGraph.copySelectedElement,
+    'edit.cut': editorGraph.cutSelectedElement,
+    'edit.paste': editorGraph.pasteElement,
+  });
 
   return (
-    <Box display="flex" flexDirection="column" height="100vh" bgcolor="background.default">
+    <div ref={hotkeysRoot} className={classes.root}>
       <EditorTopBar
         onSave={editorGraph.save}
+        onExport={editorGraph.exportJson}
         searchCanvas={editorGraph.searchCanvas}
         onSelectSearchResult={editorGraph.selectSearchResult}
       />
-      <Box display="flex" flexGrow={1} minHeight={0}>
+      <div className={classes.body}>
         {sidePanel !== null ? (
           <>
-            <Box className={classes.sidePanel} data-testid={`side-panel-${sidePanel}`}>
+            <div className={classes.sidePanel} data-testid={`side-panel-${sidePanel}`}>
               <Typography variant="h6">{SIDE_PANEL_TITLES[sidePanel]}</Typography>
               <Typography variant="body2" color="textSecondary">
                 Панель-заглушка: назначение уточняется у владельца (Q-1).
               </Typography>
-            </Box>
+            </div>
             <Divider orientation="vertical" flexItem />
           </>
         ) : null}
-        <Box flexGrow={1} minWidth={0} position="relative">
+        <div className={classes.canvasArea}>
           {/* Узлы/рёбра — из графа (graphToFlow + computeLayout); связи и
               порядок в слое уходят обратно командами (T-032/T-036). */}
           <EditorCanvas
@@ -114,22 +195,10 @@ function EditorPageLayout() {
               события мыши — pan/zoom и тулбар работают сквозь него. hasNodes
               подключён к реальному графу (S9). */}
           <EmptyCanvasState hasNodes={editorGraph.hasNodes} />
-          {/* Полоса на всю высоту только центрирует тулбар: события мыши
-              пропускает (pointer-events: none) — иначе перекрывала undo/redo
-              в левом нижнем углу и полотно под собой. */}
-          <Box
-            position="absolute"
-            left={0}
-            top={0}
-            bottom={0}
-            display="flex"
-            alignItems="center"
-            paddingLeft={2}
-            style={{ pointerEvents: 'none' }}
-          >
-            <Box style={{ pointerEvents: 'auto' }}>
+          <div className={classes.toolbarRail}>
+            <div className={classes.toolbarSlot}>
               <EditorToolbar
-                elementSchemas={elementSchemas}
+                elementSchemas={catalog.schemas}
                 activePanel={sidePanel}
                 onPanelChange={setSidePanel}
                 selectedNodeType={editorGraph.selectedNodeType}
@@ -137,29 +206,19 @@ function EditorPageLayout() {
                 onAddNode={editorGraph.addNode}
                 onAddElement={editorGraph.addElement}
               />
-            </Box>
-          </Box>
-        </Box>
-        {selectedElement !== null ? (
-          <>
-            <Divider orientation="vertical" flexItem />
-            <Box className={classes.attributesPanel} data-testid="attributes-panel">
-              <AttributesPanel
-                component={selectedElement.component}
-                schema={schemaByKind.get(selectedElement.component.kind) ?? null}
-                onUpdateProps={editorGraph.updateElementProps}
-                onToggleComplexLogic={
-                  selectedElement.component.kind === 'selectList' && selectedElement.inFormStep
-                    ? () => editorGraph.toggleComplexLogic(selectedElement.component.id)
-                    : undefined
-                }
-                incomingRules={selectedElement.incomingRules}
-                onRemoveRule={editorGraph.removeLogicRule}
-              />
-            </Box>
-          </>
+            </div>
+          </div>
+        </div>
+        {selectedElement !== null && !pointerHeld ? (
+          <div className={classes.attributesPanel}>
+            <AttributesPanel
+              component={selectedElement.component}
+              schema={catalog.schema(selectedElement.component.kind)}
+              onUpdateProps={editorGraph.updateElementProps}
+            />
+          </div>
         ) : null}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }

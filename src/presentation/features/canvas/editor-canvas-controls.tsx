@@ -1,6 +1,6 @@
-import { Panel, useReactFlow, useViewport } from '@xyflow/react';
-import { Box, IconButton, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
-import { Map as MapIcon, Redo, Undo, ZoomIn, ZoomOut, ZoomOutMap } from '@blueprint-vendor/flamingo-icons';
+import { Panel, useReactFlow, useStore, type ReactFlowState } from '@xyflow/react';
+import { Box, IconButton, Typography, makeStyles } from '@material-ui/core';
+import { editorIcons } from '@presentation/icons/editor-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 const useStyles = makeStyles<EditorTheme>((theme) => {
@@ -10,7 +10,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => {
       display: 'flex',
       alignItems: 'center',
       backgroundColor: canvas.controlsBackground,
-      borderRadius: 24,
+      borderRadius: theme.editor.shape.pill,
       padding: theme.spacing(0.5),
       // Соседние пилюли правой группы идут с зазором.
       '& + &': {
@@ -26,6 +26,11 @@ const useStyles = makeStyles<EditorTheme>((theme) => {
       '&:hover': {
         backgroundColor: canvas.controlsHoverBackground,
       },
+    },
+    // Включённый инструмент «Рука» (editor-config canvas.panTool).
+    pressed: {
+      color: canvas.edgeActive,
+      backgroundColor: canvas.controlsHoverBackground,
     },
     zoomLabel: {
       minWidth: 56,
@@ -43,6 +48,9 @@ export type EditorCanvasControlsProps = {
   onRedo?: () => void;
   miniMapVisible: boolean;
   onToggleMiniMap: () => void;
+  /** Режим «Рука»; без onTogglePanMode кнопки нет (editor-config canvas.panTool). */
+  panMode?: boolean;
+  onTogglePanMode?: () => void;
 };
 
 // Нижняя панель канваса по макету (T-011): undo/redo — отдельной группой
@@ -55,10 +63,11 @@ export function EditorCanvasControls({
   onRedo,
   miniMapVisible,
   onToggleMiniMap,
+  panMode = false,
+  onTogglePanMode,
 }: EditorCanvasControlsProps) {
   const classes = useStyles();
   const { zoomIn, zoomOut, fitView } = useReactFlow();
-  const { zoom } = useViewport();
 
   return (
     <>
@@ -71,7 +80,7 @@ export function EditorCanvasControls({
             disabled={!canUndo}
             onClick={onUndo}
           >
-            <Undo fontSize="small" />
+            <editorIcons.undo fontSize="small" />
           </IconButton>
           <IconButton
             className={classes.button}
@@ -80,12 +89,25 @@ export function EditorCanvasControls({
             disabled={!canRedo}
             onClick={onRedo}
           >
-            <Redo fontSize="small" />
+            <editorIcons.redo fontSize="small" />
           </IconButton>
         </Box>
       </Panel>
       <Panel position="bottom-right">
         <Box className={classes.row}>
+          {onTogglePanMode ? (
+            <div className={classes.group} data-testid="pan-tool-group">
+              <IconButton
+                className={panMode ? `${classes.button} ${classes.pressed}` : classes.button}
+                size="small"
+                aria-label="Рука (H)"
+                aria-pressed={panMode}
+                onClick={onTogglePanMode}
+              >
+                <editorIcons.panTool fontSize="small" />
+              </IconButton>
+            </div>
+          ) : null}
           <Box className={classes.group} data-testid="zoom-group">
             <IconButton
               className={classes.button}
@@ -93,7 +115,7 @@ export function EditorCanvasControls({
               aria-label="Вместить карту"
               onClick={() => void fitView()}
             >
-              <ZoomOutMap fontSize="small" />
+              <editorIcons.fitView fontSize="small" />
             </IconButton>
             <IconButton
               className={classes.button}
@@ -101,18 +123,16 @@ export function EditorCanvasControls({
               aria-label="Уменьшить масштаб"
               onClick={() => void zoomOut()}
             >
-              <ZoomOut fontSize="small" />
+              <editorIcons.zoomOut fontSize="small" />
             </IconButton>
-            <Typography className={classes.zoomLabel} variant="body2" aria-label="Текущий масштаб">
-              {Math.round(zoom * 100)}%
-            </Typography>
+            <ZoomLabel className={classes.zoomLabel} />
             <IconButton
               className={classes.button}
               size="small"
               aria-label="Увеличить масштаб"
               onClick={() => void zoomIn()}
             >
-              <ZoomIn fontSize="small" />
+              <editorIcons.zoomIn fontSize="small" />
             </IconButton>
           </Box>
           <Box className={classes.group} data-testid="minimap-toggle-group">
@@ -123,11 +143,25 @@ export function EditorCanvasControls({
               aria-pressed={miniMapVisible}
               onClick={onToggleMiniMap}
             >
-              <MapIcon fontSize="small" />
+              <editorIcons.minimap fontSize="small" />
             </IconButton>
           </Box>
         </Box>
       </Panel>
     </>
+  );
+}
+
+// Текущий масштаб — отдельный компонент с подпиской на округлённый процент
+// (R-PERF): useViewport перерисовывал всю панель на каждый кадр pan, хотя
+// процент при pan не меняется.
+const selectZoomPercent = (state: ReactFlowState) => Math.round(state.transform[2] * 100);
+
+function ZoomLabel({ className }: { className?: string }) {
+  const percent = useStore(selectZoomPercent);
+  return (
+    <Typography className={className} variant="body2" aria-label="Текущий масштаб">
+      {percent}%
+    </Typography>
   );
 }

@@ -3,7 +3,6 @@ import {
   toApplicationFormId,
   toBlueprintId,
   toElementId,
-  toFormComponentId,
   toFormStepId,
   toStepTransitionId,
   toLogicRuleId,
@@ -18,7 +17,15 @@ import {
 // репозитория карт ещё нет, а T-031/T-032 нужно что рендерить и проверять
 // глазами: Главная + два подсценария + степперная форма с двумя шагами +
 // связи через три колонки. Граф прогоняется через zod-схему, чтобы образец
-// гарантированно оставался валидным при изменениях модели.
+// гарантированно оставался валидным при изменениях модели. Элементы — по
+// схемам фреймворка (kind = x-element-type, атрибуты в props).
+
+const listItem = (id: string, primaryText: string, secondaryText?: string) => ({
+  id: toElementId(id),
+  kind: 'list-item',
+  props: secondaryText ? { primaryText, secondaryText } : { primaryText },
+});
+
 export function createSampleGraph(): ServiceGraph {
   return ServiceGraphSchema.parse({
     id: toBlueprintId('demo-blueprint'),
@@ -27,67 +34,33 @@ export function createSampleGraph(): ServiceGraph {
       id: toPageId('demo-home'),
       orderIndex: 0,
       elements: [
-        {
-          id: toElementId('demo-home-item-deposits'),
-          kind: 'listItem',
-          title: 'Вклады',
-          secondaryText: 'Подбор и открытие вклада',
-        },
-        {
-          id: toElementId('demo-home-item-documents'),
-          kind: 'listItem',
-          title: 'Документы',
-          secondaryText: 'Справки и выписки',
-        },
+        listItem('demo-home-item-deposits', 'Вклады', 'Подбор и открытие вклада'),
+        listItem('demo-home-item-documents', 'Документы', 'Справки и выписки'),
       ],
     },
     subScenarios: [
       {
         id: toScenarioId('demo-scenario-deposits'),
-        type: 'navigation',
         title: 'Подбор вклада',
         orderIndex: 1,
         elements: [
-          {
-            id: toElementId('demo-scenario-deposits-item-apply'),
-            kind: 'listItem',
-            title: 'Оформить заявку',
-            secondaryText: 'Переход к форме заявки',
-          },
+          listItem('demo-scenario-deposits-item-apply', 'Оформить заявку', 'Переход к форме заявки'),
         ],
       },
       {
         id: toScenarioId('demo-scenario-documents'),
-        type: 'navigation',
         title: 'Документы',
         orderIndex: 2,
         // Длинный список элементов; у одного из последних — исходящая связь.
         elements: [
-          { id: toElementId('demo-scenario-documents-item-1'), kind: 'listItem', title: 'Справка о доходах' },
-          { id: toElementId('demo-scenario-documents-item-2'), kind: 'listItem', title: 'Выписка по счёту' },
-          {
-            id: toElementId('demo-scenario-documents-item-3'),
-            kind: 'listItem',
-            title: 'Справка с места работы',
-          },
-          {
-            id: toElementId('demo-scenario-documents-item-4'),
-            kind: 'listItem',
-            title: 'Налоговая декларация',
-          },
-          { id: toElementId('demo-scenario-documents-item-5'), kind: 'listItem', title: 'Выписка из ЕГРН' },
-          {
-            id: toElementId('demo-scenario-documents-item-6'),
-            kind: 'listItem',
-            title: 'Справка об отсутствии задолженности',
-          },
-          { id: toElementId('demo-scenario-documents-item-7'), kind: 'listItem', title: 'Копия паспорта' },
-          {
-            id: toElementId('demo-scenario-documents-item-8'),
-            kind: 'listItem',
-            title: 'Заявление на выдачу',
-            secondaryText: 'Переход к форме заявки',
-          },
+          listItem('demo-scenario-documents-item-1', 'Справка о доходах'),
+          listItem('demo-scenario-documents-item-2', 'Выписка по счёту'),
+          listItem('demo-scenario-documents-item-3', 'Справка с места работы'),
+          listItem('demo-scenario-documents-item-4', 'Налоговая декларация'),
+          listItem('demo-scenario-documents-item-5', 'Выписка из ЕГРН'),
+          listItem('demo-scenario-documents-item-6', 'Справка об отсутствии задолженности'),
+          listItem('demo-scenario-documents-item-7', 'Копия паспорта'),
+          listItem('demo-scenario-documents-item-8', 'Заявление на выдачу', 'Переход к форме заявки'),
         ],
       },
     ],
@@ -101,56 +74,51 @@ export function createSampleGraph(): ServiceGraph {
             id: toFormStepId('demo-form-deposit-step-1'),
             elements: [
               {
-                id: toFormComponentId('demo-field-amount'),
-                kind: 'textField',
-                label: 'Сумма вклада',
-                required: true,
-                multiline: false,
-                placeholder: 'Например, 100 000 ₽',
+                id: toElementId('demo-field-amount'),
+                kind: 'text-field',
+                props: { label: 'Сумма вклада', required: true, placeholder: 'Например, 100 000 ₽' },
               },
               {
-                id: toFormComponentId('demo-field-period'),
-                kind: 'selectList',
-                label: 'Срок вклада',
-                required: true,
-                displayType: 'dropdown',
-                multiSelect: false,
-                search: false,
-                // Режим «Сложной логики» включён (T-037): у option'ов —
+                id: toElementId('demo-field-period'),
+                kind: 'select',
+                // Режим «Сложной логики» включён (T-037): у вариантов —
                 // source-handle'ы; правила ниже показывают чекбокс при выборе
                 // «6 месяцев» и выплату процентов при «12 месяцах» (L-I5/ADR-14).
                 hasComplexLogic: true,
-                options: [
-                  { label: '6 месяцев', value: '6m' },
-                  { label: '12 месяцев', value: '12m' },
-                ],
+                props: {
+                  label: 'Срок вклада',
+                  required: true,
+                  options: [
+                    { id: '6m', label: '6 месяцев' },
+                    { id: '12m', label: '12 месяцев' },
+                  ],
+                },
               },
               {
-                id: toFormComponentId('demo-field-agree'),
+                id: toElementId('demo-field-agree'),
                 kind: 'checkbox',
-                label: 'Согласен с условиями',
-                required: true,
+                props: { label: 'Согласен с условиями', required: true },
               },
               // Цепочка правил для раскладки шага колонками [owner 2026-10-13]:
               // «12 месяцев» → выплата процентов → «Ежемесячно» → уведомления.
               {
-                id: toFormComponentId('demo-field-payout'),
-                kind: 'selectList',
-                label: 'Выплата процентов',
-                required: true,
-                displayType: 'dropdown',
-                multiSelect: false,
+                id: toElementId('demo-field-payout'),
+                kind: 'radio-group',
                 hasComplexLogic: true,
-                options: [
-                  { label: 'Ежемесячно', value: 'monthly', isDefault: true },
-                  { label: 'В конце срока', value: 'end' },
-                ],
+                props: {
+                  label: 'Выплата процентов',
+                  required: true,
+                  value: 'monthly',
+                  items: [
+                    { label: 'Ежемесячно', value: 'monthly', disabled: false, required: false, error: false },
+                    { label: 'В конце срока', value: 'end', disabled: false, required: false, error: false },
+                  ],
+                },
               },
               {
-                id: toFormComponentId('demo-field-notify'),
+                id: toElementId('demo-field-notify'),
                 kind: 'checkbox',
-                label: 'Уведомлять о начислении',
-                required: false,
+                props: { label: 'Уведомлять о начислении' },
               },
             ],
           },
@@ -158,22 +126,23 @@ export function createSampleGraph(): ServiceGraph {
             id: toFormStepId('demo-form-deposit-step-2'),
             elements: [
               {
-                id: toFormComponentId('demo-field-comment'),
-                kind: 'textField',
-                label: 'Комментарий к заявке',
-                required: false,
-                multiline: true,
+                id: toElementId('demo-field-comment'),
+                kind: 'text-field',
+                props: { label: 'Комментарий к заявке', multiline: true },
               },
             ],
           },
           {
             id: toFormStepId('demo-form-deposit-step-3'),
+            // Шаг без входящего перехода держит явный уровень (ADR-15, как
+            // миграция v2→3): иначе он — второй корень уровня 0 и демо-граф
+            // нарушает ёмкость уровня (layer-capacity).
+            layerDepth: 2,
             elements: [
               {
-                id: toFormComponentId('demo-field-confirm'),
+                id: toElementId('demo-field-confirm'),
                 kind: 'checkbox',
-                label: 'Подтверждаю введённые данные',
-                required: true,
+                props: { label: 'Подтверждаю введённые данные', required: true },
               },
             ],
           },
@@ -225,19 +194,14 @@ export function createSampleGraph(): ServiceGraph {
         targetElementId: toElementId('demo-field-notify'),
       },
     ],
-    // Переходы между шагами [owner 2026-10-14]: «Сумма» → следующий шаг;
-    // вариант «В конце срока» — сразу на подтверждение, через шаг.
+    // Переходы между шагами [owner 2026-10-14]: «Сумма» → следующий шаг.
+    // Варианты Select'ов здесь с «Сложной логикой» — на шаги не ведут
+    // (connection-matrix, [owner 2026-10-16]).
     stepTransitions: [
       {
         id: toStepTransitionId('demo-transition-amount'),
         sourceElementId: toElementId('demo-field-amount'),
         targetStepId: toFormStepId('demo-form-deposit-step-2'),
-      },
-      {
-        id: toStepTransitionId('demo-transition-payout-end'),
-        sourceElementId: toElementId('demo-field-payout'),
-        optionId: toOptionId('end'),
-        targetStepId: toFormStepId('demo-form-deposit-step-3'),
       },
     ],
   });

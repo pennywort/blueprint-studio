@@ -1,22 +1,20 @@
 import type { ComponentType } from 'react';
-import type { ElementAttributeType } from '@application/ports/element-schema-provider';
-import type { AttributeMeta } from './element-attribute-meta';
+import type { ElementAttribute, ElementAttributeType } from '@application/ports/element-schema-provider';
 
 // Реестр редакторов свойств (T-040): маппинг «тип атрибута → React-компонент
 // редактора». Расширение — регистрацией нового редактора, без правки панели
 // атрибутов (декомпозиция, D-правило 1: никакого switch по именам элементов).
 // Встроенные маппинги: text → TextField, stringList → многострочное поле,
-// bool → Switch, number → числовое поле, radio → RadioGroup, select → Select.
+// bool → Switch, number → числовое поле, radio → RadioGroup, select → Select,
+// optionList → список вариантов, icon → поиск + сетка иконок.
 
 export type PropertyEditorProps = {
   /** Текущее значение свойства элемента (тип зависит от типа атрибута). */
   value: unknown;
   /** Изменение значения → панель упакует в UpdateElementProps. */
   onChange: (value: unknown) => void;
-  /** Метаинформация проектной схемы (D4): label, placeholder, опции enum. */
-  meta: AttributeMeta;
-  /** Обязательность из схемы элемента (манифест) — маркер у label. */
-  required: boolean;
+  /** Описание атрибута (схема + политика): подпись, подсказки, варианты, обязательность. */
+  attribute: ElementAttribute;
 };
 
 export type PropertyEditor = ComponentType<PropertyEditorProps>;

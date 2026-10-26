@@ -22,11 +22,12 @@ const DOMAIN_FORBIDDEN = [
   'awilix',
   'xstate',
   '@xyflow/*',
-  '@blueprint-vendor/*',
+  '@material-ui/*',
 ];
 
 export default [
-  { ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'vendor/**'] },
+  // docs/schemas — код и примеры из фреймворка (генератор схем), собирается там, не здесь
+  { ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'vendor/**', 'docs/schemas/**'] },
   js.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
@@ -123,7 +124,7 @@ export default [
               message: 'application не импортирует infrastructure/presentation (конституция, раздел 3)',
             },
             {
-              group: ['react', 'react-dom', '@xyflow/*', '@blueprint-vendor/*', 'xstate', 'awilix'],
+              group: ['react', 'react-dom', '@xyflow/*', '@material-ui/*', 'xstate', 'awilix'],
               message: 'application — чистый слой use-cases (конституция, раздел 3)',
             },
           ],

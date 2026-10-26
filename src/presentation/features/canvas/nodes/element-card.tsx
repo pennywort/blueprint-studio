@@ -1,55 +1,100 @@
-import { memo, useRef } from 'react';
+import { memo, useRef, type CSSProperties } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Card, CardContent, Chip, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
-import { ShowChart, Visibility } from '@blueprint-vendor/flamingo-icons';
+import { makeStyles } from '@material-ui/core';
+import { editorIcons } from '@presentation/icons/editor-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { logicAnchorHandleId, logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
 import { FORM_STEP_LAYOUT } from '../canvas-layout';
+import { setScaledDragPreview } from '../drag-preview';
 import { endElementDrag, writeElementDrag } from '../element-dnd';
 import { isActionTarget } from '../canvas-events';
 import { ViolationBadge } from './violation-badge';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
+import { useHighlightStyles } from '../highlight/highlight-styles';
+import { useEntityHighlight } from '../highlight/use-entity-highlight';
+import { TargetHandle } from './target-handle';
 
+// TEMPORARY (R-PERF-10, [owner 2026-10-22]): карточка элемента — div + классы,
+// а не Card/CardContent/Typography/Chip ДС: на стенде ~1100 карточек, и 4
+// компонента MUI на каждую были основной ценой рендера и размера DOM. Вид —
+// тот же, токены — из темы. Сравнить с карточкой MUI замером на стенде
+// (scripts/agent/perf-bench.mjs, docs/refactoring/R-PERF-canvas.md §4c);
+// реестр — docs/temporary-registry.md.
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
-    borderRadius: 12,
-    borderColor: theme.editor.canvas.elementBorder,
-    boxShadow: 'none',
-    // Handle позиционируется относительно карточки элемента (D9).
+    // Как Card variant="outlined": фон бумаги и рамка 1px.
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.editor.canvas.elementBorder}`,
+    // Радиус элемента и комментария — 24 [owner 2026-10-22].
+    borderRadius: theme.editor.shape.element,
+    color: theme.palette.text.primary,
+    // Handle позиционируется относительно карточки элемента (D9); handle на
+    // границе не обрезается (N7/N11).
     position: 'relative',
-    // Card MUI обрезает содержимое (overflow: hidden) — handle на границе
-    // карточки был виден наполовину, ребро «не доходило» до него (N7/N11).
     overflow: 'visible',
-    // Без анимации тени Paper (300 мс): выделение должно меняться мгновенно,
-    // иначе перекликивание воспринимается как лаг (повторная приёмка).
-    transition: 'none',
+    // Размер строго по макету «пример-подсценариев-с-элементами» [owner 2026-10-22]:
+    // одинаков у элемента и комментария-элемента; раскладка берёт его из FORM_STEP_LAYOUT.
+    width: FORM_STEP_LAYOUT.elementWidth,
+    height: FORM_STEP_LAYOUT.elementHeight,
+    boxSizing: 'border-box',
   },
-  // Выделение элемента (F7): чёрная рамка цвета стрелок — как у узлов и связей.
-  // Вторая половина рамки — внутренней (inset) тенью, а не толщиной border:
-  // размер карточки не меняется, handles/рёбра не сдвигаются (N10), рамка не
-  // выходит наружу и не пересекает входящие рёбра [owner 2026-10-14].
-  // Нарушение инварианта (T-043): рамка цвета ошибки; выделение важнее.
-  cardInvalid: {
-    borderColor: theme.palette.error.main,
-  },
-  cardSelected: {
-    borderColor: theme.editor.canvas.edge,
-    boxShadow: `inset 0 0 0 1px ${theme.editor.canvas.edge}`,
-  },
+  // Колонка карточки: содержимое сверху, чипы всегда внизу слева [owner 2026-10-22].
   content: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.spacing(1.5),
+    height: '100%',
+    boxSizing: 'border-box',
+    padding: theme.spacing(2),
+  },
+  // Иконка + тексты; лишний текст обрезается — высота карточки фиксирована.
+  head: {
     display: 'flex',
     alignItems: 'flex-start',
     gap: theme.spacing(1.5),
-    padding: theme.spacing(2),
-    '&:last-child': {
-      paddingBottom: theme.spacing(2),
-    },
+    flexGrow: 1,
+    minHeight: 0,
+    overflow: 'hidden',
+  },
+  title: {
+    ...theme.typography.body2,
+    overflowWrap: 'anywhere',
+  },
+  caption: {
+    ...theme.typography.caption,
+    color: theme.palette.text.secondary,
+    overflowWrap: 'anywhere',
+  },
+  // Ярлык: тип элемента, «Сложная логика», «скрыт», адресат комментария.
+  // Высота не больше 16px [owner 2026-10-22].
+  chip: {
+    ...theme.typography.caption,
+    fontSize: theme.typography.pxToRem(11),
+    lineHeight: '16px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    height: 16,
+    padding: theme.spacing(0, 0.75),
+    border: 'none',
+    borderRadius: theme.editor.shape.chip,
+    whiteSpace: 'nowrap',
+    boxSizing: 'border-box',
+    backgroundColor: theme.palette.grey[300],
+    color: theme.palette.getContrastText(theme.palette.grey[300]),
+  },
+  chipAccent: {
+    backgroundColor: theme.editor.chipAccent,
+    color: theme.editor.chipAccentContrastText,
+  },
+  chipPrimary: {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
   },
   iconWrap: {
     width: 40,
     height: 40,
     flexShrink: 0,
-    borderRadius: 8,
+    borderRadius: theme.editor.shape.icon,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -63,17 +108,24 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     flexDirection: 'column',
     gap: theme.spacing(0.5),
   },
+  // Ряд чипов внизу слева; иконки в ряду — не выше чипа (16px).
   chips: {
     display: 'flex',
     flexWrap: 'wrap',
+    alignItems: 'center',
     gap: theme.spacing(0.5),
-    marginTop: theme.spacing(1),
+    flexShrink: 0,
+    '& svg': {
+      fontSize: theme.typography.pxToRem(16),
+    },
   },
   // Чип-переключатель «Сложная логика» (T-037, L4): кликабелен; активный —
   // залитый, как на макете «сложная-логика-госб-…» (T-067 перенесёт
-  // переключатель в инспектор, чип останется индикатором).
+  // переключатель в инспектор, чип останется индикатором). Кнопка — нажатие
+  // не меняет выделение (isActionTarget).
   logicChip: {
     cursor: 'pointer',
+    fontFamily: 'inherit',
   },
   dependencyIcon: {
     color: theme.palette.text.secondary,
@@ -84,18 +136,8 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     backgroundColor: theme.editor.canvas.commentBackground,
     borderColor: theme.editor.canvas.commentBorder,
   },
-  commentContent: {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    gap: theme.spacing(1.5),
-    minHeight: FORM_STEP_LAYOUT.elementHeight,
-    padding: theme.spacing(2),
-    '&:last-child': {
-      paddingBottom: theme.spacing(2),
-    },
-  },
   commentText: {
+    ...theme.typography.body2,
     whiteSpace: 'pre-wrap',
     overflowWrap: 'anywhere',
   },
@@ -112,14 +154,29 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     display: 'flex',
     flexDirection: 'column',
     gap: theme.spacing(1.5),
-    marginTop: -12,
-    padding: theme.spacing(3, 2, 2),
+    // Заход под карточку = её радиусу: фон виден ровно в скруглениях.
+    marginTop: -theme.editor.shape.element,
+    padding: theme.spacing(0, 2, 2),
+    paddingTop: theme.editor.shape.element + theme.spacing(1.5),
     border: `1px solid ${theme.editor.canvas.commentBorder}`,
     borderTop: 'none',
-    borderRadius: '0 0 12px 12px',
+    borderRadius: `0 0 ${theme.editor.shape.element}px ${theme.editor.shape.element}px`,
     backgroundColor: theme.editor.canvas.commentBackground,
   },
 }));
+
+// Якорь входа рёбер правил: нулевой размер — ребро упирается ровно в край
+// карточки, а не за полширины handle до неё [owner 2026-10-13]. Inline-стиль
+// перебивает scoped-стили handles; константа — без нового объекта на рендер (R-PERF-8).
+const LOGIC_ANCHOR_STYLE: CSSProperties = {
+  top: FORM_STEP_LAYOUT.logicHandleTop,
+  width: 0,
+  height: 0,
+  minWidth: 0,
+  minHeight: 0,
+  opacity: 0,
+  pointerEvents: 'none',
+};
 
 export type ElementCardProps = {
   element: CanvasElementData;
@@ -139,10 +196,9 @@ export type ElementCardProps = {
 export const ElementCard = memo(function ElementCard({ element }: ElementCardProps) {
   const classes = useStyles();
   const actions = useCanvasActions();
-  const selected = useCanvasInteraction((state) => state.selectedElementId === element.id);
-  const connectTarget = useCanvasInteraction(
-    (state) => state.connectionTargets?.elements.has(element.id) ?? false,
-  );
+  const highlightClasses = useHighlightStyles();
+  // Подсветка — единый механизм (R-PERF-6): выделение (F7), ошибка (T-043), цель связи.
+  const highlight = useEntityHighlight({ entity: 'card', id: element.id });
   const violations = useCanvasInteraction((state) => state.violations.elements.get(element.id));
   // Нажатие пришлось на коннектор/кнопку: нативный dnd карточки (N2) не
   // начинается — иначе браузер забирал жест протягивания связи у source-handle
@@ -170,6 +226,8 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
           return;
         }
         writeElementDrag(event.dataTransfer, { elementId: element.id });
+        // Превью в масштабе канваса, не в 100% (доводка N2).
+        setScaledDragPreview(event);
       }}
       onDragEnd={endElementDrag}
       // Выделение — по нажатию (без «лага» click); коннектор и кнопки
@@ -185,26 +243,16 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
       }}
       onClick={(event) => event.stopPropagation()}
     >
-      <Card
-        className={[
-          classes.card,
-          isComment ? classes.commentCard : '',
-          violations ? classes.cardInvalid : '',
-          selected ? classes.cardSelected : '',
-        ].join(' ')}
-        variant="outlined"
+      <div
+        className={[classes.card, isComment ? classes.commentCard : '', highlightClasses.card].join(' ')}
+        data-highlight={highlight ?? undefined}
       >
         {/* Цель правил «Сложной логики» (T-037): рёбра видимости приходят
           на левый край карточки элемента, не шага и не формы. Только у
           компонентов форм (N5); невидим, накрывает карточку и принимает связь, только пока
           тянется правило и элемент — допустимая цель (повторная приёмка). */}
         {element.logicTarget ? (
-          <Handle
-            type="target"
-            position={Position.Left}
-            id={logicTargetHandleId(element.id)}
-            className={connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
-          />
+          <TargetHandle entity="card" id={element.id} handleId={logicTargetHandleId(element.id)} />
         ) : null}
         {/* Якорь входа рёбер правил [owner 2026-10-13]: на высоте варианта-
           источника (logicHandleTop) — ребро идёт прямой горизонталью. Только
@@ -215,78 +263,65 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
             position={Position.Left}
             id={logicAnchorHandleId(element.id)}
             isConnectable={false}
-            // Нулевой размер: ребро упирается ровно в край карточки, а не за
-            // полширины handle до неё [owner 2026-10-13].
-            style={{
-              top: FORM_STEP_LAYOUT.logicHandleTop,
-              width: 0,
-              height: 0,
-              minWidth: 0,
-              minHeight: 0,
-              opacity: 0,
-              pointerEvents: 'none',
-            }}
+            style={LOGIC_ANCHOR_STYLE}
           />
         ) : null}
         {isComment ? (
-          <CardContent className={classes.commentContent}>
-            <Typography className={classes.commentText} variant="body2">
-              {element.title}
-            </Typography>
-            <Chip className={classes.commentBadge} size="small" label={element.commentAudience} />
-          </CardContent>
-        ) : (
-          <CardContent className={classes.content}>
-            <div className={classes.iconWrap}>
-              {/* Иконки элементов платформы придут с пакетом element-schemas;
-              пока — единый плейсхолдер из дизайн-системы. */}
-              <ShowChart fontSize="small" />
+          <div className={classes.content}>
+            <div className={`${classes.head} ${classes.commentText}`}>{element.title}</div>
+            <div className={classes.chips}>
+              <span className={`${classes.chip} ${classes.commentBadge}`}>{element.commentAudience}</span>
             </div>
-            <div className={classes.texts}>
-              <Typography variant="body2">{element.title}</Typography>
-              {element.secondaryText ? (
-                <Typography variant="caption" color="textSecondary">
-                  {element.secondaryText}
-                </Typography>
-              ) : null}
-              <div className={classes.chips}>
-                <Chip size="small" color="secondary" label={element.kindLabel} />
-                {element.complexLogic ? (
-                  <Chip
-                    className={classes.logicChip}
-                    size="small"
-                    color={element.complexLogic.enabled ? 'primary' : 'default'}
-                    label="Сложная логика"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      actions?.toggleComplexLogic(element.id);
-                    }}
-                  />
-                ) : null}
-                {/* Демонстрация семантики видимости (T-062): цель правил скрыта
-                по умолчанию (L3) — до появления /preview это видно бейджем. */}
-                {element.hiddenByLogic ? (
-                  <Chip size="small" color="default" label="Скрыт в предпросмотре" />
-                ) : null}
-                {/* Индикатор «элемент кому-то подчинён» (L-Q1): виден даже при
-                выключенной логике у источника. */}
-                {violations ? <ViolationBadge messages={violations} /> : null}
-                {element.hasIncomingLogic ? (
-                  <Visibility className={classes.dependencyIcon} fontSize="small" />
+          </div>
+        ) : (
+          <div className={classes.content}>
+            <div className={classes.head}>
+              <div className={classes.iconWrap}>
+                {/* Иконки элементов платформы придут с пакетом element-schemas;
+                пока — единый плейсхолдер из дизайн-системы. */}
+                <editorIcons.elementPlaceholder fontSize="small" />
+              </div>
+              <div className={classes.texts}>
+                <div className={classes.title}>{element.title}</div>
+                {element.secondaryText ? (
+                  <div className={classes.caption}>{element.secondaryText}</div>
                 ) : null}
               </div>
             </div>
-          </CardContent>
+            <div className={classes.chips}>
+              <span className={`${classes.chip} ${classes.chipAccent}`}>{element.kindLabel}</span>
+              {element.complexLogic ? (
+                <button
+                  type="button"
+                  className={[
+                    classes.chip,
+                    classes.logicChip,
+                    element.complexLogic.enabled ? classes.chipPrimary : '',
+                  ].join(' ')}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    actions?.toggleComplexLogic(element.id);
+                  }}
+                >
+                  Сложная логика
+                </button>
+              ) : null}
+              {/* Индикатор «элемент кому-то подчинён» (L-Q1): виден даже при
+              выключенной логике у источника. */}
+              {violations ? <ViolationBadge messages={violations} /> : null}
+              {element.hasIncomingLogic ? (
+                <editorIcons.visibilityDependency className={classes.dependencyIcon} fontSize="small" />
+              ) : null}
+            </div>
+          </div>
         )}
         {/* Комментарий-элемент вне связей: ни источника, ни цели. */}
         {isComment ? null : <Handle type="source" position={Position.Right} id={element.id} />}
-      </Card>
+      </div>
       {element.note ? (
         <div className={classes.note} data-testid={`element-note-${element.id}`}>
-          <Typography className={classes.commentText} variant="body2">
-            {element.note.text}
-          </Typography>
-          <Chip className={classes.commentBadge} size="small" label={element.note.audience} />
+          <div className={classes.commentText}>{element.note.text}</div>
+          <span className={`${classes.chip} ${classes.commentBadge}`}>{element.note.audience}</span>
         </div>
       ) : null}
     </div>

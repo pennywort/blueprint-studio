@@ -1,0 +1,32 @@
+{
+  "x-format-version": 2,
+  "shared": {},
+  "elements": {
+    "comment": {
+      "title": "Комментарий",
+      "description": "Заметка на канвасе для разработчика (элемент редактора, не фреймворка)",
+      "type": "object",
+      "x-format-version": 2,
+      "x-element-type": "comment",
+      "x-category": "editor",
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "audience": {
+          "type": "string"
+        }
+      },
+      "required": ["text", "audience"]
+    }
+  },
+  "extensions": {
+    "all": {
+      "type": "object",
+      "properties": {
+        "availability": { "type": "string", "enum": ["Sigma", "Delta", "Alpha"], "multiple": true }
+      }
+    },
+    "byKind": {}
+  }
+}

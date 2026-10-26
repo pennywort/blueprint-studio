@@ -4,7 +4,7 @@ import path from 'node:path';
 export default defineConfig({
   resolve: {
     alias: [
-      // TEMPORARY: polyfill findDOMNode для MUI v4-подмены Flamingo (см. rsbuild.config.ts).
+      // TEMPORARY: polyfill findDOMNode для MUI v4 (см. rsbuild.config.ts).
       // regex — только точный импорт 'react-dom', подпути не затрагиваются.
       {
         find: /^react-dom$/,
@@ -14,6 +14,10 @@ export default defineConfig({
       { find: '@application', replacement: path.resolve(__dirname, 'src/application') },
       { find: '@infrastructure', replacement: path.resolve(__dirname, 'src/infrastructure') },
       { find: '@presentation', replacement: path.resolve(__dirname, 'src/presentation') },
+      {
+        find: /^@local\/editor-icons$/,
+        replacement: path.resolve(__dirname, 'src/presentation/icons/editor-icons.none.ts'),
+      },
     ],
   },
   test: {

@@ -1,0 +1,332 @@
+{
+  "common": {
+    "attributes": [{ "key": "availability", "label": "Доступность", "editor": "chips" }]
+  },
+  "elements": [
+    {
+      "kind": "list-item",
+      "label": "List item",
+      "category": "Сценарий",
+      "description": "Строка списка",
+      "card": { "title": "primaryText", "subtitle": "secondaryText" },
+      "defaults": { "primaryText": "Новый элемент" },
+      "attributes": [
+        {
+          "key": "primaryText",
+          "label": "Название",
+          "required": true,
+          "placeholder": "Например, Задать вопрос"
+        },
+        {
+          "key": "secondaryText",
+          "label": "Дополнительный текст",
+          "placeholder": "Например, По методологии"
+        },
+        { "key": "tertiaryText", "label": "Третий текст", "placeholder": "Например, Ответ за 2 дня" },
+        { "key": "leftAtom", "label": "Иконка" },
+        { "key": "linkHref", "label": "Внешняя ссылка", "placeholder": "https://…" }
+      ]
+    },
+    {
+      "kind": "widget-card",
+      "label": "Widget card",
+      "category": "Сценарий",
+      "description": "Карточка-виджет",
+      "card": { "title": "title", "subtitle": "subtitle" },
+      "defaults": { "title": "Новый элемент" },
+      "attributes": [
+        { "key": "title", "label": "Название", "required": true, "placeholder": "Например, Мои заявки" },
+        { "key": "subtitle", "label": "Дополнительный текст", "placeholder": "Например, Статусы и сроки" },
+        { "key": "icon", "label": "Иконка" },
+        { "key": "href", "label": "Внешняя ссылка", "placeholder": "https://…" }
+      ]
+    },
+    {
+      "kind": "comment",
+      "category": "Комментарий",
+      "description": "Заметка на канвасе для разработчика",
+      "card": { "title": "text", "badge": "audience" },
+      "defaults": { "text": "Комментарий", "audience": "Разработчику" },
+      "attributes": [
+        {
+          "key": "text",
+          "label": "Текст комментария",
+          "placeholder": "Что нужно знать разработчику",
+          "multiline": true
+        },
+        { "key": "audience", "label": "Для кого", "helperText": "Показывается бейджем внизу карточки" }
+      ]
+    },
+    {
+      "kind": "text-field",
+      "label": "Text field",
+      "category": "Форма",
+      "description": "Текстовое поле для ввода значения",
+      "card": { "title": "label", "subtitle": "placeholder" },
+      "defaults": { "label": "Текстовое поле" },
+      "attributes": [
+        { "key": "label", "label": "Название", "required": true, "placeholder": "Например, Сумма вклада" },
+        { "key": "placeholder", "label": "Подсказка внутри поля", "placeholder": "Например, 100 000 ₽" },
+        { "key": "helperText", "label": "Подпись под полем" },
+        { "key": "tooltipTextIcon", "label": "Текст подсказки" },
+        { "key": "icon", "label": "Иконка" },
+        { "key": "required", "label": "Обязательное поле", "section": "Настройки" },
+        { "key": "multiline", "label": "Многострочное", "section": "Настройки" }
+      ]
+    },
+    {
+      "kind": "alert",
+      "label": "Alert",
+      "category": "Форма",
+      "description": "Информационное сообщение",
+      "card": { "title": "label" },
+      "defaults": { "label": "Информационный блок", "variant": "info" },
+      "attributes": [
+        {
+          "key": "label",
+          "label": "Текст",
+          "required": true,
+          "placeholder": "Текст блока",
+          "multiline": true
+        },
+        {
+          "key": "variant",
+          "label": "Вид",
+          "section": "Тип",
+          "options": [
+            { "value": "info", "label": "Информация" },
+            { "value": "warning", "label": "Предупреждение" },
+            { "value": "success", "label": "Успех" },
+            { "value": "danger", "label": "Ошибка" }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "date-range-field-picker",
+      "label": "Date period",
+      "category": "Форма",
+      "description": "Выбор периода дат",
+      "card": { "title": "label", "subtitle": "placeholder" },
+      "defaults": { "label": "Период" },
+      "attributes": [
+        { "key": "label", "label": "Название", "required": true, "placeholder": "Например, Период действия" },
+        { "key": "placeholder", "label": "Подсказка внутри поля" },
+        { "key": "helperText", "label": "Подпись под полем" },
+        { "key": "required", "label": "Обязательное поле", "section": "Настройки" },
+        { "key": "disablePast", "label": "Запрет прошедших дат", "section": "Настройки" },
+        { "key": "disableFuture", "label": "Запрет будущих дат", "section": "Настройки" }
+      ]
+    },
+    {
+      "kind": "attachment",
+      "label": "Attachment",
+      "category": "Форма",
+      "description": "Поле загрузки файлов (одно на форму)",
+      "card": { "title": "label" },
+      "defaults": { "label": "Файл" },
+      "attributes": [
+        {
+          "key": "label",
+          "label": "Название",
+          "required": true,
+          "placeholder": "Например, Справка о доходах"
+        },
+        { "key": "description", "label": "Описание" },
+        {
+          "key": "validExtensions",
+          "label": "Типы файлов",
+          "helperText": "Расширение на строку: pdf, png"
+        },
+        { "key": "maxFiles", "label": "Максимум файлов" },
+        { "key": "required", "label": "Обязательное поле", "section": "Настройки" },
+        { "key": "multiple", "label": "Несколько файлов", "section": "Настройки" }
+      ]
+    },
+    {
+      "kind": "checkbox",
+      "label": "Checkbox",
+      "category": "Форма",
+      "description": "Флажок согласия/подтверждения",
+      "card": { "title": "label" },
+      "defaults": { "label": "Чекбокс" },
+      "attributes": [
+        {
+          "key": "label",
+          "label": "Название",
+          "required": true,
+          "placeholder": "Например, Согласен с условиями"
+        },
+        { "key": "helperText", "label": "Подпись под полем" },
+        { "key": "required", "label": "Обязательное поле", "section": "Настройки" }
+      ]
+    },
+    {
+      "kind": "select",
+      "label": "Select",
+      "category": "Форма",
+      "description": "Выпадающий список выбора значения",
+      "card": { "title": "label", "subtitle": "placeholder" },
+      "defaults": { "label": "Список", "options": [] },
+      "attributes": [
+        { "key": "label", "label": "Название", "required": true, "placeholder": "Например, Срок вклада" },
+        { "key": "placeholder", "label": "Подсказка внутри поля" },
+        {
+          "key": "options",
+          "label": "Варианты выбора",
+          "helperText": "Название варианта; id для правил и переходов генерируется автоматически",
+          "item": { "id": "id", "label": "label" }
+        },
+        { "key": "required", "label": "Обязательное поле", "section": "Настройки" },
+        { "key": "multiselect", "label": "Множественный выбор", "section": "Настройки" }
+      ]
+    },
+    {
+      "kind": "radio-group",
+      "label": "Radio group",
+      "category": "Форма",
+      "description": "Переключатели выбора значения (до 5 вариантов)",
+      "card": { "title": "label" },
+      "defaults": { "label": "Переключатели", "items": [] },
+      "attributes": [
+        { "key": "label", "label": "Название", "required": true, "placeholder": "Например, Срок вклада" },
+        {
+          "key": "items",
+          "label": "Варианты выбора",
+          "helperText": "Название варианта; значение для правил и переходов генерируется автоматически",
+          "item": { "id": "value", "label": "label" }
+        },
+        { "key": "required", "label": "Обязательное поле", "section": "Настройки" }
+      ]
+    },
+    {
+      "kind": "typography",
+      "label": "Typography",
+      "category": "Форма",
+      "description": "Текстовая вёрстка",
+      "card": { "title": "label" },
+      "defaults": { "label": "Заголовок", "variant": "h3" },
+      "attributes": [
+        { "key": "label", "label": "Текст", "required": true, "placeholder": "Например, Паспортные данные" },
+        {
+          "key": "variant",
+          "label": "Стиль",
+          "section": "Тип",
+          "options": [
+            { "value": "h1", "label": "Заголовок 1" },
+            { "value": "h2", "label": "Заголовок 2" },
+            { "value": "h3", "label": "Заголовок 3" },
+            { "value": "h4", "label": "Заголовок 4" },
+            { "value": "body1", "label": "Основной текст" },
+            { "value": "body2", "label": "Основной текст, мелкий" },
+            { "value": "caption1", "label": "Подпись" }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "button",
+      "label": "Button",
+      "category": "Форма",
+      "description": "Кнопка действия",
+      "card": { "title": "label" },
+      "defaults": { "label": "Кнопка", "variant": "contained", "color": "secondary" },
+      "attributes": [
+        { "key": "label", "label": "Текст кнопки", "required": true, "placeholder": "Например, Отправить" },
+        {
+          "key": "variant",
+          "label": "Вид",
+          "section": "Тип",
+          "options": [
+            { "value": "contained", "label": "С заливкой" },
+            { "value": "text", "label": "Текстовая" }
+          ]
+        },
+        {
+          "key": "color",
+          "label": "Цвет",
+          "section": "Тип",
+          "options": [
+            { "value": "primary", "label": "Основной" },
+            { "value": "secondary", "label": "Вторичный" },
+            { "value": "default", "label": "По умолчанию" }
+          ]
+        },
+        { "key": "icon", "label": "Иконка" }
+      ]
+    },
+    {
+      "kind": "ac-configuration-item",
+      "label": "CI picker",
+      "category": "Форма",
+      "description": "Выбор конфигурационной единицы",
+      "card": { "title": "label" },
+      "defaults": { "label": "Элемент конфигурации" },
+      "attributes": [
+        { "key": "label", "label": "Название", "required": true, "placeholder": "Например, Сервис" },
+        {
+          "key": "ciTypes",
+          "label": "Типы КЕ",
+          "helperText": "Тип на строку: as, autSystem, bizservice, environmenttype, fp, infresource"
+        },
+        { "key": "emptyResult", "label": "Текст пустого результата" },
+        { "key": "helperText", "label": "Подсказка под полем" },
+        { "key": "required", "label": "Обязательное поле", "section": "Настройки" },
+        { "key": "multiple", "label": "Множественный выбор", "section": "Настройки" },
+        { "key": "disabled", "label": "Отключено", "section": "Настройки" },
+        { "key": "disableCloseOnSelect", "label": "Не закрывать при выборе", "section": "Настройки" }
+      ]
+    },
+    {
+      "kind": "ac-user-picker",
+      "label": "Search user",
+      "category": "Форма",
+      "description": "Поиск сотрудника",
+      "attributes": [
+        { "key": "filter", "label": "Фильтр поиска" },
+        { "key": "isReadonly", "label": "Только чтение", "section": "Настройки" }
+      ]
+    },
+    {
+      "kind": "ac-address-asun",
+      "label": "Address ASUN",
+      "category": "Форма",
+      "description": "Выбор адреса (этаж, кабинет…)",
+      "attributes": [
+        { "key": "showFloor", "label": "Этаж" },
+        { "key": "showRoom", "label": "Кабинет" },
+        { "key": "showArea", "label": "Зона" },
+        { "key": "showPlace", "label": "Рабочее место" },
+        { "key": "required", "label": "Обязательное поле", "section": "Настройки" }
+      ]
+    },
+    {
+      "kind": "address",
+      "label": "Address",
+      "category": "Форма",
+      "description": "Адрес (город, улица)",
+      "card": { "title": "label" },
+      "defaults": { "label": "Адрес" },
+      "attributes": [
+        { "key": "label", "label": "Название", "required": true, "placeholder": "Например, Адрес доставки" },
+        { "key": "city", "label": "Город" },
+        { "key": "showCurrentLocation", "label": "Текущее местоположение", "section": "Настройки" },
+        { "key": "showLastAddress", "label": "Последний адрес", "section": "Настройки" },
+        { "key": "required", "label": "Обязательное поле", "section": "Настройки" }
+      ]
+    },
+    {
+      "kind": "ac-autocomplete-login-sudir",
+      "label": "Login",
+      "category": "Форма",
+      "description": "Поле логина сотрудника",
+      "card": { "title": "label" },
+      "defaults": { "label": "Логин сотрудника" },
+      "attributes": [
+        { "key": "label", "label": "Название", "required": true, "placeholder": "Например, Логин заявителя" },
+        { "key": "required", "label": "Обязательное поле", "section": "Настройки" },
+        { "key": "visible", "label": "Видимое поле", "section": "Настройки" }
+      ]
+    }
+  ]
+}

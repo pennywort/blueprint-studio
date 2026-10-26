@@ -5,6 +5,7 @@ import type { CanvasNodeType } from './graph-flow-adapter';
 import type { DropAnchorPosition, ElementDragPayload } from './element-dnd';
 import type { StepAnchorPosition } from './step-dnd';
 import type { ViolationMarkers } from './violation-markers';
+import type { MeasuredElementRows } from './canvas-layout';
 
 // Состояние взаимодействия канваса — НЕ в data узлов (ревью A4/P3, R2):
 // выделение, цель протягиваемой связи и нарушения живут
@@ -22,6 +23,8 @@ export type CanvasInteractionState = {
   connectionTargets: ConnectableTargets | null;
   /** Нарушения инвариантов узлов и элементов (T-043). */
   violations: ViolationMarkers;
+  /** Цель связи под курсором — ключ сущности (highlightKey), подсветка R-PERF-6. */
+  connectHover: string | null;
 };
 
 export type CanvasInteractionStore = {
@@ -38,6 +41,7 @@ export const INITIAL_CANVAS_INTERACTION: CanvasInteractionState = {
   selectedStepId: null,
   connectionTargets: null,
   violations: NO_VIOLATIONS,
+  connectHover: null,
 };
 
 export function createCanvasInteractionStore(): CanvasInteractionStore {
@@ -77,6 +81,8 @@ export type CanvasActions = {
    * в своём уровне или на другой уровень (layerDepth; якорь — место в колонке).
    */
   moveStep: (formId: string, stepId: string, anchor: StepAnchorPosition | null, layerDepth?: number) => void;
+  /** Dnd шага на середину другого шага [owner 2026-10-15]: шаги меняются местами. */
+  swapSteps: (formId: string, stepId: string, otherStepId: string) => void;
   /**
    * Dnd карточек (N2): drop в списке узла или колонке шага. targetStepId —
    * шаг-цель у форм; null — общий список узла страницы. Якорь — позиция
@@ -90,6 +96,11 @@ export type CanvasActions = {
     anchor: DropAnchorPosition | null,
     layerDepth?: number,
   ) => void;
+  /**
+   * Замер строк элементов узла страницы (верх от узла и высота, без отступов
+   * rowOffset): якоря выравнивания блоков-целей связей ([owner 2026-10-16]).
+   */
+  reportElementRows: (rows: MeasuredElementRows) => void;
   /** Варианты меню «+» шага формы — все виды элементов (ADR-17). */
   elementKindOptions: ReadonlyArray<{ kind: CanvasElementKind; label: string }>;
 };

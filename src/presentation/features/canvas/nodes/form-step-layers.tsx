@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, type DragEvent, type ReactNode } from 'react';
-import { makeStyles } from '@blueprint-vendor/flamingo-core';
+import { makeStyles } from '@material-ui/core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { FORM_STEP_LAYOUT } from '../canvas-layout';
 import type { CanvasElementData } from '../graph-flow-adapter';
@@ -11,13 +11,18 @@ import {
   type LayerColumn,
   type LayerDropDecision,
 } from '../layers/layer-columns';
-import { FORM_STEP_LAYER_POLICY } from '../layers/layer-policy';
-import { LayerDropHighlight } from '../layers/layer-drop-highlight';
+import { useLayerPolicies } from '../layers/layer-policy';
 import { packLayerBands } from '../layers/layer-bands';
 import { ElementCard } from './element-card';
 import { OptionCard } from './option-card';
-import { useCanvasActions } from '../canvas-interaction';
-import { DropIndicator, useElementDropZone } from './use-element-drop-zone';
+import {
+  ColumnDropBar,
+  columnBarX,
+  DROP_BAR_INSET,
+  DropBar,
+  DropIndicator,
+  useElementDropZone,
+} from './use-element-drop-zone';
 
 const L = FORM_STEP_LAYOUT;
 /** Шаг сетки колонок шага: колонка + зазор. */
@@ -44,13 +49,16 @@ const useStyles = makeStyles<EditorTheme>(() => ({
     flexShrink: 0,
   },
   tree: {
+    position: 'relative', // якорь полосы «после» дерева Select'а
     display: 'flex',
     flexDirection: 'column',
-    gap: L.rowGap,
+    // Внутри дерева — Select и его варианты: плотный зазор [owner 2026-10-16].
+    gap: L.optionGap,
   },
   // Ячейка колонки: ширина фиксирована — колонки всех деревьев шага
   // выровнены по одной сетке (gridLayerColumns).
   cell: {
+    position: 'relative', // якорь полосы вставки (DropIndicator)
     width: L.elementWidth,
     flexShrink: 0,
   },
@@ -73,6 +81,8 @@ type DragState = {
   column: LayerColumn | null;
   decision: LayerDropDecision;
   anchor: DropAnchorPosition | null;
+  /** Ширина слоя без поля шага — правая граница для полосы переноса. */
+  layersWidth: number;
 };
 
 export type FormStepLayersProps = {
@@ -94,11 +104,11 @@ export type FormStepLayersProps = {
 // шага/формы — перенос в колонку-кандидат.
 export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps) {
   const classes = useStyles();
-  const actions = useCanvasActions();
   const layersRef = useRef<HTMLDivElement>(null);
+  const layerPolicy = useLayerPolicies().formStep;
   // Лес правил: корни — элементы без варианта-источника в этом шаге,
   // дети — по option-handle варианта (порядок — порядок элементов шага).
-  const { rows, children, maxDepth } = useMemo(() => {
+  const { rows, children, maxDepth, elementDepths } = useMemo(() => {
     const optionHandles = new Set(
       elements.flatMap((element) => element.complexLogic?.options.map((option) => option.handleId) ?? []),
     );
@@ -126,6 +136,7 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
       ),
       children: byHandle,
       maxDepth: Math.max(-1, ...elements.map((element) => element.layerDepth ?? 0)),
+      elementDepths: new Map(elements.map((element) => [element.id, element.layerDepth ?? 0])),
     };
   }, [elements]);
 
@@ -141,9 +152,15 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
       const rect = container.getBoundingClientRect();
       const scale = container.offsetWidth > 0 ? rect.width / container.offsetWidth : 1;
       const localX = (event.clientX - rect.left) / scale;
-      const column = nearestLayerColumn(gridLayerColumns(maxDepth, FORM_STEP_LAYER_POLICY), localX);
+      const column = nearestLayerColumn(gridLayerColumns(maxDepth, layerPolicy), localX);
       const own = elements.find((element) => element.id === dragged.elementId);
-      const decision = resolveLayerDrop(own ? (own.layerDepth ?? 0) : null, column, true);
+      const decision = resolveLayerDrop(
+        layerPolicy,
+        // Вид не важен: политика шага переносит любой элемент (ADR-17).
+        { id: dragged.elementId, kind: 'element', depth: own ? (own.layerDepth ?? 0) : null },
+        column,
+        elementDepths,
+      );
       let anchor = column
         ? anchorFromPoint(
             container,
@@ -154,9 +171,9 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
       if (anchor && anchor.elementId === dragged.elementId) {
         anchor = null; // якорь на самой карточке — позиция не меняется
       }
-      return { column, decision, anchor };
+      return { column, decision, anchor, layersWidth: container.offsetWidth };
     },
-    [elements, maxDepth],
+    [elementDepths, elements, maxDepth, layerPolicy],
   );
 
   const dropElement = useCallback(
@@ -181,14 +198,33 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
   });
 
   const anchor = drag?.anchor ?? null;
+  // Перенос в колонку без якоря-карточки (пустая колонка справа, зазор
+  // между карточками) — вертикальная полоса в зазоре слева от колонки;
+  // пустой шаг — горизонтальная полоса сверху. Подсветка колонки во всю
+  // ширину здесь не рисуется: выходила за границу шага [owner 2026-10-15].
+  const columnTarget = drag?.decision.kind === 'moveToLayer' && !anchor ? drag.column : null;
 
   const renderTree = (element: CanvasElementData): ReactNode => (
     <div key={element.id} className={classes.tree}>
       <div className={classes.cell} data-layer-depth={element.layerDepth ?? 0}>
-        <DropIndicator anchor={anchor} elementId={element.id} placement="before" />
+        <DropIndicator anchor={anchor} elementId={element.id} placement="before" gap={L.rowGap} />
         <ElementCard element={element} />
-        <DropIndicator anchor={anchor} elementId={element.id} placement="after" />
+        {element.complexLogic ? null : (
+          <DropIndicator anchor={anchor} elementId={element.id} placement="after" gap={L.rowGap} />
+        )}
       </div>
+      {/* «После» Select'а — после всего его дерева (варианты и зависимые):
+          туда элемент и встанет; полоса между Select'ом и его вариантами
+          обещала место, которого нет (N2). */}
+      {element.complexLogic ? (
+        <DropIndicator
+          anchor={anchor}
+          elementId={element.id}
+          placement="after"
+          gap={L.rowGap}
+          width={L.elementWidth}
+        />
+      ) : null}
       {/* Варианты Select'а — карточки под ним всегда [owner 2026-10-14]: из
           варианта тянется переход на шаг, а при «Сложной логике» — и правило. */}
       {element.complexLogic
@@ -197,7 +233,7 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
             return (
               <div key={option.handleId} className={classes.optionRow}>
                 <div className={classes.cell}>
-                  <OptionCard option={option} onSelect={() => actions?.selectElement(element.id)} />
+                  <OptionCard option={option} elementId={element.id} />
                 </div>
                 {dependents.length > 0 ? (
                   <div className={classes.subtrees}>{dependents.map(renderTree)}</div>
@@ -227,12 +263,28 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
           }}
         />
       ) : null}
-      {drag?.decision.kind === 'moveToLayer' && drag.column ? (
-        <LayerDropHighlight
-          left={drag.column.x}
-          width={drag.column.width}
-          style={{ borderRadius: 12, zIndex: 0 }}
-        />
+      {columnTarget ? (
+        maxDepth < 0 ? (
+          <DropBar
+            orientation="horizontal"
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: DROP_BAR_INSET,
+              width: L.elementWidth - 2 * DROP_BAR_INSET,
+            }}
+            testId="drop-zone-bar"
+          />
+        ) : (
+          // Справа от последней колонки — посередине пути до границы шага.
+          <ColumnDropBar
+            x={columnBarX(columnTarget, {
+              gap: L.columnGap,
+              edge: L.stepPadding,
+              right: (drag?.layersWidth ?? 0) + L.stepPadding,
+            })}
+          />
+        )
       ) : null}
       {rows.map((row) => (
         <div key={row[0]!.item.id} className={classes.row}>

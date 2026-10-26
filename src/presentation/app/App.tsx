@@ -5,6 +5,7 @@ import type { Cradle } from '@infrastructure/container';
 import { ProjectListPage } from '@presentation/pages/project-list/ProjectListPage';
 import { EditorPage } from '@presentation/pages/editor/EditorPage';
 import { PreviewPage } from '@presentation/pages/preview/PreviewPage';
+import { SettingsPage } from '@presentation/pages/settings/SettingsPage';
 
 // Контейнер доступен фичам через контекст; конкретные адаптеры infrastructure
 // напрямую не импортируются (конституция, раздел 3).
@@ -23,6 +24,7 @@ const router = createHashRouter([
   { path: '/', element: <ProjectListPage /> },
   { path: '/editor', element: <EditorPage /> },
   { path: '/preview', element: <PreviewPage /> },
+  { path: '/settings', element: <SettingsPage /> },
 ]);
 
 export function App({ container }: { container: AwilixContainer<Cradle> }) {

@@ -1,8 +1,11 @@
 import type { ServiceGraph } from './model/service-graph';
 import { computeGraphDepths } from './graph-depths';
-import { findElementInGraph, findOwnerPageId } from './element-containers';
+import { findElementInGraph } from './element-containers';
 import { walkSubScenarios } from './graph-walk';
 import { stepTransitionTargets } from './step-transitions';
+import { kindRules } from './element-kinds';
+import type { EditorRules } from './editor-rules';
+import { canConnect, connectionSourceRole } from './connection-matrix';
 
 // Правила «с чем можно соединиться» (повторная приёмка Epic 002, [owner
 // 2026-10-13]) — единый источник для подсветки допустимых целей во время
@@ -16,7 +19,10 @@ import { stepTransitionTargets } from './step-transitions';
 //   видимости и элемент, у которого уже есть правило (L-I7), — не цели.
 // — Переход между шагами [owner 2026-10-14]: источник — элемент шага формы
 //   или вариант его Select'а, цель — шаг следующих уровней той же формы
-//   (step-transitions, уровни — form-step-depths). Вариант — источник перехода и без «Сложной логики».
+//   (step-transitions, уровни — form-step-depths).
+// Какой источник до каких целей дотягивается (элемент / вариант / вариант с
+// логикой → страница / шаг / элемент, из каких блоков) — единая матрица
+// connection-matrix [owner 2026-10-16].
 
 export type ConnectionSource =
   { kind: 'navigation'; elementId: string } | { kind: 'logic'; elementId: string; optionId: string };
@@ -32,12 +38,16 @@ export type ConnectableTargets = {
 
 const NONE: ConnectableTargets = { pages: new Set(), elements: new Set(), steps: new Set() };
 
-function navigationTargets(graph: ServiceGraph, elementId: string): ConnectableTargets {
-  const sourcePageId = findOwnerPageId(graph, elementId);
-  if (sourcePageId === null) {
+function navigationTargets(graph: ServiceGraph, rules: EditorRules, elementId: string): ConnectableTargets {
+  const found = findElementInGraph(graph, elementId);
+  if (!found) {
     return NONE;
   }
-  const steps = stepTransitionTargets(graph, elementId);
+  const sourcePageId = found.container.pageId;
+  const steps = stepTransitionTargets(graph, rules, elementId);
+  if (!canConnect(rules, 'element', 'page', found.container.kind)) {
+    return { pages: new Set(), elements: new Set(), steps };
+  }
   const depths = computeGraphDepths(graph);
   const sourceDepth = depths.get(sourcePageId) ?? 0;
   const linked = new Set(
@@ -75,16 +85,26 @@ function wouldCreateCycle(graph: ServiceGraph, sourceId: string, targetId: strin
   return false;
 }
 
-function logicTargets(graph: ServiceGraph, elementId: string, optionId: string): ConnectableTargets {
-  // Логика — только внутри шага формы (L-I5/ADR-14): Select на странице
-  // источником правила не бывает; цель — любой элемент шага [owner 2026-10-13].
+function logicTargets(
+  graph: ServiceGraph,
+  rules: EditorRules,
+  elementId: string,
+  optionId: string,
+): ConnectableTargets {
+  // Логика — только внутри блока с этой возможностью (R-CFG-2: шаг формы,
+  // L-I5/ADR-14): Select на странице источником правила не бывает; цель —
+  // любой элемент того же блока [owner 2026-10-13]. Шаги-цели переходов
+  // проверяют свою возможность сами (step-transitions).
   const found = findElementInGraph(graph, elementId);
-  if (!found || found.container.kind !== 'formStep') {
+  if (!found) {
     return NONE;
   }
-  const steps = stepTransitionTargets(graph, elementId, optionId);
-  const source = found.element;
-  if (source.kind !== 'selectList' || !source.hasComplexLogic) {
+  // Шаги и элементы — если роль варианта до них дотягивается из этого блока
+  // (connection-matrix): с «Сложной логикой» вариант связывается только
+  // внутри шага [owner 2026-10-16].
+  const steps = stepTransitionTargets(graph, rules, elementId, optionId);
+  const role = connectionSourceRole(rules, found.element, optionId);
+  if (!canConnect(rules, role, 'element', found.container.kind)) {
     return { pages: new Set(), elements: new Set(), steps };
   }
   // У цели — не больше одного правила видимости (L-I7, временно [owner
@@ -92,7 +112,7 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
   const ruleTargets = new Set<string>(graph.logicRules.map((rule) => rule.targetElementId));
   const elements = new Set<string>();
   for (const element of found.container.elements) {
-    if (ruleTargets.has(element.id) || element.kind === 'comment') {
+    if (ruleTargets.has(element.id) || !kindRules(rules, element.kind).logicTarget) {
       continue;
     }
     const duplicate = graph.logicRules.some(
@@ -109,12 +129,17 @@ function logicTargets(graph: ServiceGraph, elementId: string, optionId: string):
   return { pages: new Set(), elements, steps };
 }
 
-export function connectableTargets(graph: ServiceGraph, source: ConnectionSource): ConnectableTargets {
+export function connectableTargets(
+  graph: ServiceGraph,
+  rules: EditorRules,
+  source: ConnectionSource,
+): ConnectableTargets {
   // Комментарий-элемент не источник и не цель связей [owner 2026-10-15].
-  if (findElementInGraph(graph, source.elementId)?.element.kind === 'comment') {
+  const element = findElementInGraph(graph, source.elementId)?.element;
+  if (element && !kindRules(rules, element.kind).connectable) {
     return NONE;
   }
   return source.kind === 'navigation'
-    ? navigationTargets(graph, source.elementId)
-    : logicTargets(graph, source.elementId, source.optionId);
+    ? navigationTargets(graph, rules, source.elementId)
+    : logicTargets(graph, rules, source.elementId, source.optionId);
 }

@@ -1,0 +1,190 @@
+/**
+ * Настройки генератора — только данные. Поведение скрипта меняется правкой этих таблиц,
+ * а не кода (одно правило — одно значение).
+ */
+
+import type { Category, JsonValue, PropSchema } from './format';
+
+/**
+ * Признак корня монорепозитория: корень ищется вверх от каталога генератора
+ * (работает и для папки generator/, и для собранного одного файла). Флаг --root — явный путь.
+ */
+export const ROOT_MARKER = 'packages/lib/tsconfig.json';
+
+/** Пути относительно корня монорепозитория. */
+export const PATHS = {
+  elementsDir: 'packages/lib/src/dom/elements',
+  elementsMap: 'packages/lib/src/dom/elements/ElementsMap.ts',
+  elementsMapVariable: 'ElementsMap',
+  constants: 'packages/constants/src/index.ts',
+  elementsTypesEnum: 'ElementsTypes',
+  /** В constants: карта «устаревший тип → актуальный» ({ [ElementsTypes.A]: ElementsTypes.B }). */
+  legacyTypesMap: 'LegacyElementsTypesMap',
+  /** В constants: устаревшие типы без замены ([ElementsTypes.A, …]). */
+  deprecatedTypesList: 'DeprecatedElementsTypes',
+  libPackage: 'packages/lib',
+  schemasPackage: 'packages/element-schemas',
+  /** Относительно schemasPackage. */
+  schemasDir: 'src/schemas',
+  sharedDir: 'src/shared',
+  manifest: 'src/index.json',
+} as const;
+
+/**
+ * Общая часть всех элементов: генерируется из кода при каждом прогоне в shared/<fileName>,
+ * схемы элементов подключают её через allOf + $ref. Файлы — подсказка, при промахе тип
+ * ищется по имени во всей программе.
+ */
+export const BASE = {
+  /** Тип общих props. */
+  propsType: 'BaseProps',
+  propsFile: 'packages/lib/src/dom/BaseElement/BaseProps.ts',
+  /** Интерфейс элемента: его свойства-функции on* — общие события. */
+  elementInterface: 'BaseElement',
+  elementFile: 'packages/lib/src/dom/BaseElement/BaseElement.ts',
+  eventNamePattern: /^on[A-Z]/,
+  fileName: 'base-element.schema.json',
+  title: 'BaseElement',
+} as const;
+
+/**
+ * Компоненты: ищутся по вызовам фабрики во всей программе lib — по символу (компилятор),
+ * а не по путям и именам файлов: файлы типов называются как угодно.
+ */
+export const COMPONENT = {
+  /** Фабрика компонентов: вызов `factory<P, C, S>(ElementsTypes.X, { ... })`. */
+  factory: 'ComponentFactoryImpl',
+  /** Метод отправки события в теле компонента: `$emit('имя', значение)`. */
+  emitMethod: '$emit',
+  /** Окончание имени переменной/функции-обёртки, отрезаемое в заголовке схемы. */
+  titleSuffix: /Component$/,
+  /** Каталог схем компонентов относительно schemasPackage. */
+  componentsDir: 'src/components',
+} as const;
+
+export const SCHEMA_ID_BASE = 'https://framework.internal';
+
+/** Устаревшие имена для CLI: --element TEXT → text-field. */
+export const CLI_NAME_ALIASES: Record<string, string> = {
+  TEXT: 'text-field',
+  VIEW: 'container',
+  SCROLL_VIEW: 'container',
+  LABEL: 'typography',
+  SUGGEST: 'autocomplete',
+  DATE_PICKER: 'date-field',
+  MENU_BUTTON: 'dropdown',
+  DIALOG: 'modal',
+};
+
+/** Категория элемента. Не попавшие в таблицу — 'basic'. */
+export const CATEGORY_BY_ELEMENT: Record<string, Category> = {
+  'pop-up': 'overlay',
+  modal: 'overlay',
+  dialog: 'overlay',
+  popover: 'overlay',
+  drawer: 'overlay',
+  tooltip: 'overlay',
+  container: 'layout',
+  view: 'layout',
+  grid: 'layout',
+  'scroll-view': 'layout',
+  'flex-container': 'layout',
+  'text-field': 'form',
+  select: 'form',
+  checkbox: 'form',
+  'radio-group': 'form',
+  switch: 'form',
+  'date-field': 'form',
+  'search-field': 'form',
+  autocomplete: 'form',
+  'mask-input': 'form',
+  'step-input': 'form',
+  range: 'form',
+  rating: 'form',
+  'color-card': 'form',
+  counter: 'form',
+};
+
+/**
+ * Служебные props верхнего уровня: в схему не попадают.
+ * Имена с ведущим `_` отсекаются всегда.
+ */
+export const EXCLUDED_PROPS: readonly string[] = [
+  'type',
+  'clientId',
+  'parentId',
+  'slotType',
+  'isComponentChild',
+];
+
+/**
+ * Enum'ы типов элементов. Вложенное поле `type` с таким типом — ссылка движка на узел,
+ * а не данные пропса: во вложенных объектах отбрасывается. Любой другой `type`
+ * (дискриминатор атома, вид action-элемента) остаётся в схеме.
+ */
+export const ELEMENT_TYPE_ENUMS: readonly string[] = ['ElementsTypes', 'InternalComponentTypes'];
+
+/**
+ * Типы вложенных элементов: значение такого типа (или его наследника) — дочерний элемент,
+ * в схеме { "x-kind": "element" }. Props шаблона и рантайм-узлы движка.
+ */
+export const ELEMENT_REF_TYPES: readonly string[] = ['BaseProps', 'BaseElement', 'BaseElementImpl'];
+
+/**
+ * Внешние типы (lib.d.ts и т.п.) с известным JSON-представлением.
+ * Остальные внешние типы получают x-ts-type и запись в отчёте.
+ */
+export const KNOWN_EXTERNAL_TYPES: Readonly<Record<string, PropSchema>> = {
+  Date: { type: 'string', format: 'date-time' },
+};
+
+/** Глобальные константы в defaultProps → значение (план 2.2; только конечные числа — JSON). */
+export const KNOWN_CONSTANTS: Readonly<Record<string, JsonValue>> = {
+  'Number.MAX_VALUE': Number.MAX_VALUE,
+  'Number.MIN_VALUE': Number.MIN_VALUE,
+  'Number.MAX_SAFE_INTEGER': Number.MAX_SAFE_INTEGER,
+  'Number.MIN_SAFE_INTEGER': Number.MIN_SAFE_INTEGER,
+};
+
+/** Базовый класс-контейнер: наследники (на любой глубине) — контейнеры. */
+export const CONTAINER_BASE_CLASSES: readonly string[] = ['ContainerImpl'];
+
+/** Геттеры класса, перечисляющие допустимые дочерние типы. */
+export const CHILDREN_GETTERS: readonly string[] = ['allowedTypes', 'childrenTypes'];
+
+/** Декораторы, помечающие публичные методы. */
+export const PUBLIC_METHOD_DECORATORS: readonly string[] = ['PublicApiMethod', 'PublicApiField'];
+
+/**
+ * Общие типы: выносятся в shared и подключаются через $ref.
+ * Сейчас только enum'ы. Кандидаты на добавление — в отчёте (sharedCandidates).
+ */
+export interface SharedEnumConfig {
+  /** Имя TS-типа (enum или alias), по которому тип узнаётся. */
+  typeName: string;
+  /** Файл, где объявлен enum, относительно корня монорепозитория. */
+  sourceFile: string;
+  enumName: string;
+  /** Имя файла в shared. */
+  fileName: string;
+  title: string;
+  /** Допускает ли общий тип null (тогда `T | null` не требует обёртки). */
+  nullable: boolean;
+}
+
+export const SHARED_ENUMS: readonly SharedEnumConfig[] = [
+  {
+    typeName: 'Icon',
+    sourceFile: 'packages/lib/src/dom/elements/PropertyConstants.ts',
+    enumName: 'Icon',
+    fileName: 'icon.schema.json',
+    title: 'Icon',
+    nullable: true,
+  },
+];
+
+/**
+ * Развёрнутый компилятором union литералов признаётся общим enum, если совпадает с ним
+ * или является подмножеством размером больше порога.
+ */
+export const SHARED_ENUM_SUBSET_THRESHOLD = 50;

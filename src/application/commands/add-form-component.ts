@@ -1,15 +1,13 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { CanvasElement } from '@domain/model/canvas-element';
 import type { ApplicationFormId, FormStepId } from '@domain/model/ids';
-import { validateGraph } from '@domain/invariants';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import type { Command } from './command';
-import { InvariantViolationError } from './errors';
 
 // Команда добавления элемента на шаг формы заявки; элемент шага — любой
 // элемент канваса [owner 2026-10-13], не только форм-компонент.
-// Инварианты проверяются на черновике до фиксации: при нарушении команда
-// бросает InvariantViolationError, produceWithPatches отменяется, и состояние
+// Инварианты проверяются на черновике до фиксации (CommandBus, R-ARC-2): при
+// нарушении — InvariantViolationError, produceWithPatches отменяется, и состояние
 // остаётся нетронутым (история undo/redo не засоряется).
 export class AddFormComponent implements Command {
   readonly name = 'AddFormComponent';
@@ -38,10 +36,5 @@ export class AddFormComponent implements Command {
     const depths = [...computeStepElementDepths(step, draft.logicRules).values()];
     const nextColumn = depths.length === 0 ? 0 : Math.max(...depths) + 1;
     step.elements.push({ ...this.component, layerDepth: this.component.layerDepth ?? nextColumn });
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

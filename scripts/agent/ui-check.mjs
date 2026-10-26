@@ -15,6 +15,8 @@
 //   --exists <css>         FAIL, если совпадений нет
 //   --absent <css>         FAIL, если совпадения есть
 //   --eval <js>            выполнить выражение в странице, напечатать результат (JSON)
+//   --upload <css>=<файл>  выбрать файл в <input type=file> (импорт проекта JSON:
+//                          --url http://localhost:3123/#/ --upload "[data-testid=project-import-input]=bug.json")
 //   --shot <файл>[@<css>]  скриншот (кадр по элементу, если указан css)
 //
 // По умолчанию url = http://localhost:3123/#/editor. Если dev-сервер не
@@ -143,7 +145,13 @@ try {
       } else if (step === 'eval') {
         // eslint-disable-next-line no-new-func
         const result = await page.evaluate((code) => new Function(`return (${code})`)(), value);
-        say(`eval ${value} = ${JSON.stringify(result)?.slice(0, 300)}`);
+        // Выражение не повторяем целиком — длинный скрипт засорял вывод.
+        const head = value.replace(/\s+/g, ' ').trim();
+        say(`eval ${head.length > 60 ? `${head.slice(0, 60)}…` : head} = ${JSON.stringify(result)?.slice(0, 300)}`);
+      } else if (step === 'upload') {
+        const split = value.lastIndexOf('='); // последний «=»: в css-селекторе он тоже бывает
+        await page.locator(value.slice(0, split)).first().setInputFiles(value.slice(split + 1), { timeout: 5000 });
+        say(`upload ${value} — ok`);
       } else if (step === 'shot') {
         const [file, selector] = value.split('@');
         mkdirSync(dirname(file), { recursive: true });

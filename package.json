@@ -17,22 +17,21 @@
     "state:summary": "node scripts/project-state.mjs summary",
     "state:section": "node scripts/project-state.mjs section",
     "state:log": "node scripts/project-state.mjs log",
+    "schemas:build": "esbuild docs/schemas/generator/cli.ts --bundle --platform=node --format=cjs --target=node18 --external:ts-morph --external:ajv --legal-comments=none --banner:js=\"// СОБРАНО из docs/schemas/generator (npm run schemas:build) — не править вручную\" --outfile=docs/schemas/generate-schema.js",
+    "schemas:import": "node scripts/schemas-import.mjs",
+    "schemas:check": "node scripts/schemas-import.mjs --check",
     "agents:sync": "node scripts/agent/sync-agents.mjs"
   },
   "dependencies": {
     "@material-ui/core": "4.12.4",
     "@material-ui/icons": "4.11.3",
-    "@blueprint-vendor/flamingo-animations": "file:vendor/flamingo/animations",
-    "@blueprint-vendor/flamingo-components": "file:vendor/flamingo/components",
-    "@blueprint-vendor/flamingo-core": "file:vendor/flamingo/core",
-    "@blueprint-vendor/flamingo-icons": "file:vendor/flamingo/icons",
-    "@blueprint-vendor/flamingo-pickers": "file:vendor/flamingo/pickers",
     "@xyflow/react": "12.12.0",
     "awilix": "13.0.5",
     "immer": "11.1.18",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-router-dom": "7.18.3",
+    "tinykeys": "4.0.1",
     "zod": "4.6.5"
   },
   "devDependencies": {

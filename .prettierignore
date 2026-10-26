@@ -1,0 +1,4 @@
+# Собирается npm run schemas:build
+docs/schemas/generate-schema.js
+# Копия схем фреймворка — npm run schemas:import
+src/infrastructure/element-schemas/framework/schemas-bundle.json

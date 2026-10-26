@@ -1,17 +1,13 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
-import type { SubScenario } from '@domain/model/scenario';
 import type { ScenarioId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
-import { validateGraph } from '@domain/invariants';
 import type { Command } from './command';
 import { preservePageDepths } from './depth-preservation';
-import { InvariantViolationError } from './errors';
-import { collectSubtreeElementIds, collectSubtreeScenarioIds } from './graph-lookup';
 
 // Команда удаления подсценария (Epic 002, T-035) с каскадом связей:
-// уходят и связи, направленные на удаляемые страницы, и связи, исходящие
-// из их элементов (источник связи — элемент страницы, D9). Вложенные
-// подсценарии (children) удаляются вместе с родителем.
+// уходят и связи, направленные на удаляемую страницу, и связи, исходящие
+// из её элементов (источник связи — элемент страницы, D9). Страницы, на
+// которые она вела, остаются (список плоский, R-SCH-7).
 export class RemoveScenario implements Command {
   readonly name = 'RemoveScenario';
 
@@ -20,46 +16,17 @@ export class RemoveScenario implements Command {
   apply(draft: ServiceGraph): void {
     // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
     const depthsBeforeRemoval = computeGraphDepths(draft);
-    const location = findContainingList(draft.subScenarios, this.scenarioId);
-    if (!location) {
+    const index = draft.subScenarios.findIndex((scenario) => scenario.id === this.scenarioId);
+    if (index < 0) {
       throw new Error(`Подсценарий не найден: ${this.scenarioId}`);
     }
 
-    const removed = location.list[location.index]!;
-    const scenarioIds = collectSubtreeScenarioIds(removed);
-    const elementIds = collectSubtreeElementIds(removed);
-
-    location.list.splice(location.index, 1);
+    const [removed] = draft.subScenarios.splice(index, 1);
+    const elementIds = new Set<string>(removed!.elements.map((element) => element.id));
     draft.links = draft.links.filter(
-      (link) => !scenarioIds.has(link.targetId) && !elementIds.has(link.sourceElementId),
+      (link) => link.targetId !== this.scenarioId && !elementIds.has(link.sourceElementId),
     );
 
     preservePageDepths(draft, depthsBeforeRemoval);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
-}
-
-// Подсценарий может лежать как на верхнем уровне, так и в children другого
-// подсценария — ищем массив-владелец рекурсивно.
-function findContainingList(
-  list: SubScenario[],
-  scenarioId: ScenarioId,
-): { list: SubScenario[]; index: number } | null {
-  const index = list.findIndex((scenario) => scenario.id === scenarioId);
-  if (index >= 0) {
-    return { list, index };
-  }
-  for (const scenario of list) {
-    if (scenario.children) {
-      const found = findContainingList(scenario.children, scenarioId);
-      if (found) {
-        return found;
-      }
-    }
-  }
-  return null;
 }

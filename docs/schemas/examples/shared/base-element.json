@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://framework.internal/schemas/base-element.schema.json",
+  "title": "BaseElement",
+  "description": "Общие свойства и модели всех UI-элементов, наследуемые от BaseElementImpl",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Уникальный идентификатор элемента"
+    },
+    "visible": {
+      "type": "boolean",
+      "description": "Видимость элемента",
+      "default": true
+    },
+    "cursor": {
+      "type": "string",
+      "enum": ["default", "pointer"],
+      "description": "Тип курсора",
+      "default": "default"
+    },
+    "gravity": {
+      "type": "string",
+      "enum": ["left", "right", "center"],
+      "description": "Выравнивание внутри родителя",
+      "default": "left"
+    },
+    "margin": {
+      "description": "Внешние отступы",
+      "oneOf": [
+        { "type": "number" },
+        {
+          "type": "array",
+          "items": { "type": "number" }
+        },
+        { "enum": ["none", "normal"] }
+      ],
+      "default": 0
+    },
+    "width": {
+      "description": "Ширина элемента",
+      "oneOf": [{ "type": "number" }, { "enum": ["match_parent", "wrap_content"] }],
+      "default": "match_parent"
+    },
+    "flex": {
+      "type": "string",
+      "description": "Flex-свойство"
+    },
+    "alignSelf": {
+      "type": "string",
+      "description": "Выравнивание по собственной оси"
+    },
+    "overflow": {
+      "type": "string",
+      "description": "Поведение при переполнении"
+    },
+    "minHeight": {
+      "description": "Минимальная высота",
+      "oneOf": [{ "type": "number" }, { "type": "string" }]
+    },
+    "maxHeight": {
+      "description": "Максимальная высота",
+      "oneOf": [{ "type": "number" }, { "type": "string" }]
+    }
+  },
+  "x-model-fields": {
+    "id": { "type": "string", "required": true },
+    "type": { "type": "string", "required": true },
+    "visible": { "type": "boolean", "required": true },
+    "clientId": { "type": "string", "required": false },
+    "cursor": { "type": "string", "required": true },
+    "gravity": { "type": "string", "required": true },
+    "width": { "type": "string|number", "required": true },
+    "margin": { "type": "string|number|array", "required": true },
+    "noWrap": { "type": "boolean", "required": true },
+    "parentId": { "type": "string|null", "required": false },
+    "slotType": { "type": "string|null", "required": false },
+    "isComponentChild": { "type": "boolean", "required": false },
+    "flex": { "type": "string", "required": true },
+    "alignSelf": { "type": "string", "required": true },
+    "overflow": { "type": "string", "required": true },
+    "minHeight": { "type": "string|number", "required": true },
+    "maxHeight": { "type": "string|number", "required": true }
+  }
+}

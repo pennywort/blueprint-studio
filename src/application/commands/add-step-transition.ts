@@ -1,10 +1,8 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { StepTransition } from '@domain/model/step-transition';
-import { validateGraph } from '@domain/invariants';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { stepTransitionSourceKey, validStepTransitions } from '@domain/step-transitions';
-import type { Command } from './command';
-import { InvariantViolationError } from './errors';
+import type { Command, CommandContext } from './command';
 import { placeStepTransitionTarget } from './step-placement';
 
 // Переход между шагами формы [owner 2026-10-14]: готовый переход приходит в
@@ -23,19 +21,14 @@ export class AddStepTransition implements Command {
 
   constructor(private readonly transition: StepTransition) {}
 
-  apply(draft: ServiceGraph): void {
+  apply(draft: ServiceGraph, { rules }: CommandContext): void {
     const depthsBefore = computeAllFormStepDepths(draft);
     const key = stepTransitionSourceKey(this.transition);
     draft.stepTransitions = draft.stepTransitions.filter(
       (existing) => stepTransitionSourceKey(existing) !== key,
     );
     draft.stepTransitions.push(this.transition);
-    placeStepTransitionTarget(draft, this.transition, depthsBefore);
-    draft.stepTransitions = validStepTransitions(draft);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
+    placeStepTransitionTarget(draft, rules, this.transition, depthsBefore);
+    draft.stepTransitions = validStepTransitions(draft, rules);
   }
 }

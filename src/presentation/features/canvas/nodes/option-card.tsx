@@ -1,18 +1,23 @@
+import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Card, Chip, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
+import { Card, Chip, Typography, makeStyles } from '@material-ui/core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { isActionTarget } from '../canvas-events';
-import { FORM_STEP_LAYOUT } from '../canvas-layout';
+import { useCanvasActions } from '../canvas-interaction';
+import { CANVAS_LAYOUT, FORM_STEP_LAYOUT } from '../canvas-layout';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
-    borderRadius: 12,
+    borderRadius: theme.editor.shape.card,
     borderColor: theme.editor.canvas.elementBorder,
     boxShadow: 'none',
     // Source-handle на правом краю карточки — не обрезать (N7/N11).
     position: 'relative',
     overflow: 'visible',
     transition: 'none',
+    // Отступ слева — вариант виден частью Select'а; один на странице и в шаге
+    // формы [owner 2026-10-16]. Правый край — вровень с Select'ом.
+    marginLeft: CANVAS_LAYOUT.optionIndent,
     padding: theme.spacing(1.5, 2),
     display: 'flex',
     flexDirection: 'column',
@@ -27,18 +32,22 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
 
 export type OptionCardProps = {
   option: { handleId: string; label: string; value: string; isDefault: boolean };
-  /** Нажатие выделяет Select-владелец (вариант — его часть, не отдельный элемент). */
-  onSelect?: () => void;
+  /** Select-владелец: нажатие выделяет его (вариант — часть Select'а, не отдельный элемент). */
+  elementId: string;
 };
 
-// Вариант Select'а в шаге формы — отдельная карточка под Select'ом
-// в той же колонке шага [owner 2026-10-13; макеты «layouting …»]: из неё
+// Вариант Select'а — отдельная карточка под Select'ом: в шаге формы — в той
+// же колонке шага [owner 2026-10-13; макеты «layouting …»], на странице с
+// логикой (R-CFG-2) — под карточкой в списке. Из неё
 // тянется правило видимости (при «Сложной логике»; цель встаёт напротив) или
 // переход на следующий шаг [owner 2026-10-14] — source-handle справа.
 // TEMPORARY: макет покажут заказчику — вид «оторванных» от Select'а вариантов
 // может измениться (PROJECT_STATE, ADR-16).
-export function OptionCard({ option, onSelect }: OptionCardProps) {
+// memo + действие из контекста (R-PERF-10): пропсы стабильны, вариант не
+// перерисовывается вместе с узлом.
+export const OptionCard = memo(function OptionCard({ option, elementId }: OptionCardProps) {
   const classes = useStyles();
+  const actions = useCanvasActions();
   return (
     <Card
       // nodrag: нажатие на варианте не начинает drag узла react-flow — иначе
@@ -47,18 +56,23 @@ export function OptionCard({ option, onSelect }: OptionCardProps) {
       className={`${classes.card} nodrag`}
       variant="outlined"
       data-testid={`option-card-${option.handleId}`}
+      // Метка для полотна: нажатие выделяет Select, а не узел/шаг [owner 2026-10-16].
+      data-option-card={option.handleId}
       onPointerDown={(event) => {
         if (!isActionTarget(event.target)) {
-          onSelect?.();
+          actions?.selectElement(elementId);
         }
       }}
       onClick={(event) => event.stopPropagation()}
     >
       <Typography variant="body2">{option.label}</Typography>
-      <div className={classes.chips}>
-        <Chip size="small" color="secondary" label={option.value} />
-        {option.isDefault ? <Chip size="small" label="Предвыбор" /> : null}
-      </div>
+      {/* value варианта — служебный id (генерируется панелью, на него ссылаются
+          правила L5 и переходы), на карточке не показываем [owner 2026-10-16]. */}
+      {option.isDefault ? (
+        <div className={classes.chips}>
+          <Chip size="small" label="Предвыбор" />
+        </div>
+      ) : null}
       {/* Выход ребра — на высоте якоря цели (logicHandleTop), не по центру карточки. */}
       <Handle
         type="source"
@@ -68,4 +82,4 @@ export function OptionCard({ option, onSelect }: OptionCardProps) {
       />
     </Card>
   );
-}
+});

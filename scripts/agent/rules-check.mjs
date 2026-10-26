@@ -31,8 +31,9 @@ for (const file of changed) {
 
 const RULES = [
   {
-    re: /['"]@material-ui\//,
-    msg: 'прямой импорт @material-ui/* (только @blueprint-vendor/*)',
+    re: /['"]@material-ui\/icons/,
+    msg: 'иконка мимо таблицы — только editorIcons из presentation/icons/editor-icons.ts',
+    skip: (file) => file === 'src/presentation/icons/editor-icons.ts',
   },
   {
     re: /(?<![\w&])#[0-9a-fA-F]{3,8}\b/,

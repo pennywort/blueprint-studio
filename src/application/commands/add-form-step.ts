@@ -1,10 +1,8 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { FormStep } from '@domain/model/scenario';
 import type { ApplicationFormId } from '@domain/model/ids';
-import { validateGraph } from '@domain/invariants';
 import { nextFormStepLayerDepth } from '@domain/form-step-depths';
 import type { Command } from './command';
-import { InvariantViolationError } from './errors';
 import { findFormById } from './graph-lookup';
 
 // Команда добавления шага формы заявки (Epic 002, T-035; D1 — шаги формы
@@ -35,10 +33,5 @@ export class AddFormStep implements Command {
     }
     const layerDepth = this.step.layerDepth ?? nextFormStepLayerDepth(form, draft.stepTransitions);
     form.steps.splice(at, 0, { ...this.step, layerDepth });
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

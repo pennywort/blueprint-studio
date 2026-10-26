@@ -1,4 +1,4 @@
-import { makeStyles } from '@blueprint-vendor/flamingo-core';
+import { makeStyles } from '@material-ui/core';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 // Стили внутренних частей react-flow, оформленные токенами темы (D6).
@@ -36,15 +36,8 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
       '& .react-flow__connectionline': {
         zIndex: 10,
       },
-      // Выделение узла (F7): чёрная рамка цвета стрелок — общее правило
-      // выделения всех сущностей проекта. Рамка внутри блока (inset-тень):
-      // размер не меняется ни на пиксель, рёбра входят в границу блока без
-      // пересечения с рамкой [owner 2026-10-14]. Тень elevation Card сохраняется.
-      // Выделен шаг формы (S10) — рамка только у шага, не у формы: одна
-      // рамка на одно выделение (F5) [owner 2026-10-14].
-      '& .react-flow__node.selected [data-testid^="canvas-node-"]:not(:has([data-step-selected]))': {
-        boxShadow: `${theme.shadows[1]}, inset 0 0 0 2px ${canvas.edge}`,
-      },
+      // Рамка выделения узла (F7, F5, S10) — единая подсветка highlight/
+      // (R-PERF-6): без селектора по data-testid и :has().
       // Рёбра «Сложной логики» рисуются в общем стиле навигации (решение
       // владельца по N1: отличие предложит дизайнер).
       // Handle (N7/N11, замечание владельца 2026-10-13): плоский круг 12px
@@ -107,32 +100,54 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
         backgroundColor: theme.palette.background.paper,
         transform: 'translate(-50%, -50%)',
       },
-      // Рамка цели — поверх рамки карточки, окружность по её центру.
-      '& .react-flow__handle.editor-target.editor-target-available:hover': {
-        outline: `2px solid ${canvas.edgeActive}`,
-        outlineOffset: -1,
+      // Рамка цели под курсором — единая подсветка highlight/ (вид
+      // connectHover, R-PERF-6): у выделенной цели рамка выделения
+      // заменяется рамкой цели по приоритету политики [owner 2026-10-15].
+      // Исходящие handles сущности-цели (у блока — и его элементов) — в цвет
+      // рамки цели, подсветка единообразна [owner 2026-10-13].
+      '& [data-highlight="connectHover"] .react-flow__handle.source': {
+        backgroundColor: canvas.edgeActive,
       },
-      // Курсор над целью во время протягивания: исходящие handles той же
-      // сущности (у блока — и его элементов) — в цвет рамки цели, подсветка
-      // единообразна [owner 2026-10-13].
-      '& .react-flow__handle.editor-target.editor-target-available:hover ~ .react-flow__handle.source, & .react-flow__handle.editor-target.editor-target-available:hover ~ * .react-flow__handle.source':
-        {
-          backgroundColor: canvas.edgeActive,
-        },
       // Идёт протягивание связи — курсор «прицел» на всём канвасе. !important:
       // курсоры react-flow (grab полотна, pointer узлов) той же специфичности
       // и иначе перебивают прицел, стоит курсору уйти с handle (5.1).
-      '&.editor-connecting, &.editor-connecting *': {
-        cursor: 'crosshair !important',
+      // Курсор наследуется: прицел ставится корню и только элементам со
+      // СВОИМ курсором (полотно, узлы, рёбра, nodrag-зоны шагов и карточек,
+      // кнопки и чипы). Правило «* !important» пересчитывало стили всех ~25 тыс.
+      // элементов стенда на старте и конце каждой связи (R-PERF-7).
+      // Специфичность (3 класса) выше курсоров react-flow и makeStyles.
+      '&.editor-connecting, &.editor-connecting :is(.react-flow__pane, .react-flow__node, .react-flow__edge, .nodrag, .MuiButtonBase-root, .MuiChip-root)':
+        {
+          cursor: 'crosshair',
+        },
+      // Инструмент «Рука» (editor-config canvas.panTool): блоки, связи и
+      // handles прозрачны для мыши — нажатие попадает в полотно, и react-flow
+      // двигает его (pan), а не выделяет/тащит сущность. Перечислены только
+      // элементы со СВОИМ pointer-events (без «*», R-PERF-7).
+      '&.editor-pan-mode :is(.react-flow__node, .react-flow__edge, .react-flow__handle, .react-flow__nodesselection-rect)':
+        {
+          pointerEvents: 'none',
+        },
+      '&.editor-pan-mode .react-flow__pane': {
+        cursor: 'grab',
+      },
+      '&.editor-pan-mode .react-flow__pane.dragging': {
+        cursor: 'grabbing',
       },
       // Рёбра поверх узлов (F4) не перехватывают drop курсора на блок.
       '&.editor-connecting .react-flow__edge': {
         pointerEvents: 'none',
       },
+      // Рамка группового выделения (Shift+drag): base.css даёт только
+      // геометрию, вид — токенами темы (R-PERF-9).
+      '& .react-flow__selection, & .react-flow__nodesselection-rect': {
+        backgroundColor: canvas.selectionBackground,
+        border: `1px dotted ${canvas.edgeActive}`,
+      },
       '& .react-flow__minimap': {
         backgroundColor: canvas.minimapBackground,
         border: `1px solid ${canvas.minimapBorder}`,
-        borderRadius: 12,
+        borderRadius: theme.editor.shape.card,
         overflow: 'hidden',
       },
       // Attribution скрывать нельзя (лицензия @xyflow/react) — только
@@ -144,13 +159,6 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
       '& .react-flow__attribution a': {
         color: canvas.controlsForeground,
       },
-      // Hover-подсветка целевого узла связи (макет «связь-…-переход-к-подсценарию»,
-      // D9): серый фон + рамка. Класс вешается на узел в T-032.
-      '& .react-flow__node.editor-drop-target .react-flow__node-default, & .react-flow__node.editor-drop-target':
-        {
-          backgroundColor: canvas.nodeHoverBackground,
-          borderColor: canvas.nodeHoverBorder,
-        },
     },
   };
 });

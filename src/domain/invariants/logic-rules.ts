@@ -1,41 +1,44 @@
 import type { ServiceGraph } from '../model/service-graph';
-import type { SelectList } from '../model/form-components';
+import { canBeLogicSource, variantLabel } from '../element-kinds';
+import { containerKey, walkElementContainers } from '../element-containers';
+import { supportsLogic } from '../connection-matrix';
+import type { EditorRules } from '../editor-rules';
 import type { CanvasElement } from '../model/canvas-element';
 import type { InvariantViolation } from './index';
 
 // Инварианты «Сложной логики» (T-037/T-063, дизайн-док §5): защита данных —
 // UI делает эти состояния недостижимыми (каскадные удаления), но инварианты
-// проверяют граф независимо. Чистая функция (graph) => violations, как
+// проверяют граф независимо. Чистая функция (graph, rules) => violations, как
 // остальные правила validateGraph.
 
 const RULE_ID = 'complex-logic';
 
-// Элемент шага формы с контекстом: шаг-владелец нужен правилу «внутри
-// одного шага» (L-I5), option'ы — правилу «существующее значение списка»
-// (L-I2). Элементы страниц сюда не попадают: правило на них — ссылка на
-// элемент вне шага, отклоняется как L-I3 [owner 2026-10-13: элемент шага —
-// любой элемент канваса, логика — по-прежнему только в шагах].
+// Элемент блока с «Сложной логикой» (R-CFG-2, сейчас — шаг формы) с
+// контекстом: ключ блока-владельца нужен правилу «внутри одного блока» (L-I5),
+// option'ы — правилу «существующее значение списка» (L-I2). Элементы блоков
+// без логики сюда не попадают: правило на них — ссылка на элемент вне блока
+// с логикой, отклоняется как L-I3 [owner 2026-10-13].
 type ComponentContext = {
-  formId: string;
-  stepId: string;
+  containerKey: string;
   component: CanvasElement;
 };
 
-function collectComponents(graph: ServiceGraph): Map<string, ComponentContext> {
+function collectComponents(graph: ServiceGraph, rules: EditorRules): Map<string, ComponentContext> {
   const components = new Map<string, ComponentContext>();
-  for (const form of graph.applicationForms) {
-    for (const step of form.steps) {
-      for (const component of step.elements) {
-        components.set(component.id, { formId: form.id, stepId: step.id, component });
-      }
+  for (const container of walkElementContainers(graph)) {
+    if (!supportsLogic(rules, container)) {
+      continue;
+    }
+    for (const component of container.elements) {
+      components.set(component.id, { containerKey: containerKey(container), component });
     }
   }
   return components;
 }
 
-export function checkLogicRules(graph: ServiceGraph): InvariantViolation[] {
+export function checkLogicRules(graph: ServiceGraph, rules: EditorRules): InvariantViolation[] {
   const violations: InvariantViolation[] = [];
-  const components = collectComponents(graph);
+  const components = collectComponents(graph, rules);
   const seen = new Set<string>();
   // Цели, у которых уже есть правило (L-I7).
   const ruleTargets = new Set<string>();
@@ -58,7 +61,7 @@ export function checkLogicRules(graph: ServiceGraph): InvariantViolation[] {
     }
 
     // L-I1: источник — Select с включённой «Сложной логикой».
-    if (source.component.kind !== 'selectList' || !source.component.hasComplexLogic) {
+    if (!canBeLogicSource(rules, source.component) || !source.component.hasComplexLogic) {
       violations.push({
         rule: RULE_ID,
         path,
@@ -67,10 +70,8 @@ export function checkLogicRules(graph: ServiceGraph): InvariantViolation[] {
     }
 
     // L-I2: condition.optionId существует среди option'ов источника.
-    if (rule.condition.kind === 'optionSelected' && source.component.kind === 'selectList') {
-      const optionExists = (source.component as SelectList).options.some(
-        (option) => option.value === rule.condition.optionId,
-      );
+    if (rule.condition.kind === 'optionSelected' && canBeLogicSource(rules, source.component)) {
+      const optionExists = variantLabel(rules, source.component, rule.condition.optionId) !== null;
       if (!optionExists) {
         violations.push({ rule: RULE_ID, path, message: 'Правило ссылается на удалённое значение списка' });
       }
@@ -83,9 +84,9 @@ export function checkLogicRules(graph: ServiceGraph): InvariantViolation[] {
     }
     seen.add(key);
 
-    // L-I5: источник и цель — в пределах одного шага формы (ADR-14,
-    // [owner 2026-10-13]; ранее — одной формы).
-    if (source.formId !== target.formId || source.stepId !== target.stepId) {
+    // L-I5: источник и цель — в пределах одного блока с логикой (ADR-14,
+    // [owner 2026-10-13]; сейчас — шаг формы, ранее — одна форма).
+    if (source.containerKey !== target.containerKey) {
       violations.push({
         rule: RULE_ID,
         path,

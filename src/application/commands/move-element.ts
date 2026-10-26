@@ -1,13 +1,11 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
-import type { ElementId, FormComponentId } from '@domain/model/ids';
+import type { ElementId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { computeFormElementDepths } from '@domain/step-element-depths';
-import { validateGraph } from '@domain/invariants';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
-import type { Command } from './command';
+import type { Command, CommandContext } from './command';
 import { preserveFormElementDepths, preservePageDepths, preserveFormStepDepths } from './depth-preservation';
-import { InvariantViolationError } from './errors';
 import { removeNonAdjacentLinks } from './layer-placement';
 import { resolveElementTarget, type CanvasElementTarget } from './add-element';
 import { findElementLocation } from './graph-lookup';
@@ -27,7 +25,7 @@ export type MoveElementTarget = CanvasElementTarget;
 
 export type DropAnchor = {
   /** Карточка-якорь в приёмнике: элемент встаёт до/после неё. */
-  elementId: ElementId | FormComponentId;
+  elementId: ElementId;
   placement: 'before' | 'after';
 };
 
@@ -35,7 +33,7 @@ export class MoveElement implements Command {
   readonly name = 'MoveElement';
 
   constructor(
-    private readonly elementId: ElementId | FormComponentId,
+    private readonly elementId: ElementId,
     private readonly target: MoveElementTarget,
     private readonly anchor?: DropAnchor,
     // Колонка внутри шага-приёмника [owner 2026-10-13] (только для formStep):
@@ -44,7 +42,7 @@ export class MoveElement implements Command {
     private readonly layerDepth?: number,
   ) {}
 
-  apply(draft: ServiceGraph): void {
+  apply(draft: ServiceGraph, { rules }: CommandContext): void {
     // Уровни шагов до мутации: шаг, потерявший входящий переход, остаётся на месте (ADR-15).
     const stepDepthsBefore = computeAllFormStepDepths(draft);
     // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
@@ -110,11 +108,6 @@ export class MoveElement implements Command {
     // Каскад переходов между шагами [owner 2026-10-14]: переходы, ставшие
     // недопустимыми (элемент перенесён в другой шаг/блок), уходят вместе с причиной.
     preserveFormStepDepths(draft, stepDepthsBefore);
-    draft.stepTransitions = validStepTransitions(draft);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
+    draft.stepTransitions = validStepTransitions(draft, rules);
   }
 }

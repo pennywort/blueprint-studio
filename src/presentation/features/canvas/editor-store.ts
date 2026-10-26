@@ -5,6 +5,7 @@ import type { Command } from '@application/commands/command';
 import { InvariantViolationError } from '@application/commands/errors';
 import { useContainer } from '@presentation/app/App';
 import { useEditorNotifications } from '@presentation/features/notifications/editor-notifications';
+import { downloadTextFile, projectFileName } from '@presentation/features/projects/project-file';
 
 // Хранилище графа редактора (ревью A3, R3): граф + CommandBus + undo/redo +
 // загрузка/сохранение. TEMPORARY (до effector — запланирован, но не
@@ -17,12 +18,18 @@ export function useEditorStore() {
   const notifications = useEditorNotifications();
   const commandBus = container.cradle.commandBus;
   const graphRepository = container.cradle.graphRepository;
+  const graphFileCodec = container.cradle.graphFileCodec;
 
   // Проект выбирается query-параметром роута (/editor?project=stress&levels=…).
   const [searchParams] = useSearchParams();
-  const [graph, setGraph] = useState<ServiceGraph>(() =>
-    container.cradle.graphSeed(searchParams.get('project'), searchParams.toString()),
-  );
+  // История принадлежит одному графу (R-ARC-1, ADR-05): CommandBus — singleton
+  // DI и переживает уход со страницы, поэтому при открытии редактора она
+  // сбрасывается всегда — даже если сохранённой карты нет и load() вернёт
+  // null. Сброс идемпотентен — повторный вызов инициализатора безопасен.
+  const [graph, setGraph] = useState<ServiceGraph>(() => {
+    commandBus.reset();
+    return container.cradle.graphSeed(searchParams.get('project'), searchParams.toString());
+  });
   // Актуальный граф в ref: колбэки react-flow не должны зависеть от замыканий
   // на устаревший state, а мутации идут только через CommandBus.
   const graphRef = useRef(graph);
@@ -65,6 +72,13 @@ export function useEditorStore() {
         ),
       );
   }, [graphRepository, notifications]);
+
+  // «Экспорт JSON» [owner 2026-10-15]: текущий граф (с несохранёнными
+  // правками) — в файл; по нему состояние карты воспроизводится импортом.
+  const exportJson = useCallback(() => {
+    const current = graphRef.current;
+    downloadTextFile(projectFileName(current.title), graphFileCodec.serialize(current));
+  }, [graphFileCodec]);
 
   const runCommand = useCallback(
     (command: Command) => {
@@ -112,6 +126,7 @@ export function useEditorStore() {
     undo,
     redo,
     save,
+    exportJson,
     canUndo: commandBus.canUndo(),
     canRedo: commandBus.canRedo(),
   };

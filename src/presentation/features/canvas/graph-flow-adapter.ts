@@ -1,19 +1,25 @@
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
-import type { ListItem, WidgetCard } from '@domain/model/scenario';
-import type { FormComponent, FormComponentKind } from '@domain/model/form-components';
-import {
-  DEFAULT_COMMENT_AUDIENCE,
-  type CanvasElement,
-  type CanvasElementKind,
-} from '@domain/model/canvas-element';
+import type { EditorRules } from '@domain/editor-rules';
+import { DEFAULT_COMMENT_AUDIENCE, type CanvasElement } from '@domain/model/canvas-element';
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
 import { toElementId, toPageEntityId, type ElementId, type PageEntityId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
 import { walkSubScenarios } from '@domain/graph-walk';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
-import { evaluateVisibility } from '@domain/logic-visibility';
+import { canBeLogicSource, elementVariants, isCommentElement, kindRules } from '@domain/element-kinds';
+import { containerCapabilities, type ContainerCapabilities } from '@domain/connection-matrix';
+import type { ElementCatalog } from '@presentation/features/element-catalog/element-catalog';
+import {
+  NODE_KIND_LABELS,
+  NODE_SUBTITLES,
+  formStepLabel,
+  navigationLevelLabel,
+} from '@presentation/labels/editor-labels';
+import { EDITOR_EDGE_TYPE } from './canvas-edges';
+import { buildAnchorForest, type AnchorLink } from './layers/anchored-rows';
+import type { CanvasLayout } from './canvas-layout';
 
 // Адаптер graph ↔ flow (Epic 002, T-030) — граница domain ↔ react-flow
 // (архитектурный принцип 4 декомпозиции): домен не знает о react-flow,
@@ -36,6 +42,20 @@ export const LOGIC_ANCHOR_HANDLE_PREFIX = 'logic-anchor:';
 
 export const logicSourceHandleId = (elementId: string, optionId: string): string =>
   `${LOGIC_SOURCE_HANDLE_PREFIX}${elementId}:${optionId}`;
+
+// Правила «Сложной логики» как связи «якорь-вариант → цель» для раскладки
+// «цель напротив варианта» (layers/anchored-rows, ADR-16).
+export const logicRulesToAnchorLinks = (logicRules: ServiceGraph['logicRules']): AnchorLink[] =>
+  logicRules.flatMap((rule) =>
+    rule.condition.kind === 'optionSelected'
+      ? [
+          {
+            anchorId: logicSourceHandleId(rule.sourceElementId, rule.condition.optionId),
+            targetId: rule.targetElementId,
+          },
+        ]
+      : [],
+  );
 
 export const logicTargetHandleId = (elementId: string): string => `${LOGIC_TARGET_HANDLE_PREFIX}${elementId}`;
 
@@ -104,18 +124,17 @@ export type CanvasElementData = {
   /** На элемент есть входящие правила видимости — индикатор зависимости (L-Q1). */
   hasIncomingLogic?: boolean;
   /**
-   * Элемент скрыт в предпросмотре по правилам видимости при пустом состоянии
-   * формы (evaluateVisibility, T-062): цель с правилами скрыта по умолчанию
-   * (L3). Бейдж на карточке — демонстрация семантики до появления /preview.
-   */
-  hiddenByLogic?: boolean;
-  /**
    * Карточка может быть целью правил «Сложной логики» — target-handle на
    * левом краю. Только элементы шагов форм (источник — Select того же шага,
    * L-I5), любого вида [owner 2026-10-13]; у элементов страниц handle не
    * рисуется — соединить его доменно невозможно, лишняя точка путает (N5).
    */
   logicTarget: boolean;
+  /**
+   * Отступ над карточкой элемента страницы: блоки-цели его связей стоят
+   * напротив, и строка растёт до их стопки (computeLayout, [owner 2026-10-16]).
+   */
+  rowOffset?: number;
   /**
    * Комментарий-часть элемента (поле `comment`, US-05): показывается
    * голубым блоком под карточкой с бейджем адресата [owner 2026-10-15].
@@ -176,159 +195,89 @@ export type FlowGraph = {
   edges: CanvasEdge[];
 };
 
-// У Главной нет собственного заголовка в доменной модели — имя фиксировано
-// макетами редактора.
-const HOME_NODE_TITLE = 'Главная';
-const HOME_NODE_SUBTITLE = 'Стартовая страница сервиса';
-const FORM_NODE_SUBTITLE = 'Поля для заполнения пользователем';
-
-// Подписи чипов типов элементов (макеты: «List item», «Text field», «FAQ»…).
-// Манифест схем хранит только machine-kind; человекочитаемые названия
-// появятся, когда их начнёт отдавать провайдер схем (T-034+).
-// Экспортируется: те же подписи нужны меню добавления элементов (T-034).
-export const FORM_COMPONENT_KIND_LABELS: Record<FormComponentKind, string> = {
-  textField: 'Text field',
-  infoBlock: 'Info block',
-  datePeriod: 'Date period',
-  attachment: 'Attachment',
-  checkbox: 'Checkbox',
-  configurationItemPicker: 'CI picker',
-  employeeSearch: 'Search user',
-  selectList: 'Select list',
-  typography: 'Typography',
-  button: 'Button',
-  addressPicker: 'Address',
-  employeeLoginField: 'Login',
-};
-
-// Подписи всех видов элементов — меню добавления: любой элемент в любой
-// блок [owner 2026-10-13, ADR-17].
-export const ELEMENT_KIND_LABELS: Record<CanvasElementKind, string> = {
-  listItem: 'List item',
-  widgetCard: 'Widget card',
-  comment: 'Комментарий',
-  ...FORM_COMPONENT_KIND_LABELS,
-};
-
-// Порядковые номера уровней навигации для подписи подсценария (макеты:
-// «Первый уровень навигации», «Второй уровень навигации»).
-const NAVIGATION_LEVEL_ORDINALS = ['Первый', 'Второй', 'Третий', 'Четвёртый', 'Пятый'];
-
-function navigationLevelLabel(level: number): string {
-  const ordinal = NAVIGATION_LEVEL_ORDINALS[level - 1];
-  return ordinal ? `${ordinal} уровень навигации` : `Уровень навигации ${level}`;
-}
-
-// Подпись шага формы без своего названия — единый источник [owner
-// 2026-10-14]: номер — номер колонки (уровня) шага в форме, у шагов одного
-// уровня (ветвление) номер общий. Текст сменится при переходе к настройке.
-export function formStepLabel(level: number): string {
-  return `Шаг ${level}`;
-}
-
-// Контекст маппинга элементов: связи и правила графа; inStep — элемент
-// лежит в шаге формы (логика возможна только там, L-I5/ADR-14).
+// Контекст маппинга элементов: связи и правила графа, описания элементов.
 type ElementMapContext = {
   logicTargets: ReadonlySet<string>;
-  logicHidden: ReadonlySet<string>;
+  catalog: ElementCatalog;
+  /** Правила редактора (настройки, R-ADM): что умеет вид и блок. */
+  rules: EditorRules;
 };
 
-// Любой элемент — в любом блоке [owner 2026-10-13]: вид карточки задаёт
-// kind элемента, а возможности «Сложной логики» — блок (только шаг формы).
+// Любой элемент — в любом блоке [owner 2026-10-13]: текст карточки задаёт
+// описание элемента (card политики редактора, этап 3 docs/schemas/PLAN.md),
+// логику и переходы — возможности блока (R-CFG-2, производные матрицы связей
+// connection-matrix; сейчас обе — только у шага формы).
 function elementToElementData(
   element: CanvasElement,
   context: ElementMapContext,
-  inStep: boolean,
+  capabilities: ContainerCapabilities,
 ): CanvasElementData {
-  if (element.kind === 'comment') {
+  const { catalog, rules } = context;
+  if (isCommentElement(rules, element)) {
     // Комментарий-элемент — вне связей и «Сложной логики» в любом блоке.
     return {
       id: element.id,
-      title: element.text,
-      kindLabel: ELEMENT_KIND_LABELS.comment,
-      commentAudience: element.audience,
+      title: catalog.title(element),
+      kindLabel: catalog.kindLabel(element.kind),
+      commentAudience: catalog.badge(element) ?? DEFAULT_COMMENT_AUDIENCE,
       logicTarget: false,
     };
   }
-  const data =
-    element.kind === 'listItem' || element.kind === 'widgetCard'
-      ? listItemToElementData(element)
-      : formComponentToElementData(element, context.logicTargets, context.logicHidden);
-  if (element.comment) {
-    data.note = { text: element.comment, audience: DEFAULT_COMMENT_AUDIENCE };
-  }
-  if (inStep) {
-    data.logicTarget = true;
-    data.hasIncomingLogic = context.logicTargets.has(element.id);
-    data.hiddenByLogic = context.logicHidden.has(element.id);
-    return data;
-  }
-  // На странице правил нет: ни цели, ни переключателя режима у Select'а.
-  data.logicTarget = false;
-  delete data.complexLogic;
-  delete data.hasIncomingLogic;
-  delete data.hiddenByLogic;
-  return data;
-}
-
-function listItemToElementData(item: ListItem | WidgetCard): CanvasElementData {
-  const element: CanvasElementData = {
-    id: item.id,
-    title: item.title,
-    kindLabel: item.kind === 'widgetCard' ? 'Widget card' : 'List item',
+  const data: CanvasElementData = {
+    id: element.id,
+    title: catalog.title(element),
+    kindLabel: catalog.kindLabel(element.kind),
     logicTarget: false,
   };
-  if (item.secondaryText) {
-    element.secondaryText = item.secondaryText;
+  const subtitle = catalog.subtitle(element);
+  if (subtitle) {
+    data.secondaryText = subtitle;
   }
-  return element;
-}
-
-function formComponentToElementData(
-  component: FormComponent,
-  logicTargets: ReadonlySet<string>,
-  logicHidden: ReadonlySet<string>,
-): CanvasElementData {
-  const element: CanvasElementData = {
-    id: component.id,
-    title: 'label' in component ? component.label : component.kind,
-    kindLabel: FORM_COMPONENT_KIND_LABELS[component.kind],
-    hasIncomingLogic: logicTargets.has(component.id),
-    hiddenByLogic: logicHidden.has(component.id),
-    logicTarget: true,
-  };
-  if (component.kind === 'selectList') {
-    // Select — потенциальный источник «Сложной логики» (L5) и, вариантами,
-    // переходов между шагами [owner 2026-10-14]: option-handle'ы есть всегда,
-    // правило видимости из них — только при включённом режиме (L4).
-    element.complexLogic = {
-      enabled: component.hasComplexLogic === true,
-      options: component.options.map((option) => ({
-        handleId: logicSourceHandleId(component.id, option.value),
-        label: option.label,
-        value: option.value,
-        isDefault: option.isDefault === true,
+  if (canBeLogicSource(rules, element)) {
+    // Элемент выбора — потенциальный источник «Сложной логики» (L5) и,
+    // вариантами, переходов между шагами [owner 2026-10-14]: option-handle'ы
+    // есть всегда, правило видимости из них — только при включённом режиме (L4).
+    data.complexLogic = {
+      enabled: element.hasComplexLogic === true,
+      options: elementVariants(rules, element).map((variant) => ({
+        handleId: logicSourceHandleId(element.id, variant.id),
+        label: variant.label,
+        value: variant.id,
+        isDefault: variant.isDefault,
       })),
     };
   }
-  if ('placeholder' in component && component.placeholder) {
-    element.secondaryText = component.placeholder;
+  if (element.comment) {
+    data.note = { text: element.comment, audience: DEFAULT_COMMENT_AUDIENCE };
   }
-  return element;
+  if (capabilities.logic) {
+    data.logicTarget = kindRules(rules, element.kind).logicTarget;
+    data.hasIncomingLogic = context.logicTargets.has(element.id);
+    return data;
+  }
+  // В блоке без логики правил нет: ни цели, ни отметок видимости.
+  data.logicTarget = false;
+  delete data.hasIncomingLogic;
+  if (!capabilities.stepTransitions) {
+    // Варианты Select'а — источники и правил, и переходов: без обеих
+    // возможностей у него нет ни option-handle'ов, ни переключателя режима.
+    delete data.complexLogic;
+  }
+  return data;
 }
 
 // Прямой маппинг: ServiceGraph → узлы и рёбра react-flow.
 //
-// Узлы: Главная (необязательна, D8) + подсценарии (включая вложенные
-// children — вложенность не ограничена, БТ 7) + формы заявок (D12).
+// Узлы: Главная (необязательна, D8) + подсценарии + формы заявок (D12).
 // Рёбра: из links; source — узел, владеющий элементом-источником, а сам
 // элемент указывается sourceHandle (D9: handle на правом краю карточки
 // элемента); target — узел страницы-цели.
 //
 // Координаты не персистентны (D2) и здесь НЕ вычисляются: позиции даёт
-// computeLayout (T-036) и передаёт параметром positions; без него узлы
-// встают в (0, 0). Глубины для подписей уровня и drag-группировки
-// вычисляются здесь же (computeGraphDepths — чистая доменная функция).
+// computeLayout (T-036) и передаёт параметром layout (позиции узлов и
+// отступы строк элементов); без него узлы встают в (0, 0). Глубины для
+// подписей уровня и drag-группировки вычисляются здесь же
+// (computeGraphDepths — чистая доменная функция).
 //
 // previous — результат прошлого вызова (ревью P1, R2): неизменённые узлы,
 // их data, карточки элементов и рёбра сохраняют идентичность объектов, а
@@ -336,38 +285,40 @@ function formComponentToElementData(
 // перерисовывают только то, что действительно изменилось.
 export function graphToFlow(
   graph: ServiceGraph,
-  positions?: Readonly<Record<string, XYPosition>>,
+  rules: EditorRules,
+  catalog: ElementCatalog,
+  layout?: CanvasLayout,
   previous?: FlowGraph,
 ): FlowGraph {
-  const next = buildFlow(graph, positions);
+  const next = buildFlow(graph, rules, catalog, layout);
   return previous ? shareFlow(next, previous) : next;
 }
 
-function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPosition>>): FlowGraph {
-  const positionOf = (id: string): XYPosition => positions?.[id] ?? { x: 0, y: 0 };
+function buildFlow(
+  graph: ServiceGraph,
+  rules: EditorRules,
+  catalog: ElementCatalog,
+  layout?: CanvasLayout,
+): FlowGraph {
+  const positionOf = (id: string): XYPosition => layout?.positions[id] ?? { x: 0, y: 0 };
+  const pageCapabilities = containerCapabilities(rules, 'page');
+  // Карточка элемента страницы с отступом строки (цель напротив якоря).
+  const pageElementData = (element: CanvasElement, context: ElementMapContext): CanvasElementData => {
+    const data = elementToElementData(element, context, pageCapabilities);
+    const rowOffset = layout?.rowOffsets[element.id];
+    return rowOffset ? { ...data, rowOffset } : data;
+  };
   const depths = computeGraphDepths(graph);
   // Цели правил видимости — индикатор зависимости на карточке (T-037, L-Q1).
   const logicTargets = new Set<string>(graph.logicRules.map((rule) => rule.targetElementId));
-  // Скрытые по умолчанию цели (L3): оценка при пустом состоянии формы —
-  // демонстрация семантики видимости до появления /preview (T-062).
-  const visibleTargets = evaluateVisibility(graph.logicRules, new Map());
-  const logicHidden = new Set<string>(
-    [...logicTargets].filter((elementId) => !visibleTargets.has(toElementId(elementId))),
-  );
+  // Бейдж «Скрыт в предпросмотре» (T-062) убран [owner 2026-10-22] — нужен ли
+  // он, решат дизайнеры и заказчик (docs/открытые-вопросы.md, ОВ-1).
 
   // Цель правила → option-handle варианта-источника (L-I7: источник один;
-  // при битых данных берётся первое правило).
-  const logicParents = new Map<string, string>();
-  for (const rule of graph.logicRules) {
-    if (rule.condition.kind === 'optionSelected' && !logicParents.has(rule.targetElementId)) {
-      logicParents.set(
-        rule.targetElementId,
-        logicSourceHandleId(rule.sourceElementId, rule.condition.optionId),
-      );
-    }
-  }
+  // при битых данных берётся первое правило) — общий лес якорей.
+  const logicParents = buildAnchorForest(logicRulesToAnchorLinks(graph.logicRules)).parentOf;
 
-  const elementContext: ElementMapContext = { logicTargets, logicHidden };
+  const elementContext: ElementMapContext = { logicTargets, catalog, rules };
 
   const nodes: CanvasNode[] = [];
   // Владелец элемента → id узла: нужен, чтобы ребро вышло из узла страницы,
@@ -381,11 +332,11 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
       type: 'home',
       position: positionOf(homePage.id),
       data: {
-        title: HOME_NODE_TITLE,
+        title: NODE_KIND_LABELS.home,
         orderIndex: homePage.orderIndex,
         depth: depths.get(homePage.id) ?? 0,
-        subtitle: HOME_NODE_SUBTITLE,
-        elements: homePage.elements.map((element) => elementToElementData(element, elementContext, false)),
+        subtitle: NODE_SUBTITLES.home,
+        elements: homePage.elements.map((element) => pageElementData(element, elementContext)),
         steps: [],
         formKindLabel: null,
       },
@@ -410,7 +361,7 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
         orderIndex: scenario.orderIndex,
         depth,
         subtitle: navigationLevelLabel(depth + levelOffset || 1),
-        elements: scenario.elements.map((element) => elementToElementData(element, elementContext, false)),
+        elements: scenario.elements.map((element) => pageElementData(element, elementContext)),
         steps: [],
         formKindLabel: null,
       },
@@ -421,41 +372,29 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
   }
 
   for (const form of graph.applicationForms) {
-    // Уровни шагов формы; номер в подписи — номер занятой колонки (пустые
-    // уровни после удаления шага не дают пропусков в нумерации).
-    const formStepDepths = computeFormStepDepths(form, graph.stepTransitions);
-    const stepLevels = [...new Set(formStepDepths.values())].sort((left, right) => left - right);
-    nodes.push({
-      id: form.id,
-      type: 'form',
-      position: positionOf(form.id),
-      data: {
-        title: form.title,
-        orderIndex: form.orderIndex,
-        depth: depths.get(form.id) ?? 0,
-        subtitle: FORM_NODE_SUBTITLE,
-        elements: [],
-        steps: form.steps.map((step) => {
-          const depth = formStepDepths.get(step.id) ?? 0;
-          // Колонки элементов шага и варианты-источники для раскладки
-          // «цель напротив варианта» [owner 2026-10-13].
-          const stepDepths = computeStepElementDepths(step, graph.logicRules);
-          return {
-            id: step.id,
-            title: step.title ?? formStepLabel(stepLevels.indexOf(depth) + 1),
-            depth,
-            elements: step.elements.map((component) => ({
-              ...elementToElementData(component, elementContext, true),
-              layerDepth: stepDepths.get(component.id) ?? 0,
-              ...(logicParents.has(component.id)
-                ? { logicParentHandleId: logicParents.get(component.id)! }
-                : null),
-            })),
-          };
-        }),
-        formKindLabel: form.steps.length > 1 ? 'Степперная' : 'Одностраничная',
-      },
+    const depth = depths.get(form.id) ?? 0;
+    // Данные формы зависят только от неё самой, правил логики, переходов,
+    // каталога, правил редактора и глубины (R-PERF-5): immer сохраняет объекты
+    // неизменённых частей графа, поэтому неизменённая форма берёт data из кэша.
+    const cached = formDataCache.get(form);
+    const data =
+      cached &&
+      cached.logicRules === graph.logicRules &&
+      cached.stepTransitions === graph.stepTransitions &&
+      cached.catalog === catalog &&
+      cached.rules === rules &&
+      cached.depth === depth
+        ? cached.data
+        : formNodeData(form, depth, graph, elementContext, logicParents);
+    formDataCache.set(form, {
+      logicRules: graph.logicRules,
+      stepTransitions: graph.stepTransitions,
+      catalog,
+      rules,
+      depth,
+      data,
     });
+    nodes.push({ id: form.id, type: 'form', position: positionOf(form.id), data });
     for (const step of form.steps) {
       for (const component of step.elements) {
         elementOwnerNodeId.set(component.id, form.id);
@@ -479,8 +418,8 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
       sourceHandle: link.sourceElementId,
       target: link.targetId,
       // Ортогональные рёбра с закруглёнными углами (замечание владельца) —
-      // штатный тип react-flow smoothstep.
-      type: 'smoothstep',
+      // ребро редактора (canvas-edges, путь smoothstep).
+      type: EDITOR_EDGE_TYPE,
       markerEnd: EDGE_ARROW_MARKER_ID,
     });
   }
@@ -508,7 +447,7 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
       sourceHandle: logicSourceHandleId(rule.sourceElementId, rule.condition.optionId),
       target: ruleTargetNodeId,
       targetHandle: logicAnchorHandleId(rule.targetElementId),
-      type: 'smoothstep',
+      type: EDITOR_EDGE_TYPE,
       markerEnd: EDGE_ARROW_MARKER_ID,
       reconnectable: false,
       data: { kind: 'logic' },
@@ -540,7 +479,7 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
           : transition.sourceElementId,
       target: targetNodeId,
       targetHandle: stepTargetHandleId(transition.targetStepId),
-      type: 'smoothstep',
+      type: EDITOR_EDGE_TYPE,
       markerEnd: EDGE_ARROW_MARKER_ID,
       reconnectable: false,
       data: { kind: 'stepTransition' },
@@ -548,6 +487,66 @@ function buildFlow(graph: ServiceGraph, positions?: Readonly<Record<string, XYPo
   }
 
   return { nodes, edges };
+}
+
+type ApplicationForm = ServiceGraph['applicationForms'][number];
+
+// Кэш data узлов форм по объекту формы (R-PERF-5); WeakMap — старые версии
+// графа отпускаются сборщиком мусора.
+const formDataCache = new WeakMap<
+  ApplicationForm,
+  {
+    logicRules: ServiceGraph['logicRules'];
+    stepTransitions: ServiceGraph['stepTransitions'];
+    catalog: ElementCatalog;
+    rules: EditorRules;
+    depth: number;
+    data: CanvasNodeData;
+  }
+>();
+
+// Data узла формы: шаги, их уровни и карточки полей (D12, S10).
+function formNodeData(
+  form: ApplicationForm,
+  depth: number,
+  graph: ServiceGraph,
+  elementContext: ElementMapContext,
+  logicParents: ReadonlyMap<string, string>,
+): CanvasNodeData {
+  // Уровни шагов формы; номер в подписи — номер занятой колонки (пустые
+  // уровни после удаления шага не дают пропусков в нумерации).
+  const formStepDepths = computeFormStepDepths(form, graph.stepTransitions);
+  const stepLevels = [...new Set(formStepDepths.values())].sort((left, right) => left - right);
+  return {
+    title: form.title,
+    orderIndex: form.orderIndex,
+    depth,
+    subtitle: NODE_SUBTITLES.form,
+    elements: [],
+    steps: form.steps.map((step) => {
+      const stepDepth = formStepDepths.get(step.id) ?? 0;
+      // Колонки элементов шага и варианты-источники для раскладки
+      // «цель напротив варианта» [owner 2026-10-13].
+      const stepDepths = computeStepElementDepths(step, graph.logicRules);
+      return {
+        id: step.id,
+        title: step.title ?? formStepLabel(stepLevels.indexOf(stepDepth) + 1),
+        depth: stepDepth,
+        elements: step.elements.map((component) => ({
+          ...elementToElementData(
+            component,
+            elementContext,
+            containerCapabilities(elementContext.rules, 'formStep'),
+          ),
+          layerDepth: stepDepths.get(component.id) ?? 0,
+          ...(logicParents.has(component.id)
+            ? { logicParentHandleId: logicParents.get(component.id)! }
+            : null),
+        })),
+      };
+    }),
+    formKindLabel: form.steps.length > 1 ? 'Степперная' : 'Одностраничная',
+  };
 }
 
 // Структурное разделение: значение, равное прошлому по содержимому,

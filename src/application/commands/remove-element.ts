@@ -1,13 +1,11 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
-import type { ElementId, FormComponentId } from '@domain/model/ids';
+import type { ElementId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
-import { validateGraph } from '@domain/invariants';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
 import { computeFormElementDepths } from '@domain/step-element-depths';
-import type { Command } from './command';
+import type { Command, CommandContext } from './command';
 import { preserveFormElementDepths, preservePageDepths, preserveFormStepDepths } from './depth-preservation';
-import { InvariantViolationError } from './errors';
 import { findElementLocation } from './graph-lookup';
 
 // Команда удаления элемента канваса (Epic 002, T-035): карточки страницы
@@ -17,9 +15,9 @@ import { findElementLocation } from './graph-lookup';
 export class RemoveElement implements Command {
   readonly name = 'RemoveElement';
 
-  constructor(private readonly elementId: ElementId | FormComponentId) {}
+  constructor(private readonly elementId: ElementId) {}
 
-  apply(draft: ServiceGraph): void {
+  apply(draft: ServiceGraph, { rules }: CommandContext): void {
     // Уровни шагов до мутации: шаг, потерявший входящий переход, остаётся на месте (ADR-15).
     const stepDepthsBefore = computeAllFormStepDepths(draft);
     // Колонки элементов шагов до мутации: цель, потерявшая правило, остаётся на месте (ADR-15).
@@ -46,11 +44,6 @@ export class RemoveElement implements Command {
     // Каскад переходов между шагами [owner 2026-10-14]: переходы, ставшие
     // недопустимыми (удалён элемент-источник), уходят вместе с причиной.
     preserveFormStepDepths(draft, stepDepthsBefore);
-    draft.stepTransitions = validStepTransitions(draft);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
+    draft.stepTransitions = validStepTransitions(draft, rules);
   }
 }

@@ -1,38 +1,31 @@
 // Dnd шагов формы заявки [owner 2026-10-14]: перенос шага внутри своей формы
 // за заголовок — нативный HTML5 dnd, как у карточек (element-dnd.ts), но свой
 // MIME-тип: зона приёма шагов не реагирует на карточки, а слой элементов
-// шага — на шаги. Колонка (уровень) — по X общим ядром слоёв (layers/), как у
-// узлов канваса; шаги уровня идут друг под другом, поэтому якорь — по Y.
+// шага — на шаги. Перетаскиваемый шаг в dragover берётся из модульного
+// состояния текущего drag (ревью A9, R4), а не из MIME-типов в нижнем регистре.
 
-/** Основной MIME-тип: в данных — JSON payload (форма и шаг). */
+/** MIME-тип drag шага: в данных — JSON payload (форма и шаг). */
 export const STEP_DND_MIME = 'application/x-blueprint-form-step';
-
-// Маркер формы: в dragover данные недоступны — только типы; шаг переносится
-// лишь внутри своей формы. Браузер приводит MIME-типы к нижнему регистру.
-const STEP_DND_FORM_PREFIX = `${STEP_DND_MIME}-form-`;
-// Маркер шага: зоне приёма нужен перетаскиваемый, чтобы не показывать
-// индикатор там, где порядок не изменится.
-const STEP_DND_ID_PREFIX = `${STEP_DND_MIME}-step-`;
 
 export type StepDragPayload = { formId: string; stepId: string };
 
-export function writeStepDrag(dataTransfer: DataTransfer, { formId, stepId }: StepDragPayload): void {
-  dataTransfer.setData(STEP_DND_MIME, JSON.stringify({ formId, stepId }));
-  dataTransfer.setData(`${STEP_DND_FORM_PREFIX}${formId.toLowerCase()}`, '');
-  dataTransfer.setData(`${STEP_DND_ID_PREFIX}${stepId.toLowerCase()}`, '');
+// Текущий drag шага в этом документе; сбрасывается по dragend ручки шага.
+// Устаревшее значение не мешает: читается только при нашем MIME-типе в событии.
+let currentDrag: StepDragPayload | null = null;
+
+export function writeStepDrag(dataTransfer: DataTransfer, payload: StepDragPayload): void {
+  dataTransfer.setData(STEP_DND_MIME, JSON.stringify(payload));
   dataTransfer.effectAllowed = 'move';
+  currentDrag = payload;
 }
 
-// Идёт drag шага этой формы (по типам drag-события, доступным в dragover).
-export function isStepDragOfForm(types: readonly string[] | DOMStringList, formId: string): boolean {
-  const marker = `${STEP_DND_FORM_PREFIX}${formId.toLowerCase()}`;
-  return Array.from(types).some((type) => type.toLowerCase() === marker);
+export function endStepDrag(): void {
+  currentDrag = null;
 }
 
-// Id перетаскиваемого шага (в нижнем регистре); null — не drag шага.
-export function readStepDragId(types: readonly string[] | DOMStringList): string | null {
-  const marker = Array.from(types).find((type) => type.toLowerCase().startsWith(STEP_DND_ID_PREFIX));
-  return marker ? marker.toLowerCase().slice(STEP_DND_ID_PREFIX.length) : null;
+// Перетаскиваемый шаг во время dragover; null — это не drag шага.
+export function draggedStep(dataTransfer: DataTransfer): StepDragPayload | null {
+  return Array.from(dataTransfer.types).includes(STEP_DND_MIME) ? currentDrag : null;
 }
 
 export function readStepDrag(dataTransfer: DataTransfer): StepDragPayload | null {
@@ -69,10 +62,31 @@ export function stepAnchorFromPoint(column: HTMLElement | null, clientY: number)
   return last ? { stepId: last.dataset.formStepId!, placement: 'after' } : null;
 }
 
+// Шаг для обмена местами [owner 2026-10-15]: курсор над средней третью
+// другого шага (любой колонки) — шаги меняются местами (SwapFormSteps);
+// верхняя и нижняя трети — прежняя вставка до/после. null — обмена нет.
+export function stepSwapFromPoint(
+  zone: HTMLElement | null,
+  draggedId: string,
+  clientX: number,
+  clientY: number,
+): string | null {
+  const steps = zone ? Array.from(zone.querySelectorAll<HTMLElement>('[data-form-step-id]')) : [];
+  for (const step of steps) {
+    const rect = step.getBoundingClientRect();
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+      continue;
+    }
+    const third = rect.height / 3;
+    const inMiddle = clientY >= rect.top + third && clientY <= rect.bottom - third;
+    return inMiddle && step.dataset.formStepId !== draggedId ? step.dataset.formStepId! : null;
+  }
+  return null;
+}
+
 // Якорь, который действительно меняет порядок в колонке stepIds; null — шаг
 // останется на месте (якорь — сам шаг или его сосед с «внутренней»
-// стороны). Шаг из другой колонки встаёт к якорю как есть. Id — без учёта
-// регистра: id перетаскиваемого читается из MIME-типа.
+// стороны). Шаг из другой колонки встаёт к якорю как есть.
 export function effectiveStepAnchor(
   stepIds: readonly string[],
   draggedId: string,
@@ -81,9 +95,8 @@ export function effectiveStepAnchor(
   if (!anchor) {
     return null;
   }
-  const lowered = stepIds.map((id) => id.toLowerCase());
-  const from = lowered.indexOf(draggedId.toLowerCase());
-  const anchorIndex = lowered.indexOf(anchor.stepId.toLowerCase());
+  const from = stepIds.indexOf(draggedId);
+  const anchorIndex = stepIds.indexOf(anchor.stepId);
   if (anchorIndex < 0) {
     return null;
   }

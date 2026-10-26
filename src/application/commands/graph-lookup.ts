@@ -46,29 +46,7 @@ export function findPageById(graph: ServiceGraph, pageId: PageEntityId): PageEnt
   return null;
 }
 
-// Id всех подсценариев поддерева (включая корень) — для каскадного удаления
-// связей, направленных на удаляемые страницы.
-export function collectSubtreeScenarioIds(root: SubScenario): Set<string> {
-  const ids = new Set<string>();
-  for (const scenario of walkSubScenarios([root])) {
-    ids.add(scenario.id);
-  }
-  return ids;
-}
-
-// Id всех элементов страниц поддерева — источники связей (D9) удаляемых
-// страниц; их исходящие связи удаляются каскадом вместе со страницей.
-export function collectSubtreeElementIds(root: SubScenario): Set<string> {
-  const ids = new Set<string>();
-  for (const scenario of walkSubScenarios([root])) {
-    for (const element of scenario.elements) {
-      ids.add(element.id);
-    }
-  }
-  return ids;
-}
-
-// Подсценарий по id с учётом неограниченной вложенности (БТ, раздел 7).
+// Подсценарий по id.
 export function findSubScenarioById(graph: ServiceGraph, scenarioId: string): SubScenario | null {
   for (const scenario of walkSubScenarios(graph.subScenarios)) {
     if (scenario.id === scenarioId) {
@@ -83,25 +61,6 @@ export function findFormById(
   formId: string,
 ): ServiceGraph['applicationForms'][number] | null {
   return graph.applicationForms.find((form) => form.id === formId) ?? null;
-}
-
-// Элемент шага формы по id вместе с формой-владельцем — командам «Сложной
-// логики» (T-037/T-064) нужны и сам элемент (флаг, option'ы), и форма
-// (правило «внутри одного шага», L-I5). Элемент шага — любой элемент
-// канваса [owner 2026-10-13]; элементы страниц сюда не попадают.
-export function findFormElement(
-  graph: ServiceGraph,
-  elementId: string,
-): { form: ServiceGraph['applicationForms'][number]; element: CanvasElement } | null {
-  for (const form of graph.applicationForms) {
-    for (const step of form.steps) {
-      const element = step.elements.find((candidate) => candidate.id === elementId);
-      if (element) {
-        return { form, element };
-      }
-    }
-  }
-  return null;
 }
 
 // Цель связи — страница МИПа: подсценарий (D13) или форма заявки (D12).

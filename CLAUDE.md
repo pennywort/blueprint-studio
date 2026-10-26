@@ -14,7 +14,6 @@
 
 | Агент            | Модель | Когда                                                |
 | ---------------- | ------ | ---------------------------------------------------- |
-| `verifier`       | haiku  | после правок: lint + build + rules, разбор ошибок    |
 | `code-finder`    | haiku  | «где реализовано X» по нескольким файлам             |
 | `spec-lookup`    | haiku  | вопрос по конституции / T-xxx / D-x / ADR / L-x      |
 | `state-auditor`  | haiku  | нужно ли обновлять PROJECT_STATE; что предложить     |
@@ -26,9 +25,11 @@
 ## Хуки (`.claude/settings.json`) — работают сами
 
 - **SessionStart:** `npm ci`, если нет `node_modules` (вывод сжат).
+- **PreToolUse (Bash):** `bash-guard` блокирует правку кода через shell
+  (python, `sed -i`, `>` в `src/`, `scripts/`, `vendor/`) — правь через Edit/Write.
 - **PostToolUse (Edit/Write):** eslint изменённого файла; ошибки придут сразу.
-- **Stop:** если есть незакоммиченные правки в `src/vendor/scripts` — `verify` + `rules`;
-  красное не даст завершить ответ.
+- **Stop:** страховка, если правки в `src/vendor/scripts` забыли закоммитить, —
+  `verify` + `rules`; красное не даст завершить ответ. Обычно проверки гоняет pre-commit.
 - `env`: вывод Bash обрезается до 15 000 символов, цвета (ANSI) выключены.
 - `deny`: чтение `node_modules`, `dist`, `package-lock.json`, `*.disabled`, `docs/archive`.
 

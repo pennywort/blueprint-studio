@@ -1,4 +1,5 @@
-import { createMuiTheme, useTheme, type Theme } from '@blueprint-vendor/flamingo-core';
+import { createMuiTheme, useTheme, type Theme } from '@material-ui/core';
+import type { HighlightColorToken, HighlightPolicy, HighlightPolicyDefinition } from './highlight-policy';
 
 // Цветовые токены canvas/react-flow. Все значения — из макетов
 // docs/design-mockups (сняты пипеткой); в компонентах литеральные hex
@@ -36,6 +37,10 @@ export interface EditorCanvasPalette {
   nodeHoverBackground: string;
   /** Рамка узла при hover-подсветке цели связи. */
   nodeHoverBorder: string;
+  /** Заливка рамки группового выделения (Shift+drag), рамка — edgeActive (R-PERF-9). */
+  selectionBackground: string;
+  /** Фон колонки, куда бросить нельзя (уровень заполнен); линии — palette.error.main. */
+  dropBlockedBackground: string;
   /** Рамка карточки элемента внутри узла. */
   elementBorder: string;
   /** Фон комментария (элемент-комментарий и комментарий-часть элемента). */
@@ -49,7 +54,7 @@ export interface EditorCanvasPalette {
 }
 
 // Полная палитра темы редактора: canvas-токены + цвета, уходящие в palette
-// MUI v4 (Flamingo — форк MUI v4, механика темы та же, D6).
+// MUI v4 (UI-кит — @material-ui напрямую [owner 2026-10-22]).
 export interface EditorThemeDefinition {
   /** Фон страницы/канваса. */
   background: string;
@@ -78,6 +83,28 @@ export interface EditorThemeDefinition {
   /** Фон hover нейтральной кнопки-пилюли. */
   secondaryButtonHoverBackground: string;
   canvas: EditorCanvasPalette;
+  /** Подсветка сущностей канваса: приоритет и вид рамок (R-PERF-6). */
+  highlight: HighlightPolicyDefinition;
+  /** Радиусы скругления, px (R-PERF-8): при переходе на токены ДС — правка здесь. */
+  shape: EditorShape;
+}
+
+/** Радиусы скругления редактора по роли элемента. */
+export interface EditorShape {
+  /** Блок канваса (узел страницы/формы). */
+  block: number;
+  /** Карточка: шаг, вариант, уведомление, миникарта. */
+  card: number;
+  /** Карточка элемента и комментария на канвасе [owner 2026-10-22]. */
+  element: number;
+  /** Пилюля: панели, тулбар, кнопки-пилюли. */
+  pill: number;
+  /** Ярлык (chip). */
+  chip: number;
+  /** Плашка иконки в карточке. */
+  icon: number;
+  /** Мелкая плашка (заглушка иконки). */
+  small: number;
 }
 
 // Реестр тем: вторая тема добавляется новой записью сюда и расширением
@@ -115,12 +142,34 @@ const lightTheme: EditorThemeDefinition = {
     minimapBorder: '#d7d9df',
     nodeHoverBackground: '#e8e9ee',
     nodeHoverBorder: '#d6d7db',
+    selectionBackground: 'rgba(89, 108, 224, 0.08)',
+    dropBlockedBackground: 'rgba(244, 67, 54, 0.08)',
     elementBorder: '#d6d7db',
     commentBackground: '#ebf5fc',
     commentBorder: '#d9eaf7',
     commentBadgeBackground: '#5d616f',
     commentBadgeForeground: '#ffffff',
   },
+  highlight: {
+    // Первый активный вид побеждает [owner 2026-10-22]: смена порядка —
+    // перестановка здесь; вид, убранный из списка, не рисуется.
+    priority: ['connectHover', 'dropTarget', 'dropZone', 'selected', 'invalid'],
+    frames: {
+      // Цель связи под курсором (ADR-14, [owner 2026-10-15]).
+      connectHover: { color: 'edgeActive', style: 'solid', width: 2 },
+      // Цель dnd / обмена шагов (T-032, [owner 2026-10-14]).
+      dropTarget: { color: 'nodeHoverBorder', style: 'solid', width: 2, fill: 'nodeHoverBackground' },
+      // Зона приёма карточек во время dnd (N2).
+      dropZone: { color: 'nodeHoverBorder', style: 'dashed', width: 2 },
+      // Выделение (F7, S10): узел и шаг — 2px, карточка — 2px поверх своей рамки 1px.
+      selected: { color: 'edge', style: 'solid', width: 2 },
+      // Нарушение инварианта (T-043): узел 2px, карточка — цвет своей рамки 1px.
+      invalid: { color: 'error', style: 'solid', width: { node: 2, step: 2, card: 1 } },
+    },
+    // Карточка с рамкой 1px (variant outlined): подсветка ложится поверх неё.
+    inset: { node: 0, step: 0, card: -1 },
+  },
+  shape: { block: 16, card: 12, element: 24, pill: 24, chip: 16, icon: 8, small: 6 },
 };
 
 const editorThemeDefinitions: Record<EditorThemeName, EditorThemeDefinition> = {
@@ -128,9 +177,9 @@ const editorThemeDefinitions: Record<EditorThemeName, EditorThemeDefinition> = {
 };
 
 // Тема редактора = MUI v4 тема + наши токены в поле `editor`.
-// Собственное поле (а не module augmentation) выбрано сознательно: временный
-// шим Flamingo поверх @material-ui уйдёт, и augmentation целевых модулей
-// MUI пришлось бы переписывать; поле `editor` переживёт замену кита.
+// Собственное поле (а не module augmentation) выбрано сознательно: при замене
+// UI-кита augmentation модулей MUI пришлось бы переписывать; поле `editor`
+// переживёт замену кита.
 export type EditorTheme = Theme & {
   editor: {
     chipAccent: string;
@@ -139,8 +188,29 @@ export type EditorTheme = Theme & {
     secondaryButtonBackground: string;
     secondaryButtonHoverBackground: string;
     canvas: EditorCanvasPalette;
+    highlight: HighlightPolicy;
+    shape: EditorShape;
   };
 };
+
+// Токены цвета подсветки → значения темы (цвет ошибки — из palette MUI).
+function resolveHighlightPolicy(definition: EditorThemeDefinition, errorColor: string): HighlightPolicy {
+  const { canvas, highlight } = definition;
+  const colors: Record<HighlightColorToken, string> = {
+    edge: canvas.edge,
+    edgeActive: canvas.edgeActive,
+    nodeHoverBorder: canvas.nodeHoverBorder,
+    nodeHoverBackground: canvas.nodeHoverBackground,
+    error: errorColor,
+  };
+  const frames = Object.fromEntries(
+    Object.entries(highlight.frames).map(([kind, frame]) => [
+      kind,
+      { ...frame, color: colors[frame.color], fill: frame.fill ? colors[frame.fill] : undefined },
+    ]),
+  ) as unknown as HighlightPolicy['frames'];
+  return { priority: highlight.priority, frames, inset: highlight.inset };
+}
 
 export function getEditorThemeDefinition(name: EditorThemeName = 'light'): EditorThemeDefinition {
   return editorThemeDefinitions[name];
@@ -208,6 +278,8 @@ export function createEditorTheme(name: EditorThemeName = 'light'): EditorTheme 
       secondaryButtonBackground: definition.secondaryButtonBackground,
       secondaryButtonHoverBackground: definition.secondaryButtonHoverBackground,
       canvas: { ...definition.canvas },
+      highlight: resolveHighlightPolicy(definition, muiTheme.palette.error.main),
+      shape: { ...definition.shape },
     },
   });
 }

@@ -12,8 +12,8 @@ import {
   Tooltip,
   Typography,
   makeStyles,
-} from '@blueprint-vendor/flamingo-core';
-import { Search } from '@blueprint-vendor/flamingo-icons';
+} from '@material-ui/core';
+import { editorIcons } from '@presentation/icons/editor-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
@@ -22,7 +22,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     maxWidth: 520,
     '& .MuiOutlinedInput-root': {
       backgroundColor: theme.palette.background.paper,
-      borderRadius: 24,
+      borderRadius: theme.editor.shape.pill,
       '& fieldset': {
         borderColor: theme.palette.divider,
       },
@@ -45,19 +45,23 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   previewButton: {
     backgroundColor: theme.editor.secondaryButtonBackground,
     color: theme.palette.text.primary,
-    borderRadius: 24,
+    borderRadius: theme.editor.shape.pill,
     textTransform: 'none',
     padding: theme.spacing(1, 3),
     '&:hover': {
       backgroundColor: theme.editor.secondaryButtonHoverBackground,
     },
   },
+  // Результаты поиска — над панелями и канвасом, слой модальных окон темы (R-PERF-8).
+  resultsPopper: {
+    zIndex: theme.zIndex.modal,
+  },
   results: {
     width: 520,
     maxHeight: 360,
     overflowY: 'auto',
     marginTop: theme.spacing(0.5),
-    borderRadius: 12,
+    borderRadius: theme.editor.shape.card,
   },
   resultItem: {
     display: 'flex',
@@ -65,7 +69,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     alignItems: 'flex-start',
   },
   approvalButton: {
-    borderRadius: 24,
+    borderRadius: theme.editor.shape.pill,
     textTransform: 'none',
     padding: theme.spacing(1, 3),
   },
@@ -85,6 +89,8 @@ export type CanvasSearchResult = {
 export type EditorTopBarProps = {
   /** «Сохранить» → IGraphRepository (T-053). */
   onSave?: () => void;
+  /** «Экспорт JSON» — текущий граф в файл проекта [owner 2026-10-15]. */
+  onExport?: () => void;
   /** Маршрут предпросмотра подключается в T-051; сейчас — заглушка-обработчик. */
   onPreview?: () => void;
   /** Поиск по канвасу (T-050): совпадения по названиям узлов и элементов. */
@@ -98,7 +104,13 @@ export type EditorTopBarProps = {
 // «На согласование» (primary dark). Действия пока заглушки, разметка и
 // состояния реальные. Цвета — только из темы (D6). «На согласование» —
 // неактивна до workflow FSM (T-052, эпик 004).
-export function EditorTopBar({ onSave, onPreview, searchCanvas, onSelectSearchResult }: EditorTopBarProps) {
+export function EditorTopBar({
+  onSave,
+  onExport,
+  onPreview,
+  searchCanvas,
+  onSelectSearchResult,
+}: EditorTopBarProps) {
   const classes = useStyles();
   const [searchValue, setSearchValue] = useState('');
   const [resultsOpen, setResultsOpen] = useState(false);
@@ -145,7 +157,7 @@ export function EditorTopBar({ onSave, onPreview, searchCanvas, onSelectSearchRe
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
-                  <Search fontSize="small" />
+                  <editorIcons.search fontSize="small" />
                 </InputAdornment>
               ),
             }}
@@ -154,7 +166,7 @@ export function EditorTopBar({ onSave, onPreview, searchCanvas, onSelectSearchRe
             open={resultsOpen && query.length > 0}
             anchorEl={searchAnchorRef.current}
             placement="bottom-start"
-            style={{ zIndex: 1300 }}
+            className={classes.resultsPopper}
           >
             <Paper className={classes.results} data-testid="canvas-search-results">
               {results.length > 0 ? (
@@ -186,6 +198,9 @@ export function EditorTopBar({ onSave, onPreview, searchCanvas, onSelectSearchRe
       <Box display="flex" alignItems="center" gridGap={16}>
         <Button className={classes.saveButton} onClick={onSave}>
           Сохранить
+        </Button>
+        <Button className={classes.saveButton} onClick={onExport} data-testid="export-json">
+          Экспорт JSON
         </Button>
         <Button className={classes.previewButton} variant="contained" disableElevation onClick={onPreview}>
           Предпросмотр

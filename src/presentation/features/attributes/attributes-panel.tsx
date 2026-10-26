@@ -1,271 +1,185 @@
-import {
-  Box,
-  Divider,
-  FormControlLabel,
-  IconButton,
-  Switch,
-  TextField,
-  Typography,
-  makeStyles,
-} from '@blueprint-vendor/flamingo-core';
-import { Delete } from '@blueprint-vendor/flamingo-icons';
-import type { ElementAttributeType, ElementSchema } from '@application/ports/element-schema-provider';
+import { TextField, Typography, makeStyles } from '@material-ui/core';
+import type { ElementAttribute, ElementSchema } from '@application/ports/element-schema-provider';
 import type { ElementPropsPatch } from '@application/commands/update-element-props';
-import { hasElementField, type CanvasElement } from '@domain/model/canvas-element';
-import type { LogicRuleId } from '@domain/model/ids';
+import type { CanvasElement } from '@domain/model/canvas-element';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
-import { ELEMENT_KIND_LABELS } from '@presentation/features/canvas/graph-flow-adapter';
-import { getElementAttributeMeta, type AttributeMeta } from './element-attribute-meta';
+import { AttributeField } from './attribute-field';
 import { resolvePropertyEditor } from './property-editor-registry';
 import './builtin-property-editors';
 import { useBufferedProps } from './use-buffered-props';
 
+// Вёрстка по макетам docs/design-mockups/настройка-атрибутов-*: шапка с
+// разделителем, поля с подписью над ними (AttributeField), секции —
+// заголовком; отступы задаёт панель, а не редакторы.
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   panel: {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing(2),
+    gap: theme.spacing(2.5),
   },
-  sectionTitle: {
-    marginTop: theme.spacing(1),
-  },
-  field: {
+  header: {
     display: 'flex',
     flexDirection: 'column',
+    gap: theme.spacing(0.5),
+    paddingBottom: theme.spacing(1.5),
+    borderBottom: `1px solid ${theme.palette.divider}`,
   },
-  ruleRow: {
+  title: {
+    fontWeight: 600,
+  },
+  subtitle: {
+    color: theme.palette.text.secondary,
+  },
+  group: {
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    gap: theme.spacing(2),
+  },
+  // В секции переключатели идут плотнее: строка switch уже со своей высотой.
+  section: {
     gap: theme.spacing(1),
   },
+  sectionTitle: {
+    fontWeight: 600,
+  },
 }));
-
-// Правило видимости, приходящее на выделенный элемент (цель): для секции
-// «Видимость» инспектора (T-067).
-export type IncomingRuleView = {
-  ruleId: LogicRuleId;
-  sourceLabel: string;
-  optionLabel: string | null;
-};
 
 export type AttributesPanelProps = {
   /** Выделенный элемент (любой вид, ADR-17) — источник значений полей. */
   component: CanvasElement;
-  /** Схема элемента из IElementSchemaProvider (ADR-07); null — схемы нет. */
+  /** Описание элемента из IElementSchemaProvider; null — вида нет в политике редактора. */
   schema: ElementSchema | null;
   /**
    * Изменение полей → UpdateElementProps (undo/redo из коробки): через
    * буфер панели — одна команда на паузу ввода/blur (R2).
    */
   onUpdateProps: (elementId: CanvasElement['id'], patch: ElementPropsPatch) => void;
-  /** Только для selectList: свитч «Сложная логика» (T-067). */
-  onToggleComplexLogic?: () => void;
-  /** Правила видимости, где элемент — цель (T-067). */
-  incomingRules: IncomingRuleView[];
-  onRemoveRule: (ruleId: LogicRuleId) => void;
 };
 
-// Schema-driven панель атрибутов (T-041): состав полей и редакторы определяет
-// схема элемента из IElementSchemaProvider + метаинформация проектных схем
-// (D4: label, секции, опции enum, условная видимость) — ничего не
-// захардкожено под конкретный элемент. Значения читаются из доменного
-// компонента по ключу атрибута; атрибуты, которых нет в доменной модели
-// (stub-манифест ADR-07 шире/уже модели), не рендерятся. Поле «Комментарий
-// для разработки» — универсально (US-05). Секции «Сложная логика» и
-// «Видимость» — инспектор T-067.
-export function AttributesPanel({
-  component,
-  schema,
-  onUpdateProps,
-  onToggleComplexLogic,
-  incomingRules,
-  onRemoveRule,
-}: AttributesPanelProps) {
+// Schema-driven панель атрибутов (T-041, этап 3 docs/schemas/PLAN.md): в панели
+// только атрибуты элемента по схеме + политике редактора — состав, порядок,
+// подписи, секции и редакторы из описания элемента; ничего сверх них
+// [owner 2026-10-19]. Значения — props элемента или надстройки ext (store
+// атрибута) по ключу атрибута.
+export function AttributesPanel({ component, schema, onUpdateProps }: AttributesPanelProps) {
   const classes = useStyles();
   // Буфер ввода (R2): поля показывают черновик поверх значений графа.
   const buffer = useBufferedProps<CanvasElement['id']>(component.id, onUpdateProps);
-  const view = (buffer.draft ? { ...component, ...buffer.draft } : component) as CanvasElement;
-  const meta = getElementAttributeMeta(component.kind);
-  const title = ELEMENT_KIND_LABELS[component.kind];
+  // Значения по ключу атрибута: props элемента и надстройки ext — ключи не
+  // пересекаются (проверка сборки схем), поэтому одна таблица на оба хранилища.
+  const values = {
+    ...component.props,
+    ...component.ext,
+    ...buffer.draft?.props,
+    ...buffer.draft?.ext,
+  };
 
-  // Поля по схеме: порядок — порядок атрибутов в манифесте; атрибут виден,
-  // если ключ есть в доменной модели элемента (в том числе ещё не заданное
-  // необязательное поле) и выполнено условие видимости (D4).
-  const attributes = (schema?.attributes ?? []).filter((attribute) => {
-    if (!hasElementField(component.kind, attribute.key)) {
-      return false;
-    }
-    const rule = meta.attributes[attribute.key]?.visibleWhen;
-    return !rule || (view as unknown as Record<string, unknown>)[rule.key] === rule.equals;
-  });
+  // Атрибут виден, если выполнено его условие видимости (политика).
+  const attributes = (schema?.attributes ?? []).filter(
+    (attribute) =>
+      !attribute.visibleWhen || values[attribute.visibleWhen.key] === attribute.visibleWhen.equals,
+  );
 
-  // Группировка по секциям (мета D4): поля без секции — первыми, далее —
-  // каждая именованная секция один раз (порядок — первое появление в схеме),
-  // поля внутри сохраняют порядок манифеста.
-  const groups: { section: string | null; keys: typeof attributes }[] = [];
+  // Группировка по секциям: поля без секции — первыми, далее — каждая
+  // именованная секция один раз (порядок — первое появление в политике),
+  // поля внутри сохраняют порядок политики.
+  const groups: { section: string | null; attributes: ElementAttribute[] }[] = [];
   const groupIndex = new Map<string | null, number>();
   for (const attribute of attributes) {
-    const section = meta.attributes[attribute.key]?.section ?? null;
+    const section = attribute.section ?? null;
     const existing = groupIndex.get(section);
     if (existing !== undefined) {
-      groups[existing]!.keys.push(attribute);
+      groups[existing]!.attributes.push(attribute);
     } else {
       groupIndex.set(section, groups.length);
-      groups.push({ section, keys: [attribute] });
+      groups.push({ section, attributes: [attribute] });
     }
   }
 
   return (
-    <Box className={classes.panel} data-testid="attributes-panel" onBlur={buffer.flush}>
-      <Box>
-        <Typography variant="h6">{title}</Typography>
-        <Typography variant="body2" color="textSecondary">
-          {meta.category}
-          {meta.description ? ` · ${meta.description}` : ''}
+    <div className={classes.panel} data-testid="attributes-panel" onBlur={buffer.flush}>
+      <div className={classes.header}>
+        <Typography variant="h6" className={classes.title}>
+          {schema?.label ?? component.kind}
         </Typography>
-      </Box>
-
-      {component.kind === 'selectList' && onToggleComplexLogic ? (
-        <Box className={classes.field} data-testid="complex-logic-section">
-          <FormControlLabel
-            control={<Switch checked={component.hasComplexLogic === true} onChange={onToggleComplexLogic} />}
-            label="Сложная логика"
-          />
-          <Typography variant="caption" color="textSecondary">
-            При включении у каждого варианта появится точка соединения для правил видимости
-          </Typography>
-        </Box>
-      ) : null}
+        <Typography variant="caption" className={classes.subtitle}>
+          {schema
+            ? `${schema.category}${schema.description ? ` · ${schema.description}` : ''}`
+            : 'Элемента нет в политике редактора — атрибуты не редактируются'}
+        </Typography>
+      </div>
 
       {groups.map((group) => (
-        <Box key={group.section ?? ''} className={classes.field}>
+        <div
+          key={group.section ?? ''}
+          className={`${classes.group} ${group.section !== null ? classes.section : ''}`}
+        >
           {group.section !== null ? (
-            <Typography className={classes.sectionTitle} variant="subtitle2" data-testid="panel-section">
+            <Typography className={classes.sectionTitle} variant="subtitle1" data-testid="panel-section">
               {group.section}
             </Typography>
           ) : null}
-          {group.keys.map((attribute) => {
-            const attributeMeta: AttributeMeta = meta.attributes[attribute.key] ?? {};
-            const value = (view as unknown as Record<string, unknown>)[attribute.key];
-            const label = attributeMeta.label ?? attribute.key;
-            // Значение должно соответствовать типу атрибута: иначе (stub-
-            // манифест ADR-07 шире/уже доменной модели) — read-only сводка,
-            // чтобы схема не «молчала» и не портила данные.
-            if (value !== undefined && !isValueCompatible(attribute.type, value)) {
+          {group.attributes.map((attribute) => {
+            const value = values[attribute.key];
+            const Editor = resolvePropertyEditor(attribute.type);
+            // Значение иной ветви схемы (например, объект в «строка | объект»)
+            // или без редактора — read-only сводка: данные не портятся.
+            if (!Editor || (value !== undefined && !isValueCompatible(attribute, value))) {
               return (
-                <TextField
-                  key={attribute.key}
-                  fullWidth
-                  size="small"
-                  variant="outlined"
-                  disabled
-                  label={label}
-                  value={formatReadonlyValue(value)}
-                />
+                <AttributeField key={attribute.key} attribute={attribute}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                    disabled
+                    value={formatReadonlyValue(value)}
+                  />
+                </AttributeField>
               );
             }
-            const Editor = resolvePropertyEditor(attribute.type);
-            return Editor ? (
-              <Box key={attribute.key} className={classes.field}>
-                <Editor
-                  value={value}
-                  required={attribute.required}
-                  meta={{ label, ...attributeMeta }}
-                  onChange={(next) => buffer.change({ [attribute.key]: next } as ElementPropsPatch)}
-                />
-              </Box>
-            ) : (
-              <TextField
+            return (
+              <Editor
                 key={attribute.key}
-                fullWidth
-                size="small"
-                variant="outlined"
-                disabled
-                label={label}
-                value={formatReadonlyValue(value)}
+                value={value}
+                attribute={attribute}
+                onChange={(next) => buffer.change({ [attribute.store]: { [attribute.key]: next } })}
               />
             );
           })}
-        </Box>
+        </div>
       ))}
-
-      {incomingRules.length > 0 ? (
-        <Box className={classes.field} data-testid="visibility-section">
-          <Typography className={classes.sectionTitle} variant="subtitle2">
-            Видимость
-          </Typography>
-          {incomingRules.map((rule) => (
-            <Box className={classes.ruleRow} key={rule.ruleId}>
-              <Typography variant="body2">
-                {rule.sourceLabel}
-                {rule.optionLabel ? ` · вариант «${rule.optionLabel}»` : ''}
-              </Typography>
-              <IconButton size="small" aria-label="Удалить правило" onClick={() => onRemoveRule(rule.ruleId)}>
-                <Delete fontSize="small" />
-              </IconButton>
-            </Box>
-          ))}
-          <Typography variant="caption" color="textSecondary">
-            Элемент показывается, когда выбран указанный вариант (неявное ИЛИ между правилами)
-          </Typography>
-        </Box>
-      ) : null}
-
-      {/* Комментарий-часть элемента (US-05); у комментария-элемента его нет. */}
-      {component.kind !== 'comment' ? (
-        <>
-          <Divider />
-          <Box className={classes.field}>
-            <TextField
-              fullWidth
-              size="small"
-              variant="outlined"
-              multiline
-              rows={2}
-              label="Комментарий для разработки"
-              value={('comment' in view ? view.comment : undefined) ?? ''}
-              onChange={(event) => buffer.change({ comment: event.target.value })}
-            />
-          </Box>
-        </>
-      ) : null}
-    </Box>
+    </div>
   );
 }
 
-// Совместимость значения доменного компонента с типом атрибута схемы.
-// Несовместимые комбинации (stub-манифест ADR-07 vs доменная модель:
-// options как SelectOption[], links как MarkdownLink[]) выводятся read-only.
-function isValueCompatible(type: ElementAttributeType, value: unknown): boolean {
+// Совместимость значения props с типом атрибута (тип — из схемы элемента).
+// Множественный выбор (multiple) — массив строк при любом поле ввода; строка —
+// значение до включения multiple, редактор покажет её выбранной.
+function isValueCompatible({ type, multiple }: ElementAttribute, value: unknown): boolean {
+  if (multiple) {
+    return (
+      typeof value === 'string' || (Array.isArray(value) && value.every((item) => typeof item === 'string'))
+    );
+  }
   switch (type) {
     case 'text':
+    case 'radio':
+    case 'select':
+    case 'chips':
+    case 'icon':
       return typeof value === 'string';
     case 'bool':
       return typeof value === 'boolean';
     case 'number':
       return typeof value === 'number';
-    case 'radio':
-    case 'select':
-      return typeof value === 'string';
     case 'stringList':
       return Array.isArray(value) && value.every((item) => typeof item === 'string');
     case 'optionList':
-      return Array.isArray(value) && value.every(isRecordWith('label', 'value'));
-    case 'linkList':
-      return Array.isArray(value) && value.every(isRecordWith('label', 'url'));
+      return Array.isArray(value) && value.every((item) => typeof item === 'object' && item !== null);
   }
 }
 
-function isRecordWith(...keys: string[]) {
-  return (item: unknown): boolean =>
-    typeof item === 'object' &&
-    item !== null &&
-    keys.every((key) => typeof (item as Record<string, unknown>)[key] === 'string');
-}
-
-// Резервный вывод значения без зарегистрированного редактора (например,
-// массив объектов у stringList-атрибута): краткая сводка вместо «молчания».
+// Резервный вывод значения без подходящего редактора: краткая сводка вместо «молчания».
 function formatReadonlyValue(value: unknown): string {
   if (value === undefined || value === null) {
     return '';
@@ -273,5 +187,5 @@ function formatReadonlyValue(value: unknown): string {
   if (Array.isArray(value)) {
     return value.length === 0 ? 'Пусто' : `${value.length} элемент(ов)`;
   }
-  return String(value);
+  return typeof value === 'object' ? JSON.stringify(value) : String(value);
 }

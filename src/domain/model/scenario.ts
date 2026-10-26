@@ -1,23 +1,17 @@
 import { z } from 'zod';
 import { ApplicationFormIdSchema, FormStepIdSchema, ScenarioIdSchema } from './ids';
-import { CanvasElementSchema, IconRefSchema, type CanvasElement } from './canvas-element';
+import { CanvasElementSchema } from './canvas-element';
 
 // Сценарии, контент страниц и формы заявок — спецификация 001-foundation, разделы 5.1–5.3.
 
 // --- Контент страниц (спека 5.2) ---
 
-// List item / Widget card — элементы канваса наравне с компонентами форм:
-// определены в canvas-element.ts (универсальные элементы [owner 2026-10-13]).
-export {
-  IconRefSchema,
-  ImageRefSchema,
-  ListItemSchema,
-  WidgetCardSchema,
-  type IconRef,
-  type ImageRef,
-  type ListItem,
-  type WidgetCard,
-} from './canvas-element';
+// Элементы страниц (List item, Widget card…) — элементы канваса наравне с
+// компонентами форм: canvas-element.ts (универсальные элементы [owner 2026-10-13]).
+
+// Ссылки на иконки — строковые ключи из перечня платформы (БТ 6.1).
+export const IconRefSchema = z.string();
+export type IconRef = z.infer<typeof IconRefSchema>;
 
 export const FaqQuestionSchema = z.object({
   question: z.string(),
@@ -64,52 +58,23 @@ const pageContentFields = {
   additionalInfo: AdditionalInfoSchema.optional(),
 };
 
-// --- Сценарии (спека 5.3) ---
+// --- Подсценарии (спека 5.3) ---
 
-export const ScenarioTypeSchema = z.enum(['application', 'link', 'navigation']);
-export type ScenarioType = z.infer<typeof ScenarioTypeSchema>;
-
-// Базовые поля сценария; `children` добавляется рекурсивно в SubScenario.
-const ScenarioBaseSchema = z.object({
+// SubScenario — разводящая страница: сценарий + контент страницы (спека 5.1).
+// Переход на страницу — только стрелка канваса (`ServiceGraph.links`) [owner
+// 2026-10-19, R-SCH-7]: поля спеки 001 `children` (вложенность), `type`,
+// `link`, `applicationFormId` удалены — их не задавал UI, и они могли
+// противоречить стрелкам. Вид перехода (навигация / заявка) — по цели стрелки.
+export const SubScenarioSchema = z.object({
   id: ScenarioIdSchema,
-  type: ScenarioTypeSchema,
   title: z.string().min(1),
   description: z.string().optional(),
   icon: IconRefSchema.optional(),
-  // Только для type=navigation (инвариант scenario-type-fields).
+  // Информационный блок справа внутри страницы (БТ §7).
   infoBlock: z.object({ content: z.string(), position: z.literal('right') }).optional(),
-  // Только для type=link.
-  link: z
-    .object({ domain: z.string().optional(), url: z.string(), device: z.string().optional() })
-    .optional(),
-  // Только для type=application — ссылка на форму заявки.
-  applicationFormId: ApplicationFormIdSchema.optional(),
-});
-
-export type Scenario = z.infer<typeof ScenarioBaseSchema> & {
-  children?: Scenario[];
-};
-
-export const ScenarioSchema: z.ZodType<Scenario> = ScenarioBaseSchema.extend({
-  children: z.lazy(() => z.array(ScenarioSchema)).optional(),
-}) as z.ZodType<Scenario>;
-
-// SubScenario — разводящая страница: сценарий + контент страницы (спека 5.1).
-// Вложенность через children не ограничена (БТ, раздел 7).
-export type SubScenario = z.infer<typeof ScenarioBaseSchema> & {
-  orderIndex: number;
-  // Явная колонка канваса (уровень навигации) — см. pageContentFields.
-  layerDepth?: number;
-  elements: CanvasElement[];
-  faq?: Faq;
-  additionalInfo?: AdditionalInfo;
-  children?: SubScenario[];
-};
-
-export const SubScenarioSchema: z.ZodType<SubScenario> = ScenarioBaseSchema.extend({
   ...pageContentFields,
-  children: z.lazy(() => z.array(SubScenarioSchema)).optional(),
-}) as z.ZodType<SubScenario>;
+});
+export type SubScenario = z.infer<typeof SubScenarioSchema>;
 
 // --- Формы заявок (спека 5.1) ---
 

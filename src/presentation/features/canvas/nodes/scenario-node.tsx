@@ -1,30 +1,53 @@
-import { memo, useCallback, type DragEvent } from 'react';
-import { Handle, Position, useConnection, type NodeProps } from '@xyflow/react';
-import { Card, IconButton, Typography, makeStyles } from '@blueprint-vendor/flamingo-core';
-import { Delete } from '@blueprint-vendor/flamingo-icons';
+import { memo, useCallback, useLayoutEffect, useRef, type DragEvent } from 'react';
+import type { NodeProps } from '@xyflow/react';
+import { Card, IconButton, Typography, makeStyles } from '@material-ui/core';
+import { editorIcons } from '@presentation/icons/editor-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { ViolationBadge } from './violation-badge';
-import { CANVAS_LAYOUT } from '../canvas-layout';
+import { CANVAS_LAYOUT, FORM_STEP_LAYOUT, type MeasuredElementRows } from '../canvas-layout';
 import type { CanvasNode } from '../graph-flow-adapter';
 import { anchorFromPoint, type DropAnchorPosition, type ElementDragPayload } from '../element-dnd';
 import { ElementCard } from './element-card';
+import { OptionCard } from './option-card';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { useNodeStyles } from './node-styles';
+import { useHandlesSync } from './use-handles-sync';
 import { DropIndicator, useElementDropZone } from './use-element-drop-zone';
+import type { HighlightFlags } from '@presentation/theme/highlight-policy';
+import { useHighlightStyles } from '../highlight/highlight-styles';
+import { useEntityHighlight } from '../highlight/use-entity-highlight';
+import { TargetHandle } from './target-handle';
+
+const NO_FLAGS: HighlightFlags = {};
+const DROP_ZONE: HighlightFlags = { dropZone: true };
+
+/** Зазор между карточками элементов страницы. */
+const ELEMENTS_GAP = 24;
 
 // Своё у узла страницы — фиксированная ширина и список элементов; остальное
 // — общие стили узлов (ревью A8, R4).
-const useStyles = makeStyles<EditorTheme>((theme) => ({
+const useStyles = makeStyles<EditorTheme>(() => ({
   card: {
     width: CANVAS_LAYOUT.nodeWidth,
   },
   titles: {
     minWidth: 0,
   },
+  // Зазор вмещает полосу вставки с точками и отступом (DropBar, [owner 2026-10-15]).
   elements: {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing(1.5),
+    gap: ELEMENTS_GAP,
+  },
+  elementSlot: {
+    position: 'relative', // якорь полосы вставки (DropIndicator)
+  },
+  // Варианты Select'а под карточкой (отступ слева — у самой карточки варианта).
+  options: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: FORM_STEP_LAYOUT.optionGap,
+    marginTop: FORM_STEP_LAYOUT.optionGap,
   },
 }));
 
@@ -38,12 +61,11 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
 // Dnd (N2): весь узел — зона приёма карточек любого вида (ADR-17); позиция
 // — по якорю-карточке под курсором, без якоря — в конец списка.
 function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
+  useHandlesSync(id, data);
   const nodeClasses = useNodeStyles();
   const classes = useStyles();
   const actions = useCanvasActions();
-  // Подсветка цели связи: узел под курсором во время drag рёбер (D9/T-032).
-  const isDropTarget = useConnection((connection) => connection.inProgress && connection.toNode?.id === id);
-  const connectTarget = useCanvasInteraction((state) => state.connectionTargets?.pages.has(id) ?? false);
+  const highlightClasses = useHighlightStyles();
   const violations = useCanvasInteraction((state) => state.violations.nodes.get(id));
 
   // Зона приёма карточек: подсветка во время drag + линия-индикатор якоря.
@@ -67,29 +89,22 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
     onDrop: dropElement,
   });
   const anchor = drop?.anchor ?? null;
+  // Подсветка — единый механизм (R-PERF-6): выделение, ошибка, цель связи —
+  // из стора; зона приёма dnd карточек — локальный жест узла.
+  const highlight = useEntityHighlight({ entity: 'node', id }, drop ? DROP_ZONE : NO_FLAGS);
+  const elementsRef = useElementRowsReport(data.elements, actions?.reportElementRows);
 
   return (
     <Card
-      className={[
-        nodeClasses.card,
-        classes.card,
-        violations ? nodeClasses.invalid : '',
-        isDropTarget ? nodeClasses.dropTarget : '',
-        drop ? nodeClasses.dndActive : '',
-      ].join(' ')}
+      className={[nodeClasses.card, classes.card, highlightClasses.node].join(' ')}
+      data-highlight={highlight ?? undefined}
       data-testid={`canvas-node-${id}`}
       {...dropHandlers}
     >
       {/* Точка входа рёбер — одна на левом краю блока-узла (D9). Только у
           подсценариев: Главная целью связи быть не может (домен, N5). */}
       {/* Принимающий handle невидим и накрывает блок: принимает связь, только пока блок — допустимая цель. */}
-      {type === 'home' ? null : (
-        <Handle
-          type="target"
-          position={Position.Left}
-          className={connectTarget ? 'editor-target editor-target-available' : 'editor-target'}
-        />
-      )}
+      {type === 'home' ? null : <TargetHandle entity="node" id={id} />}
       <div className={nodeClasses.header}>
         <div className={classes.titles}>
           <Typography variant="subtitle1">{data.title}</Typography>
@@ -104,22 +119,79 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
           aria-label="Удалить узел"
           onClick={() => type && actions?.removeNode(id, type)}
         >
-          <Delete fontSize="small" />
+          <editorIcons.delete fontSize="small" />
         </IconButton>
       </div>
       {data.elements.length > 0 ? (
-        <div className={classes.elements}>
+        <div ref={elementsRef} className={classes.elements}>
           {data.elements.map((element) => (
-            <div key={element.id}>
-              <DropIndicator anchor={anchor} elementId={element.id} placement="before" />
+            <div
+              key={element.id}
+              className={classes.elementSlot}
+              // Отступ строки: блоки-цели связей напротив карточки (computeLayout).
+              style={element.rowOffset ? { marginTop: element.rowOffset } : undefined}
+            >
+              <DropIndicator anchor={anchor} elementId={element.id} placement="before" gap={ELEMENTS_GAP} />
               <ElementCard element={element} />
-              <DropIndicator anchor={anchor} elementId={element.id} placement="after" />
+              {/* Варианты Select'а с включённой «Сложной логикой» — карточки под
+                  ним, как в шаге формы: из варианта тянется правило видимости.
+                  Появляются, только если блок умеет логику (connection-matrix, R-CFG-2). */}
+              {element.complexLogic?.enabled ? (
+                <div className={classes.options}>
+                  {element.complexLogic.options.map((option) => (
+                    <OptionCard key={option.handleId} option={option} elementId={element.id} />
+                  ))}
+                </div>
+              ) : null}
+              <DropIndicator anchor={anchor} elementId={element.id} placement="after" gap={ELEMENTS_GAP} />
             </div>
           ))}
         </div>
       ) : null}
     </Card>
   );
+}
+
+// Замер строк элементов для раскладки «блок-цель напротив элемента»
+// ([owner 2026-10-16], N12): верх строки от верха узла и высота — без
+// отступа rowOffset, который дала сама раскладка. Перемер — при изменении
+// размера списка (карточка выросла, сменились отступы).
+function useElementRowsReport(
+  elements: CanvasNode['data']['elements'],
+  report: ((rows: MeasuredElementRows) => void) | undefined,
+) {
+  const elementsRef = useRef<HTMLDivElement>(null);
+  const elementsNow = useRef(elements);
+  elementsNow.current = elements;
+  useLayoutEffect(() => {
+    const list = elementsRef.current;
+    const node = list?.closest<HTMLElement>('.react-flow__node');
+    if (!list || !node || !report) {
+      return;
+    }
+    const measure = () => {
+      const nodeRect = node.getBoundingClientRect();
+      // Масштаб вьюпорта: замер в координатах канваса, не экрана.
+      const zoom = node.offsetHeight > 0 ? nodeRect.height / node.offsetHeight : 1;
+      const rows: Record<string, { top: number; height: number }> = {};
+      let offsets = 0;
+      Array.from(list.children).forEach((slot, index) => {
+        const element = elementsNow.current[index];
+        if (!element || !(slot instanceof HTMLElement)) {
+          return;
+        }
+        offsets += element.rowOffset ?? 0;
+        const top = (slot.getBoundingClientRect().top - nodeRect.top) / zoom;
+        rows[element.id] = { top: top - offsets, height: slot.offsetHeight };
+      });
+      report(rows);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [report, elements]);
+  return elementsRef;
 }
 
 // Перерисовка только при смене своих данных (data сохраняет идентичность,

@@ -1,23 +1,20 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ApplicationFormId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
-import { validateGraph } from '@domain/invariants';
 import { validStepTransitions } from '@domain/step-transitions';
-import type { Command } from './command';
+import type { Command, CommandContext } from './command';
 import { preservePageDepths } from './depth-preservation';
-import { InvariantViolationError } from './errors';
-import { walkSubScenarios } from './graph-lookup';
 
 // Команда удаления формы заявки (Epic 002, T-035) с каскадом связей:
 // удаляются все связи, направленные на эту форму (D12 — форма может быть
 // целью связи на общих основаниях), и связи, исходящие из её элементов
-// (ADR-17); applicationFormId сценариев type=application очищается (S8).
+// (ADR-17).
 export class RemoveForm implements Command {
   readonly name = 'RemoveForm';
 
   constructor(private readonly formId: ApplicationFormId) {}
 
-  apply(draft: ServiceGraph): void {
+  apply(draft: ServiceGraph, { rules }: CommandContext): void {
     // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
     const depthsBeforeRemoval = computeGraphDepths(draft);
     const index = draft.applicationForms.findIndex((form) => form.id === this.formId);
@@ -40,13 +37,6 @@ export class RemoveForm implements Command {
     draft.links = draft.links.filter(
       (link) => link.targetId !== this.formId && !componentIds.has(link.sourceElementId),
     );
-    // Сценарии type=application, ссылавшиеся на удалённую форму (S8, §6):
-    // ссылка обнуляется — висячий applicationFormId не остаётся в графе.
-    for (const scenario of walkSubScenarios(draft.subScenarios)) {
-      if (scenario.type === 'application' && scenario.applicationFormId === this.formId) {
-        delete scenario.applicationFormId;
-      }
-    }
     draft.logicRules = draft.logicRules.filter(
       (rule) => !componentIds.has(rule.sourceElementId) && !componentIds.has(rule.targetElementId),
     );
@@ -55,11 +45,6 @@ export class RemoveForm implements Command {
 
     // Каскад переходов между шагами [owner 2026-10-14]: переходы, ставшие
     // недопустимыми (удалена форма), уходят вместе с причиной.
-    draft.stepTransitions = validStepTransitions(draft);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
+    draft.stepTransitions = validStepTransitions(draft, rules);
   }
 }

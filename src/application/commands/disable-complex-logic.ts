@@ -1,11 +1,10 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
-import type { FormComponentId } from '@domain/model/ids';
-import { validateGraph } from '@domain/invariants';
+import type { ElementId } from '@domain/model/ids';
+import { canBeLogicSource } from '@domain/element-kinds';
 import { computeFormElementDepths } from '@domain/step-element-depths';
-import type { Command } from './command';
+import type { Command, CommandContext } from './command';
 import { preserveFormElementDepths } from './depth-preservation';
-import { InvariantViolationError } from './errors';
-import { findFormElement } from './graph-lookup';
+import { findElementInGraph } from '@domain/element-containers';
 
 // Выключение режима «Сложная логика» (T-037/T-064, L4): при наличии правил —
 // каскадное удаление всех рёбер этого источника (UI заранее спрашивает
@@ -14,16 +13,17 @@ import { findFormElement } from './graph-lookup';
 export class DisableComplexLogic implements Command {
   readonly name = 'DisableComplexLogic';
 
-  constructor(private readonly componentId: FormComponentId) {}
+  constructor(private readonly componentId: ElementId) {}
 
-  apply(draft: ServiceGraph): void {
+  apply(draft: ServiceGraph, { rules }: CommandContext): void {
     // Колонки элементов шагов до мутации: цель, потерявшая правило, остаётся на месте (ADR-15).
     const elementDepthsBefore = computeFormElementDepths(draft);
-    const found = findFormElement(draft, this.componentId);
+    // Выключить можно в любом блоке (R-CFG-2): снятие флага только убирает правила.
+    const found = findElementInGraph(draft, this.componentId);
     if (!found) {
       throw new Error(`Элемент не найден: ${this.componentId}`);
     }
-    if (found.element.kind !== 'selectList') {
+    if (!canBeLogicSource(rules, found.element)) {
       throw new Error(
         `Сложная логика v1 поддерживает только Select (элемент ${this.componentId}: ${found.element.kind})`,
       );
@@ -34,10 +34,5 @@ export class DisableComplexLogic implements Command {
     );
 
     preserveFormElementDepths(draft, elementDepthsBefore);
-
-    const violations = validateGraph(draft);
-    if (violations.length > 0) {
-      throw new InvariantViolationError(violations);
-    }
   }
 }

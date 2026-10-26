@@ -1,17 +1,43 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { CanvasElement } from '@domain/model/canvas-element';
-import type { LogicRuleId } from '@domain/model/ids';
-import { findElementLocation, findFormElement } from '@application/commands/graph-lookup';
+import { findElementLocation } from '@application/commands/graph-lookup';
 
-// Данные инспектора для выделенного элемента: сам компонент формы + его
-// правила видимости, где он — цель (T-067).
+// Данные панели атрибутов для выделенного элемента (T-041).
 export type SelectedElementInfo = {
   component: CanvasElement;
-  /** Элемент лежит в шаге формы — только там возможна «Сложная логика» (L-I5). */
-  inFormStep: boolean;
-  incomingRules: { ruleId: LogicRuleId; sourceLabel: string; optionLabel: string | null }[];
 };
+
+// Кнопка мыши зажата на канвасе: пока ЛКМ удержана, подразумевается попытка
+// переноса, и панель атрибутов не должна открываться — она сужает канвас и
+// срывает drag. Жест кончается на pointerup (клик, drag узла react-flow) либо
+// на dragend/drop (нативный dnd карточек: на его старте браузер шлёт
+// pointercancel и pointerup уже не будет — поэтому pointercancel жест НЕ
+// завершает, иначе панель открывалась бы посреди переноса; drop нужен на
+// случай, когда перенесённая карточка перемонтирована и dragend не дойдёт).
+// Нажатия вне .react-flow (сама панель) не считаются.
+export function useCanvasPointerHeld(): boolean {
+  const [held, setHeld] = useState(false);
+  useEffect(() => {
+    const onDown = (event: PointerEvent) => {
+      if (event.target instanceof Element && event.target.closest('.react-flow')) {
+        setHeld(true);
+      }
+    };
+    const onRelease = () => setHeld(false);
+    window.addEventListener('pointerdown', onDown, true);
+    window.addEventListener('pointerup', onRelease, true);
+    window.addEventListener('dragend', onRelease, true);
+    window.addEventListener('drop', onRelease, true);
+    return () => {
+      window.removeEventListener('pointerdown', onDown, true);
+      window.removeEventListener('pointerup', onRelease, true);
+      window.removeEventListener('dragend', onRelease, true);
+      window.removeEventListener('drop', onRelease, true);
+    };
+  }, []);
+  return held;
+}
 
 // Выделение на канвасе (ревью A3, R3): узел, шаг формы и элемент.
 // Выделение узла и элемента взаимоисключающи — последний клик побеждает
@@ -51,34 +77,15 @@ export function useSelection(graph: ServiceGraph) {
     setSelectedNodeId((current) => (current === nodeId ? null : current));
   }, []);
 
-  // Выделенный элемент + его правила видимости (цель) — данные панели
-  // атрибутов (T-041/T-067). Любой вид элемента (ADR-17).
+  // Выделенный элемент — данные панели атрибутов (T-041). Любой вид
+  // элемента (ADR-17).
   const selectedElement = useMemo<SelectedElementInfo | null>(() => {
     if (!selectedElementId) {
       return null;
     }
     const location = findElementLocation(graph, selectedElementId);
     const component = location?.list[location.index];
-    if (!location || !component) {
-      return null;
-    }
-    const incomingRules = graph.logicRules
-      .filter((rule) => rule.targetElementId === selectedElementId)
-      .map((rule) => {
-        const source = findFormElement(graph, rule.sourceElementId)?.element;
-        const sourceLabel = source && 'label' in source ? source.label : (source?.kind ?? 'Элемент');
-        let optionLabel: string | null = null;
-        if (rule.condition.kind === 'optionSelected' && source?.kind === 'selectList') {
-          optionLabel =
-            source.options.find((option) => option.value === rule.condition.optionId)?.label ?? null;
-        }
-        return { ruleId: rule.id, sourceLabel, optionLabel };
-      });
-    return {
-      component,
-      inFormStep: location.container.kind === 'formStep',
-      incomingRules,
-    };
+    return component ? { component } : null;
   }, [graph, selectedElementId]);
 
   return {
