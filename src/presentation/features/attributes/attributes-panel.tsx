@@ -153,10 +153,13 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
 }
 
 // Совместимость значения props с типом атрибута (тип — из схемы элемента).
-// Множественный выбор (multiple) — массив строк при любом поле ввода.
+// Множественный выбор (multiple) — массив строк при любом поле ввода; строка —
+// значение до включения multiple, редактор покажет её выбранной.
 function isValueCompatible({ type, multiple }: ElementAttribute, value: unknown): boolean {
   if (multiple) {
-    return Array.isArray(value) && value.every((item) => typeof item === 'string');
+    return (
+      typeof value === 'string' || (Array.isArray(value) && value.every((item) => typeof item === 'string'))
+    );
   }
   switch (type) {
     case 'text':

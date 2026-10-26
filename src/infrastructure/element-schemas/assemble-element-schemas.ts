@@ -331,6 +331,10 @@ function assembleAttribute(
   if (policy.item && kind.type !== 'objectList') {
     fail('item — только у массива объектов');
   }
+  // Частая ошибка: «один / несколько» — свойство данных, не вида поля.
+  if ('multiple' in policy) {
+    fail('multiple задаётся в схеме (extensions схем проекта рядом с enum), не в политике');
+  }
 
   switch (kind.type) {
     case 'enum':

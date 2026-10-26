@@ -24,7 +24,7 @@
     "all": {
       "type": "object",
       "properties": {
-        "availability": { "type": "string", "enum": ["Sigma", "Delta", "Alpha"] }
+        "availability": { "type": "string", "enum": ["Sigma", "Delta", "Alpha"], "multiple": true }
       }
     },
     "byKind": {}

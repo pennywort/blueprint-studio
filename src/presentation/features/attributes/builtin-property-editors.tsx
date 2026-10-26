@@ -166,8 +166,14 @@ function RadioPropertyEditor({ value, onChange, attribute }: PropertyEditorProps
   );
 }
 
+// Значения множественного выбора; одиночная строка — значение до включения
+// multiple в схеме: показывается выбранной, первая правка запишет массив.
 const asStrings = (value: unknown): string[] =>
-  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : typeof value === 'string'
+      ? [value]
+      : [];
 
 // Пустое значение — «не задано» (prop снимается): берётся значение фреймворка.
 function SelectPropertyEditor({ value, onChange, attribute }: PropertyEditorProps) {
