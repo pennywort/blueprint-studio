@@ -18,6 +18,10 @@ export default defineConfig({
         find: /^@local\/editor-icons$/,
         replacement: path.resolve(__dirname, 'src/presentation/icons/editor-icons.none.ts'),
       },
+      {
+        find: /^@local\/framework-icons$/,
+        replacement: path.resolve(__dirname, 'src/presentation/icons/framework-icons.none.ts'),
+      },
     ],
   },
   test: {

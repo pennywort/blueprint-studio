@@ -4,12 +4,22 @@
 registry Flamingo. Поэтому всё, что касается Flamingo, живёт **в файлах вне git**:
 `git pull` их не трогает и не конфликтует с ними.
 
-| Что                | Файл / команда                                           | В git |
-| ------------------ | -------------------------------------------------------- | ----- |
-| Иконки Flamingo    | `src/presentation/icons/editor-icons.local.tsx`          | нет   |
-| Пакет иконок       | `npm install --no-save <пакет иконок flamingo>@<версия>` | нет   |
-| Таблица ролей      | `src/presentation/icons/editor-icons.ts` (правит облако) | да    |
-| Заглушка без файла | `src/presentation/icons/editor-icons.none.ts`            | да    |
+| Что                                     | Файл / команда                                              | В git |
+| --------------------------------------- | ----------------------------------------------------------- | ----- |
+| Иконки Flamingo                         | `src/presentation/icons/editor-icons.local.tsx`             | нет   |
+| Пакет иконок                            | `npm install --no-save <пакет иконок flamingo>@<версия>`    | нет   |
+| Таблица ролей                           | `src/presentation/icons/editor-icons.ts` (правит облако)    | да    |
+| Заглушка без файла                      | `src/presentation/icons/editor-icons.none.ts`               | да    |
+| Иконки атрибута `icon` (глифы по имени) | `src/presentation/icons/framework-icons.local.tsx`          | нет   |
+| Тип резолвера                           | `src/presentation/icons/framework-icons.ts` (правит облако) | да    |
+
+Два набора иконок — не путать:
+
+- **Иконки интерфейса редактора** (корзина, плейсхолдер на элементах, зум…) —
+  `editor-icons.local.tsx`: частичная таблица «роль → компонент».
+- **Иконки фреймворка** — значения атрибута `icon` (имена из enum схемы:
+  `alert_triangle`, `*_filled`) — `framework-icons.local.tsx`: функция
+  `(name) => компонент | undefined` (`FrameworkIconResolver`). `undefined` — монограмма.
 
 ## Как работает
 

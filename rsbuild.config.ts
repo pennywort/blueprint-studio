@@ -3,12 +3,12 @@ import { pluginReact } from '@rsbuild/plugin-react';
 import fs from 'node:fs';
 import path from 'node:path';
 
-// Локальные переопределения вне git (docs/local-overrides.md): есть файл — берём его,
-// нет — заглушку. Тот же порядок, что в tsconfig paths.
-const localIcons = path.resolve(__dirname, 'src/presentation/icons/editor-icons.local.tsx');
-const editorIconsOverride = fs.existsSync(localIcons)
-  ? localIcons
-  : path.resolve(__dirname, 'src/presentation/icons/editor-icons.none.ts');
+// Локальные переопределения вне git (docs/local-overrides.md): есть `<имя>.local.tsx` —
+// берём его, нет — заглушку `<имя>.none.ts`. Тот же порядок, что в tsconfig paths.
+function localOverride(name: string): string {
+  const local = path.resolve(__dirname, `src/presentation/icons/${name}.local.tsx`);
+  return fs.existsSync(local) ? local : path.resolve(__dirname, `src/presentation/icons/${name}.none.ts`);
+}
 
 export default defineConfig({
   plugins: [pluginReact()],
@@ -27,7 +27,8 @@ export default defineConfig({
       '@application': path.resolve(__dirname, 'src/application'),
       '@infrastructure': path.resolve(__dirname, 'src/infrastructure'),
       '@presentation': path.resolve(__dirname, 'src/presentation'),
-      '@local/editor-icons$': editorIconsOverride,
+      '@local/editor-icons$': localOverride('editor-icons'),
+      '@local/framework-icons$': localOverride('framework-icons'),
     },
   },
   html: {

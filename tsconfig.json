@@ -24,6 +24,10 @@
       "@local/editor-icons": [
         "src/presentation/icons/editor-icons.local.tsx",
         "src/presentation/icons/editor-icons.none.ts"
+      ],
+      "@local/framework-icons": [
+        "src/presentation/icons/framework-icons.local.tsx",
+        "src/presentation/icons/framework-icons.none.ts"
       ]
     }
   },

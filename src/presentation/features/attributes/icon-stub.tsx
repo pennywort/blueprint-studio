@@ -1,10 +1,11 @@
 import { makeStyles } from '@material-ui/core';
+import { resolveFrameworkIcon } from '@presentation/icons/framework-icons';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
-// TEMPORARY: заглушка иконки фреймворка [owner 2026-10-20] — набора иконок
-// целевой ДС в редакторе нет, поэтому вместо глифа — монограмма имени
-// (alert_triangle → AT), *_filled — залитая плашка. Удалить, когда появятся
-// настоящие иконки (docs/temporary-registry.md, п. 8).
+// TEMPORARY: заглушка иконки фреймворка [owner 2026-10-20] — глиф берётся из
+// локального набора (resolveFrameworkIcon, docs/local-overrides.md); нет глифа —
+// монограмма имени (alert_triangle → AT), *_filled — залитая плашка. Удалить
+// монограмму, когда набор иконок ДС будет в git (docs/temporary-registry.md, п. 8).
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
   stub: {
@@ -44,6 +45,8 @@ function monogram(name: string): string {
 
 export function IconStub({ name }: { name: string }) {
   const classes = useStyles();
+  const Glyph = resolveFrameworkIcon(name);
+  if (Glyph) return <Glyph fontSize="small" />;
   const filled = name.endsWith('_filled');
   return (
     <span className={`${classes.stub} ${filled ? classes.filled : ''}`} aria-hidden>
