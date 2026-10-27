@@ -40,6 +40,7 @@
 | 31  | `canvas-performance`                | todo   |                               |         |
 | 32  | `canvas-architecture-refactor`      | todo   |                               |         |
 | 33  | `comment-elements`                  | todo   |                               |         |
+| 34  | `canvas-multi-select-clipboard`     | todo   |                               |         |
 
 ## Журнал сессий (одна строка на сессию)
 
