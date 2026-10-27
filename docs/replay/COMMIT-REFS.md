@@ -43,4 +43,4 @@ docs(openspec): <change-id> — <суть> (задача NN)
 | 31  | `canvas-performance`                | Производительность канваса на больших картах             | R2, R-PERF                                                     |
 | 32  | `canvas-architecture-refactor`      | Состояние редактора разрезано на хуки                    | R3, R4                                                         |
 | 33  | `comment-elements`                  | Комментарии для разработчика                             | —                                                              |
-| 34  | `canvas-multi-select-clipboard`     | Мультивыделение элементов и копирование группы           | ADR-12, ADR-22, R-HK                                           |
+| 34  | `canvas-multi-select-clipboard`     | Мультивыделение, копирование и перенос группы            | ADR-12, ADR-22, R-HK                                           |
