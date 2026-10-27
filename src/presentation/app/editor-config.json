@@ -1,5 +1,6 @@
 {
   "canvas": {
-    "panTool": true
+    "panTool": true,
+    "navigation": "figma"
   }
 }

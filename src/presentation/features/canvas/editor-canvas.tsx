@@ -46,6 +46,7 @@ import { useLayerPolicies } from './layers/layer-policy';
 import { LayerDropHighlight } from './layers/layer-drop-highlight';
 import { isActionTarget } from './canvas-events';
 import { EditorCanvasControls } from './editor-canvas-controls';
+import { CANVAS_NAVIGATION_SCHEMES } from './canvas-navigation';
 import { canvasNodeTypes } from './nodes/node-types';
 import { EditorConnectionLine, canvasEdgeTypes, editorEdgePath } from './canvas-edges';
 import { EDGE_ARROW_MARKER_ID, type CanvasEdge, type CanvasNode } from './graph-flow-adapter';
@@ -639,6 +640,9 @@ function CanvasInner({
         nodeDragThreshold={5}
         // Мин. зум 10% вместо дефолтных 50% react-flow (замечание владельца 2026-10-13).
         minZoom={0.1}
+        // Колесо/трекпад: скролл двигает полотно, pinch — масштаб (как в Figma);
+        // схема — canvas.navigation конфига редактора.
+        {...CANVAS_NAVIGATION_SCHEMES[EDITOR_CONFIG.canvas.navigation]}
         colorMode="light"
         fitView
       >
