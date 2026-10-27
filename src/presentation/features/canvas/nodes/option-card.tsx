@@ -60,7 +60,7 @@ export const OptionCard = memo(function OptionCard({ option, elementId }: Option
       data-option-card={option.handleId}
       onPointerDown={(event) => {
         if (!isActionTarget(event.target)) {
-          actions?.selectElement(elementId);
+          actions?.selectElement(elementId, event.shiftKey);
         }
       }}
       onClick={(event) => event.stopPropagation()}

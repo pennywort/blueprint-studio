@@ -31,17 +31,21 @@ export function resolveElementTarget(
   }
 }
 
-// Команда добавления элемента в узел канваса (Epic 002, T-035). Готовый
-// элемент приходит в конструктор (id — от IIdGenerator вызывающей стороны).
+// Команда добавления элементов в узел канваса (Epic 002, T-035). Готовые
+// элементы приходят в конструктор (id — от IIdGenerator вызывающей стороны);
+// несколько — вставка группы из буфера одним шагом undo [owner 2026-10-27].
 // Инварианты проверяются на черновике до фиксации (например, второй
 // attachment на форму отклоняется инвариантом #1).
 export class AddElement implements Command {
   readonly name = 'AddElement';
+  private readonly elements: readonly CanvasElement[];
 
   constructor(
     private readonly target: CanvasElementTarget,
-    private readonly element: CanvasElement,
-  ) {}
+    ...elements: CanvasElement[]
+  ) {
+    this.elements = elements;
+  }
 
   apply(draft: ServiceGraph): void {
     const target = this.target;
@@ -52,15 +56,20 @@ export class AddElement implements Command {
       throw new Error(`Блок для элемента не найден: ${JSON.stringify(this.target)}`);
     }
 
-    if (target.kind === 'formStep' && this.element.layerDepth === undefined) {
-      // Новый элемент шага без правил встаёт в колонку правее самой глубокой —
-      // шаг растёт по горизонтали [owner 2026-10-13] (как AddFormComponent).
-      const depths = [
-        ...computeStepElementDepths({ id: target.stepId, elements: list }, draft.logicRules).values(),
-      ];
-      list.push({ ...this.element, layerDepth: depths.length === 0 ? 0 : Math.max(...depths) + 1 });
-    } else {
-      list.push(this.element);
+    if (target.kind !== 'formStep') {
+      list.push(...this.elements);
+      return;
     }
+    // Новые элементы шага без правил встают в одну колонку правее самой
+    // глубокой — шаг растёт по горизонтали [owner 2026-10-13] (как AddFormComponent).
+    const depths = [
+      ...computeStepElementDepths({ id: target.stepId, elements: list }, draft.logicRules).values(),
+    ];
+    const layerDepth = depths.length === 0 ? 0 : Math.max(...depths) + 1;
+    list.push(
+      ...this.elements.map((element) =>
+        element.layerDepth === undefined ? { ...element, layerDepth } : element,
+      ),
+    );
   }
 }

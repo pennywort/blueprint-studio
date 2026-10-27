@@ -16,12 +16,12 @@ export function useCanvasNodes(
   graph: ServiceGraph,
   interaction: {
     selectedNodeId: string | null;
-    selectedElementId: string | null;
+    selectedElementIds: readonly string[];
     selectedStepId: string | null;
     connectionTargets: ConnectableTargets | null;
   },
 ) {
-  const { selectedNodeId, selectedElementId, selectedStepId, connectionTargets } = interaction;
+  const { selectedNodeId, selectedElementIds, selectedStepId, connectionTargets } = interaction;
   // Фактические размеры узлов от react-flow (N12): стек колонки строится по
   // ним, чтобы зазор между узлами был ровно rowGap. Обновляется только при
   // реальном изменении (> 1px) — иначе пересчёт раскладки зациклился бы.
@@ -88,7 +88,7 @@ export function useCanvasNodes(
   useLayoutEffect(() => {
     interactionStore.setState({
       selectedNodeId,
-      selectedElementId,
+      selectedElementIds,
       selectedStepId,
       connectionTargets,
       violations: violationMarkers,
@@ -96,7 +96,7 @@ export function useCanvasNodes(
   }, [
     interactionStore,
     selectedNodeId,
-    selectedElementId,
+    selectedElementIds,
     selectedStepId,
     connectionTargets,
     violationMarkers,
@@ -104,13 +104,14 @@ export function useCanvasNodes(
 
   // Выделение узла управляется отсюда (N6; взаимоисключение с элементом,
   // F5): новый объект — только у выделенного узла, data общая.
+  const noElementSelected = selectedElementIds.length === 0;
   const nodes = useMemo<CanvasNode[]>(() => {
-    const selectedId = selectedElementId === null ? selectedNodeId : null;
+    const selectedId = noElementSelected ? selectedNodeId : null;
     if (selectedId === null) {
       return flow.nodes;
     }
     return flow.nodes.map((node) => (node.id === selectedId ? { ...node, selected: true } : node));
-  }, [flow.nodes, selectedNodeId, selectedElementId]);
+  }, [flow.nodes, selectedNodeId, noElementSelected]);
 
   return {
     nodes,

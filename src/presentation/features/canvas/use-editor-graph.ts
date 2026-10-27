@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef } from 'react';
 import type { CanvasElement, CanvasElementKind } from '@domain/model/canvas-element';
+import type { ServiceGraph } from '@domain/model/service-graph';
 import { canBeLogicSource, kindRules } from '@domain/element-kinds';
 import type { EditorRules } from '@domain/editor-rules';
 import { useEditorRules } from '@presentation/features/settings/use-settings';
@@ -70,6 +71,18 @@ function elementKindOptions(
     .map((schema) => ({ kind: schema.kind, label: schema.label }));
 }
 
+// Выделенные элементы в порядке карты: блоки — в порядке выбора, внутри
+// блока — по месту в списке; исчезнувшие (undo) пропускаются.
+function elementsInMapOrder(graph: ServiceGraph, elementIds: readonly string[]): CanvasElement[] {
+  const locations = elementIds
+    .map((id) => findElementLocation(graph, id))
+    .filter((location) => location !== null);
+  const lists = [...new Set(locations.map((location) => location.list))];
+  return locations
+    .sort((left, right) => lists.indexOf(left.list) - lists.indexOf(right.list) || left.index - right.index)
+    .map((location) => location.list[location.index]!);
+}
+
 // Хук страницы редактора — композиция (ревью A3, R3): хранилище графа
 // (editor-store), выделение, связи, поиск и узлы канваса — отдельные хуки;
 // здесь — маппинг событий канваса и тулбара в команды. Публичный интерфейс
@@ -92,10 +105,12 @@ export function useEditorGraph() {
   const {
     selectedNodeId,
     selectedElementId,
+    selectedElementIds,
     selectedStepId,
     selectedElement,
     selectNode,
     selectElement,
+    selectElements,
     clearSelection,
     forgetNode,
   } = useSelection(graph);
@@ -114,7 +129,7 @@ export function useEditorGraph() {
     graph,
     {
       selectedNodeId,
-      selectedElementId,
+      selectedElementIds,
       selectedStepId,
       connectionTargets,
     },
@@ -198,11 +213,16 @@ export function useEditorGraph() {
   // проекта: выделение + Delete). Возвращает true, если нажатие обработано,
   // — канвас тогда гасит событие, чтобы react-flow не удалил узел.
   // Выделенный шаг формы (S10) удаляется сам, а не вся форма (T-035).
+  // Набор элементов (Shift+клик) — одной командой, один шаг undo [owner 2026-10-27].
   const deleteSelectedElement = useCallback((): boolean => {
-    if (selectedElementId) {
-      const elementId = selectedElementId;
+    if (selectedElementIds.length > 0) {
+      const elementIds = selectedElementIds
+        .filter((id) => findElementLocation(graphRef.current, id))
+        .map(toElementId);
       selectElement(null);
-      runCommand(new RemoveElement(toElementId(elementId)));
+      if (elementIds.length > 0) {
+        runCommand(new RemoveElement(...elementIds));
+      }
       return true;
     }
     if (selectedNodeType === 'form' && selectedNodeId && selectedStepId) {
@@ -214,10 +234,11 @@ export function useEditorGraph() {
     }
     return false;
   }, [
+    graphRef,
     runCommand,
     selectElement,
     selectNode,
-    selectedElementId,
+    selectedElementIds,
     selectedNodeId,
     selectedNodeType,
     selectedStepId,
@@ -267,32 +288,33 @@ export function useEditorGraph() {
     [newElement, runCommand, selectedNodeTarget],
   );
 
-  // Буфер обмена элементов (хоткеи Ctrl+C/X/V [owner 2026-10-15]): копия
-  // элемента в памяти редактора, системный буфер не трогается. Обработчики
-  // возвращают false, если делать нечего, — тогда работает действие браузера.
-  const clipboardRef = useRef<CanvasElement | null>(null);
+  // Буфер обмена элементов (хоткеи Ctrl+C/X/V [owner 2026-10-15]): копии
+  // выделенных элементов в памяти редактора, системный буфер не трогается.
+  // Обработчики возвращают false, если делать нечего, — тогда работает
+  // действие браузера. Набор из нескольких — Shift+клик [owner 2026-10-27].
+  const clipboardRef = useRef<readonly CanvasElement[]>([]);
 
   const copySelectedElement = useCallback((): boolean => {
-    const location = selectedElementId ? findElementLocation(graphRef.current, selectedElementId) : null;
-    const element = location?.list[location.index];
-    if (!element) {
+    const elements = elementsInMapOrder(graphRef.current, selectedElementIds);
+    if (elements.length === 0) {
       return false;
     }
-    clipboardRef.current = structuredClone(element);
+    clipboardRef.current = structuredClone(elements);
     return true;
-  }, [graphRef, selectedElementId]);
+  }, [graphRef, selectedElementIds]);
 
-  // Вырезать = копировать + штатное удаление выделенного элемента (RemoveElement).
+  // Вырезать = копировать + штатное удаление выделенных элементов (RemoveElement).
   const cutSelectedElement = useCallback(
     (): boolean => copySelectedElement() && deleteSelectedElement(),
     [copySelectedElement, deleteSelectedElement],
   );
 
-  // Вставка: выделен элемент — в его блок, иначе — в выделенный узел (как
-  // меню тулбара). Копия получает новый id и становится выделенной.
+  // Вставка: выделены элементы — в блок основного (последнего выбранного),
+  // иначе — в выделенный узел (как меню тулбара); в конец блока, одной
+  // командой. Копии получают новые id и становятся выделенными.
   const pasteElement = useCallback((): boolean => {
     const copied = clipboardRef.current;
-    if (!copied) {
+    if (copied.length === 0) {
       return false;
     }
     const location = selectedElementId ? findElementLocation(graphRef.current, selectedElementId) : null;
@@ -312,14 +334,14 @@ export function useEditorGraph() {
       target = selectedNodeTarget();
     }
     if (target) {
-      const element = cloneElementWithId(copied, idGenerator.next());
-      runCommand(new AddElement(target, element));
-      if (findElementLocation(graphRef.current, element.id)) {
-        selectElement(element.id);
+      const elements = copied.map((element) => cloneElementWithId(element, idGenerator.next()));
+      runCommand(new AddElement(target, ...elements));
+      if (findElementLocation(graphRef.current, elements[0]!.id)) {
+        selectElements(elements.map((element) => element.id));
       }
     }
     return true;
-  }, [graphRef, idGenerator, runCommand, selectElement, selectedElementId, selectedNodeTarget]);
+  }, [graphRef, idGenerator, runCommand, selectElements, selectedElementId, selectedNodeTarget]);
 
   // «+» конкретного шага формы → элемент выбранного вида на этот шаг.
   const addElementToStep = useCallback(

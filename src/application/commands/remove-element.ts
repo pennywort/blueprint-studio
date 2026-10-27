@@ -12,10 +12,14 @@ import { findElementLocation } from './graph-lookup';
 // (ListItem/WidgetCard) или компонента формы. Элемент ищется по id во всём
 // графе. Каскад: вместе с элементом уходят его исходящие связи (источник
 // связи — элемент страницы, D9); входящие связи на страницы не трогаются.
+// Несколько id — удаление группы выделенных одним шагом undo [owner 2026-10-27].
 export class RemoveElement implements Command {
   readonly name = 'RemoveElement';
+  private readonly elementIds: ReadonlySet<ElementId>;
 
-  constructor(private readonly elementId: ElementId) {}
+  constructor(...elementIds: ElementId[]) {
+    this.elementIds = new Set(elementIds);
+  }
 
   apply(draft: ServiceGraph, { rules }: CommandContext): void {
     // Уровни шагов до мутации: шаг, потерявший входящий переход, остаётся на месте (ADR-15).
@@ -24,17 +28,20 @@ export class RemoveElement implements Command {
     const elementDepthsBefore = computeFormElementDepths(draft);
     // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
     const depthsBeforeRemoval = computeGraphDepths(draft);
-    const location = findElementLocation(draft, this.elementId);
-    if (!location) {
-      throw new Error(`Элемент не найден: ${this.elementId}`);
+    for (const elementId of this.elementIds) {
+      const location = findElementLocation(draft, elementId);
+      if (!location) {
+        throw new Error(`Элемент не найден: ${elementId}`);
+      }
+      location.list.splice(location.index, 1);
     }
 
-    location.list.splice(location.index, 1);
-    draft.links = draft.links.filter((link) => link.sourceElementId !== this.elementId);
+    const removed = this.elementIds;
+    draft.links = draft.links.filter((link) => !removed.has(link.sourceElementId));
     // Каскад сложной логики (T-037, §6 дизайн-дока): вместе с элементом
     // уходят правила, где он источник или цель.
     draft.logicRules = draft.logicRules.filter(
-      (rule) => rule.sourceElementId !== this.elementId && rule.targetElementId !== this.elementId,
+      (rule) => !removed.has(rule.sourceElementId) && !removed.has(rule.targetElementId),
     );
 
     preservePageDepths(draft, depthsBeforeRemoval);

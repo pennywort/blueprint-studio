@@ -23,7 +23,7 @@ const CONNECT_HOVER = 4;
 // примитив, и сущность перерисовывается только при смене СВОИХ флагов (R-PERF-6).
 function storeFlags(state: CanvasInteractionState, target: HighlightTarget): number {
   let flags = 0;
-  const noElement = state.selectedElementId === null;
+  const noElement = state.selectedElementIds.length === 0;
   switch (target.entity) {
     case 'node':
       // Выделен шаг или элемент — рамка у них, не у узла: одна рамка на одно выделение (F5).
@@ -40,7 +40,7 @@ function storeFlags(state: CanvasInteractionState, target: HighlightTarget): num
       }
       break;
     case 'card':
-      if (state.selectedElementId === target.id) {
+      if (state.selectedElementIds.includes(target.id)) {
         flags |= SELECTED;
       }
       if (state.violations.elements.has(target.id)) {

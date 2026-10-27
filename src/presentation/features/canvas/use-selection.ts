@@ -39,14 +39,18 @@ export function useCanvasPointerHeld(): boolean {
   return held;
 }
 
-// Выделение на канвасе (ревью A3, R3): узел, шаг формы и элемент.
-// Выделение узла и элемента взаимоисключающи — последний клик побеждает
+const NO_ELEMENTS: readonly string[] = [];
+
+// Выделение на канвасе (ревью A3, R3): узел, шаг формы и элементы.
+// Выделение узла и элементов взаимоисключающи — последний клик побеждает
 // (единое правило проекта: выделение + Delete, F5/ADR-12).
 export function useSelection(graph: ServiceGraph) {
   // Выделенный узел (клик): цель меню добавления элементов тулбара (T-034).
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  // Выделенный элемент внутри узла: Delete/Backspace удаляет именно его.
-  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  // Выделенные элементы в порядке выделения; Shift+клик набирает несколько
+  // для Delete и Ctrl+C/X/V [owner 2026-10-27]. Последний — основной: его
+  // блок — цель вставки.
+  const [selectedElementIds, setSelectedElementIds] = useState<readonly string[]>(NO_ELEMENTS);
   // Выделенный шаг формы (S10): меню элементов тулбара добавляет в него.
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
 
@@ -57,12 +61,28 @@ export function useSelection(graph: ServiceGraph) {
     setSelectedNodeId(nodeId);
     setSelectedStepId(nodeId !== null ? stepId : null);
     if (nodeId !== null) {
-      setSelectedElementId(null);
+      setSelectedElementIds(NO_ELEMENTS);
     }
   }, []);
-  const selectElement = useCallback((elementId: string | null) => {
-    setSelectedElementId(elementId);
-    if (elementId !== null) {
+  // additive (Shift+клик) — элемент добавляется в набор или убирается из него;
+  // иначе выделение — только он.
+  const selectElement = useCallback((elementId: string | null, additive = false) => {
+    if (elementId === null) {
+      setSelectedElementIds(NO_ELEMENTS);
+      return;
+    }
+    setSelectedNodeId(null);
+    setSelectedElementIds((current) => {
+      if (!additive) {
+        return current.length === 1 && current[0] === elementId ? current : [elementId];
+      }
+      return current.includes(elementId) ? current.filter((id) => id !== elementId) : [...current, elementId];
+    });
+  }, []);
+  // Набор элементов целиком (копии после вставки).
+  const selectElements = useCallback((elementIds: readonly string[]) => {
+    setSelectedElementIds(elementIds.length === 0 ? NO_ELEMENTS : elementIds);
+    if (elementIds.length > 0) {
       setSelectedNodeId(null);
     }
   }, []);
@@ -70,27 +90,32 @@ export function useSelection(graph: ServiceGraph) {
   // на сущности, пока не выбрана другая).
   const clearSelection = useCallback(() => {
     setSelectedNodeId(null);
-    setSelectedElementId(null);
+    setSelectedElementIds(NO_ELEMENTS);
   }, []);
   // Удалённый узел больше не выделен.
   const forgetNode = useCallback((nodeId: string) => {
     setSelectedNodeId((current) => (current === nodeId ? null : current));
   }, []);
 
-  // Выделенный элемент — данные панели атрибутов (T-041). Любой вид
-  // элемента (ADR-17).
+  // Основной выделенный элемент — последний выбранный.
+  const selectedElementId = selectedElementIds.at(-1) ?? null;
+
+  // Единственный выделенный элемент — данные панели атрибутов (T-041). Любой
+  // вид элемента (ADR-17); при наборе из нескольких панель не показывается.
   const selectedElement = useMemo<SelectedElementInfo | null>(() => {
-    if (!selectedElementId) {
+    if (selectedElementIds.length !== 1 || !selectedElementId) {
       return null;
     }
     const location = findElementLocation(graph, selectedElementId);
     const component = location?.list[location.index];
     return component ? { component } : null;
-  }, [graph, selectedElementId]);
+  }, [graph, selectedElementId, selectedElementIds.length]);
 
   return {
     selectedNodeId,
     selectedElementId,
+    selectedElementIds,
+    selectElements,
     selectedStepId,
     selectedElement,
     selectNode,

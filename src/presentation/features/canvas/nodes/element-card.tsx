@@ -235,10 +235,12 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
       // Выделение — следующей макрозадачей (ADR-16/17, доводка dnd): синхронный
       // ре-рендер узла внутри pointerdown срывал старт нативного drag в
       // Chromium — карточку, не выделенную заранее, нельзя было перетащить.
+      // Shift — добавить в выделение или убрать из него [owner 2026-10-27].
       onPointerDown={(event) => {
         pressOnActionRef.current = isActionTarget(event.target);
         if (!pressOnActionRef.current) {
-          setTimeout(() => actions?.selectElement(element.id), 0);
+          const additive = event.shiftKey;
+          setTimeout(() => actions?.selectElement(element.id, additive), 0);
         }
       }}
       onClick={(event) => event.stopPropagation()}

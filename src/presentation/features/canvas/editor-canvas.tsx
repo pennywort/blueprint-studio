@@ -228,14 +228,14 @@ function CanvasInner({
   // стор без перерисовки канваса (ревью P3, R2).
   useEffect(() => {
     const store = interactionStore ?? STANDALONE_STORE;
-    let { selectedNodeId, selectedElementId } = store.getState();
+    let { selectedNodeId, selectedElementIds } = store.getState();
     return store.subscribe(() => {
       const state = store.getState();
       const changed =
-        state.selectedNodeId !== selectedNodeId || state.selectedElementId !== selectedElementId;
+        state.selectedNodeId !== selectedNodeId || state.selectedElementIds !== selectedElementIds;
       selectedNodeId = state.selectedNodeId;
-      selectedElementId = state.selectedElementId;
-      if (changed && (selectedNodeId !== null || selectedElementId !== null)) {
+      selectedElementIds = state.selectedElementIds;
+      if (changed && (selectedNodeId !== null || selectedElementIds.length > 0)) {
         setEdges((current) =>
           current.some((edge) => edge.selected)
             ? current.map((edge) => (edge.selected ? { ...edge, selected: false } : edge))

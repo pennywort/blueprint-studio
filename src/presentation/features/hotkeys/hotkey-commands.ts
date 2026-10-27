@@ -12,9 +12,9 @@ export const HOTKEY_COMMANDS = {
   'project.save': { title: 'Сохранить проект', allowInInput: true, repeat: false },
   'edit.undo': { title: 'Отменить', allowInInput: false, repeat: true },
   'edit.redo': { title: 'Повторить', allowInInput: false, repeat: true },
-  'edit.copy': { title: 'Копировать элемент', allowInInput: false, repeat: false },
-  'edit.cut': { title: 'Вырезать элемент', allowInInput: false, repeat: false },
-  'edit.paste': { title: 'Вставить элемент', allowInInput: false, repeat: false },
+  'edit.copy': { title: 'Копировать элементы', allowInInput: false, repeat: false },
+  'edit.cut': { title: 'Вырезать элементы', allowInInput: false, repeat: false },
+  'edit.paste': { title: 'Вставить элементы', allowInInput: false, repeat: false },
   // Единое удаление (F5): элемент или шаг, иначе выделенные блоки и связи.
   'edit.delete': { title: 'Удалить выделенное', allowInInput: false, repeat: false },
   'canvas.cancelConnection': { title: 'Отменить протягивание связи', allowInInput: false, repeat: false },

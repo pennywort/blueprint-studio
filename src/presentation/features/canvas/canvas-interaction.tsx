@@ -16,7 +16,8 @@ import type { MeasuredElementRows } from './canvas-layout';
 
 export type CanvasInteractionState = {
   selectedNodeId: string | null;
-  selectedElementId: string | null;
+  /** Выделенные элементы (Shift+клик — несколько, [owner 2026-10-27]). */
+  selectedElementIds: readonly string[];
   /** Выделенный шаг формы (S10) — подсветка колонки шага. */
   selectedStepId: string | null;
   /** Допустимые цели протягиваемой связи (ADR-14); null — связь не тянется. */
@@ -37,7 +38,7 @@ const NO_VIOLATIONS: ViolationMarkers = { nodes: new Map(), elements: new Map() 
 
 export const INITIAL_CANVAS_INTERACTION: CanvasInteractionState = {
   selectedNodeId: null,
-  selectedElementId: null,
+  selectedElementIds: [],
   selectedStepId: null,
   connectionTargets: null,
   violations: NO_VIOLATIONS,
@@ -70,7 +71,8 @@ export function createCanvasInteractionStore(): CanvasInteractionStore {
 // узла/карточки. Объект стабилен (создаётся один раз хуком), поэтому
 // контекст не перерисовывает потребителей.
 export type CanvasActions = {
-  selectElement: (elementId: string) => void;
+  /** additive — Shift+клик: добавить в выделение или убрать из него. */
+  selectElement: (elementId: string, additive?: boolean) => void;
   toggleComplexLogic: (elementId: string) => void;
   removeNode: (nodeId: string, nodeType: CanvasNodeType) => void;
   addElementToStep: (formId: string, stepId: string, kind: CanvasElementKind) => void;

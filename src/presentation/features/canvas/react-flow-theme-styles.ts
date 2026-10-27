@@ -144,6 +144,12 @@ export const useReactFlowThemeStyles = makeStyles<EditorTheme>((theme) => {
         backgroundColor: canvas.selectionBackground,
         border: `1px dotted ${canvas.edgeActive}`,
       },
+      // Кольцо фокуса узла react-flow (узлы фокусируемы, tabIndex) браузер
+      // показывал после любой клавиши, в т.ч. Shift мультивыделения, —
+      // «синяя рамка» без назначения; выделение рисует highlight/ (ADR-12).
+      '& .react-flow__node:focus-visible': {
+        outline: 'none',
+      },
       '& .react-flow__minimap': {
         backgroundColor: canvas.minimapBackground,
         border: `1px solid ${canvas.minimapBorder}`,
