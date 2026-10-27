@@ -15,7 +15,7 @@ import {
   isCommentElement,
   kindRules,
 } from '@domain/element-kinds';
-import { containerCapabilities, type ContainerCapabilities } from '@domain/connection-matrix';
+import { containerCapabilities, variantsVisible, type ElementContainerKind } from '@domain/connection-matrix';
 import type { ElementCatalog } from '@presentation/features/element-catalog/element-catalog';
 import {
   NODE_KIND_LABELS,
@@ -218,9 +218,10 @@ type ElementMapContext = {
 function elementToElementData(
   element: CanvasElement,
   context: ElementMapContext,
-  capabilities: ContainerCapabilities,
+  containerKind: ElementContainerKind,
 ): CanvasElementData {
   const { catalog, rules } = context;
+  const capabilities = containerCapabilities(rules, containerKind);
   if (isCommentElement(rules, element)) {
     // Комментарий-элемент — вне связей и «Сложной логики» в любом блоке.
     return {
@@ -250,12 +251,15 @@ function elementToElementData(
     data.complexLogic = {
       available,
       enabled: available && element.hasComplexLogic === true,
-      options: elementVariants(rules, element).map((variant) => ({
-        handleId: logicSourceHandleId(element.id, variant.id),
-        label: variant.label,
-        value: variant.id,
-        isDefault: variant.isDefault,
-      })),
+      // Карточки вариантов — только если из них есть куда тянуть связь (connection-matrix).
+      options: (variantsVisible(rules, element, containerKind) ? elementVariants(rules, element) : []).map(
+        (variant) => ({
+          handleId: logicSourceHandleId(element.id, variant.id),
+          label: variant.label,
+          value: variant.id,
+          isDefault: variant.isDefault,
+        }),
+      ),
     };
   }
   if (element.comment) {
@@ -312,10 +316,9 @@ function buildFlow(
   layout?: CanvasLayout,
 ): FlowGraph {
   const positionOf = (id: string): XYPosition => layout?.positions[id] ?? { x: 0, y: 0 };
-  const pageCapabilities = containerCapabilities(rules, 'page');
   // Карточка элемента страницы с отступом строки (цель напротив якоря).
   const pageElementData = (element: CanvasElement, context: ElementMapContext): CanvasElementData => {
-    const data = elementToElementData(element, context, pageCapabilities);
+    const data = elementToElementData(element, context, 'page');
     const rowOffset = layout?.rowOffsets[element.id];
     return rowOffset ? { ...data, rowOffset } : data;
   };
@@ -544,11 +547,7 @@ function formNodeData(
         title: step.title ?? formStepLabel(stepLevels.indexOf(stepDepth) + 1),
         depth: stepDepth,
         elements: step.elements.map((component) => ({
-          ...elementToElementData(
-            component,
-            elementContext,
-            containerCapabilities(elementContext.rules, 'formStep'),
-          ),
+          ...elementToElementData(component, elementContext, 'formStep'),
           layerDepth: stepDepths.get(component.id) ?? 0,
           ...(logicParents.has(component.id)
             ? { logicParentHandleId: logicParents.get(component.id)! }

@@ -225,8 +225,9 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
           width={L.elementWidth}
         />
       ) : null}
-      {/* Варианты Select'а — карточки под ним всегда [owner 2026-10-14]: из
-          варианта тянется переход на шаг, а при «Сложной логике» — и правило. */}
+      {/* Варианты Select'а — карточки под ним, если из варианта есть связь
+          (variantsVisible; сейчас всегда — переход на шаг [owner 2026-10-14],
+          а при «Сложной логике» — правило). */}
       {element.complexLogic
         ? element.complexLogic.options.map((option) => {
             const dependents = children.get(option.handleId) ?? [];

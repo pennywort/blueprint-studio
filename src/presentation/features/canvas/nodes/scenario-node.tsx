@@ -133,10 +133,9 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
             >
               <DropIndicator anchor={anchor} elementId={element.id} placement="before" gap={ELEMENTS_GAP} />
               <ElementCard element={element} />
-              {/* Варианты Select'а с включённой «Сложной логикой» — карточки под
-                  ним, как в шаге формы: из варианта тянется правило видимости.
-                  Появляются, только если блок умеет логику (connection-matrix, R-CFG-2). */}
-              {element.complexLogic?.enabled ? (
+              {/* Варианты Select'а — карточки под ним, как в шаге формы, если из
+                  варианта на странице есть связь (variantsVisible, connection-matrix). */}
+              {element.complexLogic && element.complexLogic.options.length > 0 ? (
                 <div className={classes.options}>
                   {element.complexLogic.options.map((option) => (
                     <OptionCard key={option.handleId} option={option} elementId={element.id} />

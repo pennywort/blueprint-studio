@@ -7,6 +7,7 @@ import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
 import { groupByLayer } from '@domain/layer-depths';
 import { elementVariants } from '@domain/element-kinds';
+import { variantsVisible } from '@domain/connection-matrix';
 import type { EditorRules } from '@domain/editor-rules';
 import { logicRulesToAnchorLinks, logicSourceHandleId } from './graph-flow-adapter';
 import {
@@ -133,10 +134,11 @@ function estimateStepHeight(
       return 0;
     }
     const inner = new Set(seen).add(id);
-    // Строки элемента: карточка, затем варианты элемента выбора — карточки
-    // всегда (переходы на шаги, [owner 2026-10-14]).
+    // Строки элемента: карточка, затем варианты элемента выбора — если из них
+    // в шаге есть связи (variantsVisible; сейчас всегда — переходы на шаги, [owner 2026-10-14]).
     const rows: AnchorRow<string>[] = [{ top: 0, height: S.elementHeight, children: [] }];
-    for (const variant of elementVariants(rules, component)) {
+    const variants = variantsVisible(rules, component, 'formStep') ? elementVariants(rules, component) : [];
+    for (const variant of variants) {
       const previous = rows.at(-1)!;
       rows.push({
         top: previous.top + previous.height + S.optionGap,
