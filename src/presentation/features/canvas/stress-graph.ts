@@ -53,7 +53,7 @@ function stepFields(prefix: string, count: number): { elements: unknown[]; rules
       elements.push({
         id,
         kind: 'select',
-        hasComplexLogic: true,
+        ext: { complexLogic: true },
         props: {
           label: `Список ${index + 1}`,
           options: OPTION_VALUES.map((value) => ({ id: value, label: `Вариант ${value}` })),

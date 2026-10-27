@@ -74,8 +74,6 @@ export type PolicyElement = {
   card?: { title?: string; subtitle?: string; badge?: string };
   defaults?: Record<string, unknown>;
   attributes: PolicyAttribute[];
-  /** Режим «Сложная логика» доступен виду (нужен атрибут вариантов optionList). */
-  complexLogic?: boolean;
 };
 
 export type EditorPolicy = {
@@ -527,15 +525,6 @@ function assembleElement(
     }
   }
 
-  // «Сложная логика» — из вариантов выбора (L5): без optionList источнику не из чего строить правила.
-  if (policy.complexLogic !== undefined && typeof policy.complexLogic !== 'boolean') {
-    fail('complexLogic')('ожидается true/false');
-  }
-  const complexLogic = policy.complexLogic === true;
-  if (complexLogic && !attributes.some((attribute) => attribute.type === 'optionList')) {
-    fail('complexLogic')('у элемента нет атрибута вариантов выбора (optionList)');
-  }
-
   const title = typeof schema.title === 'string' ? schema.title : policy.kind;
   return {
     kind: policy.kind,
@@ -546,7 +535,6 @@ function assembleElement(
     card,
     defaults,
     attributes,
-    complexLogic,
   };
 }
 

@@ -3,9 +3,7 @@ import type { ServiceGraph } from '@domain/model/service-graph';
 import { validateGraph, type InvariantViolation } from '@domain/invariants';
 import type { IClock } from '@application/ports/clock';
 import type { EditorSettings } from '@application/settings/editor-settings';
-import type { IElementSchemaProvider } from '@application/ports/element-schema-provider';
 import { rulesSettings } from '@application/settings/rules-settings';
-import { withElementPolicy } from '@application/settings/element-policy-rules';
 import type { Command } from './command';
 import { InvariantViolationError } from './errors';
 
@@ -48,22 +46,12 @@ export class CommandBus {
 
   // Деструктуризация в конструкторе обязательна: Awilix PROXY + минификация
   // production-сборки (конституция, железное правило 7).
-  constructor(
-    private readonly deps: {
-      clock: IClock;
-      editorSettings: EditorSettings;
-      elementSchemaProvider: IElementSchemaProvider;
-    },
-  ) {}
+  constructor(private readonly deps: { clock: IClock; editorSettings: EditorSettings }) {}
 
   execute(current: ServiceGraph, command: Command): ServiceGraph {
     // Правила — действующие на момент команды (настройки редактора, R-ADM):
     // администратор поменял правило — следующая команда проверяется по новому.
-    // Решения политики о видах (complexLogic) — в тех же правилах ([owner 2026-10-27]).
-    const rules = withElementPolicy(
-      this.deps.editorSettings.get(rulesSettings),
-      this.deps.elementSchemaProvider.listSchemas(),
-    );
+    const rules = this.deps.editorSettings.get(rulesSettings);
     // Инварианты (конституция §4) проверяются здесь, один раз для любой
     // команды (R-ARC-2, AGENTS.md §4a): исключение до записи в историю —
     // граф и история не меняются. Отклоняется только команда, добавившая

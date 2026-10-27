@@ -166,7 +166,6 @@
       "label": "Select",
       "category": "Форма",
       "description": "Выпадающий список выбора значения",
-      "complexLogic": true,
       "card": { "title": "label", "subtitle": "placeholder" },
       "defaults": { "label": "Список", "options": [] },
       "attributes": [
@@ -179,7 +178,13 @@
           "item": { "id": "id", "label": "label" }
         },
         { "key": "required", "label": "Обязательное поле", "section": "Настройки" },
-        { "key": "multiselect", "label": "Множественный выбор", "section": "Настройки" }
+        { "key": "multiselect", "label": "Множественный выбор", "section": "Настройки" },
+        {
+          "key": "complexLogic",
+          "label": "Сложная логика",
+          "helperText": "Варианты выбора управляют видимостью элементов шага",
+          "section": "Настройки"
+        }
       ]
     },
     {

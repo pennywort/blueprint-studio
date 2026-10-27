@@ -50,9 +50,8 @@ export const CanvasElementSchema = z.object({
   routing: RoutingRuleSchema.optional(),
   // Элемент с динамическим контентом (инварианты #3–5).
   hasDynamicContent: z.boolean().optional(),
-  // Включён режим «Сложная логика» (T-037, L4/L5): у вариантов источника
-  // появляются source-handle'ы правил видимости (element-kinds: logicSource).
-  hasComplexLogic: z.boolean().optional(),
+  // Режим «Сложная логика» (T-037, L4/L5) — атрибут схемы вида в ext
+  // (element-kinds: COMPLEX_LOGIC_KEY), а не метаданные [owner 2026-10-27].
 });
 export type CanvasElement = z.infer<typeof CanvasElementSchema>;
 export type CanvasElementId = CanvasElement['id'];

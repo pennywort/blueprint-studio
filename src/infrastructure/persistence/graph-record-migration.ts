@@ -1,7 +1,7 @@
 // Версии формата записи карты в хранилище (ревью A11, R4). Запись без
 // номера — формат до миграции «универсальные элементы» (версия 1).
 // Каждая следующая версия добавляет шаг миграции в MIGRATIONS.
-export const GRAPH_RECORD_VERSION = 6;
+export const GRAPH_RECORD_VERSION = 7;
 
 const VERSION_FIELD = 'schemaVersion';
 
@@ -353,6 +353,26 @@ function migrateComponent(element: unknown): unknown {
 const migrateComponentsToFramework = (raw: unknown): unknown =>
   mapGraphElements(raw, (elements) => (Array.isArray(elements) ? elements.map(migrateComponent) : elements));
 
+// Версия 6 → 7 [owner 2026-10-27]: «Сложная логика» — атрибут схемы вида в ext
+// (complexLogic, extensions.byKind схем проекта), а не метаданные hasComplexLogic.
+// Выключенный флаг не переносится: отсутствие атрибута — то же «выключено».
+function migrateComplexLogicFlag(element: unknown): unknown {
+  if (!isRecord(element) || !('hasComplexLogic' in element)) {
+    return element;
+  }
+  const { hasComplexLogic, ...rest } = element;
+  if (hasComplexLogic !== true) {
+    return rest;
+  }
+  const ext = isRecord(rest.ext) ? rest.ext : {};
+  return { ...rest, ext: { ...ext, complexLogic: true } };
+}
+
+const migrateComplexLogicToExt = (raw: unknown): unknown =>
+  mapGraphElements(raw, (elements) =>
+    Array.isArray(elements) ? elements.map(migrateComplexLogicFlag) : elements,
+  );
+
 /** Шаг миграции: с версии (ключ) на следующую. */
 const MIGRATIONS: Readonly<Record<number, (raw: unknown) => unknown>> = {
   1: migrateUniversalElements,
@@ -360,6 +380,7 @@ const MIGRATIONS: Readonly<Record<number, (raw: unknown) => unknown>> = {
   3: migrateTransitionsToLinks,
   4: migrateElementsToFrameworkSchemas,
   5: migrateComponentsToFramework,
+  6: migrateComplexLogicToExt,
 };
 
 // Запись хранилища → данные для доменной схемы: шаги миграции от версии

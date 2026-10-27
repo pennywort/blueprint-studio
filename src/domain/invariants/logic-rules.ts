@@ -1,5 +1,5 @@
 import type { ServiceGraph } from '../model/service-graph';
-import { canBeLogicSource, hasElementVariants, variantLabel } from '../element-kinds';
+import { hasElementVariants, isLogicSource, variantLabel } from '../element-kinds';
 import { containerKey, walkElementContainers } from '../element-containers';
 import { supportsLogic } from '../connection-matrix';
 import type { EditorRules } from '../editor-rules';
@@ -61,7 +61,7 @@ export function checkLogicRules(graph: ServiceGraph, rules: EditorRules): Invari
     }
 
     // L-I1: источник — Select с включённой «Сложной логикой».
-    if (!canBeLogicSource(rules, source.component) || !source.component.hasComplexLogic) {
+    if (!isLogicSource(rules, source.component)) {
       violations.push({
         rule: RULE_ID,
         path,
