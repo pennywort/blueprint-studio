@@ -103,15 +103,16 @@ export function createSampleGraph(): ServiceGraph {
               // «12 месяцев» → выплата процентов → «Ежемесячно» → уведомления.
               {
                 id: toElementId('demo-field-payout'),
-                kind: 'radio-group',
+                // Select, а не radio-group: «Сложная логика» по политике — только у select [owner 2026-10-27].
+                kind: 'select',
                 hasComplexLogic: true,
                 props: {
                   label: 'Выплата процентов',
                   required: true,
                   value: 'monthly',
-                  items: [
-                    { label: 'Ежемесячно', value: 'monthly', disabled: false, required: false, error: false },
-                    { label: 'В конце срока', value: 'end', disabled: false, required: false, error: false },
+                  options: [
+                    { id: 'monthly', label: 'Ежемесячно' },
+                    { id: 'end', label: 'В конце срока' },
                   ],
                 },
               },

@@ -1,7 +1,7 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import { CanvasElementSchema, type CanvasElement, type ElementProps } from '@domain/model/canvas-element';
 import type { ElementId } from '@domain/model/ids';
-import { canBeLogicSource, elementVariants } from '@domain/element-kinds';
+import { elementVariants, hasElementVariants } from '@domain/element-kinds';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
 import { computeFormElementDepths } from '@domain/step-element-depths';
@@ -82,7 +82,7 @@ export class UpdateElementProps implements Command {
     // Каскад сложной логики при удалении вариантов источника (T-037, §6
     // дизайн-дока): правила на удалённые варианты уходят вместе с ними
     // (UI недостижимость L-I2, инвариант — защита).
-    if (canBeLogicSource(rules, parsed.data)) {
+    if (hasElementVariants(rules, parsed.data)) {
       const optionValues = new Set<string>(elementVariants(rules, parsed.data).map((variant) => variant.id));
       draft.logicRules = draft.logicRules.filter(
         (rule) =>

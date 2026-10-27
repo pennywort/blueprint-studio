@@ -36,8 +36,15 @@ export interface ElementKindRules {
   readonly logicTarget: boolean;
   /** Есть в меню добавления элементов (тулбар, «+» шага), если вид есть в политике. */
   readonly inAddMenu: boolean;
-  /** Варианты — источник логики (F01, L5); нет — вид не источник. */
+  /** Варианты — источники переходов между шагами и (с complexLogic) логики (F01, L5). */
   readonly variants?: ElementVariantsRule;
+  /**
+   * Виду доступен режим «Сложная логика» (L5, [owner 2026-10-27]). Источник —
+   * только политика редактора (`complexLogic` элемента, editor-policy.json):
+   * в правила подставляется withElementPolicy, администратор правил его не
+   * задаёт. Флаг включения у конкретного элемента — hasComplexLogic в модели.
+   */
+  readonly complexLogic?: boolean;
 }
 
 /** Обычный элемент — вид без строки в таблице. */
@@ -80,9 +87,18 @@ export function isCommentElement(rules: EditorRules, element: CanvasElement): bo
   return kindRules(rules, element.kind).family === 'comment';
 }
 
-/** Элемент может включить «Сложную логику»: у вида есть варианты (L5). */
-export function canBeLogicSource(rules: EditorRules, element: CanvasElement): boolean {
+/** У вида есть варианты выбора — источники переходов между шагами [owner 2026-10-14]. */
+export function hasElementVariants(rules: EditorRules, element: CanvasElement): boolean {
   return kindRules(rules, element.kind).variants !== undefined;
+}
+
+/**
+ * Элемент может включить «Сложную логику» (L5): у вида есть варианты и режим
+ * разрешён политикой редактора (complexLogic, [owner 2026-10-27]).
+ */
+export function canBeLogicSource(rules: EditorRules, element: CanvasElement): boolean {
+  const kind = kindRules(rules, element.kind);
+  return kind.variants !== undefined && kind.complexLogic === true;
 }
 
 export type ElementVariant = { id: OptionId; label: string; isDefault: boolean };
