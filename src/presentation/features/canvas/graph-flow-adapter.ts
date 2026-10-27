@@ -8,7 +8,13 @@ import { computeGraphDepths } from '@domain/graph-depths';
 import { walkSubScenarios } from '@domain/graph-walk';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
-import { canBeLogicSource, elementVariants, isCommentElement, kindRules } from '@domain/element-kinds';
+import {
+  canBeLogicSource,
+  elementVariants,
+  hasElementVariants,
+  isCommentElement,
+  kindRules,
+} from '@domain/element-kinds';
 import { containerCapabilities, type ContainerCapabilities } from '@domain/connection-matrix';
 import type { ElementCatalog } from '@presentation/features/element-catalog/element-catalog';
 import {
@@ -102,12 +108,14 @@ export type CanvasElementData = {
   /** Подпись чипа типа («List item», «Text field»…). */
   kindLabel: string;
   /**
-   * «Сложная логика» (T-037): поле присутствует у Select'а — потенциального
-   * источника правил (L5). enabled — режим включён (варианты — источники
+   * «Сложная логика» (T-037): поле присутствует у элемента с вариантами выбора.
+   * available — режим разрешён политикой редактора (переключатель на карточке,
+   * [owner 2026-10-27]); enabled — режим включён (варианты — источники
    * правил); options — строки option'ов для рендера с handle-id: в шаге
    * формы есть всегда — вариант — источник перехода на шаг [owner 2026-10-14].
    */
   complexLogic?: {
+    available: boolean;
     enabled: boolean;
     options: ReadonlyArray<{ handleId: string; label: string; value: string; isDefault: boolean }>;
   };
@@ -233,12 +241,15 @@ function elementToElementData(
   if (subtitle) {
     data.secondaryText = subtitle;
   }
-  if (canBeLogicSource(rules, element)) {
-    // Элемент выбора — потенциальный источник «Сложной логики» (L5) и,
-    // вариантами, переходов между шагами [owner 2026-10-14]: option-handle'ы
-    // есть всегда, правило видимости из них — только при включённом режиме (L4).
+  if (hasElementVariants(rules, element)) {
+    // Элемент выбора — вариантами источник переходов между шагами [owner
+    // 2026-10-14] и, если вид разрешён политикой, «Сложной логики» (L5):
+    // option-handle'ы есть всегда, правило видимости из них — только при
+    // включённом режиме (L4).
+    const available = canBeLogicSource(rules, element);
     data.complexLogic = {
-      enabled: element.hasComplexLogic === true,
+      available,
+      enabled: available && element.hasComplexLogic === true,
       options: elementVariants(rules, element).map((variant) => ({
         handleId: logicSourceHandleId(element.id, variant.id),
         label: variant.label,

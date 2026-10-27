@@ -1,6 +1,6 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { ElementId } from '@domain/model/ids';
-import { canBeLogicSource } from '@domain/element-kinds';
+import { hasElementVariants } from '@domain/element-kinds';
 import { computeFormElementDepths } from '@domain/step-element-depths';
 import type { Command, CommandContext } from './command';
 import { preserveFormElementDepths } from './depth-preservation';
@@ -23,10 +23,10 @@ export class DisableComplexLogic implements Command {
     if (!found) {
       throw new Error(`Элемент не найден: ${this.componentId}`);
     }
-    if (!canBeLogicSource(rules, found.element)) {
-      throw new Error(
-        `Сложная логика v1 поддерживает только Select (элемент ${this.componentId}: ${found.element.kind})`,
-      );
+    // Выключить можно и там, где политика уже не разрешает режим ([owner 2026-10-27]):
+    // флаг, сохранённый раньше, снимается вместе с правилами.
+    if (!hasElementVariants(rules, found.element)) {
+      throw new Error(`У элемента нет вариантов выбора: ${this.componentId} (${found.element.kind})`);
     }
     found.element.hasComplexLogic = false;
     draft.logicRules = draft.logicRules.filter(

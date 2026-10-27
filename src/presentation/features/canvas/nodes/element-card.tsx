@@ -295,7 +295,7 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
             </div>
             <div className={classes.chips}>
               <span className={`${classes.chip} ${classes.chipAccent}`}>{element.kindLabel}</span>
-              {element.complexLogic ? (
+              {element.complexLogic?.available ? (
                 <button
                   type="button"
                   className={[

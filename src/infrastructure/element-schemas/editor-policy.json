@@ -166,6 +166,7 @@
       "label": "Select",
       "category": "Форма",
       "description": "Выпадающий список выбора значения",
+      "complexLogic": true,
       "card": { "title": "label", "subtitle": "placeholder" },
       "defaults": { "label": "Список", "options": [] },
       "attributes": [

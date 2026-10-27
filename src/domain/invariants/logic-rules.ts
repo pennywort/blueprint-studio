@@ -1,5 +1,5 @@
 import type { ServiceGraph } from '../model/service-graph';
-import { canBeLogicSource, variantLabel } from '../element-kinds';
+import { canBeLogicSource, hasElementVariants, variantLabel } from '../element-kinds';
 import { containerKey, walkElementContainers } from '../element-containers';
 import { supportsLogic } from '../connection-matrix';
 import type { EditorRules } from '../editor-rules';
@@ -70,7 +70,7 @@ export function checkLogicRules(graph: ServiceGraph, rules: EditorRules): Invari
     }
 
     // L-I2: condition.optionId существует среди option'ов источника.
-    if (rule.condition.kind === 'optionSelected' && canBeLogicSource(rules, source.component)) {
+    if (rule.condition.kind === 'optionSelected' && hasElementVariants(rules, source.component)) {
       const optionExists = variantLabel(rules, source.component, rule.condition.optionId) !== null;
       if (!optionExists) {
         violations.push({ rule: RULE_ID, path, message: 'Правило ссылается на удалённое значение списка' });
