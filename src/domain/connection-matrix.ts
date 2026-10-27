@@ -60,10 +60,31 @@ export function connectionSourceRole(
   element: CanvasElement,
   optionId?: string,
 ): ConnectionSourceRole {
-  if (optionId === undefined) {
-    return 'element';
-  }
+  return optionId === undefined ? 'element' : variantRole(rules, element);
+}
+
+/** Роль вариантов элемента выбора: с включённой «Сложной логикой» — logicOption (L4). */
+function variantRole(rules: EditorRules, element: CanvasElement): ConnectionSourceRole {
   return canBeLogicSource(rules, element) && element.hasComplexLogic === true ? 'logicOption' : 'option';
+}
+
+/**
+ * Карточки вариантов элемента видны в блоке, если из варианта в его роли
+ * есть куда протянуть связь ([owner 2026-10-27]): вариант без связей на канвасе
+ * не нужен. Сегодня — в шаге формы всегда (option → step), на странице —
+ * нигде. «Варианты только при сложной логике» без кода = убрать переходы
+ * вариантов в настройках администратора (null удаляет ключ при слиянии):
+ * `{ "rules": { "connections": { "option": { "step": null } } } }`.
+ */
+export function variantsVisible(
+  rules: EditorRules,
+  element: CanvasElement,
+  kind: ElementContainerKind,
+): boolean {
+  const reach: ConnectionReach = rules.connections[variantRole(rules, element)];
+  return (Object.values(reach) as (readonly ElementContainerKind[] | undefined)[]).some(
+    (from) => from?.includes(kind) ?? false,
+  );
 }
 
 /** Может ли источник роли `role` из блока вида `from` вести на цель `target`. */
