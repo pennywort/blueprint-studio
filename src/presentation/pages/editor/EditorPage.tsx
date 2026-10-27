@@ -215,6 +215,14 @@ function EditorPageLayout() {
               component={selectedElement.component}
               schema={catalog.schema(selectedElement.component.kind)}
               onUpdateProps={editorGraph.updateElementProps}
+              complexLogic={
+                editorGraph.selectedComplexLogic
+                  ? {
+                      enabled: editorGraph.selectedComplexLogic.enabled,
+                      onToggle: () => editorGraph.toggleComplexLogic(selectedElement.component.id),
+                    }
+                  : null
+              }
             />
           </div>
         ) : null}
