@@ -41,6 +41,13 @@ export function useCanvasPointerHeld(): boolean {
 
 const NO_ELEMENTS: readonly string[] = [];
 
+/**
+ * Как выделить элемент [owner 2026-10-27]: only — только он; toggle (Shift+клик) —
+ * добавить в набор или убрать из него; press — нажатие на карточку: элемент
+ * из набора набор не сбрасывает (его тащат группой), сброс до одного — по click.
+ */
+export type ElementSelectMode = 'only' | 'toggle' | 'press';
+
 // Выделение на канвасе (ревью A3, R3): узел, шаг формы и элементы.
 // Выделение узла и элементов взаимоисключающи — последний клик побеждает
 // (единое правило проекта: выделение + Delete, F5/ADR-12).
@@ -64,19 +71,22 @@ export function useSelection(graph: ServiceGraph) {
       setSelectedElementIds(NO_ELEMENTS);
     }
   }, []);
-  // additive (Shift+клик) — элемент добавляется в набор или убирается из него;
-  // иначе выделение — только он.
-  const selectElement = useCallback((elementId: string | null, additive = false) => {
+  const selectElement = useCallback((elementId: string | null, mode: ElementSelectMode = 'only') => {
     if (elementId === null) {
       setSelectedElementIds(NO_ELEMENTS);
       return;
     }
     setSelectedNodeId(null);
     setSelectedElementIds((current) => {
-      if (!additive) {
-        return current.length === 1 && current[0] === elementId ? current : [elementId];
+      if (mode === 'toggle') {
+        return current.includes(elementId)
+          ? current.filter((id) => id !== elementId)
+          : [...current, elementId];
       }
-      return current.includes(elementId) ? current.filter((id) => id !== elementId) : [...current, elementId];
+      if (mode === 'press' && current.includes(elementId)) {
+        return current;
+      }
+      return current.length === 1 && current[0] === elementId ? current : [elementId];
     });
   }, []);
   // Набор элементов целиком (копии после вставки).

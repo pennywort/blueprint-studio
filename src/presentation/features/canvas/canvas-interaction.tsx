@@ -5,6 +5,7 @@ import type { CanvasNodeType } from './graph-flow-adapter';
 import type { DropAnchorPosition, ElementDragPayload } from './element-dnd';
 import type { StepAnchorPosition } from './step-dnd';
 import type { ViolationMarkers } from './violation-markers';
+import type { ElementSelectMode } from './use-selection';
 import type { MeasuredElementRows } from './canvas-layout';
 
 // Состояние взаимодействия канваса — НЕ в data узлов (ревью A4/P3, R2):
@@ -71,8 +72,8 @@ export function createCanvasInteractionStore(): CanvasInteractionStore {
 // узла/карточки. Объект стабилен (создаётся один раз хуком), поэтому
 // контекст не перерисовывает потребителей.
 export type CanvasActions = {
-  /** additive — Shift+клик: добавить в выделение или убрать из него. */
-  selectElement: (elementId: string, additive?: boolean) => void;
+  /** Режим — ElementSelectMode (use-selection): only по умолчанию. */
+  selectElement: (elementId: string, mode?: ElementSelectMode) => void;
   toggleComplexLogic: (elementId: string) => void;
   removeNode: (nodeId: string, nodeType: CanvasNodeType) => void;
   addElementToStep: (formId: string, stepId: string, kind: CanvasElementKind) => void;

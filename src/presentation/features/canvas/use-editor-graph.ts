@@ -114,6 +114,11 @@ export function useEditorGraph() {
     clearSelection,
     forgetNode,
   } = useSelection(graph);
+  // Выделение для действий карточек (перенос группы): через ref, чтобы
+  // canvasActions оставался стабильным и смена выделения не перерисовывала
+  // все карточки (ревью A4, R-PERF).
+  const selectedElementIdsRef = useRef(selectedElementIds);
+  selectedElementIdsRef.current = selectedElementIds;
   const {
     connect,
     reconnect,
@@ -445,16 +450,22 @@ export function useEditorGraph() {
           stepId: toFormStepId(targetStepId),
         };
       }
+      // Перетащили карточку из выделенной группы — переносится вся группа
+      // в порядке карты, одной командой [owner 2026-10-27].
+      const selected = selectedElementIdsRef.current;
+      const group = selected.includes(dragged.elementId)
+        ? elementsInMapOrder(graphRef.current, selected).map((element) => element.id)
+        : [toElementId(dragged.elementId)];
       runCommand(
         new MoveElement(
-          toElementId(dragged.elementId),
+          group,
           target,
           anchor ? { elementId: toElementId(anchor.elementId), placement: anchor.placement } : undefined,
           target.kind === 'formStep' ? layerDepth : undefined,
         ),
       );
     },
-    [notifications, runCommand],
+    [graphRef, notifications, runCommand],
   );
 
   // Чип «Сложная логика» на карточке Select'а (T-037/T-066, L4): включение

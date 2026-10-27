@@ -18,8 +18,8 @@ import { findElementLocation } from './graph-lookup';
 //
 // Цель задаётся блоком-приёмником; позиция — якорем (карточка-сосед и
 // сторона от неё), чтобы UI не считал индексы списков:
-// команда сама находит якорь в приёмнике ПОСЛЕ изъятия элемента из
-// источника — сдвиг индексов приёмника не снаружи.
+// команда сама переводит якорь в позицию среди остающихся элементов
+// приёмника — сдвиг индексов приёмника не снаружи.
 
 export type MoveElementTarget = CanvasElementTarget;
 
@@ -29,11 +29,14 @@ export type DropAnchor = {
   placement: 'before' | 'after';
 };
 
+// Группа выделенных элементов [owner 2026-10-27] переносится той же командой
+// (один шаг undo): элементы встают подряд, в переданном порядке, на место
+// якоря; каскады — те же, что у одного элемента, для каждого из группы.
 export class MoveElement implements Command {
   readonly name = 'MoveElement';
 
   constructor(
-    private readonly elementId: ElementId,
+    private readonly elementIds: readonly ElementId[],
     private readonly target: MoveElementTarget,
     private readonly anchor?: DropAnchor,
     // Колонка внутри шага-приёмника [owner 2026-10-13] (только для formStep):
@@ -48,10 +51,7 @@ export class MoveElement implements Command {
     // Уровни до мутации: страницы, потерявшие связи, остаются на месте (ADR-15).
     const depthsBeforeRemoval = computeGraphDepths(draft);
     const elementDepthsBefore = computeFormElementDepths(draft);
-    const location = findElementLocation(draft, this.elementId);
-    if (!location) {
-      throw new Error(`Элемент не найден: ${this.elementId}`);
-    }
+    const movedIds = new Set<string>(this.elementIds);
     const targetList = resolveElementTarget(draft, this.target);
     if (!targetList) {
       throw new Error('Приёмник для переноса не найден');
@@ -59,39 +59,50 @@ export class MoveElement implements Command {
     // Совместимость вида элемента и блока не проверяется: любой элемент —
     // в любом блоке [owner 2026-10-13].
 
-    const [moved] = location.list.splice(location.index, 1);
-    const element = moved!;
-
-    // Каскад сложной логики: элемент уходит в ДРУГОЙ блок (шаг той же или
-    // другой формы, страницу) — правила, где он источник или цель, невалидны
-    // (L-I5: логика только внутри одного шага, ADR-14). Перенос в другую
-    // колонку своего шага рвёт их же [owner 2026-10-13]: переносится один
-    // элемент, без группы, — старые связи теряют смысл. Порядок внутри
-    // колонки правил не трогает.
-    const changesBlock = targetList !== location.list;
-    const changesColumn =
-      this.layerDepth !== undefined && this.layerDepth !== elementDepthsBefore.get(this.elementId);
-    if (changesBlock || changesColumn) {
-      draft.logicRules = draft.logicRules.filter(
-        (rule) => rule.sourceElementId !== this.elementId && rule.targetElementId !== this.elementId,
-      );
-      // Колонка — только внутри шага; в чужом блоке прежняя колонка не имеет смысла.
-      if (this.target.kind === 'formStep' && this.layerDepth !== undefined) {
-        element.layerDepth = this.layerDepth;
-      } else {
-        delete element.layerDepth;
-      }
-    }
-
-    // Позиция: якорь ищется в приёмнике после изъятия — индексы уже чистые.
-    let toIndex = targetList.length;
+    // Позиция — до изъятия: место якоря среди НЕпереносимых элементов
+    // приёмника. Так якорем может быть и сам элемент группы (группу бросили
+    // на её же карточку) — группа встаёт на прежнее место, индексы не снаружи.
+    let toIndex: number | null = null;
     if (this.anchor) {
       const anchorIndex = targetList.findIndex((item) => item.id === this.anchor!.elementId);
       if (anchorIndex >= 0) {
-        toIndex = this.anchor.placement === 'before' ? anchorIndex : anchorIndex + 1;
+        const position = this.anchor.placement === 'before' ? anchorIndex : anchorIndex + 1;
+        toIndex = targetList.slice(0, position).filter((item) => !movedIds.has(item.id)).length;
       }
     }
-    targetList.splice(toIndex, 0, element);
+
+    const elements = this.elementIds.map((elementId) => {
+      const location = findElementLocation(draft, elementId);
+      if (!location) {
+        throw new Error(`Элемент не найден: ${elementId}`);
+      }
+      const [moved] = location.list.splice(location.index, 1);
+      const element = moved!;
+
+      // Каскад сложной логики: элемент уходит в ДРУГОЙ блок (шаг той же или
+      // другой формы, страницу) — правила, где он источник или цель, невалидны
+      // (L-I5: логика только внутри одного шага, ADR-14). Перенос в другую
+      // колонку своего шага рвёт их же [owner 2026-10-13]: колонку меняет и
+      // группа целиком — старые связи теряют смысл (как ADR-22 для копий).
+      // Порядок внутри колонки правил не трогает.
+      const changesBlock = targetList !== location.list;
+      const changesColumn =
+        this.layerDepth !== undefined && this.layerDepth !== elementDepthsBefore.get(elementId);
+      if (changesBlock || changesColumn) {
+        draft.logicRules = draft.logicRules.filter(
+          (rule) => rule.sourceElementId !== elementId && rule.targetElementId !== elementId,
+        );
+        // Колонка — только внутри шага; в чужом блоке прежняя колонка не имеет смысла.
+        if (this.target.kind === 'formStep' && this.layerDepth !== undefined) {
+          element.layerDepth = this.layerDepth;
+        } else {
+          delete element.layerDepth;
+        }
+      }
+      return element;
+    });
+
+    targetList.splice(toIndex ?? targetList.length, 0, ...elements);
 
     // Каскад N4: исходящие связи перенесённого элемента осмысленны только
     // между смежными уровнями «источник + 1 = цель» — после смены владельца
@@ -100,10 +111,10 @@ export class MoveElement implements Command {
     // элемент пересчитывала уровень цели в смежный, связь оставалась, а затем
     // закрепление возвращало цель на прежний уровень (доводка dnd, ADR-17).
     preservePageDepths(draft, depthsBeforeRemoval);
-    removeNonAdjacentLinks(draft, (link) => link.sourceElementId === this.elementId);
+    removeNonAdjacentLinks(draft, (link) => movedIds.has(link.sourceElementId));
 
     preservePageDepths(draft, depthsBeforeRemoval);
-    preserveFormElementDepths(draft, elementDepthsBefore, new Set([this.elementId]));
+    preserveFormElementDepths(draft, elementDepthsBefore, movedIds);
 
     // Каскад переходов между шагами [owner 2026-10-14]: переходы, ставшие
     // недопустимыми (элемент перенесён в другой шаг/блок), уходят вместе с причиной.

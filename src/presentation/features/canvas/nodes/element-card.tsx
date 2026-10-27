@@ -239,14 +239,22 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
       // ре-рендер узла внутри pointerdown срывал старт нативного drag в
       // Chromium — карточку, не выделенную заранее, нельзя было перетащить.
       // Shift — добавить в выделение или убрать из него [owner 2026-10-27].
+      // Нажатие на карточку из выделенной группы группу не сбрасывает — её
+      // тащат целиком; клик без переноса оставляет выделенной только карточку
+      // (после нативного drag click не приходит).
       onPointerDown={(event) => {
         pressOnActionRef.current = isActionTarget(event.target);
         if (!pressOnActionRef.current) {
-          const additive = event.shiftKey;
-          setTimeout(() => actions?.selectElement(element.id, additive), 0);
+          const mode = event.shiftKey ? 'toggle' : 'press';
+          setTimeout(() => actions?.selectElement(element.id, mode), 0);
         }
       }}
-      onClick={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (!event.shiftKey && !isActionTarget(event.target)) {
+          actions?.selectElement(element.id, 'only');
+        }
+      }}
     >
       <div
         className={[classes.card, isComment ? classes.commentCard : '', highlightClasses.card].join(' ')}
