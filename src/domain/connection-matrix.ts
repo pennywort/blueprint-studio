@@ -1,11 +1,11 @@
 import type { CanvasElement } from './model/canvas-element';
 import type { ElementContainer } from './element-containers';
-import { canBeLogicSource } from './element-kinds';
+import { isLogicSource } from './element-kinds';
 import type { EditorRules } from './editor-rules';
 
 // Матрица связей (R-CFG-2, [owner 2026-10-16]) — ЕДИНСТВЕННЫЙ источник
 // правды «кто, откуда и куда может строить связи». Данные, а не ветвления
-// `container.kind === 'formStep'` / `hasComplexLogic && optionId`: изменить
+// `container.kind === 'formStep'` / `complexLogic && optionId`: изменить
 // или вернуть поведение = поправить строку; новый вид источника, цели или
 // блока — новая строка/значение, проверки не меняются. Таблица ниже —
 // умолчания; действующая приходит в EditorRules из настроек редактора (R-ADM).
@@ -65,7 +65,7 @@ export function connectionSourceRole(
 
 /** Роль вариантов элемента выбора: с включённой «Сложной логикой» — logicOption (L4). */
 function variantRole(rules: EditorRules, element: CanvasElement): ConnectionSourceRole {
-  return canBeLogicSource(rules, element) && element.hasComplexLogic === true ? 'logicOption' : 'option';
+  return isLogicSource(rules, element) ? 'logicOption' : 'option';
 }
 
 /**

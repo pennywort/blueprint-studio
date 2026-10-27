@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef } from 'react';
 import type { CanvasElement, CanvasElementKind } from '@domain/model/canvas-element';
 import type { ServiceGraph } from '@domain/model/service-graph';
-import { canBeLogicSource, kindRules } from '@domain/element-kinds';
+import { COMPLEX_LOGIC_KEY, kindRules } from '@domain/element-kinds';
 import type { EditorRules } from '@domain/editor-rules';
 import { useEditorRules } from '@presentation/features/settings/use-settings';
 import {
@@ -29,11 +29,8 @@ import { MoveFormStep } from '@application/commands/move-form-step';
 import { SwapFormSteps } from '@application/commands/swap-form-steps';
 import { SetPageLayerDepth } from '@application/commands/set-page-layer-depth';
 import { UpdateElementProps, type ElementPropsPatch } from '@application/commands/update-element-props';
-import { EnableComplexLogic } from '@application/commands/enable-complex-logic';
-import { DisableComplexLogic } from '@application/commands/disable-complex-logic';
 import { findElementLocation, findFormById } from '@application/commands/graph-lookup';
 import { findElementInGraph } from '@domain/element-containers';
-import { supportsLogic } from '@domain/connection-matrix';
 import { useContainer } from '@presentation/app/App';
 import { useEditorNotifications } from '@presentation/features/notifications/editor-notifications';
 import type { AddableElementKind, AddableNodeKind } from '@presentation/features/toolbar/editor-toolbar';
@@ -43,7 +40,12 @@ import {
   useElementCatalog,
   type ElementCatalog,
 } from '@presentation/features/element-catalog/element-catalog';
-import { flowNodesToLayerOrder, type CanvasNode, type CanvasNodeType } from './graph-flow-adapter';
+import {
+  complexLogicToggle,
+  flowNodesToLayerOrder,
+  type CanvasNode,
+  type CanvasNodeType,
+} from './graph-flow-adapter';
 import {
   NEW_FORM_TITLE,
   NEW_SCENARIO_TITLE,
@@ -87,25 +89,6 @@ function elementsInMapOrder(graph: ServiceGraph, elementIds: readonly string[]):
 // (editor-store), выделение, связи, поиск и узлы канваса — отдельные хуки;
 // здесь — маппинг событий канваса и тулбара в команды. Публичный интерфейс
 // для EditorPage не изменился. TEMPORARY до effector (см. editor-store.ts).
-/**
- * Переключатель «Сложная логика» у элемента (L4, T-067): виден у источника
- * логики (element-kinds + политика) в блоке с логикой (connection-matrix,
- * R-CFG-2); включённый — в любом блоке, чтобы его можно было выключить.
- * Один источник для чипа карточки и свитча панели атрибутов; null — не показывать.
- */
-export function complexLogicSwitch(
-  graph: ServiceGraph,
-  rules: EditorRules,
-  elementId: string,
-): { enabled: boolean } | null {
-  const found = findElementInGraph(graph, elementId);
-  if (!found || !canBeLogicSource(rules, found.element)) {
-    return null;
-  }
-  const enabled = found.element.hasComplexLogic === true;
-  return enabled || supportsLogic(rules, found.container) ? { enabled } : null;
-}
-
 export function useEditorGraph() {
   const container = useContainer();
   // Правила редактора из настроек (R-ADM) — те же, что у команд.
@@ -474,19 +457,20 @@ export function useEditorGraph() {
     [notifications, runCommand],
   );
 
-  // Переключение «Сложной логики» (T-037/T-066/T-067, L4) — чип карточки и
-  // свитч панели атрибутов: включение открывает option-handle'ы, выключение
-  // при наличии правил — с подтверждением и каскадным удалением рёбер (каскад —
-  // внутри команды, undo возвращает и флаг, и правила). TEMPORARY: подтверждение —
-  // нативный confirm до появления диалогов дизайн-системы.
+  // Чип «Сложная логика» на карточке (T-037/T-066, L4) — тот же атрибут
+  // complexLogic, что свитч панели: та же команда UpdateElementProps, каскад
+  // правил и переходов — внутри неё, undo возвращает и флаг, и рёбра. Чип
+  // спрашивает подтверждение каскада. TEMPORARY: нативный confirm до диалогов
+  // дизайн-системы.
   const toggleComplexLogic = useCallback(
     (elementId: string) => {
-      const component = findElementInGraph(graphRef.current, elementId)?.element;
-      if (!component || !complexLogicSwitch(graphRef.current, rules, elementId)) {
+      const found = findElementInGraph(graphRef.current, elementId);
+      const toggle = found ? complexLogicToggle(catalog, rules, found.element, found.container.kind) : null;
+      if (!found || !toggle) {
         return;
       }
-      const componentId = component.id;
-      if (component.hasComplexLogic) {
+      const componentId = found.element.id;
+      if (toggle.enabled) {
         const rulesCount = graphRef.current.logicRules.filter(
           (rule) => rule.sourceElementId === elementId,
         ).length;
@@ -496,7 +480,7 @@ export function useEditorGraph() {
         ) {
           return;
         }
-        runCommand(new DisableComplexLogic(componentId));
+        runCommand(new UpdateElementProps(componentId, { ext: { [COMPLEX_LOGIC_KEY]: false } }));
       } else {
         // Вариант с логикой не ведёт на шаг (connection-matrix, [owner 2026-10-16]):
         // его переходы команда удалит каскадом — спрашиваем, как при выключении.
@@ -511,10 +495,10 @@ export function useEditorGraph() {
         ) {
           return;
         }
-        runCommand(new EnableComplexLogic(componentId));
+        runCommand(new UpdateElementProps(componentId, { ext: { [COMPLEX_LOGIC_KEY]: true } }));
       }
     },
-    [runCommand, rules],
+    [catalog, runCommand, rules],
   );
 
   // Действия узлов и карточек — стабильный объект в контексте канваса
@@ -574,9 +558,6 @@ export function useEditorGraph() {
     reportNodeSizes,
     clearSelection,
     selectedElement,
-    selectedComplexLogic: selectedElement
-      ? complexLogicSwitch(graph, rules, selectedElement.component.id)
-      : null,
     updateElementProps,
     toggleComplexLogic,
     connect,

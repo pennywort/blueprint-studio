@@ -27,6 +27,13 @@
         "availability": { "type": "string", "enum": ["Sigma", "Delta", "Alpha"], "multiple": true }
       }
     },
-    "byKind": {}
+    "byKind": {
+      "select": {
+        "type": "object",
+        "properties": {
+          "complexLogic": { "type": "boolean" }
+        }
+      }
+    }
   }
 }

@@ -9,10 +9,11 @@ import { walkSubScenarios } from '@domain/graph-walk';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
 import {
-  canBeLogicSource,
+  COMPLEX_LOGIC_KEY,
   elementVariants,
   hasElementVariants,
   isCommentElement,
+  isLogicSource,
   kindRules,
 } from '@domain/element-kinds';
 import { containerCapabilities, variantsVisible, type ElementContainerKind } from '@domain/connection-matrix';
@@ -109,10 +110,10 @@ export type CanvasElementData = {
   kindLabel: string;
   /**
    * «Сложная логика» (T-037): поле присутствует у элемента с вариантами выбора.
-   * available — режим разрешён политикой редактора (переключатель на карточке,
-   * [owner 2026-10-27]); enabled — режим включён (варианты — источники
-   * правил); options — строки option'ов для рендера с handle-id: в шаге
-   * формы есть всегда — вариант — источник перехода на шаг [owner 2026-10-14].
+   * available — на карточке есть чип-переключатель (complexLogicToggle);
+   * enabled — атрибут complexLogic включён (варианты — источники правил);
+   * options — строки option'ов для рендера с handle-id, если из вариантов
+   * есть связи в блоке (variantsVisible, connection-matrix).
    */
   complexLogic?: {
     available: boolean;
@@ -211,6 +212,28 @@ type ElementMapContext = {
   rules: EditorRules;
 };
 
+/**
+ * Чип «Сложная логика» на карточке (L4) — переключатель атрибута complexLogic:
+ * виден, если атрибут есть в описании вида (схема + политика редактора) и
+ * блок умеет логику (connection-matrix, R-CFG-2); включённый — в любом блоке,
+ * чтобы его можно было выключить. null — чипа нет.
+ */
+export function complexLogicToggle(
+  catalog: ElementCatalog,
+  rules: EditorRules,
+  element: CanvasElement,
+  containerKind: ElementContainerKind,
+): { enabled: boolean } | null {
+  const attribute = catalog
+    .schema(element.kind)
+    ?.attributes.some((item) => item.key === COMPLEX_LOGIC_KEY && item.store === 'ext');
+  if (!attribute || !hasElementVariants(rules, element)) {
+    return null;
+  }
+  const enabled = isLogicSource(rules, element);
+  return enabled || containerCapabilities(rules, containerKind).logic ? { enabled } : null;
+}
+
 // Любой элемент — в любом блоке [owner 2026-10-13]: текст карточки задаёт
 // описание элемента (card политики редактора, этап 3 docs/schemas/PLAN.md),
 // логику и переходы — возможности блока (R-CFG-2, производные матрицы связей
@@ -244,13 +267,11 @@ function elementToElementData(
   }
   if (hasElementVariants(rules, element)) {
     // Элемент выбора — вариантами источник переходов между шагами [owner
-    // 2026-10-14] и, если вид разрешён политикой, «Сложной логики» (L5):
-    // option-handle'ы есть всегда, правило видимости из них — только при
-    // включённом режиме (L4).
-    const available = canBeLogicSource(rules, element);
+    // 2026-10-14] и, с атрибутом complexLogic, правил «Сложной логики» (L4/L5).
+    const toggle = complexLogicToggle(catalog, rules, element, containerKind);
     data.complexLogic = {
-      available,
-      enabled: available && element.hasComplexLogic === true,
+      available: toggle !== null,
+      enabled: isLogicSource(rules, element),
       // Карточки вариантов — только если из них есть куда тянуть связь (connection-matrix).
       options: (variantsVisible(rules, element, containerKind) ? elementVariants(rules, element) : []).map(
         (variant) => ({

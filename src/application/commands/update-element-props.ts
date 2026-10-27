@@ -1,7 +1,7 @@
 import type { ServiceGraph } from '@domain/model/service-graph';
 import { CanvasElementSchema, type CanvasElement, type ElementProps } from '@domain/model/canvas-element';
 import type { ElementId } from '@domain/model/ids';
-import { elementVariants, hasElementVariants } from '@domain/element-kinds';
+import { elementVariants, hasElementVariants, isLogicSource } from '@domain/element-kinds';
 import { computeAllFormStepDepths } from '@domain/form-step-depths';
 import { validStepTransitions } from '@domain/step-transitions';
 import { computeFormElementDepths } from '@domain/step-element-depths';
@@ -79,22 +79,25 @@ export class UpdateElementProps implements Command {
     // zod отсекает неизвестные схеме поля — в граф попадает только контракт.
     location.list[location.index] = parsed.data;
 
-    // Каскад сложной логики при удалении вариантов источника (T-037, §6
-    // дизайн-дока): правила на удалённые варианты уходят вместе с ними
-    // (UI недостижимость L-I2, инвариант — защита).
+    // Каскад сложной логики (T-037, §6 дизайн-дока, L4): правила источника
+    // остаются, только пока он источник (атрибут complexLogic включён) и их
+    // вариант существует — выключение атрибута или удаление варианта уносит
+    // правила атомарно, undo вернёт (UI недостижимость L-I1/L-I2, инвариант — защита).
     if (hasElementVariants(rules, parsed.data)) {
+      const source = isLogicSource(rules, parsed.data);
       const optionValues = new Set<string>(elementVariants(rules, parsed.data).map((variant) => variant.id));
       draft.logicRules = draft.logicRules.filter(
         (rule) =>
           rule.sourceElementId !== this.elementId ||
-          (rule.condition.kind === 'optionSelected' && optionValues.has(rule.condition.optionId)),
+          (source && rule.condition.kind === 'optionSelected' && optionValues.has(rule.condition.optionId)),
       );
     }
 
     preserveFormElementDepths(draft, elementDepthsBefore);
 
     // Каскад переходов между шагами [owner 2026-10-14]: переходы, ставшие
-    // недопустимыми (удалён вариант Select'а), уходят вместе с причиной.
+    // недопустимыми (удалён вариант Select'а; вариант с включённой логикой
+    // на шаг не ведёт, [owner 2026-10-16]), уходят вместе с причиной.
     preserveFormStepDepths(draft, stepDepthsBefore);
     draft.stepTransitions = validStepTransitions(draft, rules);
   }

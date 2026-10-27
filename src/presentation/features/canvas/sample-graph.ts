@@ -84,7 +84,7 @@ export function createSampleGraph(): ServiceGraph {
                 // Режим «Сложной логики» включён (T-037): у вариантов —
                 // source-handle'ы; правила ниже показывают чекбокс при выборе
                 // «6 месяцев» и выплату процентов при «12 месяцах» (L-I5/ADR-14).
-                hasComplexLogic: true,
+                ext: { complexLogic: true },
                 props: {
                   label: 'Срок вклада',
                   required: true,
@@ -103,9 +103,9 @@ export function createSampleGraph(): ServiceGraph {
               // «12 месяцев» → выплата процентов → «Ежемесячно» → уведомления.
               {
                 id: toElementId('demo-field-payout'),
-                // Select, а не radio-group: «Сложная логика» по политике — только у select [owner 2026-10-27].
+                // Select, а не radio-group: атрибут «Сложная логика» — только в схеме select [owner 2026-10-27].
                 kind: 'select',
-                hasComplexLogic: true,
+                ext: { complexLogic: true },
                 props: {
                   label: 'Выплата процентов',
                   required: true,

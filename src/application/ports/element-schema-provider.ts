@@ -85,12 +85,6 @@ export type ElementSchema = {
   /** Значения props нового элемента. */
   defaults: Readonly<Record<string, unknown>>;
   attributes: readonly ElementAttribute[];
-  /**
-   * Виду доступен режим «Сложная логика» (L5, [owner 2026-10-27]): решение
-   * политики, а не кода — включить у другого вида = поправить политику.
-   * Включён ли режим у элемента — hasComplexLogic в модели карты.
-   */
-  complexLogic: boolean;
 };
 
 export class SchemaNotFoundError extends Error {
