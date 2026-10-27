@@ -52,8 +52,9 @@ export const OptionCard = memo(function OptionCard({ option, elementId }: Option
     <Card
       // nodrag: нажатие на варианте не начинает drag узла react-flow — иначе
       // тащился весь блок формы (доводка dnd, ADR-16). Сам вариант не
-      // переносится: он часть Select'а.
-      className={`${classes.card} nodrag`}
+      // переносится: он часть Select'а. nokey — Shift+клик доходит до
+      // варианта, а не начинает рамку выделения react-flow (как у карточки).
+      className={`${classes.card} nodrag nokey`}
       variant="outlined"
       data-testid={`option-card-${option.handleId}`}
       // Метка для полотна: нажатие выделяет Select, а не узел/шаг [owner 2026-10-16].

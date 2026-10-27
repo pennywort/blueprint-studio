@@ -215,7 +215,10 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
     <div
       // nodrag: нажатие на карточке не начинает drag узла react-flow —
       // иначе тащился весь блок, а нативный dnd карточки не стартовал.
-      className="nodrag"
+      // nokey: с зажатым Shift (selectionKeyCode) react-flow начинает рамку
+      // выделения и поверх узлов, гася pointerdown, — Shift+клик не доходил
+      // до карточки; nokey исключает её из рамки [owner 2026-10-27].
+      className="nodrag nokey"
       data-testid={`element-card-${element.id}`}
       data-element-card={element.id}
       draggable
