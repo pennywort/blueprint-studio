@@ -87,6 +87,25 @@ function elementsInMapOrder(graph: ServiceGraph, elementIds: readonly string[]):
 // (editor-store), выделение, связи, поиск и узлы канваса — отдельные хуки;
 // здесь — маппинг событий канваса и тулбара в команды. Публичный интерфейс
 // для EditorPage не изменился. TEMPORARY до effector (см. editor-store.ts).
+/**
+ * Переключатель «Сложная логика» у элемента (L4, T-067): виден у источника
+ * логики (element-kinds + политика) в блоке с логикой (connection-matrix,
+ * R-CFG-2); включённый — в любом блоке, чтобы его можно было выключить.
+ * Один источник для чипа карточки и свитча панели атрибутов; null — не показывать.
+ */
+export function complexLogicSwitch(
+  graph: ServiceGraph,
+  rules: EditorRules,
+  elementId: string,
+): { enabled: boolean } | null {
+  const found = findElementInGraph(graph, elementId);
+  if (!found || !canBeLogicSource(rules, found.element)) {
+    return null;
+  }
+  const enabled = found.element.hasComplexLogic === true;
+  return enabled || supportsLogic(rules, found.container) ? { enabled } : null;
+}
+
 export function useEditorGraph() {
   const container = useContainer();
   // Правила редактора из настроек (R-ADM) — те же, что у команд.
@@ -455,22 +474,15 @@ export function useEditorGraph() {
     [notifications, runCommand],
   );
 
-  // Чип «Сложная логика» на карточке Select'а (T-037/T-066, L4): включение
-  // открывает option-handle'ы, выключение при наличии правил — с
-  // подтверждением и каскадным удалением рёбер (каскад — внутри команды,
-  // undo возвращает и флаг, и правила). TEMPORARY до инспектора (T-067):
-  // переключатель живёт на чипе, а не в панели атрибутов; подтверждение —
+  // Переключение «Сложной логики» (T-037/T-066/T-067, L4) — чип карточки и
+  // свитч панели атрибутов: включение открывает option-handle'ы, выключение
+  // при наличии правил — с подтверждением и каскадным удалением рёбер (каскад —
+  // внутри команды, undo возвращает и флаг, и правила). TEMPORARY: подтверждение —
   // нативный confirm до появления диалогов дизайн-системы.
   const toggleComplexLogic = useCallback(
     (elementId: string) => {
-      // Режим логики — у источника логики (element-kinds) в блоке с логикой
-      // (connection-matrix, R-CFG-2); выключить можно в любом блоке.
-      const found = findElementInGraph(graphRef.current, elementId);
-      const component = found?.element;
-      if (!found || !component || !canBeLogicSource(rules, component)) {
-        return;
-      }
-      if (!component.hasComplexLogic && !supportsLogic(rules, found.container)) {
+      const component = findElementInGraph(graphRef.current, elementId)?.element;
+      if (!component || !complexLogicSwitch(graphRef.current, rules, elementId)) {
         return;
       }
       const componentId = component.id;
@@ -562,6 +574,9 @@ export function useEditorGraph() {
     reportNodeSizes,
     clearSelection,
     selectedElement,
+    selectedComplexLogic: selectedElement
+      ? complexLogicSwitch(graph, rules, selectedElement.component.id)
+      : null,
     updateElementProps,
     toggleComplexLogic,
     connect,

@@ -54,6 +54,25 @@ export type AttributesPanelProps = {
    * буфер панели — одна команда на паузу ввода/blur (R2).
    */
   onUpdateProps: (elementId: CanvasElement['id'], patch: ElementPropsPatch) => void;
+  /**
+   * Свитч «Сложная логика» (T-067, L4) в секции «Настройки»: флаг элемента
+   * hasComplexLogic — метаданные, не атрибут схемы; виден, если вид разрешён
+   * политикой (complexLogic) и блок поддерживает логику. null — не показывать.
+   */
+  complexLogic?: { enabled: boolean; onToggle: () => void } | null;
+};
+
+const SETTINGS_SECTION = 'Настройки';
+
+// Описание свитча для общего редактора bool — та же вёрстка, что у атрибутов.
+const COMPLEX_LOGIC_ATTRIBUTE: ElementAttribute = {
+  key: 'hasComplexLogic',
+  type: 'bool',
+  store: 'props',
+  required: false,
+  label: 'Сложная логика',
+  helperText: 'Варианты выбора управляют видимостью элементов шага',
+  section: SETTINGS_SECTION,
 };
 
 // Schema-driven панель атрибутов (T-041, этап 3 docs/schemas/PLAN.md): в панели
@@ -61,7 +80,7 @@ export type AttributesPanelProps = {
 // подписи, секции и редакторы из описания элемента; ничего сверх них
 // [owner 2026-10-19]. Значения — props элемента или надстройки ext (store
 // атрибута) по ключу атрибута.
-export function AttributesPanel({ component, schema, onUpdateProps }: AttributesPanelProps) {
+export function AttributesPanel({ component, schema, onUpdateProps, complexLogic }: AttributesPanelProps) {
   const classes = useStyles();
   // Буфер ввода (R2): поля показывают черновик поверх значений графа.
   const buffer = useBufferedProps<CanvasElement['id']>(component.id, onUpdateProps);
@@ -95,6 +114,11 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
       groups.push({ section, attributes: [attribute] });
     }
   }
+  // Свитч «Сложная логика» — последним в «Настройках»; секции нет — создаётся.
+  if (complexLogic && !groupIndex.has(SETTINGS_SECTION)) {
+    groups.push({ section: SETTINGS_SECTION, attributes: [] });
+  }
+  const BoolEditor = resolvePropertyEditor('bool');
 
   return (
     <div className={classes.panel} data-testid="attributes-panel" onBlur={buffer.flush}>
@@ -146,6 +170,13 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
               />
             );
           })}
+          {complexLogic && BoolEditor && group.section === SETTINGS_SECTION ? (
+            <BoolEditor
+              value={complexLogic.enabled}
+              attribute={COMPLEX_LOGIC_ATTRIBUTE}
+              onChange={complexLogic.onToggle}
+            />
+          ) : null}
         </div>
       ))}
     </div>
