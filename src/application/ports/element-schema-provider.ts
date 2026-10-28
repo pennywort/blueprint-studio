@@ -63,11 +63,16 @@ export type ElementAttribute = {
   visibleWhen?: AttributeVisibilityRule;
 };
 
-/** Ключи props, которые карточка канваса показывает текстом и бейджем. */
+/** Ключи props, которые карточка канваса показывает текстом, бейджем и иконкой. */
 export type ElementCardFields = {
   title?: string;
   subtitle?: string;
   badge?: string;
+  /**
+   * Атрибут типа icon, чья иконка рисуется на карточке [owner 2026-10-28];
+   * без ключа или без значения — плейсхолдер вида.
+   */
+  icon?: string;
 };
 
 // Описание элемента для редактора: подписи вида, атрибуты в порядке

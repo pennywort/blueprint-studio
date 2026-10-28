@@ -8,7 +8,7 @@
       "label": "List item",
       "category": "Сценарий",
       "description": "Строка списка",
-      "card": { "title": "primaryText", "subtitle": "secondaryText" },
+      "card": { "title": "primaryText", "subtitle": "secondaryText", "icon": "leftAtom" },
       "defaults": { "primaryText": "Новый элемент" },
       "attributes": [
         {
@@ -32,7 +32,7 @@
       "label": "Widget card",
       "category": "Сценарий",
       "description": "Карточка-виджет",
-      "card": { "title": "title", "subtitle": "subtitle" },
+      "card": { "title": "title", "subtitle": "subtitle", "icon": "icon" },
       "defaults": { "title": "Новый элемент" },
       "attributes": [
         { "key": "title", "label": "Название", "required": true, "placeholder": "Например, Мои заявки" },
@@ -62,7 +62,7 @@
       "label": "Text field",
       "category": "Форма",
       "description": "Текстовое поле для ввода значения",
-      "card": { "title": "label", "subtitle": "placeholder" },
+      "card": { "title": "label", "subtitle": "placeholder", "icon": "icon" },
       "defaults": { "label": "Текстовое поле" },
       "attributes": [
         { "key": "label", "label": "Название", "required": true, "placeholder": "Например, Сумма вклада" },
@@ -235,7 +235,7 @@
       "label": "Button",
       "category": "Форма",
       "description": "Кнопка действия",
-      "card": { "title": "label" },
+      "card": { "title": "label", "icon": "icon" },
       "defaults": { "label": "Кнопка", "variant": "contained", "color": "secondary" },
       "attributes": [
         { "key": "label", "label": "Текст кнопки", "required": true, "placeholder": "Например, Отправить" },

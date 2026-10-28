@@ -71,7 +71,7 @@ export type PolicyElement = {
   label?: string;
   category: string;
   description?: string;
-  card?: { title?: string; subtitle?: string; badge?: string };
+  card?: { title?: string; subtitle?: string; badge?: string; icon?: string };
   defaults?: Record<string, unknown>;
   attributes: PolicyAttribute[];
 };
@@ -513,6 +513,14 @@ function assembleElement(
   for (const key of [card.title, card.subtitle, card.badge]) {
     if (key !== undefined && !properties[key]) {
       fail(`card.${key}`)('нет в схеме элемента');
+    }
+  }
+  // Иконка карточки — атрибут политики типа icon из props [owner 2026-10-28]:
+  // карточка рисует только то, что можно выбрать в панели.
+  if (card.icon !== undefined) {
+    const iconAttribute = attributes.find((attribute) => attribute.key === card.icon);
+    if (!iconAttribute || iconAttribute.type !== 'icon' || iconAttribute.store !== 'props') {
+      fail(`card.${card.icon}`)('иконка карточки — не атрибут политики типа icon');
     }
   }
 

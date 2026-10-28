@@ -108,6 +108,8 @@ export type CanvasElementData = {
   secondaryText?: string;
   /** Подпись чипа типа («List item», «Text field»…). */
   kindLabel: string;
+  /** Выбранная иконка фреймворка (card.icon политики); нет — плейсхолдер. */
+  icon?: string;
   /**
    * «Сложная логика» (T-037): поле присутствует у элемента с вариантами выбора.
    * available — на карточке есть чип-переключатель (complexLogicToggle);
@@ -264,6 +266,10 @@ function elementToElementData(
   const subtitle = catalog.subtitle(element);
   if (subtitle) {
     data.secondaryText = subtitle;
+  }
+  const icon = catalog.icon(element);
+  if (icon) {
+    data.icon = icon;
   }
   if (hasElementVariants(rules, element)) {
     // Элемент выбора — вариантами источник переходов между шагами [owner

@@ -2,6 +2,7 @@ import { memo, useRef, type CSSProperties } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { makeStyles } from '@material-ui/core';
 import { editorIcons } from '@presentation/icons/editor-icons';
+import { IconStub } from '@presentation/features/attributes/icon-stub';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { logicAnchorHandleId, logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
 import { FORM_STEP_LAYOUT } from '../canvas-layout';
@@ -290,9 +291,13 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
           <div className={classes.content}>
             <div className={classes.head}>
               <div className={classes.iconWrap}>
-                {/* Иконки элементов платформы придут с пакетом element-schemas;
-                пока — единый плейсхолдер из дизайн-системы. */}
-                <editorIcons.elementPlaceholder fontSize="small" />
+                {/* Выбранная в атрибуте иконка (card.icon политики) [owner
+                2026-10-28]; не выбрана или у вида нет иконки — плейсхолдер. */}
+                {element.icon ? (
+                  <IconStub name={element.icon} />
+                ) : (
+                  <editorIcons.elementPlaceholder fontSize="small" />
+                )}
               </div>
               <div className={classes.texts}>
                 <div className={classes.title}>{element.title}</div>

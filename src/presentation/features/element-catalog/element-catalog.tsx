@@ -19,6 +19,8 @@ export type ElementCatalog = {
   title(element: CanvasElement): string;
   subtitle(element: CanvasElement): string | undefined;
   badge(element: CanvasElement): string | undefined;
+  /** Имя иконки фреймворка на карточке: props[card.icon] [owner 2026-10-28]. */
+  icon(element: CanvasElement): string | undefined;
 };
 
 const textProp = (element: CanvasElement, key: string | undefined): string | undefined => {
@@ -36,6 +38,7 @@ export function createElementCatalog(schemas: readonly ElementSchema[]): Element
       textProp(element, byKind.get(element.kind)?.card.title) ?? catalog.kindLabel(element.kind),
     subtitle: (element) => textProp(element, byKind.get(element.kind)?.card.subtitle),
     badge: (element) => textProp(element, byKind.get(element.kind)?.card.badge),
+    icon: (element) => textProp(element, byKind.get(element.kind)?.card.icon),
   };
   return catalog;
 }
