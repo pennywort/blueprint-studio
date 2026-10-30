@@ -87,13 +87,21 @@ export interface EditorThemeDefinition {
   highlight: HighlightPolicyDefinition;
   /** Радиусы скругления, px (R-PERF-8): при переходе на токены ДС — правка здесь. */
   shape: EditorShape;
+  /** Толщины рамок, px [owner 2026-10-30]. */
+  stroke: EditorStroke;
+  /** Внутренние отступы карточек, px [owner 2026-10-30]. */
+  inset: EditorInset;
 }
 
 /** Радиусы скругления редактора по роли элемента. */
 export interface EditorShape {
-  /** Блок канваса (узел страницы/формы). */
+  /** Блок канваса: главная, сценарий, форма заявки [owner 2026-10-30]. */
   block: number;
-  /** Карточка: шаг, вариант, уведомление, миникарта. */
+  /** Шаг внутри формы (и заглушки шага) [owner 2026-10-30]. */
+  step: number;
+  /** Атрибутное окно (панель атрибутов) [owner 2026-10-30]. */
+  panel: number;
+  /** Карточка: вариант, уведомление, миникарта. */
   card: number;
   /** Карточка элемента и комментария на канвасе [owner 2026-10-22]. */
   element: number;
@@ -106,6 +114,24 @@ export interface EditorShape {
   /** Мелкая плашка (заглушка иконки). */
   small: number;
 }
+
+/** Толщины рамок по роли. */
+export interface EditorStroke {
+  /** Собственная рамка: карточка элемента, атрибутное окно. */
+  outline: number;
+  /** Рамка выделенной сущности (подсветка selected). */
+  selected: number;
+}
+
+/** Отступы содержимого карточки от её внешнего края (с рамкой). */
+export interface EditorInset {
+  /** Бейдж типа элемента — от левого и нижнего краёв карточки. */
+  badge: number;
+}
+
+// Одно значение — один источник [owner 2026-10-30]: толщины читают и
+// компоненты (stroke), и политика подсветки (frames.selected, inset карточки).
+const STROKE: EditorStroke = { outline: 1, selected: 2 };
 
 // Реестр тем: вторая тема добавляется новой записью сюда и расширением
 // EditorThemeName — компоненты при этом не меняются (D6).
@@ -162,14 +188,21 @@ const lightTheme: EditorThemeDefinition = {
       // Зона приёма карточек во время dnd (N2).
       dropZone: { color: 'nodeHoverBorder', style: 'dashed', width: 2 },
       // Выделение (F7, S10): узел и шаг — 2px, карточка — 2px поверх своей рамки 1px.
-      selected: { color: 'edge', style: 'solid', width: 2 },
+      selected: { color: 'edge', style: 'solid', width: STROKE.selected },
       // Нарушение инварианта (T-043): узел 2px, карточка — цвет своей рамки 1px.
-      invalid: { color: 'error', style: 'solid', width: { node: 2, step: 2, card: 1 } },
+      invalid: {
+        color: 'error',
+        style: 'solid',
+        width: { node: STROKE.selected, step: STROKE.selected, card: STROKE.outline },
+      },
     },
     // Карточка с рамкой 1px (variant outlined): подсветка ложится поверх неё.
-    inset: { node: 0, step: 0, card: -1 },
+    inset: { node: 0, step: 0, card: -STROKE.outline },
   },
-  shape: { block: 16, card: 12, element: 24, pill: 24, chip: 16, icon: 8, small: 6 },
+  // Значения из макетов docs/design-mockups [owner 2026-10-30].
+  shape: { block: 24, step: 16, panel: 24, card: 12, element: 24, pill: 24, chip: 16, icon: 8, small: 6 },
+  stroke: STROKE,
+  inset: { badge: 16 },
 };
 
 const editorThemeDefinitions: Record<EditorThemeName, EditorThemeDefinition> = {
@@ -190,6 +223,8 @@ export type EditorTheme = Theme & {
     canvas: EditorCanvasPalette;
     highlight: HighlightPolicy;
     shape: EditorShape;
+    stroke: EditorStroke;
+    inset: EditorInset;
   };
 };
 
@@ -280,6 +315,8 @@ export function createEditorTheme(name: EditorThemeName = 'light'): EditorTheme 
       canvas: { ...definition.canvas },
       highlight: resolveHighlightPolicy(definition, muiTheme.palette.error.main),
       shape: { ...definition.shape },
+      stroke: { ...definition.stroke },
+      inset: { ...definition.inset },
     },
   });
 }

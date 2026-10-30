@@ -25,7 +25,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   card: {
     // Как Card variant="outlined": фон бумаги и рамка 1px.
     backgroundColor: theme.palette.background.paper,
-    border: `1px solid ${theme.editor.canvas.elementBorder}`,
+    border: `${theme.editor.stroke.outline}px solid ${theme.editor.canvas.elementBorder}`,
     // Радиус элемента и комментария — 24 [owner 2026-10-22].
     borderRadius: theme.editor.shape.element,
     color: theme.palette.text.primary,
@@ -46,7 +46,9 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     gap: theme.spacing(1.5),
     height: '100%',
     boxSizing: 'border-box',
-    padding: theme.spacing(2),
+    // Бейдж типа — 16px от внешнего левого и нижнего края карточки, рамка
+    // входит в отступ (как inside-stroke макета) [owner 2026-10-30].
+    padding: theme.editor.inset.badge - theme.editor.stroke.outline,
   },
   // Иконка + тексты; лишний текст обрезается — высота карточки фиксирована.
   head: {
@@ -159,7 +161,7 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     marginTop: -theme.editor.shape.element,
     padding: theme.spacing(0, 2, 2),
     paddingTop: theme.editor.shape.element + theme.spacing(1.5),
-    border: `1px solid ${theme.editor.canvas.commentBorder}`,
+    border: `${theme.editor.stroke.outline}px solid ${theme.editor.canvas.commentBorder}`,
     borderTop: 'none',
     borderRadius: `0 0 ${theme.editor.shape.element}px ${theme.editor.shape.element}px`,
     backgroundColor: theme.editor.canvas.commentBackground,
