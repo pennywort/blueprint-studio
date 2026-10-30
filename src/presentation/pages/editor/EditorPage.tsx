@@ -83,8 +83,9 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     overflowY: 'auto',
     boxSizing: 'border-box',
     backgroundColor: theme.palette.background.paper,
-    border: `1px solid ${theme.palette.divider}`,
-    borderRadius: theme.editor.shape.pill,
+    // Обводка 1px и радиус 24 атрибутного окна [owner 2026-10-30].
+    border: `${theme.editor.stroke.outline}px solid ${theme.palette.divider}`,
+    borderRadius: theme.editor.shape.panel,
     padding: theme.spacing(2.5),
   },
 }));
