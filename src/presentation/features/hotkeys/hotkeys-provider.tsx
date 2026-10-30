@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { useSettingsSection } from '@presentation/features/settings/use-settings';
 import type { HotkeyHandlers } from './hotkey-commands';
-import { createHotkeysRegistry, type HotkeysRegistry } from './hotkeys-registry';
+import { createHotkeysRegistry, type HotkeysRegistry, type RegisterOptions } from './hotkeys-registry';
 import { detectPlatform, resolveKeybindings } from './keybindings';
 import { keybindingsSettings } from './keybindings-settings';
 
@@ -41,14 +41,24 @@ export function useHotkeysRoot(): RefCallback<HTMLElement> {
   );
 }
 
+export type HotkeyHandlersOptions = Omit<RegisterOptions, 'area'> & {
+  // false — обработчики сняты (слой закрыт); по умолчанию — всё время жизни.
+  readonly enabled?: boolean;
+  readonly area?: RegisterOptions['area'];
+};
+
 // Обработчики команд компонента — только «команда → действие», клавиши
-// компонент не знает. Регистрация одна на время жизни компонента,
-// актуальные замыкания читаются в момент нажатия.
-export function useHotkeyHandlers(handlers: HotkeyHandlers): void {
+// компонент не знает. Регистрация — на время жизни компонента (или пока
+// enabled), актуальные замыкания читаются в момент нажатия.
+export function useHotkeyHandlers(handlers: HotkeyHandlers, options: HotkeyHandlersOptions = {}): void {
   const registry = useContext(HotkeysContext);
   const source = useRef(handlers);
+  const { enabled = true, area, priority } = options;
   useEffect(() => {
     source.current = handlers;
   });
-  useEffect(() => registry?.register(source), [registry]);
+  useEffect(
+    () => (enabled ? registry?.register(source, { area, priority }) : undefined),
+    [registry, enabled, area, priority],
+  );
 }

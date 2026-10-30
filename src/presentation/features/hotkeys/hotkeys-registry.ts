@@ -9,10 +9,21 @@ import { HOTKEY_COMMANDS, type HotkeyCommandId, type HotkeyHandlers } from './ho
 // Источник обработчиков: актуальные замыкания читаются в момент нажатия.
 export type HandlersSource = { readonly current: HotkeyHandlers };
 
+export type RegisterOptions = {
+  // Своя область источника вне корня — портал слоя (Dialog, Menu): команды
+  // источника работают и с фокусом в ней (стек слоёв, dismiss-layer.ts).
+  readonly area?: { readonly current: HTMLElement | null };
+  // Приоритет в стеке; при равном выше тот, кто зарегистрирован позже.
+  readonly priority?: number;
+};
+
+type Entry = { source: HandlersSource; area: RegisterOptions['area']; priority: number };
+
 export type HotkeysRegistry = {
-  // Обработчики команд; возвращает отписку. У команды один обработчик:
-  // при повторной регистрации действует последняя.
-  register(source: HandlersSource): () => void;
+  // Обработчики команд; возвращает отписку. Источники — стек: нажатие
+  // получает верхний источник с обработчиком команды в своей области;
+  // его false — «не обработано», команда уходит к следующему ниже.
+  register(source: HandlersSource, options?: RegisterOptions): () => void;
   // Корень области: нажатия с фокусом внутри него (или ни на чём — body).
   // Слушатель — на document корня, чужие части страницы хоста
   // микрофронтенда (конституция §7) хоткеи не получают. Возвращает отписку.
@@ -34,41 +45,38 @@ function isTextInput(target: EventTarget | null): boolean {
 }
 
 export function createHotkeysRegistry(table: ReadonlyMap<string, HotkeyCommandId>): HotkeysRegistry {
-  let sources: HandlersSource[] = [];
-
-  const handlerOf = (command: HotkeyCommandId) => {
-    for (let index = sources.length - 1; index >= 0; index -= 1) {
-      const handler = sources[index]!.current[command];
-      if (handler) {
-        return handler;
-      }
-    }
-    return undefined;
-  };
+  // По возрастанию приоритета, внутри — по порядку регистрации: верх — конец.
+  let entries: Entry[] = [];
 
   return {
-    register(source) {
-      sources = [...sources, source];
+    register(source, options = {}) {
+      const entry: Entry = { source, area: options.area, priority: options.priority ?? 0 };
+      const above = entries.findIndex((item) => item.priority > entry.priority);
+      entries =
+        above < 0 ? [...entries, entry] : [...entries.slice(0, above), entry, ...entries.slice(above)];
       return () => {
-        sources = sources.filter((entry) => entry !== source);
+        entries = entries.filter((item) => item !== entry);
       };
     },
 
     attach(root) {
       const run = (command: HotkeyCommandId, event: KeyboardEvent) => {
         const meta = HOTKEY_COMMANDS[command];
-        const handler = handlerOf(command);
-        if (
-          !handler ||
-          !isInsideRoot(event, root) ||
-          (event.repeat && !meta.repeat) ||
-          (!meta.allowInInput && isTextInput(event.target))
-        ) {
+        if ((event.repeat && !meta.repeat) || (!meta.allowInInput && isTextInput(event.target))) {
           return;
         }
-        // false — делать нечего: остаётся действие браузера по умолчанию.
-        if (handler() !== false) {
-          event.preventDefault();
+        const insideRoot = isInsideRoot(event, root);
+        for (let index = entries.length - 1; index >= 0; index -= 1) {
+          const { source, area } = entries[index]!;
+          const handler = source.current[command];
+          const target = event.target;
+          const inArea = target instanceof Node && area?.current?.contains(target) === true;
+          // false — делать нечего: команда уходит ниже, в конце остаётся
+          // действие браузера по умолчанию.
+          if (handler && (insideRoot || inArea) && handler() !== false) {
+            event.preventDefault();
+            return;
+          }
         }
       };
       const keymap = Object.fromEntries(

@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo, useRef, useState, type DragEvent } from 're
 import type { NodeProps } from '@xyflow/react';
 import { Card, Chip, IconButton, Menu, MenuItem, Typography, makeStyles } from '@material-ui/core';
 import { editorIcons } from '@presentation/icons/editor-icons';
+import { useDismissLayer } from '@presentation/features/hotkeys/dismiss-layer';
 import type { CanvasElementKind } from '@domain/model/canvas-element';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { NODE_KIND_LABELS } from '@presentation/labels/editor-labels';
@@ -168,6 +169,8 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
   // Меню «+» шага: якорь + шаг, в который добавляем. Варианты kind приходят
   // из контекста действий (elementKindOptions) — узел не знает о провайдере схем.
   const [stepMenu, setStepMenu] = useState<{ anchor: HTMLElement; stepId: string } | null>(null);
+  // Меню — слой стека Esc (dismiss-layer.ts).
+  const stepMenuLayer = useDismissLayer(stepMenu !== null, () => setStepMenu(null));
 
   // Handles при смене данных узла пересчитывает канвас (editor-canvas,
   // только узлы с новым data — ревью P4, R2).
@@ -368,7 +371,12 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
       </div>
 
       {/* Меню выбора типа элемента для «+» шага (T-034). */}
-      <Menu anchorEl={stepMenu?.anchor ?? null} open={stepMenu !== null} onClose={() => setStepMenu(null)}>
+      <Menu
+        {...stepMenuLayer}
+        anchorEl={stepMenu?.anchor ?? null}
+        open={stepMenu !== null}
+        onClose={() => setStepMenu(null)}
+      >
         {(actions?.elementKindOptions ?? []).map((option) => (
           <MenuItem key={option.kind} onClick={() => pickKind(option.kind)}>
             {option.label}

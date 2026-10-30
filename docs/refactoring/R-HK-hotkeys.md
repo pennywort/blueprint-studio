@@ -7,19 +7,20 @@
 
 `src/presentation/features/hotkeys/`:
 
-| Файл                       | Роль                                                                                                                                     |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `default-keybindings.json` | умолчания в формате keybindings.json VS Code: `{ key, command, mac?, win?, linux? }`                                                     |
-| `hotkey-commands.ts`       | реестр команд: id → `{ title, allowInInput, repeat }`; типы обработчиков                                                                 |
-| `keybindings.ts`           | zod-схема записи, `resolveKeybindings` (умолчания + пользовательские, `-command`), перевод в синтаксис tinykeys (`mod`, буквы по `code`) |
-| `hotkeys-registry.ts`      | чистый TS без React: таблица + обработчики, `attach(root)` — один слушатель `keydown`                                                    |
-| `hotkeys-provider.tsx`     | `HotkeysProvider` (без разметки, значение не меняется), `useHotkeysRoot`, `useHotkeyHandlers`                                            |
+| Файл                       | Роль                                                                                                                                                 |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `default-keybindings.json` | умолчания в формате keybindings.json VS Code: `{ key, command, mac?, win?, linux? }`                                                                 |
+| `hotkey-commands.ts`       | реестр команд: id → `{ title, allowInInput, repeat }`; типы обработчиков                                                                             |
+| `keybindings.ts`           | zod-схема записи, `resolveKeybindings` (умолчания + пользовательские, `-command`), перевод в синтаксис tinykeys (`mod`, буквы по `code`)             |
+| `hotkeys-registry.ts`      | чистый TS без React: таблица + обработчики, `attach(root)` — один слушатель `keydown`                                                                |
+| `hotkeys-provider.tsx`     | `HotkeysProvider` (без разметки, значение не меняется), `useHotkeysRoot`, `useHotkeyHandlers`                                                        |
+| `dismiss-layer.ts`         | стек слоёв Esc (`layer.dismiss`): `useDismissLayer(open, onDismiss, kind)`, `useSelectLayer()` — окна, меню, поппер, панели, клик-связь [2026-10-30] |
 
 Переопределения — секция настроек `keybindings` (`features/hotkeys/keybindings-settings.ts`):
 умолчания ← администратор ← пользователь, см. [R-ADM-settings.md](R-ADM-settings.md) [2026-10-22].
 Отдельный порт `keybindings-storage` удалён: личные настройки — `IUserSettingsStorage`.
 Регистрируют обработчики: `pages/editor/EditorPage.tsx` (save/undo/redo/copy/cut/paste) и
-`features/canvas/editor-canvas.tsx` (`edit.delete`, `canvas.cancelConnection`).
+`features/canvas/editor-canvas.tsx` (`edit.delete`; клик-связь — слой `gesture` стека Esc).
 Буфер элементов — `features/canvas/use-editor-graph.ts` (`copySelectedElement`,
 `cutSelectedElement`, `pasteElement`), копия под новым id — `cloneElementWithId` в
 `features/canvas/default-elements.ts`.

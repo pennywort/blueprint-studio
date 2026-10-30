@@ -6,6 +6,7 @@ import type { CanvasElementKind } from '@domain/model/canvas-element';
 import { kindRules } from '@domain/element-kinds';
 import type { EditorRules } from '@domain/editor-rules';
 import { useEditorRules } from '@presentation/features/settings/use-settings';
+import { useDismissLayer } from '@presentation/features/hotkeys/dismiss-layer';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import type { CanvasNodeType } from '@presentation/features/canvas/graph-flow-adapter';
 import { NODE_KIND_LABELS } from '@presentation/labels/editor-labels';
@@ -101,6 +102,9 @@ export function EditorToolbar({
   const classes = useStyles();
   const [nodeMenuAnchor, setNodeMenuAnchor] = useState<HTMLElement | null>(null);
   const [elementMenuAnchor, setElementMenuAnchor] = useState<HTMLElement | null>(null);
+  // Меню — слои стека Esc (dismiss-layer.ts).
+  const nodeMenuLayer = useDismissLayer(nodeMenuAnchor !== null, () => setNodeMenuAnchor(null));
+  const elementMenuLayer = useDismissLayer(elementMenuAnchor !== null, () => setElementMenuAnchor(null));
 
   const buttonClass = (active: boolean) =>
     active ? `${classes.button} ${classes.buttonActive}` : classes.button;
@@ -150,6 +154,7 @@ export function EditorToolbar({
       </IconButton>
 
       <Menu
+        {...nodeMenuLayer}
         anchorEl={nodeMenuAnchor}
         open={nodeMenuAnchor !== null}
         onClose={() => setNodeMenuAnchor(null)}
@@ -171,6 +176,7 @@ export function EditorToolbar({
       </Menu>
 
       <Menu
+        {...elementMenuLayer}
         anchorEl={elementMenuAnchor}
         open={elementMenuAnchor !== null}
         onClose={() => setElementMenuAnchor(null)}

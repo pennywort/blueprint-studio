@@ -17,7 +17,10 @@ export const HOTKEY_COMMANDS = {
   'edit.paste': { title: 'Вставить элементы', allowInInput: false, repeat: false },
   // Единое удаление (F5): элемент или шаг, иначе выделенные блоки и связи.
   'edit.delete': { title: 'Удалить выделенное', allowInInput: false, repeat: false },
-  'canvas.cancelConnection': { title: 'Отменить протягивание связи', allowInInput: false, repeat: false },
+  // Единое закрытие (стек слоёв, dismiss-layer.ts): верхний открытый слой —
+  // окно, меню, поппер, панель атрибутов, клик-связь. И из полей ввода: так
+  // закрываются окна MUI (Esc в поле окна — закрыть окно).
+  'layer.dismiss': { title: 'Закрыть верхний слой', allowInInput: true, repeat: false },
   // Инструмент «Рука» (editor-config canvas.panTool): только перемещение по полотну.
   'canvas.togglePanMode': { title: 'Инструмент «Рука»', allowInInput: false, repeat: false },
 } as const satisfies Record<string, HotkeyCommandMeta>;
