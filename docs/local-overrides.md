@@ -23,7 +23,9 @@ registry Flamingo. Поэтому всё, что касается Flamingo, жи
 
 ## Как работает
 
-- Код берёт иконки только из `editorIcons` (роль → компонент), по умолчанию — MUI.
+- Код берёт иконки только из `editorIcons` (роль → компонент), по умолчанию — MUI
+  (TEMPORARY, temporary-registry п. 10). Импорт `@material-ui/icons` вне
+  `src/presentation/icons/` запрещён eslint.
 - Алиас `@local/editor-icons` (tsconfig paths + `rsbuild.config.ts`) ведёт на
   `editor-icons.local.tsx`, если файл есть, иначе на заглушку `editor-icons.none.ts`.
 - Локальный файл экспортирует по умолчанию `EditorIconOverrides` — частичную таблицу:

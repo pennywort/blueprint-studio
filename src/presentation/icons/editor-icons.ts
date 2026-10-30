@@ -25,6 +25,9 @@ import localIcons from '@local/editor-icons';
 
 // Иконки редактора — одна таблица «роль → компонент» [owner 2026-10-22]:
 // код берёт иконку по роли, смена набора = правка таблицы, а не всех экранов.
+// TEMPORARY: набор по умолчанию — MUI (облако без Flamingo); Flamingo подключается
+// локальным editor-icons.local.tsx без правки компонентов (temporary-registry п. 10).
+// Прямой импорт @material-ui/icons вне этой папки запрещён eslint.
 export type EditorIconRole =
   | 'add'
   | 'delete'

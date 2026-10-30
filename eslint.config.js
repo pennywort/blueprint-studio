@@ -161,6 +161,30 @@ export default [
               group: ['@infrastructure/*', '!@infrastructure/container'],
               message: 'presentation импортирует только infrastructure/container (конституция, раздел 3)',
             },
+            {
+              // TEMPORARY: иконки MUI — заглушка до Flamingo; набор меняется в одном фасаде
+              // (temporary-registry п. 10, docs/local-overrides.md).
+              group: ['@material-ui/icons', '@material-ui/icons/*'],
+              message:
+                'иконки — только через фасад @presentation/icons/editor-icons (temporary-registry п. 10)',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Фасад иконок — единственное место, где разрешён @material-ui/icons.
+    files: [`${LAYERS.presentation}/icons/**/*.{ts,tsx}`],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@infrastructure/*', '!@infrastructure/container'],
+              message: 'presentation импортирует только infrastructure/container (конституция, раздел 3)',
+            },
           ],
         },
       ],
