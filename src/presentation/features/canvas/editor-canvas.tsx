@@ -34,6 +34,7 @@ import '@xyflow/react/dist/base.css';
 import { useEditorTheme } from '@presentation/theme/editor-theme';
 import { EDITOR_CONFIG } from '@presentation/app/editor-config';
 import { useHotkeyHandlers } from '@presentation/features/hotkeys/hotkeys-provider';
+import { useDismissLayer } from '@presentation/features/hotkeys/dismiss-layer';
 import { useReactFlowThemeStyles } from './react-flow-theme-styles';
 import {
   buildLayerColumns,
@@ -450,16 +451,11 @@ function CanvasInner({
   }, [cancelClickConnection]);
 
   // Клавиатурные команды канваса — только обработчики, комбинации задаёт
-  // система хоткеев. Escape без клик-связи не обрабатывается (false).
+  // система хоткеев. Незавершённая клик-связь — слой-жест стека Esc
+  // (dismiss-layer.ts): закрывается раньше панелей и меню.
+  useDismissLayer(clickFrom !== null, cancelClickConnection, 'gesture');
   useHotkeyHandlers({
     'edit.delete': deleteSelection,
-    'canvas.cancelConnection': () => {
-      if (!clickActiveRef.current) {
-        return false;
-      }
-      cancelClickConnection();
-      return true;
-    },
     'canvas.togglePanMode': () => {
       if (!EDITOR_CONFIG.canvas.panTool) {
         return false;

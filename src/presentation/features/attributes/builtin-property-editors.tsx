@@ -14,6 +14,7 @@ import {
   makeStyles,
 } from '@material-ui/core';
 import { editorIcons } from '@presentation/icons/editor-icons';
+import { useSelectLayer } from '@presentation/features/hotkeys/dismiss-layer';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { AttributeField } from './attribute-field';
 import { IconPropertyEditor } from './icon-property-editor';
@@ -178,6 +179,8 @@ const asStrings = (value: unknown): string[] =>
 // Пустое значение — «не задано» (prop снимается): берётся значение фреймворка.
 function SelectPropertyEditor({ value, onChange, attribute }: PropertyEditorProps) {
   const options = attribute.options ?? [];
+  // Меню Select'а — слой стека Esc (dismiss-layer.ts).
+  const menuLayer = useSelectLayer();
   if (attribute.multiple) {
     // Несколько вариантов: список с отметками, значения — в порядке вариантов.
     const selected = asStrings(value);
@@ -185,6 +188,7 @@ function SelectPropertyEditor({ value, onChange, attribute }: PropertyEditorProp
     return (
       <AttributeField attribute={attribute}>
         <Select
+          {...menuLayer}
           fullWidth
           multiple
           variant="outlined"
@@ -213,6 +217,7 @@ function SelectPropertyEditor({ value, onChange, attribute }: PropertyEditorProp
   return (
     <AttributeField attribute={attribute}>
       <Select
+        {...menuLayer}
         fullWidth
         variant="outlined"
         margin="dense"

@@ -14,6 +14,7 @@ import {
   makeStyles,
 } from '@material-ui/core';
 import { editorIcons } from '@presentation/icons/editor-icons';
+import { useDismissLayer } from '@presentation/features/hotkeys/dismiss-layer';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
@@ -116,6 +117,10 @@ export function EditorTopBar({
   const [resultsOpen, setResultsOpen] = useState(false);
   const searchAnchorRef = useRef<HTMLDivElement | null>(null);
   const query = searchValue.trim();
+  // Результаты поиска — слой стека Esc (dismiss-layer.ts); фокус остаётся в
+  // поле внутри корня хоткеев, область поппера не нужна.
+  const resultsShown = resultsOpen && query.length > 0;
+  useDismissLayer(resultsShown, () => setResultsOpen(false));
   const results = query && searchCanvas ? searchCanvas(query) : [];
 
   const pickResult = (result: CanvasSearchResult) => {
@@ -150,8 +155,6 @@ export function EditorTopBar({
             onKeyDown={(event) => {
               if (event.key === 'Enter' && results[0]) {
                 pickResult(results[0]);
-              } else if (event.key === 'Escape') {
-                setResultsOpen(false);
               }
             }}
             InputProps={{
@@ -163,7 +166,7 @@ export function EditorTopBar({
             }}
           />
           <Popper
-            open={resultsOpen && query.length > 0}
+            open={resultsShown}
             anchorEl={searchAnchorRef.current}
             placement="bottom-start"
             className={classes.resultsPopper}

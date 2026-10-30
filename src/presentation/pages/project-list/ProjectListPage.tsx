@@ -20,6 +20,8 @@ import { toBlueprintId, type BlueprintId } from '@domain/model/ids';
 import { useContainer } from '@presentation/app/App';
 import { downloadTextFile, projectFileName } from '@presentation/features/projects/project-file';
 import { EditorThemeProvider } from '@presentation/theme/editor-theme-provider';
+import { HotkeysProvider, useHotkeysRoot } from '@presentation/features/hotkeys/hotkeys-provider';
+import { useDismissLayer } from '@presentation/features/hotkeys/dismiss-layer';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 
 const useStyles = makeStyles<EditorTheme>((theme) => ({
@@ -87,6 +89,11 @@ function ProjectList() {
   const [newTitle, setNewTitle] = useState('');
   const [pendingDelete, setPendingDelete] = useState<GraphSummary | null>(null);
   const [importConflict, setImportConflict] = useState<ImportConflict | null>(null);
+  // Окна — слои стека Esc (dismiss-layer.ts); корень страницы — граница хоткеев.
+  const hotkeysRoot = useHotkeysRoot();
+  const createLayer = useDismissLayer(createOpen, () => setCreateOpen(false));
+  const deleteLayer = useDismissLayer(pendingDelete !== null, () => setPendingDelete(null));
+  const conflictLayer = useDismissLayer(importConflict !== null, () => setImportConflict(null));
 
   const refresh = useCallback(() => {
     graphRepository
@@ -173,7 +180,7 @@ function ProjectList() {
   };
 
   return (
-    <Box className={classes.root}>
+    <div ref={hotkeysRoot} className={classes.root}>
       <Box className={classes.header}>
         <Typography variant="h4">Проекты</Typography>
         <Button
@@ -284,7 +291,7 @@ function ProjectList() {
         </Box>
       </Box>
 
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)}>
+      <Dialog {...createLayer} open={createOpen} onClose={() => setCreateOpen(false)}>
         <DialogTitle>Новый проект</DialogTitle>
         <DialogContent>
           <TextField
@@ -309,7 +316,7 @@ function ProjectList() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={pendingDelete !== null} onClose={() => setPendingDelete(null)}>
+      <Dialog {...deleteLayer} open={pendingDelete !== null} onClose={() => setPendingDelete(null)}>
         <DialogTitle>Удалить проект?</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -324,7 +331,7 @@ function ProjectList() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={importConflict !== null} onClose={() => setImportConflict(null)}>
+      <Dialog {...conflictLayer} open={importConflict !== null} onClose={() => setImportConflict(null)}>
         <DialogTitle>Проект уже есть</DialogTitle>
         <DialogContent>
           <DialogContentText>
@@ -342,14 +349,17 @@ function ProjectList() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </div>
   );
 }
 
 export function ProjectListPage() {
   return (
     <EditorThemeProvider>
-      <ProjectList />
+      {/* Хоткеи страницы: пока только Esc стека слоёв [owner 2026-10-30]. */}
+      <HotkeysProvider>
+        <ProjectList />
+      </HotkeysProvider>
     </EditorThemeProvider>
   );
 }

@@ -18,6 +18,7 @@ import {
   useHotkeyHandlers,
   useHotkeysRoot,
 } from '@presentation/features/hotkeys/hotkeys-provider';
+import { useDismissLayer } from '@presentation/features/hotkeys/dismiss-layer';
 import { EditorTopBar } from '@presentation/features/top-bar/editor-top-bar';
 import { EditorToolbar, type EditorSidePanel } from '@presentation/features/toolbar/editor-toolbar';
 
@@ -130,6 +131,11 @@ function EditorPageLayout() {
   // Панель открывается по отпусканию ЛКМ, а не по нажатию: пока кнопка
   // удержана, это попытка переноса, и сужение канваса её срывает (баг drag).
   const pointerHeld = useCanvasPointerHeld();
+  const attributesOpen = selectedElement !== null && !pointerHeld;
+  // Панели — слои стека Esc (dismiss-layer.ts): панель атрибутов закрывается
+  // снятием выделения — она лишь его представление (D10).
+  useDismissLayer(attributesOpen, editorGraph.clearSelection);
+  useDismissLayer(sidePanel !== null, () => setSidePanel(null));
 
   // Корень страницы — граница хоткеев; команды страницы — только
   // «команда → действие», комбинации — в keybindings (features/hotkeys).
@@ -209,7 +215,7 @@ function EditorPageLayout() {
             </div>
           </div>
         </div>
-        {selectedElement !== null && !pointerHeld ? (
+        {attributesOpen ? (
           <div className={classes.attributesPanel}>
             <AttributesPanel
               component={selectedElement.component}
