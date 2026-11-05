@@ -1,7 +1,12 @@
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react';
 import type { ServiceGraph } from '@domain/model/service-graph';
 import type { EditorRules } from '@domain/editor-rules';
-import { DEFAULT_COMMENT_AUDIENCE, type CanvasElement } from '@domain/model/canvas-element';
+import {
+  DEFAULT_COMMENT_AUDIENCE,
+  type CanvasElement,
+  type CanvasElementKind,
+  type ElementProps,
+} from '@domain/model/canvas-element';
 import { PageLinkTargetIdSchema, type PageLinkTargetId } from '@domain/model/page-link';
 import { toElementId, toPageEntityId, type ElementId, type PageEntityId } from '@domain/model/ids';
 import { computeGraphDepths } from '@domain/graph-depths';
@@ -102,6 +107,13 @@ export function parseLogicTargetHandle(handle: string): string | null {
 // source-handle связи (D9).
 export type CanvasElementData = {
   id: string;
+  /** Вид элемента — ключ таблицы набросков (element-sketches, [owner 2026-11-05]). */
+  kind: CanvasElementKind;
+  /**
+   * props элемента из ServiceBlueprint — та же ссылка (immer сохраняет её, пока
+   * элемент не менялся): набросок сам берёт нужные поля, memo по ссылке.
+   */
+  props: ElementProps;
   /** Основной текст карточки. */
   title: string;
   /** Дополнительный текст (вторая строка). */
@@ -251,6 +263,8 @@ function elementToElementData(
     // Комментарий-элемент — вне связей и «Сложной логики» в любом блоке.
     return {
       id: element.id,
+      kind: element.kind,
+      props: element.props,
       title: catalog.title(element),
       kindLabel: catalog.kindLabel(element.kind),
       commentAudience: catalog.badge(element) ?? DEFAULT_COMMENT_AUDIENCE,
@@ -259,6 +273,8 @@ function elementToElementData(
   }
   const data: CanvasElementData = {
     id: element.id,
+    kind: element.kind,
+    props: element.props,
     title: catalog.title(element),
     kindLabel: catalog.kindLabel(element.kind),
     logicTarget: false,

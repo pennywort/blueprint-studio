@@ -2,7 +2,7 @@ import { memo, useRef, type CSSProperties } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { makeStyles } from '@material-ui/core';
 import { editorIcons } from '@presentation/icons/editor-icons';
-import { IconStub } from '@presentation/features/attributes/icon-stub';
+import { ElementSketch } from '../element-sketches/element-sketch';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { logicAnchorHandleId, logicTargetHandleId, type CanvasElementData } from '../graph-flow-adapter';
 import { FORM_STEP_LAYOUT } from '../canvas-layout';
@@ -59,15 +59,6 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     minHeight: 0,
     overflow: 'hidden',
   },
-  title: {
-    ...theme.typography.body2,
-    overflowWrap: 'anywhere',
-  },
-  caption: {
-    ...theme.typography.caption,
-    color: theme.palette.text.secondary,
-    overflowWrap: 'anywhere',
-  },
   // Ярлык: тип элемента, «Сложная логика», «скрыт», адресат комментария.
   // Высота не больше 16px [owner 2026-10-22].
   chip: {
@@ -92,24 +83,6 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   chipPrimary: {
     backgroundColor: theme.palette.primary.main,
     color: theme.palette.primary.contrastText,
-  },
-  iconWrap: {
-    width: 40,
-    height: 40,
-    flexShrink: 0,
-    borderRadius: theme.editor.shape.icon,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.editor.canvas.controlsBackground,
-    color: theme.palette.text.secondary,
-  },
-  texts: {
-    flexGrow: 1,
-    minWidth: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: theme.spacing(0.5),
   },
   // Ряд чипов внизу слева; иконки в ряду — не выше чипа (16px).
   chips: {
@@ -291,23 +264,14 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
           </div>
         ) : (
           <div className={classes.content}>
-            <div className={classes.head}>
-              <div className={classes.iconWrap}>
-                {/* Выбранная в атрибуте иконка (card.icon политики) [owner
-                2026-10-28]; не выбрана или у вида нет иконки — плейсхолдер. */}
-                {element.icon ? (
-                  <IconStub name={element.icon} />
-                ) : (
-                  <editorIcons.elementPlaceholder fontSize="small" />
-                )}
-              </div>
-              <div className={classes.texts}>
-                <div className={classes.title}>{element.title}</div>
-                {element.secondaryText ? (
-                  <div className={classes.caption}>{element.secondaryText}</div>
-                ) : null}
-              </div>
-            </div>
+            {/* Набросок элемента по kind (element-sketches, [owner 2026-11-05]). */}
+            <ElementSketch
+              kind={element.kind}
+              props={element.props}
+              title={element.title}
+              secondaryText={element.secondaryText}
+              icon={element.icon}
+            />
             <div className={classes.chips}>
               <span className={`${classes.chip} ${classes.chipAccent}`}>{element.kindLabel}</span>
               {element.complexLogic?.available ? (
