@@ -5,7 +5,7 @@ import { editorIcons } from '@presentation/icons/editor-icons';
 import { useDismissLayer } from '@presentation/features/hotkeys/dismiss-layer';
 import type { CanvasElementKind } from '@domain/model/canvas-element';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
-import { NODE_KIND_LABELS } from '@presentation/labels/editor-labels';
+import { FORM_KIND_LABELS, NODE_KIND_LABELS } from '@presentation/labels/editor-labels';
 import { ViolationBadge } from './violation-badge';
 import { groupByLayer } from '@domain/layer-depths';
 import { CANVAS_LAYOUT, FORM_STEP_LAYOUT } from '../canvas-layout';
@@ -297,8 +297,8 @@ function FormNodeView({ id, data }: NodeProps<CanvasNode>) {
                 · {data.title}
               </Typography>
             ) : null}
-            {data.formKindLabel ? (
-              <Chip className={classes.neutralChip} size="small" label={data.formKindLabel} />
+            {data.formKind ? (
+              <Chip className={classes.neutralChip} size="small" label={FORM_KIND_LABELS[data.formKind]} />
             ) : null}
           </div>
           <Typography variant="body2" color="textSecondary">
