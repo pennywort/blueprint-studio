@@ -13,7 +13,7 @@
 | [R-ENT-entities.md](R-ENT-entities.md)               | R-ENT-1…5   | Сущности канваса × возможности: одно ядро вместо дублей         | ⏳ ожидает                              |
 | [R-BOX-layout.md](R-BOX-layout.md)                   | R-BOX-1…4   | `Box` MUI v4 → `div` + `makeStyles` (производительность)        | ⏳ ожидает                              |
 | [R-HK-hotkeys.md](R-HK-hotkeys.md)                   | R-HK-1…5    | Доводка системы хоткеев и буфера элементов по итогам ревью      | ⏳ ожидает                              |
-| [R-CFG-config.md](R-CFG-config.md)                   | R-CFG-1…11  | Правила редактора — таблицы и конфиг вместо ветвлений           | 🔄 9 ✅ (в R-ADM-1)                     |
+| [R-CFG-config.md](R-CFG-config.md)                   | R-CFG-1…11  | Правила редактора — таблицы и конфиг вместо ветвлений           | 🔄 1, 2, 9 ✅; 5, 6, 7, 10 частично     |
 | [R-ADM-settings.md](R-ADM-settings.md)               | R-ADM-1…6   | Настройки: администратор (для всех) и пользователь, одно ядро   | 🔄 1 ✅; 2 — задача на бэкенд           |
 | [R-ARC-architecture.md](R-ARC-architecture.md)       | R-ARC-1…7   | Находки архитектурного ревью 2026-10-19 (баг undo, §4b, слои)   | 🔄 1, 2 ✅                              |
 | [R-SCH-element-schemas.md](R-SCH-element-schemas.md) | R-SCH-1…9   | Один источник атрибутов элемента и переходов (R-ARC-3, R-ARC-4) | ⏳ ждёт решений владельца               |
@@ -21,7 +21,7 @@
 | [R-DOM-domain-rules.md](R-DOM-domain-rules.md)       | R-DOM-1…10  | Доменные правила из presentation — в domain (ревью 2026-11-08)  | ⏳ ожидает                              |
 | [R-CMD-commands.md](R-CMD-commands.md)               | R-CMD-1…7   | Команды: один каскад удаления (баг), use-case'ы проекта         | ⏳ ожидает (R-CMD-1 — первым)           |
 | [R-MOD-modules.md](R-MOD-modules.md)                 | R-MOD-1…8   | Крупные модули, границы фич, модульное состояние, общие части   | ⏳ ожидает                              |
-| [R-GOV-agent-guidance.md](R-GOV-agent-guidance.md)   | R-GOV-1…9   | Инструкции и проверки, чтобы агенты сами соблюдали архитектуру  | ⏳ ожидает (1, 2 — решение владельца)   |
+| [R-GOV-agent-guidance.md](R-GOV-agent-guidance.md)   | R-GOV-1…11  | Инструкции и проверки, чтобы агенты сами соблюдали архитектуру  | 🔄 1, 2, 6 ✅; 10 — решение владельца   |
 
 Итог повторного ревью и порядок шагов — [ревью-архитектуры-2026-11-08.md](../ревью-архитектуры-2026-11-08.md):
 R-CMD-1 → R-DOM-1 → R-GOV-1…4 → остальное R-DOM → R-CMD → R-MOD.

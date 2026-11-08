@@ -27,19 +27,23 @@
 
 ## Сводка
 
-| Шаг     | Суть                                                                    | Владелец |
-| ------- | ----------------------------------------------------------------------- | -------- |
-| R-GOV-1 | AGENTS.md: §4c «Куда класть код» + шаг ревью в чек-листе §7             | да       |
-| R-GOV-2 | ADR-24 «presentation не выводит доменных фактов» + строка в конституции | да       |
-| R-GOV-3 | Карты слоёв `src/<слой>/README.md`                                      | нет      |
-| R-GOV-4 | `npm run rules`: новые проверки с baseline                              | нет      |
-| R-GOV-5 | eslint: относительные пути в infrastructure, решение по zod             | да (zod) |
-| R-GOV-6 | `rules-reviewer` проверяет §4a/§4b и «есть ли функция в domain»         | нет      |
-| R-GOV-7 | Шаблон новой возможности `docs/templates/feature.md`                    | нет      |
-| R-GOV-8 | Убрать устаревшее и противоречия в доках                                | частично |
-| R-GOV-9 | Регулярное `/architecture-review` после эпика                           | да       |
+| Шаг      | Суть                                                                    | Владелец |
+| -------- | ----------------------------------------------------------------------- | -------- |
+| R-GOV-1  | AGENTS.md: §4c «Куда класть код» + шаг ревью в чек-листе §7             | да       |
+| R-GOV-2  | ADR-24 «presentation не выводит доменных фактов» + строка в конституции | да       |
+| R-GOV-3  | Карты слоёв `src/<слой>/README.md`                                      | нет      |
+| R-GOV-4  | `npm run rules`: новые проверки с baseline                              | нет      |
+| R-GOV-5  | eslint: относительные пути в infrastructure, решение по zod             | да (zod) |
+| R-GOV-6  | `rules-reviewer` проверяет §4a/§4b и «есть ли функция в domain»         | нет      |
+| R-GOV-7  | Шаблон новой возможности `docs/templates/feature.md`                    | нет      |
+| R-GOV-8  | Убрать устаревшее и противоречия в доках                                | частично |
+| R-GOV-9  | Регулярное `/architecture-review` после эпика                           | да       |
+| R-GOV-10 | Configs first: аудит, умолчания правил в JSON                           | да       |
+| R-GOV-11 | `schemas:check` в pre-commit                                            | нет      |
 
-Порядок: 1 → 2 → 4 → 6 → 3 → 7 → 8 → 5 → 9.
+Порядок: 1 → 2 → 4 → 6 → 3 → 7 → 8 → 5 → 9 → 11; 10 — после ответа владельца.
+
+**Статус [2026-11-08]:** R-GOV-1, 2, 6 ✅ (AGENTS.md §4c, §4d, конституция §3 п.5, rules-reviewer); ADR-24 — внести через `/update-state`.
 
 ---
 
@@ -158,3 +162,37 @@ baseline-файл (`scripts/agent/rules-baseline.json`, счётчик по фа
 **Цель.** Правило в AGENTS.md §7 или docs/refactoring/README.md: `/architecture-review`
 после каждого эпика или раз в месяц. Результат — новый `docs/ревью-архитектуры-<дата>.md` и
 планы здесь. Повторно найденное не дублировать, а обновлять статус.
+
+## R-GOV-10. Configs first: аудит и умолчания в JSON [решение владельца]
+
+**Факт (аудит 2026-11-08).** Принцип записан в AGENTS.md §4d. Правила «что куда можно» уже
+данные: `editor-policy.json` (виды, атрибуты, умолчания) и `EditorRules` (связи, лимиты,
+ёмкость, строгость; переопределение — `public/config/editor-settings.json`). Но:
+
+- **умолчания `EditorRules` — TS-константы** (`DEFAULT_*` в `domain/*`), а конституция §4a п.5
+  так и требует («умолчания — в коде»);
+- **остались `if` вместо полей конфига** (план — R-CFG):
+  - L-I7 «одно правило на цель»: `invariants/logic-rules.ts:100`, `connection-rules.ts:112` (R-CFG-3);
+  - «один переход на источник»: `invariants/step-transitions.ts:26`, `commands/add-step-transition.ts:27` (R-CFG-3);
+  - «Главная закреплена на 0» в 5 местах домена и команд и в `layer-policy.ts:47` (R-CFG-4, R-DOM-2);
+  - «смена колонки рвёт правила»: `commands/move-element.ts:86-93` (R-CFG-4);
+  - меню узлов и запрет второй Главной: `editor-toolbar.tsx:65-69,167`, `use-editor-graph.ts:183` (R-CFG-7);
+  - тексты нарушений внутри инвариантов (R-CFG-11);
+- `RULE_BY_KIND` (`invariants/routing-excludes-dynamic-content.ts:16`) администратору недоступен (R-ADM-6);
+- UI не показывает лимиты заранее (`elementCountLimits`, `variants.max`) — нарушение видно
+  только после команды (R-CFG-5).
+
+**Вопрос владельцу.** Где хранить умолчания правил:
+
+1. JSON-файл умолчаний (`infrastructure/settings/default-editor-rules.json`). Схема и тип
+   остаются в domain, DI отдаёт файл как `defaults` секции `rules`. Один формат с политикой.
+   Нужна правка конституции §4a п.5 (рекомендуется, если правила будет читать не только разработчик).
+2. Оставить TS-таблицы в domain, как сейчас. JSON — только переопределение администратора.
+
+## R-GOV-11. `schemas:check` в pre-commit
+
+**Факт.** `npm run schemas:check` (проверка `editor-policy.json` по схемам) не входит ни в
+`verify`, ни в `.husky/pre-commit`. Ошибка в политике всплывёт только при старте.
+
+**Цель.** В pre-commit — запуск только при изменённых `src/infrastructure/element-schemas/**`
+(через lint-staged или проверку `git diff --cached --name-only`).

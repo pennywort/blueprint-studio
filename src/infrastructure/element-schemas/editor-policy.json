@@ -122,7 +122,7 @@
       "kind": "attachment",
       "label": "Attachment",
       "category": "Форма",
-      "description": "Поле загрузки файлов (одно на форму)",
+      "description": "Поле загрузки файлов (одно на шаг формы)",
       "card": { "title": "label" },
       "defaults": { "label": "Файл" },
       "attributes": [
