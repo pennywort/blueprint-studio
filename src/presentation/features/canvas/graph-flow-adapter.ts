@@ -13,6 +13,7 @@ import { computeGraphDepths } from '@domain/graph-depths';
 import { walkSubScenarios } from '@domain/graph-walk';
 import { computeStepElementDepths } from '@domain/step-element-depths';
 import { computeFormStepDepths } from '@domain/form-step-depths';
+import { formKindOf, type FormKind } from '@domain/form-kind';
 import {
   COMPLEX_LOGIC_KEY,
   elementVariants,
@@ -197,8 +198,8 @@ export type CanvasNodeData = {
   elements: CanvasElementData[];
   /** Шаги формы (D1); у узлов-сценариев — пустой массив. */
   steps: CanvasFormStepData[];
-  /** Чип типа формы («Одностраничная»/«Степперная»); у не-форм — null. */
-  formKindLabel: string | null;
+  /** Тип формы для чипа (domain/form-kind, D1); у не-форм — null. */
+  formKind: FormKind | null;
   // Интерактивное (обработчики T-034, выделение, цель связи, нарушения,
   // reveal поиска) — НЕ в data: data содержит только данные графа и
   // сохраняет идентичность между пересчётами (ревью A4/P1, R2).
@@ -395,7 +396,7 @@ function buildFlow(
         subtitle: NODE_SUBTITLES.home,
         elements: homePage.elements.map((element) => pageElementData(element, elementContext)),
         steps: [],
-        formKindLabel: null,
+        formKind: null,
       },
     });
     for (const element of homePage.elements) {
@@ -420,7 +421,7 @@ function buildFlow(
         subtitle: navigationLevelLabel(depth + levelOffset || 1),
         elements: scenario.elements.map((element) => pageElementData(element, elementContext)),
         steps: [],
-        formKindLabel: null,
+        formKind: null,
       },
     });
     for (const element of scenario.elements) {
@@ -598,7 +599,7 @@ function formNodeData(
         })),
       };
     }),
-    formKindLabel: form.steps.length > 1 ? 'Степперная' : 'Одностраничная',
+    formKind: formKindOf(form),
   };
 }
 

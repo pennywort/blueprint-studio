@@ -1,3 +1,5 @@
+import type { FormKind } from '@domain/form-kind';
+
 // Единый словарь подписей редактора (R-CFG-6, [owner 2026-10-16]): названия
 // узлов, «Шаг N», уровни навигации — один источник для канваса, меню и
 // панели атрибутов. Формат словаря пока не утверждён — это stub: при
@@ -11,6 +13,12 @@ export const NODE_KIND_LABELS = {
   subScenario: 'Подсценарий',
   form: 'Форма заявки',
 } as const;
+
+// Чип типа формы в шапке узла формы (D1); тип — domain/form-kind.
+export const FORM_KIND_LABELS: Readonly<Record<FormKind, string>> = {
+  single: 'Одностраничная',
+  stepper: 'Степперная',
+};
 
 // Подзаголовки узлов (макеты редактора).
 export const NODE_SUBTITLES = {
