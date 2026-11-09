@@ -1,0 +1,137 @@
+{
+  "src/domain/invariants/element-count-limits.ts": {
+    "cyrillic-domain": 5
+  },
+  "src/domain/invariants/layer-capacity.ts": {
+    "cyrillic-domain": 3
+  },
+  "src/domain/invariants/logic-rules.ts": {
+    "cyrillic-domain": 8
+  },
+  "src/domain/invariants/radio-max-five-options.ts": {
+    "cyrillic-domain": 1
+  },
+  "src/domain/invariants/routing-excludes-dynamic-content.ts": {
+    "cyrillic-domain": 1
+  },
+  "src/domain/invariants/step-transitions.ts": {
+    "cyrillic-domain": 1
+  },
+  "src/domain/model/canvas-element.ts": {
+    "cyrillic-domain": 1
+  },
+  "src/domain/step-transitions.ts": {
+    "cyrillic-domain": 4
+  },
+  "src/infrastructure/element-schemas/assemble-element-schemas.ts": {
+    "lines": 674
+  },
+  "src/infrastructure/persistence/graph-record-migration.ts": {
+    "lines": 426
+  },
+  "src/presentation/features/attributes/attributes-panel.tsx": {
+    "cyrillic-presentation": 2
+  },
+  "src/presentation/features/attributes/builtin-property-editors.tsx": {
+    "cyrillic-presentation": 6
+  },
+  "src/presentation/features/attributes/icon-property-editor.tsx": {
+    "cyrillic-presentation": 4
+  },
+  "src/presentation/features/canvas/canvas-edges.tsx": {
+    "kind-branch": 1
+  },
+  "src/presentation/features/canvas/canvas-layout.ts": {
+    "length-compare": 1
+  },
+  "src/presentation/features/canvas/default-elements.ts": {
+    "cyrillic-presentation": 2
+  },
+  "src/presentation/features/canvas/editor-canvas-controls.tsx": {
+    "cyrillic-presentation": 8,
+    "box-import": 1
+  },
+  "src/presentation/features/canvas/editor-canvas.tsx": {
+    "lines": 751
+  },
+  "src/presentation/features/canvas/empty-canvas-state.tsx": {
+    "cyrillic-presentation": 2,
+    "box-import": 1
+  },
+  "src/presentation/features/canvas/graph-flow-adapter.ts": {
+    "lines": 686
+  },
+  "src/presentation/features/canvas/nodes/element-card.tsx": {
+    "cyrillic-presentation": 1
+  },
+  "src/presentation/features/canvas/nodes/form-node.tsx": {
+    "cyrillic-presentation": 5,
+    "length-compare": 1,
+    "lines": 532
+  },
+  "src/presentation/features/canvas/nodes/option-card.tsx": {
+    "cyrillic-presentation": 1
+  },
+  "src/presentation/features/canvas/nodes/scenario-node.tsx": {
+    "cyrillic-presentation": 1,
+    "length-compare": 2
+  },
+  "src/presentation/features/canvas/sample-graph.ts": {
+    "cyrillic-presentation": 26
+  },
+  "src/presentation/features/canvas/stress-graph.ts": {
+    "cyrillic-presentation": 11
+  },
+  "src/presentation/features/canvas/use-connection.ts": {
+    "kind-branch": 4
+  },
+  "src/presentation/features/canvas/use-editor-graph.ts": {
+    "kind-branch": 4,
+    "cyrillic-presentation": 5,
+    "length-compare": 1,
+    "confirm-alert": 2,
+    "lines": 602
+  },
+  "src/presentation/features/hotkeys/hotkey-commands.ts": {
+    "cyrillic-presentation": 9
+  },
+  "src/presentation/features/hotkeys/keybindings-settings.ts": {
+    "cyrillic-presentation": 1
+  },
+  "src/presentation/features/notifications/editor-notifications.tsx": {
+    "cyrillic-presentation": 1
+  },
+  "src/presentation/features/projects/project-file.ts": {
+    "cyrillic-presentation": 1
+  },
+  "src/presentation/features/settings/settings-issues-notifier.tsx": {
+    "cyrillic-presentation": 4
+  },
+  "src/presentation/features/settings/settings-overview.tsx": {
+    "cyrillic-presentation": 10
+  },
+  "src/presentation/features/toolbar/editor-toolbar.tsx": {
+    "cyrillic-presentation": 4,
+    "kind-branch": 1,
+    "box-import": 1
+  },
+  "src/presentation/features/top-bar/editor-top-bar.tsx": {
+    "cyrillic-presentation": 8,
+    "keydown": 1,
+    "box-import": 1
+  },
+  "src/presentation/pages/editor/EditorPage.tsx": {
+    "cyrillic-presentation": 2
+  },
+  "src/presentation/pages/preview/PreviewPage.tsx": {
+    "cyrillic-presentation": 2
+  },
+  "src/presentation/pages/project-list/ProjectListPage.tsx": {
+    "cyrillic-presentation": 29,
+    "keydown": 1,
+    "box-import": 1
+  },
+  "src/presentation/pages/settings/SettingsPage.tsx": {
+    "cyrillic-presentation": 3
+  }
+}
