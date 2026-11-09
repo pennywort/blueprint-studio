@@ -23,7 +23,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 -->
 
 > **SCHEMA_VERSION:** 2
-> **UPDATED:** 2026-11-08
+> **UPDATED:** 2026-11-09
 > **CURRENT_EPIC:** 002 (Canvas, in-progress)
 
 ---
@@ -43,24 +43,24 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 <!-- status: installed | planned | removed
 Версии — ТОЛЬКО из package.json. planned = решение принято, пакет не установлен. -->
 
-| Слой            | Пакет                                                                 | Версия                           | Статус                                                                                                  |
-| --------------- | --------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Сборка          | @rsbuild/core + @rsbuild/plugin-react                                 | 2.2.0 / 2.1.1                    | installed                                                                                               |
-| Микрофронтенд   | Module Federation (Rsbuild MF plugin)                                 | —                                | planned [owner 2026-10-06]                                                                              |
-| Фреймворк       | react + react-dom                                                     | 19.3.0                           | installed                                                                                               |
-| Язык            | typescript (strict)                                                   | 5.7.3                            | installed                                                                                               |
-| UI-кит          | @blueprint-vendor/flamingo-components (core/icons/pickers/animations) | 4.9.17                           | TEMPORARY: недоступен, шимы `file:vendor/flamingo/*` поверх @material-ui/core 4.12.4 [owner 2026-10-09] |
-| Подмена UI-кита | @material-ui/core + @material-ui/icons                                | 4.12.4 / 4.11.3                  | installed TEMPORARY — удаляются вместе с шимами (KIMI.md §4.1)                                          |
-| Состояние       | effector + patronum                                                   | —                                | planned                                                                                                 |
-| DI              | awilix                                                                | 13.0.5                           | installed, используется (container.ts)                                                                  |
-| Валидация       | zod                                                                   | 4.6.5                            | installed                                                                                               |
-| Патчи/undo      | immer                                                                 | 11.1.18                          | installed                                                                                               |
-| Роутер          | react-router-dom (createHashRouter)                                   | 7.18.3                           | installed — под вопросом в микрофронте, см. §6                                                          |
-| Тесты           | vitest + @testing-library/react (+ @testing-library/dom, jsdom)       | 5.0.0 / 16.3.3 / 10.4.2 / 27.2.0 | installed                                                                                               |
-| Canvas          | @xyflow/react                                                         | 12.12.0                          | installed [коммит b2dfd1e]                                                                              |
-| Workflow        | xstate                                                                | —                                | planned (Epic 004)                                                                                      |
-| Линтинг         | eslint (flat) + eslint-plugin-boundaries                              | 9.39.5 / 7.2.0                   | installed                                                                                               |
-| Форматирование  | prettier + husky + commitlint + lint-staged                           | 3.9.6 / 9.1.7 / 21.2.2 / 16.2.6  | installed                                                                                               |
+| Слой           | Пакет                                                                 | Версия                           | Статус                                                                         |
+| -------------- | --------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------ |
+| Сборка         | @rsbuild/core + @rsbuild/plugin-react                                 | 2.2.0 / 2.1.1                    | installed                                                                      |
+| Микрофронтенд  | Module Federation (Rsbuild MF plugin)                                 | —                                | planned [owner 2026-10-06]                                                     |
+| Фреймворк      | react + react-dom                                                     | 19.3.0                           | installed                                                                      |
+| Язык           | typescript (strict)                                                   | 5.7.3                            | installed                                                                      |
+| UI-кит         | @blueprint-vendor/flamingo-components (core/icons/pickers/animations) | —                                | removed: шимы удалены, переход на Flamingo отложен [owner 2026-10-22, c108a86] |
+| UI-кит         | @material-ui/core + @material-ui/icons                                | 4.12.4 / 4.11.3                  | installed — напрямую, ADR-26 [owner 2026-10-22, c108a86]                       |
+| Состояние      | effector + patronum                                                   | —                                | planned                                                                        |
+| DI             | awilix                                                                | 13.0.5                           | installed, используется (container.ts)                                         |
+| Валидация      | zod                                                                   | 4.6.5                            | installed                                                                      |
+| Патчи/undo     | immer                                                                 | 11.1.18                          | installed                                                                      |
+| Роутер         | react-router-dom (createHashRouter)                                   | 7.18.3                           | installed — под вопросом в микрофронте, см. §6                                 |
+| Тесты          | vitest + @testing-library/react (+ @testing-library/dom, jsdom)       | 5.0.0 / 16.3.3 / 10.4.2 / 27.2.0 | installed                                                                      |
+| Canvas         | @xyflow/react                                                         | 12.12.0                          | installed [коммит b2dfd1e]                                                     |
+| Workflow       | xstate                                                                | —                                | planned (Epic 004)                                                             |
+| Линтинг        | eslint (flat) + eslint-plugin-boundaries                              | 9.39.5 / 7.2.0                   | installed                                                                      |
+| Форматирование | prettier + husky + commitlint + lint-staged                           | 3.9.6 / 9.1.7 / 21.2.2 / 16.2.6  | installed                                                                      |
 
 ---
 
@@ -96,6 +96,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 | ADR-23 | «Сложная логика» — атрибут схемы вида, а не мета элемента: поле complexLogic в extensions.byKind схем проекта (сейчас только select), атрибут политики редактора, значение ext.complexLogic; домен читает по COMPLEX_LOGIC_KEY; каскад правил/переходов — в UpdateElementProps                                                                                                                                                                                                                                                                                                                                                                                                                                           | [owner 2026-10-27] Флаг нужен генератору МИПа в схеме элемента; включение по видам — политикой, без кода                                                          | active, реализовано (e7aa5b1)                                  |
 | ADR-24 | Presentation не вычисляет доменных фактов: любой вывод из модели (тип, номер, допустимость, последствия действия) — функция domain, одно понятие — один небольшой модуль `src/domain/<понятие>.ts`; UI и адаптеры только показывают результат. Эталон — domain/form-kind.ts + FORM_KIND_LABELS (1309575)                                                                                                                                                                                                                                                                                                                                                                                                                 | [owner 2026-11-08] Одно правило читают UI, команды и генератор; копии в компонентах расходятся (ревью 2026-11-08). AGENTS.md §4c, конституция §3 п.5              | active                                                         |
 | ADR-25 | Configs first: в конфиг (поле EditorRules / editor-policy.json / хоткеи / editor-config) выносится только то, что в будущем может легко измениться по решению людей (заказчик, администратор, окружение, бэкенд); определения понятий, технические имена, подписи и вёрстка — код. Умолчания — TS-таблицы domain, переопределение — editor-settings.json; источник подменяется за портом                                                                                                                                                                                                                                                                                                                                 | [owner 2026-11-08] Гибкость без перебора: цель — не избавиться от программирования. Критерий — AGENTS.md §4d, конституция §4a; остаток — R-GOV-10 (R-CFG-3/4/5/7) | active                                                         |
+| ADR-26 | UI-кит — MUI v4 напрямую (@material-ui/core 4.12.4, @material-ui/icons 4.11.3); шимы Flamingo удалены, переход на Flamingo отложен; иконки — только через фасад presentation/icons                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | [owner 2026-10-22] Flamingo недоступен; c108a86, 7928f56                                                                                                          | active                                                         |
 
 ---
 
@@ -116,7 +117,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - [T-008] Command Bus: command.ts + command-bus.ts (execute/undo/redo через produceWithPatches + enablePatches) + add-form-component.ts + errors.ts; 12 тестов [коммит af8ba3e]
 - [T-009] DI Container: infrastructure/container.ts (Awilix PROXY, strict, Cradle: idGenerator/clock/elementSchemaProvider/commandBus; манифест через .inject), buildContainer() подключён в bootstrap.tsx; 3 теста [коммит af8ba3e]
 - [T-010] Расхождение FormStepSchema vs step.components устранено: FormStepSchema содержит components [коммит af8ba3e]
-- Верификация на локальной машине выполнена: npm install + test + lint + build зелёные; TEMPORARY-подмена Flamingo → шимы поверх MUI v4 (vendor/flamingo/*, findDOMNode-полифилл, legacy-peer-deps) [owner 2026-10-09, коммит 3feb1ce]
+- Верификация на локальной машине выполнена: npm install + test + lint + build зелёные; TEMPORARY-подмена Flamingo → шимы поверх MUI v4 (vendor/flamingo/*, findDOMNode-полифилл, legacy-peer-deps) [owner 2026-10-09, коммит 3feb1ce]; шимы удалены — MUI v4 напрямую (ADR-26) [c108a86]
 - [T-004 эпик 002] Доменная модель страниц и связей: страницы — верхнеуровневые сущности ServiceGraph (homePage?, subScenarios[], applicationForms[]), персистентный orderIndex, PageLink (sourceElementId → targetId), координат нет (D2) [коммит a3deb1a]
 - [T-010/T-011 эпик 002] Тема редактора (src/presentation/theme/: createEditorTheme, EditorThemeProvider, useEditorTheme, токены theme.editor.canvas) + стилизация react-flow токенами темы (D6) [коммит cd920b6]
 - [T-020/T-021/T-022 эпик 002] Каркас страницы редактора: EditorTopBar (поиск, «Сохранить»/«Предпросмотр»/«На согласование»), EditorToolbar (4 кнопки, меню добавления узлов/элементов, панели-заглушки), компоновка EditorPage [коммит d8c312e]
@@ -176,6 +177,11 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - [T-067, ADR-23] «Сложная логика» — атрибут complexLogic схемы select (ext): свитч в «Настройках» панели атрибутов и чип карточки — одна команда UpdateElementProps; формат записи карты v7 (миграция hasComplexLogic) [e7aa5b1, 0ad1139]
 - [эпик 002] Карточки вариантов видны, если из варианта в блоке есть связь (variantsVisible, матрица связей); «варианты только при сложной логике» — rules.connections.option.step = null в настройках администратора [d12c821]
 - [ADR-24] Тип формы «Одностраничная/Степперная» — domain/form-kind.ts (FORM_KIND_RULE, formKindOf), подпись — FORM_KIND_LABELS; форма из одного шага = одностраничная [owner 2026-11-08] (1309575)
+- [schemas] Надстройки над схемой (extensions all/byKind в схемах проекта): значения — в поле ext элемента, не в props; общие атрибуты — common.attributes политики; ввод chips; "multiple": true рядом с enum — массив значений (в политике — ошибка schemas:check); общий атрибут «Доступность» (Sigma/Delta/Alpha, multiple) [2973d50, 2d9e6f7, 7686784, d05607e]
+- [эпик 002] Иконки редактора — по роли из presentation/icons/editor-icons.ts (фасад; @material-ui/icons вне него запрещён eslint); глифы атрибута icon — resolveFrameworkIcon; локальные переопределения @local/editor-icons, @local/framework-icons вне git (docs/local-overrides.md) [428811e, 6454e7a, 7928f56]
+- [эпик 002] Карточка элемента: иконка из атрибута по слоту card.icon политики; содержимое — набросок по kind (таблица sketch-registry, вид без записи — набросок по умолчанию), читает kind + props из ServiceBlueprint [6d0f31b, 95b3221]
+- [эпик 002] Навигация канваса — схема данных canvas.navigation в editor-config.json (figma: скролл двигает, pinch масштабирует | zoom) [b11c9db]
+- [эпик 002, R-HK] Esc — команда layer.dismiss: стек слоёв (useDismissLayer), одно нажатие закрывает верхний слой; встроенный Esc модалок MUI и canvas.cancelConnection убраны [a10fb5e]
 
 ### 4.2 NOT DONE (пробелы)
 
@@ -335,3 +341,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-10-28 | agent:claude | §6: баг — надпись «Выбрано» в редакторе иконки двигает панель
 - 2026-11-08 | agent:claude | ADR-24 (доменные факты — в domain), ADR-25 (configs first); тип формы domain/form-kind; баг каскада удаления страниц (R-CMD-1); §7 п.6 — планы ревью 2026-11-08
 - 2026-11-08 | agent:claude | ADR-25 уточнено [owner]: в конфиг — только то, что может легко измениться по решению людей; умолчания остаются TS-таблицами
+- 2026-11-09 | agent:claude | ретроспективно: ADR-26 (MUI v4 напрямую, Flamingo removed), DONE — ext/multiple/«Доступность», фасад иконок, card.icon и наброски, навигация канваса, Esc layer.dismiss
