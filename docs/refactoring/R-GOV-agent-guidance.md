@@ -91,7 +91,7 @@
 Ссылки на них — из AGENTS.md §4c и `README.md`. Поддерживать при создании модуля: пункт в
 шаблоне R-GOV-7.
 
-## R-GOV-4. Новые проверки `npm run rules` ✅ 2026-11-09 (коммит — см. git log `R-GOV-4`)
+## R-GOV-4. Новые проверки `npm run rules` ✅ 2026-11-09 (79ea9e8)
 
 Сделано: правила в `rules-check.mjs`, baseline `rules-baseline.json` (55 старых нарушений, 6 файлов > 400 строк),
 маркер `rules-allow`, `--update-baseline` (только уменьшение). Сужение: `kind` у `decision`/`condition`
