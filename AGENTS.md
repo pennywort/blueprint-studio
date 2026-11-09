@@ -197,7 +197,7 @@ react-flow, позиции/цвете или тексте лейбла; ввод
 | Команда                                | Зачем                                                                        |
 | -------------------------------------- | ---------------------------------------------------------------------------- |
 | `npm run verify`                       | lint + build (сам — в pre-commit). Ошибка — только ошибки + путь к логу      |
-| `npm run rules`                        | правила §4, не ловимые eslint (hex, `window`; в pre-commit)                  |
+| `npm run rules`                        | правила §4, не ловимые eslint (в pre-commit); список — ниже                  |
 | `npm run ui -- <шаги>`                 | ручная проверка UI текстом (сам поднимет dev-сервер); шаги — в шапке скрипта |
 | `node scripts/agent/lint-file.mjs <f>` | eslint одного файла сразу после правки                                       |
 | `npm run state:summary`                | что открыто в PROJECT_STATE и нужно ли его обновлять                         |
@@ -206,6 +206,13 @@ react-flow, позиции/цвете или тексте лейбла; ввод
 | `npm run state:log -- <кто> "<что>"`   | бамп UPDATED + строка в CHANGELOG (вручную их не трогать)                    |
 | `npm run schemas:import -- [бандл]`    | копия схем фреймворка в `src/` + проверка политики редактора                 |
 | `npm run schemas:check`                | проверка политики редактора по текущей копии схем                            |
+
+`rules` — ошибка всегда: hex-цвет, запись в `window`, иконка мимо `editorIcons`, правка `*.disabled`, новый тест.
+С baseline `scripts/agent/rules-baseline.json` (старое — ⚠️, новое — ❌; R-GOV-4): кириллица в литералах
+presentation вне `labels/` и в domain (кроме `Error`), `kind === '…'`/`switch (…kind)` в presentation,
+`.steps/.elements/.options.length` с числом, импорт `Box`, `onKeyDown`/keydown вне `features/hotkeys`,
+`confirm(`/`alert(`, рост файла > 400 строк. Ложное срабатывание — `// rules-allow: <id> — <причина>`;
+baseline не повышать, `--update-baseline` только уменьшает.
 
 Полные логи — в `.agent-logs/*.log`; читай только нужный фрагмент (поиск по
 файлу/строке), не целиком.

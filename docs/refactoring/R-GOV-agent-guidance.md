@@ -27,23 +27,23 @@
 
 ## Сводка
 
-| Шаг      | Суть                                                                    | Владелец |
-| -------- | ----------------------------------------------------------------------- | -------- |
-| R-GOV-1  | AGENTS.md: §4c «Куда класть код» + шаг ревью в чек-листе §7             | да       |
-| R-GOV-2  | ADR-24 «presentation не выводит доменных фактов» + строка в конституции | да       |
-| R-GOV-3  | Карты слоёв `src/<слой>/README.md`                                      | нет      |
-| R-GOV-4  | `npm run rules`: новые проверки с baseline                              | нет      |
-| R-GOV-5  | eslint: относительные пути в infrastructure, решение по zod             | да (zod) |
-| R-GOV-6  | `rules-reviewer` проверяет §4a/§4b и «есть ли функция в domain»         | нет      |
-| R-GOV-7  | Шаблон новой возможности `docs/templates/feature.md`                    | нет      |
-| R-GOV-8  | Убрать устаревшее и противоречия в доках                                | частично |
-| R-GOV-9  | Регулярное `/architecture-review` после эпика                           | да       |
-| R-GOV-10 | Configs first: аудит, умолчания правил в JSON                           | решено   |
-| R-GOV-11 | `schemas:check` в pre-commit                                            | нет      |
+| Шаг        | Суть                                                                    | Владелец |
+| ---------- | ----------------------------------------------------------------------- | -------- |
+| R-GOV-1    | AGENTS.md: §4c «Куда класть код» + шаг ревью в чек-листе §7             | да       |
+| R-GOV-2    | ADR-24 «presentation не выводит доменных фактов» + строка в конституции | да       |
+| R-GOV-3    | Карты слоёв `src/<слой>/README.md`                                      | нет      |
+| R-GOV-4 ✅ | `npm run rules`: новые проверки с baseline                              | нет      |
+| R-GOV-5    | eslint: относительные пути в infrastructure, решение по zod             | да (zod) |
+| R-GOV-6    | `rules-reviewer` проверяет §4a/§4b и «есть ли функция в domain»         | нет      |
+| R-GOV-7    | Шаблон новой возможности `docs/templates/feature.md`                    | нет      |
+| R-GOV-8    | Убрать устаревшее и противоречия в доках                                | частично |
+| R-GOV-9    | Регулярное `/architecture-review` после эпика                           | да       |
+| R-GOV-10   | Configs first: аудит, умолчания правил в JSON                           | решено   |
+| R-GOV-11   | `schemas:check` в pre-commit                                            | нет      |
 
 Порядок: 1 → 2 → 4 → 6 → 3 → 7 → 8 → 5 → 9 → 11; 10a…c — по решению владельца 2026-11-08.
 
-**Статус [2026-11-08]:** R-GOV-1, 2, 6 ✅ (AGENTS.md §4c, §4d, конституция §3 п.5 и §4a, rules-reviewer); ADR-24, ADR-25 — в PROJECT_STATE.
+**Статус [2026-11-09]:** R-GOV-1, 2, 4, 6 ✅ (AGENTS.md §4c, §4d, конституция §3 п.5 и §4a, rules-reviewer); ADR-24, ADR-25 — в PROJECT_STATE.
 
 ---
 
@@ -91,7 +91,11 @@
 Ссылки на них — из AGENTS.md §4c и `README.md`. Поддерживать при создании модуля: пункт в
 шаблоне R-GOV-7.
 
-## R-GOV-4. Новые проверки `npm run rules`
+## R-GOV-4. Новые проверки `npm run rules` ✅ 2026-11-09 (79ea9e8)
+
+Сделано: правила в `rules-check.mjs`, baseline `rules-baseline.json` (55 старых нарушений, 6 файлов > 400 строк),
+маркер `rules-allow`, `--update-baseline` (только уменьшение). Сужение: `kind` у `decision`/`condition`
+(результат domain) и сообщения `Error` — не нарушения.
 
 **Цель.** Новые правила в `scripts/agent/rules-check.mjs`. Для существующего кода —
 baseline-файл (`scripts/agent/rules-baseline.json`, счётчик по файлу): старое даёт
