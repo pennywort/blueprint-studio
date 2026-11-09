@@ -19,7 +19,7 @@
 | [R-SCH-element-schemas.md](R-SCH-element-schemas.md) | R-SCH-1…9   | Один источник атрибутов элемента и переходов (R-ARC-3, R-ARC-4) | ⏳ ждёт решений владельца               |
 | [R-PERF-canvas.md](R-PERF-canvas.md)                 | R-PERF-0…12 | Производительность канваса и CSS на больших картах (ревью RF)   | ⏳ ожидает (решения 2026-10-22 приняты) |
 | [R-DOM-domain-rules.md](R-DOM-domain-rules.md)       | R-DOM-1…10  | Доменные правила из presentation — в domain (ревью 2026-11-08)  | ⏳ ожидает                              |
-| [R-CMD-commands.md](R-CMD-commands.md)               | R-CMD-1…7   | Команды: один каскад удаления (баг), use-case'ы проекта         | ⏳ ожидает (R-CMD-1 — первым)           |
+| [R-CMD-commands.md](R-CMD-commands.md)               | R-CMD-1…7   | Команды: один каскад удаления (баг), use-case'ы проекта         | 🔄 1 ✅                                 |
 | [R-MOD-modules.md](R-MOD-modules.md)                 | R-MOD-1…8   | Крупные модули, границы фич, модульное состояние, общие части   | ⏳ ожидает                              |
 | [R-GOV-agent-guidance.md](R-GOV-agent-guidance.md)   | R-GOV-1…11  | Инструкции и проверки, чтобы агенты сами соблюдали архитектуру  | 🔄 1, 2, 4, 6 ✅; 10 решено, к работе   |
 
