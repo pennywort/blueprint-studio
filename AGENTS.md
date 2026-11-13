@@ -270,6 +270,22 @@ baseline не повышать, `--update-baseline` только уменьша�
   (Bitbucket). В GitHub не пушить никогда.
 - **Мусор не коммитить:** одноразовые скрипты, скриншоты, заметки — в `.agent-logs/`
   (в `.gitignore`); не в корень и не в `scripts/`. `*.local.*` в git не попадают.
+- **Чек-лист §7 для локального агента:** п. 4 — push ветки и `master` в `origin` (Bitbucket);
+  п. 5 (`PROJECT_STATE`) — пропустить, это зона ядра.
+
+**Разовая настройка локального агента** (если `git remote -v` ещё не такой):
+
+```bash
+git remote rename origin github
+git remote set-url --push github DISABLED
+git remote add origin <url-bitbucket>
+git config branch.master.remote github   # git pull по умолчанию — из GitHub
+git config branch.master.pushRemote origin   # git push по умолчанию — в Bitbucket
+git config merge.conflictstyle diff3
+```
+
+Проверка: `git remote -v` — `github` с push `DISABLED`, `origin` — Bitbucket.
+Push `master` — без `-u` (иначе pull переключится на Bitbucket).
 
 **Конфликт при `git pull github master`** (только merge, без rebase/`--force`):
 
