@@ -10,3 +10,9 @@ coverage/
 *.local.ts
 *.local.tsx
 .env.local
+# Мусор агентов (AGENTS.md §8): одноразовые скрипты, скриншоты и заметки в корне
+*.local.mjs
+*.local.js
+/*.png
+/next_task.md
+/TASK_*.md
