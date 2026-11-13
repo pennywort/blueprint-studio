@@ -23,7 +23,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 -->
 
 > **SCHEMA_VERSION:** 2
-> **UPDATED:** 2026-11-09
+> **UPDATED:** 2026-11-13
 > **CURRENT_EPIC:** 002 (Canvas, in-progress)
 
 ---
@@ -182,6 +182,8 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - [эпик 002] Карточка элемента: иконка из атрибута по слоту card.icon политики; содержимое — набросок по kind (таблица sketch-registry, вид без записи — набросок по умолчанию), читает kind + props из ServiceBlueprint [6d0f31b, 95b3221]
 - [эпик 002] Навигация канваса — схема данных canvas.navigation в editor-config.json (figma: скролл двигает, pinch масштабирует | zoom) [b11c9db]
 - [эпик 002, R-HK] Esc — команда layer.dismiss: стек слоёв (useDismissLayer), одно нажатие закрывает верхний слой; встроенный Esc модалок MUI и canvas.cancelConnection убраны [a10fb5e]
+- [R-CMD-1, ADR-15] Один каскад удаления: правило «что уходит» — domain/cascade-removal.ts, применение и сохранение уровней — application/commands/cascade-remove.ts (removeWithCascade); его вызывают RemoveForm/RemoveFormStep/RemoveElement/RemoveScenario/RemoveHomePage; удаление страницы чистит logicRules её элементов [34cbb98]
+- [R-GOV-4] npm run rules: новые проверки (кириллица вне labels, ветвления по kind, .length с числом, Box, свои keydown, confirm/alert, рост файла > 400 строк) с baseline scripts/agent/rules-baseline.json — старое ⚠️, новое ❌; маркер rules-allow [79ea9e8]
 
 ### 4.2 NOT DONE (пробелы)
 
@@ -235,7 +237,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - ✅ RESOLVED [R4 A13, owner 2026-10-14: код удалён, не просто выключен]: сжатие элементов узлов/шагов (T-033) временно выключено (ELEMENTS_COLLAPSE_ENABLED = false) до уточнения с заказчиком; код сохранён
 - ❓ NEW [S12-fix, owner 2026-10-12]: цветовая палитра темы будет меняться отдельным агентом с доступом к файлам — текущие токены theme.editor.canvas не финальные
 - 🐞 NEW [owner 2026-10-28]: выбор иконки в панели атрибутов (icon-property-editor) показывает надпись «Выбрано: …» — панель прыгает, появляется скролл. Надпись не нужна — удалить
-- 🐞 NEW [agent:claude 2026-11-08, ревью архитектуры]: удаление страницы (RemoveScenario/RemoveHomePage) чистит links, но не logicRules элементов страницы — при включённой матрицей логике на страницах останутся висящие правила; сейчас скрыто (логика только в шагах формы). Исправление — R-CMD-1 (docs/refactoring/R-CMD-commands.md)
+- ✅ RESOLVED [agent:claude 2026-11-09, коммит 34cbb98]: удаление страницы (RemoveScenario/RemoveHomePage) не чистило logicRules элементов страницы — исправлено общим каскадом удаления (R-CMD-1)
 
 Замечания приёмки S12-fix [owner 2026-10-12] — ✅ ИСПРАВЛЕНЫ [agent 2026-10-13, коммит 5b367e7; решения owner по N1/N4 зафиксированы, ADR-13; проверено в dev-приложении]:
 
@@ -266,7 +268,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 3. [ ] NEW: установить и настроить Module Federation plugin для Rsbuild, проверить интеграцию с host
 4. [ ] /preview — отдельная большая задача [owner 2026-10-13]; после пакета preview lib-app-core (T-051) и персистентности (T-053)
 5. [ ] Остаток этапа 3 схем элементов — бэклог `docs/schemas/PLAN.md` «Этап 3 — что осталось» (переход на пакет схем, редакторы `value` и сложных типов, `schemas:check` в pre-commit) [owner 2026-10-19]
-6. [ ] Планы ревью архитектуры 2026-11-08 (docs/ревью-архитектуры-2026-11-08.md): R-CMD-1 (баг каскада) → R-DOM-1 → R-GOV-4 → R-DOM, R-CMD, R-MOD; configs first — R-GOV-10 и R-CFG (готовы R-CFG-1, 2, 9; частично 5, 6, 7, 10). Решения владельца: undo удаления выделенного — один шаг (R-CMD-4) [owner 2026-11-08]
+6. [ ] Планы ревью архитектуры 2026-11-08 (docs/ревью-архитектуры-2026-11-08.md): R-DOM-1 → R-DOM, R-CMD, R-MOD (готовы R-CMD-1, R-GOV-4); configs first — R-GOV-10 и R-CFG (готовы R-CFG-1, 2, 9; частично 5, 6, 7, 10). Решения владельца: undo удаления выделенного — один шаг (R-CMD-4) [owner 2026-11-08]
 7. [ ] План R-ADM (docs/refactoring/R-ADM-settings.md): R-ADM-2/3 — настройки администратора в бэкенде и их запись; R-ADM-4 — вкладка «Мои» и запись секций; editor-config.json (canvas.panTool) перенести секцией в реестр
 
 ---
@@ -342,3 +344,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-11-08 | agent:claude | ADR-24 (доменные факты — в domain), ADR-25 (configs first); тип формы domain/form-kind; баг каскада удаления страниц (R-CMD-1); §7 п.6 — планы ревью 2026-11-08
 - 2026-11-08 | agent:claude | ADR-25 уточнено [owner]: в конфиг — только то, что может легко измениться по решению людей; умолчания остаются TS-таблицами
 - 2026-11-09 | agent:claude | ретроспективно: ADR-26 (MUI v4 напрямую, Flamingo removed), DONE — ext/multiple/«Доступность», фасад иконок, card.icon и наброски, навигация канваса, Esc layer.dismiss
+- 2026-11-13 | agent:claude | R-CMD-1 (каскад удаления, баг logicRules страниц закрыт), R-GOV-4 (проверки rules с baseline) — в §4.1; §6, §7 п.6
