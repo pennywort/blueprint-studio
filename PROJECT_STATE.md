@@ -184,6 +184,8 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - [эпик 002, R-HK] Esc — команда layer.dismiss: стек слоёв (useDismissLayer), одно нажатие закрывает верхний слой; встроенный Esc модалок MUI и canvas.cancelConnection убраны [a10fb5e]
 - [R-CMD-1, ADR-15] Один каскад удаления: правило «что уходит» — domain/cascade-removal.ts, применение и сохранение уровней — application/commands/cascade-remove.ts (removeWithCascade); его вызывают RemoveForm/RemoveFormStep/RemoveElement/RemoveScenario/RemoveHomePage; удаление страницы чистит logicRules её элементов [34cbb98]
 - [R-GOV-4] npm run rules: новые проверки (кириллица вне labels, ветвления по kind, .length с числом, Box, свои keydown, confirm/alert, рост файла > 400 строк) с baseline scripts/agent/rules-baseline.json — старое ⚠️, новое ❌; маркер rules-allow [79ea9e8]
+- [R-GOV-1, 2, 6] Правила для агентов: AGENTS.md §4c «Куда класть код» и §4d configs first, конституция §3 п.5 и §4a, rules-reviewer проверяет §4a–§4d; строка «слои» в отчёте §7 [a806977, 9400961, ed874f9]
+- [эпик 002] Радиусы и обводки по макетам — токены темы: блоки 24, шаг формы 16, panel 24, stroke 1/2 (их читает политика подсветки), inset.badge 16 [d7473c4]
 
 ### 4.2 NOT DONE (пробелы)
 
@@ -268,7 +270,7 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 3. [ ] NEW: установить и настроить Module Federation plugin для Rsbuild, проверить интеграцию с host
 4. [ ] /preview — отдельная большая задача [owner 2026-10-13]; после пакета preview lib-app-core (T-051) и персистентности (T-053)
 5. [ ] Остаток этапа 3 схем элементов — бэклог `docs/schemas/PLAN.md` «Этап 3 — что осталось» (переход на пакет схем, редакторы `value` и сложных типов, `schemas:check` в pre-commit) [owner 2026-10-19]
-6. [ ] Планы ревью архитектуры 2026-11-08 (docs/ревью-архитектуры-2026-11-08.md): R-DOM-1 → R-DOM, R-CMD, R-MOD (готовы R-CMD-1, R-GOV-4); configs first — R-GOV-10 и R-CFG (готовы R-CFG-1, 2, 9; частично 5, 6, 7, 10). Решения владельца: undo удаления выделенного — один шаг (R-CMD-4) [owner 2026-11-08]
+6. [ ] Планы ревью архитектуры 2026-11-08 (docs/ревью-архитектуры-2026-11-08.md): R-DOM-1 → R-DOM, R-CMD, R-MOD (готовы R-CMD-1, R-GOV-1, 2, 4, 6); configs first — R-GOV-10 и R-CFG (готовы R-CFG-1, 2, 9; частично 5, 6, 7, 10). Решения владельца: undo удаления выделенного — один шаг (R-CMD-4) [owner 2026-11-08]
 7. [ ] План R-ADM (docs/refactoring/R-ADM-settings.md): R-ADM-2/3 — настройки администратора в бэкенде и их запись; R-ADM-4 — вкладка «Мои» и запись секций; editor-config.json (canvas.panTool) перенести секцией в реестр
 
 ---
@@ -345,3 +347,4 @@ SCHEMA RULES (SCHEMA_VERSION: 2)
 - 2026-11-08 | agent:claude | ADR-25 уточнено [owner]: в конфиг — только то, что может легко измениться по решению людей; умолчания остаются TS-таблицами
 - 2026-11-09 | agent:claude | ретроспективно: ADR-26 (MUI v4 напрямую, Flamingo removed), DONE — ext/multiple/«Доступность», фасад иконок, card.icon и наброски, навигация канваса, Esc layer.dismiss
 - 2026-11-13 | agent:claude | R-CMD-1 (каскад удаления, баг logicRules страниц закрыт), R-GOV-4 (проверки rules с baseline) — в §4.1; §6, §7 п.6
+- 2026-11-13 | agent:claude | сверка: в §4.1 — R-GOV-1, 2, 6 и токены радиусов/обводок (d7473c4); §7 п.6
