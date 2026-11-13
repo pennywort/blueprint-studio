@@ -282,6 +282,7 @@ git remote add origin <url-bitbucket>
 git config branch.master.remote github   # git pull по умолчанию — из GitHub
 git config branch.master.pushRemote origin   # git push по умолчанию — в Bitbucket
 git config merge.conflictstyle diff3
+git config pull.rebase false   # pull — только merge (§8)
 ```
 
 Проверка: `git remote -v` — `github` с push `DISABLED`, `origin` — Bitbucket.
