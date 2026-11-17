@@ -10,6 +10,24 @@ function localOverride(name: string): string {
   return fs.existsSync(local) ? local : path.resolve(__dirname, `src/presentation/icons/${name}.none.ts`);
 }
 
+// Режим «движок по симлинкам» (docs/local-overrides.md, ОВ-21): на рабочей машине пакеты
+// движка подключены через file:/npm link. Определяется сам — по симлинкам в node_modules.
+function linkedPackages(): string[] {
+  const root = path.resolve(__dirname, 'node_modules');
+  if (!fs.existsSync(root)) return [];
+  const names = fs
+    .readdirSync(root)
+    .flatMap((name) =>
+      name.startsWith('@') ? fs.readdirSync(path.join(root, name)).map((sub) => `${name}/${sub}`) : [name],
+    );
+  return names.filter((name) => fs.lstatSync(path.join(root, name)).isSymbolicLink());
+}
+
+const LINKED = linkedPackages();
+if (LINKED.length > 0) {
+  console.log(`[rsbuild] режим симлинков: ${LINKED.join(', ')}`);
+}
+
 export default defineConfig({
   plugins: [pluginReact()],
   source: {
@@ -18,6 +36,9 @@ export default defineConfig({
     transformImport: [{ libraryName: '@material-ui/icons', customName: '@material-ui/icons/{{ member }}' }],
   },
   resolve: {
+    // Одна копия React и MUI на бандл: пакет по симлинку резолвит свои зависимости из
+    // монорепо движка (React 17) → две копии React. Без симлинков — ничего не меняет (ОВ-21).
+    dedupe: ['react', 'react-dom', '@material-ui/core', '@material-ui/styles'],
     alias: {
       // TEMPORARY: polyfill findDOMNode для MUI v4 (react-dom 19 удалил findDOMNode).
       // '$' — только точный импорт 'react-dom', подпути ('react-dom/client' и т.п.)
@@ -34,6 +55,9 @@ export default defineConfig({
   html: {
     title: 'blueprint-studio',
   },
+  // Только в режиме симлинков (ОВ-21): пересборка пакета движка пересоздаёт его dist,
+  // lazy compilation держит старый резолв («Module not found»), overlay залипает на нём.
+  dev: LINKED.length > 0 ? { lazyCompilation: false, client: { overlay: false } } : {},
   output: {
     // Относительные пути ассетов: никаких предположений о корневом пути
     // (конституция, раздел 7 — гигиена встраиваемости).
