@@ -48,17 +48,19 @@ registry Flamingo. Поэтому всё, что касается Flamingo, жи
 зависимостей фреймворка; для предпросмотра T-051, Q-8) — подключаются из локального монорепо
 симлинками, чтобы правки элемента сразу были видны в редакторе.
 
-**MUI v4 — только у studio** (UI редактора). Flamingo в lib-app-core на MUI не опирается [owner 2026-11-17];
-пакеты движка `@material-ui/*` не тянут (проверено 2026-11-17), поэтому в `dedupe` его нет.
+**MUI v4.** Studio использует его напрямую (UI редактора); lib-app-core — нет, но Flamingo, на котором
+построены preview-элементы (peer `@scope/flamingo-components`), зависит от `@material-ui/core` и `/styles` v4.
+Поэтому они в `dedupe`: две копии `@material-ui/styles` — тема Flamingo не видна элементам
+(«theme.palette.inverse is undefined», проверено 2026-11-17).
 
 **Всё машинное — вне git; `package.json`, `package-lock.json`, `rsbuild.config.ts`, `tsconfig.json` не править.**
 
-| Что                                                             | Где                                                          | В git |
-| --------------------------------------------------------------- | ------------------------------------------------------------ | ----- |
-| Подключение пакетов                                             | `npm install --no-save <путь к пакету>` (или `npm link`)     | нет   |
-| `dev.lazyCompilation: false`, `dev.client.overlay: false` и др. | `rsbuild.config.local.ts` (сливается поверх базового)        | нет   |
-| `resolve.dedupe` (react, react-dom)                             | `rsbuild.config.ts` — всегда, без симлинков ничего не меняет | да    |
-| tsconfig `paths` `react*` → `node_modules/@types/react*`        | `tsconfig.json` — всегда (tsconfig не бывает локальным)      | да    |
+| Что                                                              | Где                                                          | В git |
+| ---------------------------------------------------------------- | ------------------------------------------------------------ | ----- |
+| Подключение пакетов                                              | `npm install --no-save <путь к пакету>` (или `npm link`)     | нет   |
+| `dev.lazyCompilation: false`, `dev.client.overlay: false` и др.  | `rsbuild.config.local.ts` (сливается поверх базового)        | нет   |
+| `resolve.dedupe` (react, react-dom, @material-ui/core, …/styles) | `rsbuild.config.ts` — всегда, без симлинков ничего не меняет | да    |
+| tsconfig `paths` `react*` → `node_modules/@types/react*`         | `tsconfig.json` — всегда (tsconfig не бывает локальным)      | да    |
 
 Пример `rsbuild.config.local.ts`:
 
