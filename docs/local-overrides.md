@@ -46,14 +46,31 @@ registry Flamingo. Поэтому всё, что касается Flamingo, жи
 На рабочей машине пакеты lib-app-core — **схемы** элементов (полный набор атрибутов; редактор
 сужает их политикой) и **preview-элементы** (упрощённые копии на Flamingo: тот же вид и те же props, без
 зависимостей фреймворка; для предпросмотра T-051, Q-8) — подключаются из локального монорепо
-через `file:` / `npm link`, чтобы правки элемента сразу были видны в редакторе.
-Отдельного флага нет: `rsbuild.config.ts` сам находит симлинки в `node_modules`
-и пишет в консоль `[rsbuild] режим симлинков: …`.
+симлинками, чтобы правки элемента сразу были видны в редакторе.
 
-| Что                                                              | Когда           | Зачем                                                             |
-| ---------------------------------------------------------------- | --------------- | ----------------------------------------------------------------- |
-| `resolve.dedupe` (react, react-dom, @material-ui/core, …/styles) | всегда          | одна копия React/MUI; пакет по симлинку тянет React 17 движка     |
-| tsconfig `paths` `react*` → `node_modules/@types/react*`         | всегда          | tsc не подмешивает `@types/react@17` из монорепо движка           |
-| `dev.lazyCompilation: false`, `dev.client.overlay: false`        | только симлинки | пересборка пакета (`rimraf dist`) не оставляет «Module not found» |
+**Всё машинное — вне git; `package.json`, `package-lock.json`, `rsbuild.config.ts`, `tsconfig.json` не править.**
 
-Без симлинков (облако, CI) поведение сборки прежнее. Снимается при переходе на пакеты из registry.
+| Что                                                              | Где                                                          | В git |
+| ---------------------------------------------------------------- | ------------------------------------------------------------ | ----- |
+| Подключение пакетов                                              | `npm install --no-save <путь к пакету>` (или `npm link`)     | нет   |
+| `dev.lazyCompilation: false`, `dev.client.overlay: false` и др.  | `rsbuild.config.local.ts` (сливается поверх базового)        | нет   |
+| `resolve.dedupe` (react, react-dom, @material-ui/core, …/styles) | `rsbuild.config.ts` — всегда, без симлинков ничего не меняет | да    |
+| tsconfig `paths` `react*` → `node_modules/@types/react*`         | `tsconfig.json` — всегда (tsconfig не бывает локальным)      | да    |
+
+Пример `rsbuild.config.local.ts`:
+
+```ts
+import type { RsbuildConfig } from '@rsbuild/core';
+
+const config: RsbuildConfig = {
+  // пересборка пакета (rimraf dist) не оставляет залипшего «Module not found»
+  dev: { lazyCompilation: false, client: { overlay: false } },
+};
+
+export default config;
+```
+
+- В консоли сборки — `[rsbuild] + rsbuild.config.local.ts`, значит файл подхвачен.
+- `npm install` / `npm ci` после pull снимает пакеты `--no-save` — подключи их снова.
+- Нужна правка вне этих файлов — «Запрос к ядру» владельцу (AGENTS.md §8).
+- Снимается при переходе на пакеты из registry.
