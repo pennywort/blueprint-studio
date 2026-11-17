@@ -49,16 +49,16 @@ registry Flamingo. Поэтому всё, что касается Flamingo, жи
 симлинками, чтобы правки элемента сразу были видны в редакторе.
 
 **MUI v4 — только у studio** (UI редактора). Flamingo в lib-app-core на MUI не опирается [owner 2026-11-17];
-`@material-ui/*` в `dedupe` — из запроса ОВ-21, остаётся, только если `npm ls` покажет, что пакеты движка его тянут.
+пакеты движка `@material-ui/*` не тянут (проверено 2026-11-17), поэтому в `dedupe` его нет.
 
 **Всё машинное — вне git; `package.json`, `package-lock.json`, `rsbuild.config.ts`, `tsconfig.json` не править.**
 
-| Что                                                              | Где                                                          | В git |
-| ---------------------------------------------------------------- | ------------------------------------------------------------ | ----- |
-| Подключение пакетов                                              | `npm install --no-save <путь к пакету>` (или `npm link`)     | нет   |
-| `dev.lazyCompilation: false`, `dev.client.overlay: false` и др.  | `rsbuild.config.local.ts` (сливается поверх базового)        | нет   |
-| `resolve.dedupe` (react, react-dom, @material-ui/core, …/styles) | `rsbuild.config.ts` — всегда, без симлинков ничего не меняет | да    |
-| tsconfig `paths` `react*` → `node_modules/@types/react*`         | `tsconfig.json` — всегда (tsconfig не бывает локальным)      | да    |
+| Что                                                             | Где                                                          | В git |
+| --------------------------------------------------------------- | ------------------------------------------------------------ | ----- |
+| Подключение пакетов                                             | `npm install --no-save <путь к пакету>` (или `npm link`)     | нет   |
+| `dev.lazyCompilation: false`, `dev.client.overlay: false` и др. | `rsbuild.config.local.ts` (сливается поверх базового)        | нет   |
+| `resolve.dedupe` (react, react-dom)                             | `rsbuild.config.ts` — всегда, без симлинков ничего не меняет | да    |
+| tsconfig `paths` `react*` → `node_modules/@types/react*`        | `tsconfig.json` — всегда (tsconfig не бывает локальным)      | да    |
 
 Пример `rsbuild.config.local.ts`:
 
