@@ -19,10 +19,11 @@ const baseConfig: RsbuildConfig = {
     transformImport: [{ libraryName: '@material-ui/icons', customName: '@material-ui/icons/{{ member }}' }],
   },
   resolve: {
-    // Одна копия React на бандл: пакеты движка по симлинку держат свой React 17
-    // (ОВ-21, docs/local-overrides.md). При обычной установке ничего не меняет.
-    // MUI не дедуплицируем: движок от @material-ui/* не зависит (проверено 2026-11-17).
-    dedupe: ['react', 'react-dom'],
+    // Одна копия React и MUI на бандл: пакеты движка по симлинку держат свой React 17,
+    // а preview-элементы через Flamingo (peer) тянут @material-ui/core и /styles v4 —
+    // две копии /styles = тема Flamingo не видна элементам (ОВ-21, docs/local-overrides.md).
+    // При обычной установке ничего не меняет.
+    dedupe: ['react', 'react-dom', '@material-ui/core', '@material-ui/styles'],
     alias: {
       // TEMPORARY: polyfill findDOMNode для MUI v4 (react-dom 19 удалил findDOMNode).
       // '$' — только точный импорт 'react-dom', подпути ('react-dom/client' и т.п.)
