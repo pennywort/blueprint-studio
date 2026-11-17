@@ -1,7 +1,8 @@
-import { defineConfig } from '@rsbuild/core';
+import { defineConfig, mergeRsbuildConfig, type RsbuildConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 // Локальные переопределения вне git (docs/local-overrides.md): есть `<имя>.local.tsx` —
 // берём его, нет — заглушку `<имя>.none.ts`. Тот же порядок, что в tsconfig paths.
@@ -10,25 +11,7 @@ function localOverride(name: string): string {
   return fs.existsSync(local) ? local : path.resolve(__dirname, `src/presentation/icons/${name}.none.ts`);
 }
 
-// Режим «движок по симлинкам» (docs/local-overrides.md, ОВ-21): на рабочей машине пакеты
-// движка подключены через file:/npm link. Определяется сам — по симлинкам в node_modules.
-function linkedPackages(): string[] {
-  const root = path.resolve(__dirname, 'node_modules');
-  if (!fs.existsSync(root)) return [];
-  const names = fs
-    .readdirSync(root)
-    .flatMap((name) =>
-      name.startsWith('@') ? fs.readdirSync(path.join(root, name)).map((sub) => `${name}/${sub}`) : [name],
-    );
-  return names.filter((name) => fs.lstatSync(path.join(root, name)).isSymbolicLink());
-}
-
-const LINKED = linkedPackages();
-if (LINKED.length > 0) {
-  console.log(`[rsbuild] режим симлинков: ${LINKED.join(', ')}`);
-}
-
-export default defineConfig({
+const baseConfig: RsbuildConfig = {
   plugins: [pluginReact()],
   source: {
     // Именованный импорт иконок → путь к одной иконке: корневой индекс
@@ -36,8 +19,8 @@ export default defineConfig({
     transformImport: [{ libraryName: '@material-ui/icons', customName: '@material-ui/icons/{{ member }}' }],
   },
   resolve: {
-    // Одна копия React и MUI на бандл: пакет по симлинку резолвит свои зависимости из
-    // монорепо движка (React 17) → две копии React. Без симлинков — ничего не меняет (ОВ-21).
+    // Одна копия React и MUI на бандл, даже если пакет (по симлинку) тянет свои копии
+    // (ОВ-21, docs/local-overrides.md). При обычной установке ничего не меняет.
     dedupe: ['react', 'react-dom', '@material-ui/core', '@material-ui/styles'],
     alias: {
       // TEMPORARY: polyfill findDOMNode для MUI v4 (react-dom 19 удалил findDOMNode).
@@ -55,12 +38,20 @@ export default defineConfig({
   html: {
     title: 'blueprint-studio',
   },
-  // Только в режиме симлинков (ОВ-21): пересборка пакета движка пересоздаёт его dist,
-  // lazy compilation держит старый резолв («Module not found»), overlay залипает на нём.
-  dev: LINKED.length > 0 ? { lazyCompilation: false, client: { overlay: false } } : {},
   output: {
     // Относительные пути ассетов: никаких предположений о корневом пути
     // (конституция, раздел 7 — гигиена встраиваемости).
     assetPrefix: './',
   },
+};
+
+// Настройки рабочей машины — `rsbuild.config.local.ts` вне git (docs/local-overrides.md,
+// ОВ-21): есть файл — его конфиг сливается поверх базового; этот файл при этом не правится.
+const LOCAL_CONFIG = path.resolve(__dirname, 'rsbuild.config.local.ts');
+
+export default defineConfig(async () => {
+  if (!fs.existsSync(LOCAL_CONFIG)) return baseConfig;
+  const local = (await import(pathToFileURL(LOCAL_CONFIG).href)) as { default: RsbuildConfig };
+  console.log('[rsbuild] + rsbuild.config.local.ts');
+  return mergeRsbuildConfig(baseConfig, local.default);
 });

@@ -35,5 +35,5 @@
       ]
     }
   },
-  "include": ["src", "rsbuild.config.ts", "vitest.config.ts", "vitest.setup.ts"]
+  "include": ["src", "rsbuild.config.ts", "rsbuild.config.local.ts", "vitest.config.ts", "vitest.setup.ts"]
 }
