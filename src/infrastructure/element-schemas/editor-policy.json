@@ -9,7 +9,7 @@
       "category": "Сценарий",
       "description": "Строка списка",
       "card": { "title": "primaryText", "subtitle": "secondaryText", "icon": "leftAtom" },
-      "defaults": { "primaryText": "Новый элемент" },
+      "defaults": { "primaryText": "Новый элемент", "tertiaryText": "" },
       "attributes": [
         {
           "key": "primaryText",
@@ -22,7 +22,12 @@
           "label": "Дополнительный текст",
           "placeholder": "Например, По методологии"
         },
-        { "key": "tertiaryText", "label": "Третий текст", "placeholder": "Например, Ответ за 2 дня" },
+        {
+          "key": "tertiaryText",
+          "label": "Третий текст",
+          "placeholder": "Например, Ответ за 2 дня",
+          "hidden": true
+        },
         { "key": "leftAtom", "label": "Иконка" },
         { "key": "linkHref", "label": "Внешняя ссылка", "placeholder": "https://…" }
       ]

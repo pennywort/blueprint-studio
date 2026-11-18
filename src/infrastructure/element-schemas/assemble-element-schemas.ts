@@ -61,9 +61,9 @@ export type PolicyAttribute = {
   editor?: PolicyEditor;
   /** Подмножество enum схемы с подписями; без него — весь enum. */
   options?: AttributeOption[];
-  /** Ключи id и подписи элемента массива объектов (optionList). */
-  item?: { id: string; label: string };
+  item?: { id: string; label: string }; // ключи id и подписи элемента массива (optionList)
   visibleWhen?: { key: string; equals: unknown };
+  hidden?: boolean; // не в панели, настройка сохранена; не required [owner 2026-11-18]
 };
 
 export type PolicyElement = {
@@ -304,8 +304,8 @@ function assembleAttribute(
     fail('тип значения в схеме не поддерживается редактором — уберите атрибут из политики');
     return null;
   }
-  if (schemaRequired && policy.required === false) {
-    fail('обязателен в схеме — политика не может снять обязательность');
+  if (schemaRequired ? policy.required === false || policy.hidden : policy.required && policy.hidden) {
+    fail('обязательный атрибут: политика не может снять обязательность или скрыть его (hidden)');
   }
   const attribute: ElementAttribute = {
     key: policy.key,
@@ -498,17 +498,17 @@ function assembleElement(
           refs,
           fail(attributePolicy.key),
         );
-    if (attribute) {
+    if (attribute && !attributePolicy.hidden) {
       attributes.push(attribute);
     }
   }
 
   for (const attribute of attributes) {
-    if (attribute.visibleWhen && !seen.has(attribute.visibleWhen.key)) {
-      fail(attribute.key)(`visibleWhen ссылается на атрибут вне политики: ${attribute.visibleWhen.key}`);
+    const target = attribute.visibleWhen?.key;
+    if (target !== undefined && !attributes.some((item) => item.key === target)) {
+      fail(attribute.key)(`visibleWhen ссылается на атрибут вне политики или скрытый: ${target}`);
     }
   }
-
   const card = policy.card ?? {};
   for (const key of [card.title, card.subtitle, card.badge]) {
     if (key !== undefined && !properties[key]) {
