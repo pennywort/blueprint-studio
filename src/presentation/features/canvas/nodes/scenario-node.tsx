@@ -29,6 +29,12 @@ const ELEMENTS_GAP = 24;
 const useStyles = makeStyles<EditorTheme>(() => ({
   card: {
     width: CANVAS_LAYOUT.nodeWidth,
+    // Геометрия узла (ширина контента = карточка элемента, отступы снаружи) не должна
+    // зависеть от чужого глобального CSS: CssBaseline Flamingo (превью, хост-приложение
+    // микрофронтенда) ставит `html { box-sizing: border-box }` + `* { inherit }` —
+    // узел сжимался на 2×nodePadding, карточки вылезали вправо [owner 2026-11-18].
+    // Явное значение обрывает наследование и для всего содержимого узла.
+    boxSizing: 'content-box',
   },
   titles: {
     minWidth: 0,
