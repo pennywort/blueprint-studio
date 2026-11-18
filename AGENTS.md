@@ -257,11 +257,11 @@ baseline не повышать, `--update-baseline` только уменьша�
 **Поток односторонний:** GitHub → Bitbucket. Облачный агент Bitbucket не видит, код превью ему
 недоступен: поэтому смену API ядра он называет владельцу в ответе (что сломается у превью).
 
-| Зона                      | Владелец        | Пути                                                                                                                                                                                 |
-| ------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Ядро                      | облачный Claude | `src/domain`, `src/application`, `src/infrastructure`, `src/presentation/{app,features,theme,icons}`, `pages/editor`, `scripts/`, конфиги, `AGENTS.md`, `PROJECT_STATE.md`, `specs/` |
-| Превью (UI-черновик)      | локальный агент | `src/presentation/pages/{preview,smoke-*}/`, `src/preview-smoke/`, `docs/preview-elements/`, `docs/adr/` превью                                                                      |
-| Общие (только дописывать) | оба             | `presentation/labels/editor-labels.ts`, `docs/открытые-вопросы.md`, `presentation/app/App.tsx` (только маршруты своих страниц)                                                       |
+| Зона                      | Владелец        | Пути                                                                                                                                                                                                    |
+| ------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ядро                      | облачный Claude | `src/domain`, `src/application`, `src/infrastructure` (кроме `preview/`), `src/presentation/{app,features,theme,icons}`, `pages/editor`, `scripts/`, конфиги, `AGENTS.md`, `PROJECT_STATE.md`, `specs/` |
+| Превью (UI-черновик)      | локальный агент | `src/presentation/pages/{preview,smoke-*}/`, `src/infrastructure/preview/`, `docs/preview-elements/`, `docs/adr/` превью                                                                                |
+| Общие (только дописывать) | оба             | `presentation/labels/editor-labels.ts`, `docs/открытые-вопросы.md`, `presentation/app/App.tsx` (только маршруты своих страниц)                                                                          |
 
 - **Чужую зону не правь.** Нужна правка ядра — не пиши в файлы, скажи владельцу в ответе
   отдельным блоком «**Запрос к ядру:** что / зачем / API-контракт»; владелец перенесёт.
