@@ -4,9 +4,8 @@
       { "key": "availability", "label": "Доступность", "editor": "chips" },
       {
         "key": "developerComment",
-        "label": "Комментарий для разработчика",
-        "placeholder": "Что нужно знать разработчику",
-        "helperText": "Показывается плашкой под элементом на канвасе",
+        "label": "Комментарий для разработки",
+        "placeholder": "Добавьте описание",
         "multiline": true
       }
     ]
