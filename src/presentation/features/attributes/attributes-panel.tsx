@@ -2,10 +2,7 @@ import { TextField, Typography, makeStyles } from '@material-ui/core';
 import type { ElementAttribute, ElementSchema } from '@application/ports/element-schema-provider';
 import type { ElementPropsPatch } from '@application/commands/update-element-props';
 import type { CanvasElement } from '@domain/model/canvas-element';
-import { supportsDeveloperComment } from '@domain/element-kinds';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
-import { DEVELOPER_COMMENT_LABELS } from '@presentation/labels/editor-labels';
-import { useEditorRules } from '@presentation/features/settings/use-settings';
 import { AttributeField } from './attribute-field';
 import { resolvePropertyEditor } from './property-editor-registry';
 import './builtin-property-editors';
@@ -66,7 +63,6 @@ export type AttributesPanelProps = {
 // атрибута) по ключу атрибута.
 export function AttributesPanel({ component, schema, onUpdateProps }: AttributesPanelProps) {
   const classes = useStyles();
-  const rules = useEditorRules();
   // Буфер ввода (R2): поля показывают черновик поверх значений графа.
   const buffer = useBufferedProps<CanvasElement['id']>(component.id, onUpdateProps);
   // Значения по ключу атрибута: props элемента и надстройки ext — ключи не
@@ -152,26 +148,6 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
           })}
         </div>
       ))}
-
-      {/* Комментарий-часть элемента (US-05, [owner 2026-11-19]): метаданное
-          `comment` карты, не атрибут схемы — у всех элементов; на канвасе —
-          плашка под карточкой. Пустое поле снимает комментарий. */}
-      {supportsDeveloperComment(rules, component) ? (
-        <AttributeField attribute={{ ...DEVELOPER_COMMENT_LABELS, required: false }}>
-          <TextField
-            fullWidth
-            multiline
-            minRows={3}
-            size="small"
-            variant="outlined"
-            inputProps={{ 'data-testid': 'developer-comment' }}
-            value={
-              (buffer.draft && 'comment' in buffer.draft ? buffer.draft.comment : component.comment) ?? ''
-            }
-            onChange={(event) => buffer.change({ comment: event.target.value || undefined })}
-          />
-        </AttributeField>
-      ) : null}
     </div>
   );
 }

@@ -80,15 +80,6 @@ export function isCommentElement(rules: EditorRules, element: CanvasElement): bo
   return kindRules(rules, element.kind).family === 'comment';
 }
 
-/**
- * У элемента есть комментарий-часть для разработчика (поле `comment`, US-05,
- * [owner 2026-11-19]): у всех элементов, кроме комментария-элемента — он сам
- * комментарий, плашка под ним дублировала бы его.
- */
-export function supportsDeveloperComment(rules: EditorRules, element: CanvasElement): boolean {
-  return !isCommentElement(rules, element);
-}
-
 /** У вида есть варианты выбора — источники переходов между шагами [owner 2026-10-14]. */
 export function hasElementVariants(rules: EditorRules, element: CanvasElement): boolean {
   return kindRules(rules, element.kind).variants !== undefined;
@@ -100,6 +91,19 @@ export function hasElementVariants(rules: EditorRules, element: CanvasElement): 
  * политики. Включить режим у другого вида = добавить ему поле и атрибут, код не меняется.
  */
 export const COMPLEX_LOGIC_KEY = 'complexLogic';
+
+/**
+ * Ключ атрибута «Комментарий для разработчика» в надстройках элемента (ext)
+ * [owner 2026-11-19]: общее поле всех элементов (extensions.all схем проекта,
+ * common политики редактора); на канвасе — плашка под карточкой (US-05).
+ */
+export const DEVELOPER_COMMENT_KEY = 'developerComment';
+
+/** Комментарий для разработчика у элемента; пустой — нет. */
+export function developerComment(element: CanvasElement): string | undefined {
+  const value = element.ext?.[DEVELOPER_COMMENT_KEY];
+  return typeof value === 'string' && value !== '' ? value : undefined;
+}
 
 /**
  * Элемент — источник правил «Сложной логики» (L4/L5): у вида есть варианты и

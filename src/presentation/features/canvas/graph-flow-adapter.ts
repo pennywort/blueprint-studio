@@ -16,6 +16,7 @@ import { computeFormStepDepths } from '@domain/form-step-depths';
 import { formKindOf, type FormKind } from '@domain/form-kind';
 import {
   COMPLEX_LOGIC_KEY,
+  developerComment,
   elementVariants,
   hasElementVariants,
   isCommentElement,
@@ -159,10 +160,7 @@ export type CanvasElementData = {
    * напротив, и строка растёт до их стопки (computeLayout, [owner 2026-10-16]).
    */
   rowOffset?: number;
-  /**
-   * Комментарий-часть элемента (поле `comment`, US-05): показывается
-   * голубым блоком под карточкой с бейджем адресата [owner 2026-10-15].
-   */
+  /** Комментарий для разработчика (ext, US-05): голубой блок под карточкой [owner 2026-10-15]. */
   note?: { text: string; audience: string };
   /**
    * Карточка — комментарий-элемент (kind 'comment'): голубая карточка с
@@ -306,8 +304,9 @@ function elementToElementData(
       ),
     };
   }
-  if (element.comment) {
-    data.note = { text: element.comment, audience: DEFAULT_COMMENT_AUDIENCE };
+  const note = developerComment(element);
+  if (note) {
+    data.note = { text: note, audience: DEFAULT_COMMENT_AUDIENCE };
   }
   if (capabilities.logic) {
     data.logicTarget = kindRules(rules, element.kind).logicTarget;

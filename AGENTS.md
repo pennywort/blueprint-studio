@@ -167,6 +167,24 @@ tinykeys 4 (хоткеи — только через `features/hotkeys`, [owner 
 JSON в `domain` не импортируется: значения приходят параметром (`EditorRules`, `ElementSchemaProvider`).
 Что ещё зашито в код по этому критерию — `docs/refactoring/R-GOV-agent-guidance.md` (R-GOV-10).
 
+## 4e. Атрибуты элементов — один механизм [owner 2026-11-19]
+
+Любое новое поле элемента в панели атрибутов — **только данными**, без кода панели и без новых полей модели:
+
+| Поле                         | Схема (тип значения)                                        | Панель (подпись, редактор, порядок)                |
+| ---------------------------- | ----------------------------------------------------------- | -------------------------------------------------- |
+| атрибут фреймворка           | `framework/schemas-bundle.json` (`npm run schemas:import`)  | `editor-policy.json` → `elements[kind].attributes` |
+| своё поле **всех** элементов | `project/project-schemas.json` → `extensions.all`           | `editor-policy.json` → `common.attributes`         |
+| своё поле **одного** вида    | `project/project-schemas.json` → `extensions.byKind.<kind>` | `editor-policy.json` → `elements[kind].attributes` |
+
+- Значения: атрибуты фреймворка — `props`, надстройки проекта — `ext`. Новых полей в `CanvasElementSchema`
+  под атрибуты не заводить; блоки полей вручную в `attributes-panel.tsx` не добавлять.
+- Скрыть общее поле у вида — `{ "key": …, "hidden": true }` в его `attributes`, не условие в коде.
+- Если код читает атрибут (канвас, правила) — ключ-константа и функция в `domain/element-kinds.ts`
+  (эталоны `COMPLEX_LOGIC_KEY`, `DEVELOPER_COMMENT_KEY`).
+- Перенос старых данных в новое место — шаг миграции `infrastructure/persistence/graph-record-migration.ts`.
+- После правки — `npm run schemas:check`. Механизм не подходит — остановись и спроси владельца.
+
 ## 4b. Генерируемость UI из карты [owner 2026-10-16] — оценивай КАЖДУЮ правку
 
 **Инвариант:** `ServiceBlueprint` — единственный источник истины об экране. Всё, из чего

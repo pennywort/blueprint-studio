@@ -1,7 +1,14 @@
 // Версии формата записи карты в хранилище (ревью A11, R4). Запись без
 // номера — формат до миграции «универсальные элементы» (версия 1).
 // Каждая следующая версия добавляет шаг миграции в MIGRATIONS.
-export const GRAPH_RECORD_VERSION = 7;
+export const GRAPH_RECORD_VERSION = 8;
+
+import {
+  isRecord,
+  mapGraphElements,
+  migrateDeveloperCommentToExt,
+  type LegacyRecord,
+} from './graph-record-elements';
 
 const VERSION_FIELD = 'schemaVersion';
 
@@ -11,11 +18,6 @@ const VERSION_FIELD = 'schemaVersion';
 // step.components, а у List item/Widget card нет дискриминатора kind.
 // Миграция приводит такую запись к текущей форме до валидации; запись в
 // новой форме проходит без изменений.
-
-type LegacyRecord = Record<string, unknown>;
-
-const isRecord = (value: unknown): value is LegacyRecord =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 function withKind(items: unknown, kind: 'listItem' | 'widgetCard'): unknown[] {
   return Array.isArray(items)
@@ -276,24 +278,6 @@ const migrateElementList = (elements: unknown): unknown =>
 const migrateElementsToFrameworkSchemas = (raw: unknown): unknown =>
   mapGraphElements(raw, migrateElementList);
 
-// Списки элементов всех блоков карты (Главная, подсценарии, шаги форм) → fn.
-function mapGraphElements(raw: unknown, fn: (elements: unknown) => unknown): unknown {
-  if (!isRecord(raw)) {
-    return raw;
-  }
-  const page = (value: unknown) => (isRecord(value) ? { ...value, elements: fn(value.elements) } : value);
-  return {
-    ...raw,
-    ...(isRecord(raw.homePage) ? { homePage: page(raw.homePage) } : null),
-    subScenarios: Array.isArray(raw.subScenarios) ? raw.subScenarios.map(page) : raw.subScenarios,
-    applicationForms: Array.isArray(raw.applicationForms)
-      ? raw.applicationForms.map((form: unknown) =>
-          isRecord(form) && Array.isArray(form.steps) ? { ...form, steps: form.steps.map(page) } : form,
-        )
-      : raw.applicationForms,
-  };
-}
-
 // Версия 5 → 6 (этап 4.3 docs/schemas/PLAN.md): черновые компоненты из схем
 // проекта → компоненты фреймворка (секция components бандла). Поля без пары
 // в схеме компонента (подпись поиска сотрудника и адреса, тип поиска,
@@ -381,6 +365,7 @@ const MIGRATIONS: Readonly<Record<number, (raw: unknown) => unknown>> = {
   4: migrateElementsToFrameworkSchemas,
   5: migrateComponentsToFramework,
   6: migrateComplexLogicToExt,
+  7: migrateDeveloperCommentToExt,
 };
 
 // Запись хранилища → данные для доменной схемы: шаги миграции от версии

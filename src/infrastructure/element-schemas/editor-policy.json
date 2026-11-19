@@ -1,6 +1,15 @@
 {
   "common": {
-    "attributes": [{ "key": "availability", "label": "Доступность", "editor": "chips" }]
+    "attributes": [
+      { "key": "availability", "label": "Доступность", "editor": "chips" },
+      {
+        "key": "developerComment",
+        "label": "Комментарий для разработчика",
+        "placeholder": "Что нужно знать разработчику",
+        "helperText": "Показывается плашкой под элементом на канвасе",
+        "multiline": true
+      }
+    ]
   },
   "elements": [
     {
@@ -59,7 +68,8 @@
           "placeholder": "Что нужно знать разработчику",
           "multiline": true
         },
-        { "key": "audience", "label": "Для кого", "helperText": "Показывается бейджем внизу карточки" }
+        { "key": "audience", "label": "Для кого", "helperText": "Показывается бейджем внизу карточки" },
+        { "key": "developerComment", "hidden": true }
       ]
     },
     {
