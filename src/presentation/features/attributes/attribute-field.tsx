@@ -41,14 +41,17 @@ export function AttributeField({ attribute, variant = 'caption', children }: Att
   const classes = useStyles();
   return (
     <div className={classes.field}>
-      <Typography
-        component="label"
-        variant={variant === 'heading' ? 'subtitle1' : 'caption'}
-        className={variant === 'heading' ? classes.heading : classes.label}
-      >
-        {attribute.label}
-        {attribute.required ? <span className={classes.required}>*</span> : null}
-      </Typography>
+      {/* Пустая подпись — её уже показал переключатель поля (ToggleGate). */}
+      {attribute.label ? (
+        <Typography
+          component="label"
+          variant={variant === 'heading' ? 'subtitle1' : 'caption'}
+          className={variant === 'heading' ? classes.heading : classes.label}
+        >
+          {attribute.label}
+          {attribute.required ? <span className={classes.required}>*</span> : null}
+        </Typography>
+      ) : null}
       {children}
       {attribute.helperText ? (
         <Typography variant="caption" className={classes.helper}>

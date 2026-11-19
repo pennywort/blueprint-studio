@@ -1,6 +1,8 @@
 {
   "common": {
-    "attributes": [{ "key": "availability", "label": "Доступность", "editor": "chips" }]
+    "attributes": [
+      { "key": "availability", "label": "Доступность на платформе", "editor": "chips", "toggle": true }
+    ]
   },
   "elements": [
     {
