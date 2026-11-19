@@ -131,8 +131,16 @@ function EditorPageLayout() {
   const selectedElement = editorGraph.selectedElement;
   // Панель открывается по отпусканию ЛКМ, а не по нажатию: пока кнопка
   // удержана, это попытка переноса, и сужение канваса её срывает (баг drag).
+  // Уже открытая панель при новом нажатии не закрывается (канвас и так сужен,
+  // переносу она не мешает): иначе двойной клик и переключение между
+  // элементами давали моргание закрыть/открыть [owner 2026-11-19]. Прошлое
+  // значение — state с обновлением при рендере (паттерн React «prev props»).
   const pointerHeld = useCanvasPointerHeld();
-  const attributesOpen = selectedElement !== null && !pointerHeld;
+  const [attributesShown, setAttributesShown] = useState(false);
+  const attributesOpen = selectedElement !== null && (!pointerHeld || attributesShown);
+  if (attributesOpen !== attributesShown) {
+    setAttributesShown(attributesOpen);
+  }
   // Панели — слои стека Esc (dismiss-layer.ts): панель атрибутов закрывается
   // снятием выделения — она лишь его представление (D10).
   useDismissLayer(attributesOpen, editorGraph.clearSelection);

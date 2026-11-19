@@ -100,12 +100,10 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
       fontSize: theme.typography.pxToRem(16),
     },
   },
-  // Чип-переключатель «Сложная логика» (T-037, L4): кликабелен; активный —
-  // залитый, как на макете «сложная-логика-госб-…» (T-067 перенесёт
-  // переключатель в инспектор, чип останется индикатором). Кнопка — нажатие
-  // не меняет выделение (isActionTarget).
+  // Чип-индикатор «Сложная логика» (T-037, L4, T-067): не кликается,
+  // переключатель — в панели атрибутов [owner 2026-11-19]; активный —
+  // залитый, как на макете «сложная-логика-госб-…».
   logicChip: {
-    cursor: 'pointer',
     fontFamily: 'inherit',
   },
   dependencyIcon: {
@@ -289,20 +287,17 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
                 </span>
               ))}
               {element.complexLogic?.available ? (
-                <button
-                  type="button"
+                // Чип — только индикатор: переключение по клику убрано, меняется
+                // в панели атрибутов [owner 2026-11-19].
+                <span
                   className={[
                     classes.chip,
                     classes.logicChip,
                     element.complexLogic.enabled ? classes.chipPrimary : '',
                   ].join(' ')}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    actions?.toggleComplexLogic(element.id);
-                  }}
                 >
                   Сложная логика
-                </button>
+                </span>
               ) : null}
               {/* Индикатор «элемент кому-то подчинён» (L-Q1): виден даже при
               выключенной логике у источника. */}
