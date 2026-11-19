@@ -7,6 +7,7 @@ import { AttributeField } from './attribute-field';
 import { resolvePropertyEditor } from './property-editor-registry';
 import './builtin-property-editors';
 import { useBufferedProps } from './use-buffered-props';
+import { ToggleGate } from './toggle-gate';
 
 // Вёрстка по макетам docs/design-mockups/настройка-атрибутов-*: шапка с
 // разделителем, поля с подписью над ними (AttributeField), секции —
@@ -137,13 +138,22 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
                 </AttributeField>
               );
             }
+            const onChange = (next: unknown) =>
+              buffer.change({ [attribute.store]: { [attribute.key]: next } });
+            if (!attribute.toggle) {
+              return <Editor key={attribute.key} value={value} attribute={attribute} onChange={onChange} />;
+            }
+            // Поле под переключателем (toggle политики): подпись — у переключателя;
+            // ключ с id элемента сбрасывает «раскрыто» при смене выделения.
             return (
-              <Editor
-                key={attribute.key}
-                value={value}
+              <ToggleGate
+                key={`${component.id}:${attribute.key}`}
                 attribute={attribute}
-                onChange={(next) => buffer.change({ [attribute.store]: { [attribute.key]: next } })}
-              />
+                hasValue={value !== undefined}
+                onClear={() => onChange(undefined)}
+              >
+                <Editor value={value} attribute={{ ...attribute, label: '' }} onChange={onChange} />
+              </ToggleGate>
             );
           })}
         </div>

@@ -1,7 +1,7 @@
 {
   "common": {
     "attributes": [
-      { "key": "availability", "label": "Доступность", "editor": "chips" },
+      { "key": "availability", "label": "Доступность на платформе", "editor": "chips", "toggle": true },
       {
         "key": "developerComment",
         "label": "Комментарий для разработчика",
