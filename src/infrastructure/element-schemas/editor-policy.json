@@ -240,28 +240,9 @@
           ]
         },
         { "key": "required", "label": "Обязательность поля", "section": "Настройки" },
-        {
-          "key": "dynamicContent",
-          "label": "Динамический контент",
-          "helperText": "Значения подтягиваются из внешней системы при разработке",
-          "section": "Настройки"
-        },
-        {
-          "key": "complexLogic",
-          "label": "Сложная логика",
-          "helperText": "Варианты выбора управляют видимостью элементов шага",
-          "section": "Настройки"
-        },
-        {
-          "key": "multiselect",
-          "label": "Единичный выбор",
-          "section": "Настройки",
-          "invert": true,
-          "lockedWhen": [
-            { "key": "groupType", "equals": "radio", "value": false },
-            { "key": "groupType", "equals": "checkbox", "value": true }
-          ]
-        },
+        { "key": "dynamicContent", "label": "Динамический контент", "section": "Настройки" },
+        { "key": "complexLogic", "label": "Сложная логика", "section": "Настройки" },
+        { "key": "multiselect", "label": "Единичный выбор", "section": "Настройки", "invert": true },
         { "key": "search", "label": "Поиск", "section": "Настройки" },
         {
           "key": "optionsSource",
@@ -286,8 +267,7 @@
         {
           "key": "options",
           "view": "manual",
-          "label": "Варианты выбора",
-          "helperText": "Новое значение — и кнопкой «Значение» под элементом на канвасе",
+          "label": "",
           "item": { "id": "id", "label": "label" },
           "section": "Добавить список",
           "visibleWhen": { "key": "optionsSource", "equals": "manual" }
@@ -295,7 +275,7 @@
         {
           "key": "options",
           "view": "text",
-          "label": "Значения списком",
+          "label": "",
           "editor": "text",
           "delimiter": ";",
           "placeholder": "Значение 1; Значение 2; Значение 3",
