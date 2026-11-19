@@ -65,6 +65,11 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
   },
 }));
 
+// Высота многострочного текстового поля по макету [owner 2026-11-19]: от 2 строк,
+// растёт с текстом до 6, дальше — прокрутка. Одна для всех multiline политики.
+const MULTILINE_MIN_ROWS = 2;
+const MULTILINE_MAX_ROWS = 6;
+
 function TextPropertyEditor({ value, onChange, attribute }: PropertyEditorProps) {
   return (
     <AttributeField attribute={attribute}>
@@ -74,7 +79,8 @@ function TextPropertyEditor({ value, onChange, attribute }: PropertyEditorProps)
         variant="outlined"
         placeholder={attribute.placeholder}
         multiline={attribute.multiline}
-        rows={attribute.multiline ? 3 : undefined}
+        minRows={attribute.multiline ? MULTILINE_MIN_ROWS : undefined}
+        maxRows={attribute.multiline ? MULTILINE_MAX_ROWS : undefined}
         value={typeof value === 'string' ? value : ''}
         onChange={(event) => onChange(event.target.value)}
       />
