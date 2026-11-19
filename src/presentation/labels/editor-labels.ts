@@ -40,3 +40,10 @@ export function navigationLevelLabel(level: number): string {
 export function formStepLabel(level: number): string {
   return `Шаг ${level}`;
 }
+
+// Поле комментария-части элемента в панели атрибутов (US-05, [owner 2026-11-19]);
+// на канвасе — плашка под карточкой элемента.
+export const DEVELOPER_COMMENT_LABELS = {
+  label: 'Комментарий для разработчика',
+  helperText: 'Показывается плашкой под элементом на канвасе',
+} as const;

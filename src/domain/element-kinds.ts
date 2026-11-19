@@ -80,6 +80,15 @@ export function isCommentElement(rules: EditorRules, element: CanvasElement): bo
   return kindRules(rules, element.kind).family === 'comment';
 }
 
+/**
+ * У элемента есть комментарий-часть для разработчика (поле `comment`, US-05,
+ * [owner 2026-11-19]): у всех элементов, кроме комментария-элемента — он сам
+ * комментарий, плашка под ним дублировала бы его.
+ */
+export function supportsDeveloperComment(rules: EditorRules, element: CanvasElement): boolean {
+  return !isCommentElement(rules, element);
+}
+
 /** У вида есть варианты выбора — источники переходов между шагами [owner 2026-10-14]. */
 export function hasElementVariants(rules: EditorRules, element: CanvasElement): boolean {
   return kindRules(rules, element.kind).variants !== undefined;
