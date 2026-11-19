@@ -63,6 +63,12 @@ const useStyles = makeStyles<EditorTheme>(() => ({
     width: L.elementWidth,
     flexShrink: 0,
   },
+  // Последний вариант и кнопка «Значение» под ним — зазор как между вариантами.
+  cellWithAdd: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: L.optionGap,
+  },
   // Строка варианта: карточка варианта + зависящие от него элементы
   // правее — цель встаёт напротив своего варианта (макеты «layouting …»);
   // высота строки — по большему из них, следующий вариант сдвигается вниз.
@@ -205,49 +211,57 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
   // ширину здесь не рисуется: выходила за границу шага [owner 2026-10-15].
   const columnTarget = drag?.decision.kind === 'moveToLayer' && !anchor ? drag.column : null;
 
-  const renderTree = (element: CanvasElementData): ReactNode => (
-    <div key={element.id} className={classes.tree}>
-      <div className={classes.cell} data-layer-depth={element.layerDepth ?? 0}>
-        <DropIndicator anchor={anchor} elementId={element.id} placement="before" gap={L.rowGap} />
-        <ElementCard element={element} />
-        {element.complexLogic ? null : (
-          <DropIndicator anchor={anchor} elementId={element.id} placement="after" gap={L.rowGap} />
-        )}
-      </div>
-      {/* «После» Select'а — после всего его дерева (варианты и зависимые):
+  const renderTree = (element: CanvasElementData): ReactNode => {
+    const canAdd = element.complexLogic?.canAdd === true;
+    const lastOption = element.complexLogic?.options.at(-1);
+    return (
+      <div key={element.id} className={classes.tree}>
+        <div className={classes.cell} data-layer-depth={element.layerDepth ?? 0}>
+          <DropIndicator anchor={anchor} elementId={element.id} placement="before" gap={L.rowGap} />
+          <ElementCard element={element} />
+          {element.complexLogic ? null : (
+            <DropIndicator anchor={anchor} elementId={element.id} placement="after" gap={L.rowGap} />
+          )}
+        </div>
+        {/* «После» Select'а — после всего его дерева (варианты и зависимые):
           туда элемент и встанет; полоса между Select'ом и его вариантами
           обещала место, которого нет (N2). */}
-      {element.complexLogic ? (
-        <DropIndicator
-          anchor={anchor}
-          elementId={element.id}
-          placement="after"
-          gap={L.rowGap}
-          width={L.elementWidth}
-        />
-      ) : null}
-      {/* Варианты Select'а — карточки под ним, если из варианта есть связь
+        {element.complexLogic ? (
+          <DropIndicator
+            anchor={anchor}
+            elementId={element.id}
+            placement="after"
+            gap={L.rowGap}
+            width={L.elementWidth}
+          />
+        ) : null}
+        {/* Варианты Select'а — карточки под ним, если из варианта есть связь
           (variantsVisible; сейчас всегда — переход на шаг [owner 2026-10-14],
           а при «Сложной логике» — правило). */}
-      {element.complexLogic
-        ? element.complexLogic.options.map((option, index) => {
-            const dependents = children.get(option.handleId) ?? [];
-            return (
-              <div key={option.handleId} className={classes.optionRow}>
-                <div className={classes.cell}>
-                  <OptionCard option={option} index={index + 1} elementId={element.id} />
+        {element.complexLogic
+          ? element.complexLogic.options.map((option, index) => {
+              const dependents = children.get(option.handleId) ?? [];
+              // «Значение» — сразу под последним вариантом, а не под стопкой его
+              // зависимых элементов (способ «вручную», variant-source, [owner 2026-11-19]).
+              const withAdd = canAdd && option === lastOption;
+              return (
+                <div key={option.handleId} className={classes.optionRow}>
+                  <div className={`${classes.cell} ${withAdd ? classes.cellWithAdd : ''}`}>
+                    <OptionCard option={option} index={index + 1} elementId={element.id} />
+                    {withAdd ? <AddVariantButton elementId={element.id} /> : null}
+                  </div>
+                  {dependents.length > 0 ? (
+                    <div className={classes.subtrees}>{dependents.map(renderTree)}</div>
+                  ) : null}
                 </div>
-                {dependents.length > 0 ? (
-                  <div className={classes.subtrees}>{dependents.map(renderTree)}</div>
-                ) : null}
-              </div>
-            );
-          })
-        : null}
-      {/* «Значение» под вариантами — способ «вручную» (variant-source, [owner 2026-11-19]). */}
-      {element.complexLogic?.canAdd ? <AddVariantButton elementId={element.id} /> : null}
-    </div>
-  );
+              );
+            })
+          : null}
+        {/* Вариантов ещё нет — кнопка под самим элементом. */}
+        {canAdd && !lastOption ? <AddVariantButton elementId={element.id} /> : null}
+      </div>
+    );
+  };
 
   return (
     <div ref={layersRef} className={classes.layers} data-testid="form-step-layers" {...dropHandlers}>

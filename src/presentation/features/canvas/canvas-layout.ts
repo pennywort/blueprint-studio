@@ -147,14 +147,15 @@ function estimateStepHeight(
         children: childrenOf.get(logicSourceHandleId(id, variant.id)) ?? [],
       });
     }
-    // Кнопка «Значение» под вариантами — та же проверка, что у карточки (graph-flow-adapter).
+    // Кнопка «Значение» — та же проверка, что у карточки (graph-flow-adapter):
+    // под последним вариантом в его строке (FormStepLayers), без вариантов — под элементом.
     if (visible && canAddVariantOnCanvas(rules, component)) {
-      const previous = rows.at(-1)!;
-      rows.push({
-        top: previous.top + previous.height + S.optionGap,
-        height: S.addVariantHeight,
-        children: [],
-      });
+      const last = rows.at(-1)!;
+      if (variants.at(-1)) {
+        last.height += S.optionGap + S.addVariantHeight;
+      } else {
+        rows.push({ top: last.top + last.height + S.optionGap, height: S.addVariantHeight, children: [] });
+      }
     }
     const last = rows.at(-1)!;
     return layoutAnchoredRows(rows, last.top + last.height, (child) => tree(child, inner), S.rowGap).extent;
