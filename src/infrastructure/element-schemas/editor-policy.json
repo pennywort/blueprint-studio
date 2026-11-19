@@ -76,17 +76,23 @@
       "kind": "text-field",
       "label": "Text field",
       "category": "Форма",
-      "description": "Текстовое поле для ввода значения",
-      "card": { "title": "label", "subtitle": "placeholder", "icon": "icon" },
+      "description": "Поле для ввода информации пользователем",
+      "card": { "title": "label", "subtitle": "placeholder" },
       "defaults": { "label": "Текстовое поле" },
       "attributes": [
-        { "key": "label", "label": "Название", "required": true, "placeholder": "Например, Сумма вклада" },
-        { "key": "placeholder", "label": "Подсказка внутри поля", "placeholder": "Например, 100 000 ₽" },
-        { "key": "helperText", "label": "Подпись под полем" },
-        { "key": "tooltipTextIcon", "label": "Текст подсказки" },
-        { "key": "icon", "label": "Иконка" },
-        { "key": "required", "label": "Обязательное поле", "section": "Настройки" },
-        { "key": "multiline", "label": "Многострочное", "section": "Настройки" }
+        { "key": "label", "label": "Название поля", "required": true, "placeholder": "Например, Вопрос" },
+        {
+          "key": "placeholder",
+          "label": "Плейсхолдер",
+          "required": true,
+          "placeholder": "Например, Добавьте описание"
+        },
+        { "key": "required", "label": "Обязательность поля" },
+        { "key": "multiline", "label": "Многострочное" },
+        { "key": "counter", "label": "Ограничение символов", "toggle": true },
+        { "key": "helperText", "label": "Подсказка под полем", "multiline": true, "toggle": true },
+        { "key": "tooltipTextIcon", "label": "Подсказка иконкой", "multiline": true, "toggle": true },
+        { "key": "icon", "label": "Иконка", "hidden": true }
       ]
     },
     {

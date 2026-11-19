@@ -143,7 +143,7 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
       <ToggleGate
         key={`${component.id}:${id}`}
         attribute={attribute}
-        hasValue={value !== undefined}
+        hasValue={value !== undefined && value !== null && value !== ''}
         onClear={() => onChange(undefined)}
       >
         {editor}

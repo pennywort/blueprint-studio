@@ -7,12 +7,12 @@
 
 ## Сделано
 
-| Слот       | Что рисует                             | Элементы                                                     |
-| ---------- | -------------------------------------- | ------------------------------------------------------------ |
-| `title`    | основной текст                         | все, кроме ac-user-picker, ac-address-asun                   |
-| `subtitle` | вторая строка                          | list-item, widget-card, text-field, date, select             |
-| `badge`    | бейдж (адресат)                        | comment                                                      |
-| `icon`     | выбранная иконка (атрибут типа `icon`) | list-item `leftAtom`, widget-card, text-field, button `icon` |
+| Слот       | Что рисует                             | Элементы                                         |
+| ---------- | -------------------------------------- | ------------------------------------------------ |
+| `title`    | основной текст                         | все, кроме ac-user-picker, ac-address-asun       |
+| `subtitle` | вторая строка                          | list-item, widget-card, text-field, date, select |
+| `badge`    | бейдж (адресат)                        | comment                                          |
+| `icon`     | выбранная иконка (атрибут типа `icon`) | list-item `leftAtom`, widget-card, button `icon` |
 
 Иконка: глиф — из локального набора фреймворка (`@local/framework-icons`), без него —
 монограмма (`IconStub`, temporary-registry п. 8). Не выбрана — плейсхолдер вида.
