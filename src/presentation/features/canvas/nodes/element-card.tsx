@@ -274,6 +274,7 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
               title={element.title}
               secondaryText={element.secondaryText}
               icon={element.icon}
+              iconSlot={element.iconSlot}
             />
             <div className={classes.chips}>
               <span className={`${classes.chip} ${classes.chipAccent}`}>{element.kindLabel}</span>

@@ -21,6 +21,8 @@ export type ElementCatalog = {
   badge(element: CanvasElement): string | undefined;
   /** Имя иконки фреймворка на карточке: props[card.icon] [owner 2026-10-28]. */
   icon(element: CanvasElement): string | undefined;
+  /** У вида есть место иконки на карточке (card.icon политики) [owner 2026-11-19]. */
+  hasIcon(kind: CanvasElementKind): boolean;
   /** Чипы карточки по значениям атрибутов (card.chips политики) [owner 2026-11-19]. */
   chips(element: CanvasElement): readonly CardChip[];
 };
@@ -64,6 +66,7 @@ export function createElementCatalog(schemas: readonly ElementSchema[]): Element
     subtitle: (element) => textProp(element, byKind.get(element.kind)?.card.subtitle),
     badge: (element) => textProp(element, byKind.get(element.kind)?.card.badge),
     icon: (element) => textProp(element, byKind.get(element.kind)?.card.icon),
+    hasIcon: (kind) => byKind.get(kind)?.card.icon !== undefined,
     chips: (element) => {
       const schema = byKind.get(element.kind);
       return schema?.card.chips

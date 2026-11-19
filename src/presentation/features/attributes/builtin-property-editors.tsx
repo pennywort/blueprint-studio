@@ -254,7 +254,7 @@ function SelectPropertyEditor({ value, onChange, attribute }: PropertyEditorProp
 }
 
 // Выбор чипами [owner 2026-10-22]: выбранный — заливка цветом темы, остальные —
-// контур. Один вариант: повторный клик снимает выбор у необязательного
+// серая заливка без обводки [owner 2026-11-19]. Один вариант: повторный клик снимает выбор у необязательного
 // атрибута. Несколько (attribute.multiple): клик переключает вариант,
 // порядок значений — порядок вариантов; пустой выбор снимает значение.
 function ChipsPropertyEditor({ value, onChange, attribute }: PropertyEditorProps) {
@@ -281,7 +281,6 @@ function ChipsPropertyEditor({ value, onChange, attribute }: PropertyEditorProps
             clickable
             label={option.label}
             color={selected.has(option.value) ? 'primary' : 'default'}
-            variant={selected.has(option.value) ? 'default' : 'outlined'}
             aria-pressed={selected.has(option.value)}
             onClick={() => toggle(option.value)}
           />

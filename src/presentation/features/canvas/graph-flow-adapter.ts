@@ -127,6 +127,8 @@ export type CanvasElementData = {
   chips?: readonly CardChip[];
   /** Выбранная иконка фреймворка (card.icon политики); нет — плейсхолдер. */
   icon?: string;
+  /** У вида есть место иконки (card.icon политики) [owner 2026-11-19]. */
+  iconSlot?: boolean;
   /**
    * «Сложная логика» (T-037): поле присутствует у элемента с вариантами выбора.
    * available — на карточке есть чип-переключатель (complexLogicToggle);
@@ -279,9 +281,12 @@ function elementToElementData(
   if (subtitle) {
     data.secondaryText = subtitle;
   }
-  const icon = catalog.icon(element);
-  if (icon) {
-    data.icon = icon;
+  if (catalog.hasIcon(element.kind)) {
+    data.iconSlot = true;
+    const icon = catalog.icon(element);
+    if (icon) {
+      data.icon = icon;
+    }
   }
   if (hasElementVariants(rules, element)) {
     // Элемент выбора — вариантами источник переходов между шагами [owner

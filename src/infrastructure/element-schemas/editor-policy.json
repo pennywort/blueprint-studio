@@ -241,7 +241,19 @@
         },
         { "key": "required", "label": "Обязательность поля", "section": "Настройки" },
         { "key": "dynamicContent", "label": "Динамический контент", "section": "Настройки" },
-        { "key": "complexLogic", "label": "Сложная логика", "section": "Настройки" },
+        {
+          "key": "complexLogic",
+          "label": "Сложная логика",
+          "section": "Настройки",
+          "lockedWhen": [
+            {
+              "key": "dynamicContent",
+              "equals": true,
+              "value": false,
+              "notice": "При включении динамического контента отсутствует возможность настройки сложной логики"
+            }
+          ]
+        },
         { "key": "multiselect", "label": "Единичный выбор", "section": "Настройки", "invert": true },
         { "key": "search", "label": "Поиск", "section": "Настройки" },
         {
@@ -333,7 +345,7 @@
       "label": "Button",
       "category": "Форма",
       "description": "Кнопка действия",
-      "card": { "title": "label", "icon": "icon" },
+      "card": { "title": "label" },
       "defaults": { "label": "Кнопка", "variant": "contained", "color": "secondary" },
       "attributes": [
         { "key": "label", "label": "Текст кнопки", "required": true, "placeholder": "Например, Отправить" },

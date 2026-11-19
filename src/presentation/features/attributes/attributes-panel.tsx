@@ -11,6 +11,7 @@ import { useBufferedProps } from './use-buffered-props';
 import { ToggleGate } from './toggle-gate';
 import { activeLock } from '@domain/attribute-locks';
 import { patchWithLocks } from './attribute-locks';
+import { LockNotice } from './lock-notice';
 import './choice-list-editors';
 
 // Вёрстка по макетам docs/design-mockups/настройка-атрибутов-*: шапка с
@@ -135,7 +136,13 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
       />
     );
     if (!attribute.toggle) {
-      return <Fragment key={id}>{editor}</Fragment>;
+      return (
+        <Fragment key={id}>
+          {/* Пояснение фиксации — текст правила lockedWhen политики [owner 2026-11-19]. */}
+          {lock?.notice ? <LockNotice text={lock.notice} /> : null}
+          {editor}
+        </Fragment>
+      );
     }
     // Поле под переключателем (toggle политики): подпись — у переключателя;
     // ключ с id элемента сбрасывает «раскрыто» при смене выделения.
