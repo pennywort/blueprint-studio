@@ -1,7 +1,6 @@
 {
   "common": {
     "attributes": [
-      { "key": "availability", "label": "Доступность на платформе", "editor": "chips", "toggle": true },
       {
         "key": "developerComment",
         "label": "Комментарий для разработчика",
@@ -38,7 +37,8 @@
           "hidden": true
         },
         { "key": "leftAtom", "label": "Иконка" },
-        { "key": "linkHref", "label": "Внешняя ссылка", "placeholder": "https://…" }
+        { "key": "linkHref", "label": "Внешняя ссылка", "placeholder": "https://…" },
+        { "key": "availability", "label": "Доступность на платформе", "editor": "chips", "toggle": true }
       ]
     },
     {
@@ -52,7 +52,8 @@
         { "key": "title", "label": "Название", "required": true, "placeholder": "Например, Мои заявки" },
         { "key": "subtitle", "label": "Дополнительный текст", "placeholder": "Например, Статусы и сроки" },
         { "key": "icon", "label": "Иконка" },
-        { "key": "href", "label": "Внешняя ссылка", "placeholder": "https://…" }
+        { "key": "href", "label": "Внешняя ссылка", "placeholder": "https://…" },
+        { "key": "availability", "label": "Доступность на платформе", "editor": "chips", "toggle": true }
       ]
     },
     {

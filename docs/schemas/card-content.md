@@ -38,7 +38,7 @@
 | button                  | `variant` + `color` → мини-превью кнопки                         |
 | ac-configuration-item   | `ciTypes`, `multiple`, `required`                                |
 | address                 | `city`, `showCurrentLocation`, `showLastAddress`, `required`     |
-| все                     | `availability` (общий, chips[]) → чипы платформ                  |
+| list-item, widget-card  | `availability` (byKind, chips[]) → чипы платформ                 |
 
 ## Нельзя / не имеет смысла
 
