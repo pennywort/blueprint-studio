@@ -1,5 +1,4 @@
 import type {
-  AttributeOption,
   ElementAttribute,
   ElementAttributeType,
   ElementSchema,
@@ -46,44 +45,9 @@ export type SchemaBundle = {
   extensions?: SchemaExtensions;
 };
 
-/** Вид поля ввода enum в панели — ключ `editor` политики. */
-export type PolicyEditor = 'select' | 'radio' | 'chips';
-
-export type PolicyAttribute = {
-  key: string;
-  label?: string;
-  required?: boolean;
-  placeholder?: string;
-  helperText?: string;
-  multiline?: boolean;
-  section?: string;
-  /** Поле ввода enum: выпадающий список (по умолчанию), переключатели или чипы. */
-  editor?: PolicyEditor;
-  /** Подмножество enum схемы с подписями; без него — весь enum. */
-  options?: AttributeOption[];
-  item?: { id: string; label: string }; // ключи id и подписи элемента массива (optionList)
-  visibleWhen?: { key: string; equals: unknown };
-  hidden?: boolean; // не в панели, настройка сохранена; не required [owner 2026-11-18]
-};
-
-export type PolicyElement = {
-  kind: string;
-  label?: string;
-  category: string;
-  description?: string;
-  card?: { title?: string; subtitle?: string; badge?: string; icon?: string };
-  defaults?: Record<string, unknown>;
-  attributes: PolicyAttribute[];
-};
-
-export type EditorPolicy = {
-  /**
-   * Атрибуты надстроек extensions.all у всех элементов политики — после своих
-   * атрибутов элемента; элемент, указавший такой ключ сам, задаёт ему место.
-   */
-  common?: { attributes: PolicyAttribute[] };
-  elements: PolicyElement[];
-};
+// Форма политики — editor-policy-types.ts (R-MOD); реэкспорт для прежних импортов.
+import type { PolicyEditor, PolicyAttribute, PolicyElement, EditorPolicy } from './editor-policy-types';
+export type { PolicyEditor, PolicyAttribute, PolicyElement, EditorPolicy };
 
 export type SchemaSources = {
   framework: unknown;
@@ -304,8 +268,10 @@ function assembleAttribute(
     fail('тип значения в схеме не поддерживается редактором — уберите атрибут из политики');
     return null;
   }
-  if (schemaRequired ? policy.required === false || policy.hidden : policy.required && policy.hidden) {
-    fail('обязательный атрибут: политика не может снять обязательность или скрыть его (hidden)');
+  // hidden и toggle (выключение снимает значение) — только у необязательного [owner 2026-11-19].
+  const hides = policy.hidden || policy.toggle;
+  if (schemaRequired ? policy.required === false || hides : policy.required && hides) {
+    fail('обязательный атрибут: нельзя снять обязательность, скрыть (hidden) или убрать под toggle');
   }
   const attribute: ElementAttribute = {
     key: policy.key,
@@ -313,14 +279,13 @@ function assembleAttribute(
     store,
     required: schemaRequired || policy.required === true,
     label: policy.label ?? policy.key,
+    ...(policy.visibleWhen && { visibleWhen: policy.visibleWhen }),
+    ...(policy.toggle && { toggle: true }),
   };
   for (const field of ['placeholder', 'helperText', 'section'] as const) {
     if (policy[field] !== undefined) {
       attribute[field] = policy[field];
     }
-  }
-  if (policy.visibleWhen) {
-    attribute.visibleWhen = policy.visibleWhen;
   }
   if (policy.multiline && kind.type !== 'text') {
     fail('multiline — только у строкового атрибута');
