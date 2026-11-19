@@ -710,8 +710,7 @@ function ClickConnectionLine({ from }: { from: XYPosition }) {
   );
 }
 
-// Полоса-подсветка целевой колонки dnd (F6): координаты flow переводятся
-// в экранные через useViewport (pan/zoom); сама полоса — общая для слоёв.
+// Подсветка целевой колонки dnd (F6): flow → экран через useViewport; полоса — общая для слоёв.
 function DropZoneHighlight({ zone }: { zone: { x: number; width: number; blocked: boolean } }) {
   const { x: viewportX, zoom } = useViewport();
   return (
@@ -724,6 +723,7 @@ const STANDALONE_STORE = createCanvasInteractionStore();
 const NO_ACTIONS: CanvasActions = {
   selectElement: () => undefined,
   toggleComplexLogic: () => undefined,
+  addElementVariant: () => undefined,
   removeNode: () => undefined,
   addElementToStep: () => undefined,
   removeStep: () => undefined,

@@ -13,8 +13,22 @@ import type { CanvasElementKind } from '@domain/model/canvas-element';
 // массив значений enum — select/chips с multiple), stringList — массив строк,
 // optionList — массив объектов с id и подписью, icon — string с enum из
 // общей схемы иконок фреймворка (shared/icon.schema.json).
+// switches — enum взаимоисключающими switch (вложенные поля варианта — под
+// его switch); optionFile / optionText — тот же массив вариантов, что
+// optionList, из файла CSV или текста через разделитель [owner 2026-11-19].
 export type ElementAttributeType =
-  'bool' | 'text' | 'number' | 'select' | 'radio' | 'chips' | 'stringList' | 'optionList' | 'icon';
+  | 'bool'
+  | 'text'
+  | 'number'
+  | 'select'
+  | 'radio'
+  | 'chips'
+  | 'switches'
+  | 'stringList'
+  | 'optionList'
+  | 'optionFile'
+  | 'optionText'
+  | 'icon';
 
 // Где лежит значение атрибута в элементе карты: props — атрибуты элемента
 // фреймворка, ext — надстройки проекта над схемой (extensions схем проекта).
@@ -23,6 +37,19 @@ export type ElementAttributeStore = 'props' | 'ext';
 export type AttributeOption = {
   value: string;
   label: string;
+  /** Подсказка варианта (иконка «i» у switches) [owner 2026-11-19]. */
+  hint?: string;
+};
+
+/**
+ * Фиксация значения [owner 2026-11-19]: пока атрибут key равен equals, у
+ * поля значение value и оно недоступно; смена key в панели записывает value
+ * той же командой — в карте значение согласовано (радио → единичный выбор).
+ */
+export type AttributeLock = {
+  key: string;
+  equals: unknown;
+  value: unknown;
 };
 
 /** Форма элемента списка optionList: ключи id и подписи, шаблон нового элемента. */
@@ -67,6 +94,30 @@ export type ElementAttribute = {
    * хранится одно значение атрибута, схема и экспорт не меняются.
    */
   toggle?: boolean;
+  /**
+   * Вид ввода того же значения [owner 2026-11-19]: ключ может встретиться в
+   * описании несколько раз с разными view (список, файл, текст) — значение
+   * одно, видимость выбирает visibleWhen.
+   */
+  view?: string;
+  /** bool: переключатель показывает отрицание значения. */
+  invert?: boolean;
+  lockedWhen?: readonly AttributeLock[];
+  /** Разделитель значений optionText. */
+  delimiter?: string;
+};
+
+/**
+ * Чип карточки канваса по значению атрибута описания [owner 2026-11-19]:
+ * bool — текст label при значении when (по умолчанию true); enum — короткая
+ * подпись варианта (labels, иначе подпись варианта атрибута).
+ */
+export type ElementCardChip = {
+  key: string;
+  label?: string;
+  when?: boolean;
+  labels?: Readonly<Record<string, string>>;
+  tone?: 'default' | 'error';
 };
 
 /** Ключи props, которые карточка канваса показывает текстом, бейджем и иконкой. */
@@ -79,6 +130,8 @@ export type ElementCardFields = {
    * без ключа или без значения — плейсхолдер вида.
    */
   icon?: string;
+  /** Чипы по атрибутам в порядке политики (card.chips). */
+  chips?: readonly ElementCardChip[];
 };
 
 // Описание элемента для редактора: подписи вида, атрибуты в порядке
@@ -95,6 +148,8 @@ export type ElementSchema = {
   card: ElementCardFields;
   /** Значения props нового элемента. */
   defaults: Readonly<Record<string, unknown>>;
+  /** Значения надстроек ext нового элемента [owner 2026-11-19]. */
+  extDefaults: Readonly<Record<string, unknown>>;
   attributes: readonly ElementAttribute[];
 };
 

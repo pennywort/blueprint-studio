@@ -1,12 +1,13 @@
 // Версии формата записи карты в хранилище (ревью A11, R4). Запись без
 // номера — формат до миграции «универсальные элементы» (версия 1).
 // Каждая следующая версия добавляет шаг миграции в MIGRATIONS.
-export const GRAPH_RECORD_VERSION = 8;
+export const GRAPH_RECORD_VERSION = 9;
 
 import {
   isRecord,
   mapGraphElements,
   migrateDeveloperCommentToExt,
+  migrateSelectToSelectionList,
   type LegacyRecord,
 } from './graph-record-elements';
 
@@ -366,6 +367,7 @@ const MIGRATIONS: Readonly<Record<number, (raw: unknown) => unknown>> = {
   5: migrateComponentsToFramework,
   6: migrateComplexLogicToExt,
   7: migrateDeveloperCommentToExt,
+  8: migrateSelectToSelectionList,
 };
 
 // Запись хранилища → данные для доменной схемы: шаги миграции от версии

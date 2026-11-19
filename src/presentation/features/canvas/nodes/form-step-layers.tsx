@@ -15,6 +15,7 @@ import { useLayerPolicies } from '../layers/layer-policy';
 import { packLayerBands } from '../layers/layer-bands';
 import { ElementCard } from './element-card';
 import { OptionCard } from './option-card';
+import { AddVariantButton } from './add-variant-button';
 import {
   ColumnDropBar,
   columnBarX,
@@ -229,12 +230,12 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
           (variantsVisible; сейчас всегда — переход на шаг [owner 2026-10-14],
           а при «Сложной логике» — правило). */}
       {element.complexLogic
-        ? element.complexLogic.options.map((option) => {
+        ? element.complexLogic.options.map((option, index) => {
             const dependents = children.get(option.handleId) ?? [];
             return (
               <div key={option.handleId} className={classes.optionRow}>
                 <div className={classes.cell}>
-                  <OptionCard option={option} elementId={element.id} />
+                  <OptionCard option={option} index={index + 1} elementId={element.id} />
                 </div>
                 {dependents.length > 0 ? (
                   <div className={classes.subtrees}>{dependents.map(renderTree)}</div>
@@ -243,6 +244,8 @@ export function FormStepLayers({ elements, onDropElement }: FormStepLayersProps)
             );
           })
         : null}
+      {/* «Значение» под вариантами — способ «вручную» (variant-source, [owner 2026-11-19]). */}
+      {element.complexLogic?.canAdd ? <AddVariantButton elementId={element.id} /> : null}
     </div>
   );
 

@@ -18,6 +18,9 @@ import { useSelectLayer } from '@presentation/features/hotkeys/dismiss-layer';
 import type { EditorTheme } from '@presentation/theme/editor-theme';
 import { AttributeField } from './attribute-field';
 import { IconPropertyEditor } from './icon-property-editor';
+import { newVariantId } from './new-variant-id';
+import { appendVariantItem } from '@domain/variant-source';
+import { variantNumberLabel } from '@presentation/labels/editor-labels';
 import { registerPropertyEditor, type PropertyEditorProps } from './property-editor-registry';
 
 // Встроенные редакторы свойств (T-040): text → TextField, stringList →
@@ -126,8 +129,11 @@ function MultilinePropertyEditor({ value, onChange, attribute }: PropertyEditorP
   );
 }
 
-function BoolPropertyEditor({ value, onChange, attribute }: PropertyEditorProps) {
+// invert — переключатель показывает отрицание значения («Единичный выбор» =
+// не multiselect); disabled — значение зафиксировано (lockedWhen).
+function BoolPropertyEditor({ value, onChange, attribute, disabled }: PropertyEditorProps) {
   const classes = useStyles();
+  const checked = attribute.invert ? value !== true : value === true;
   return (
     <div className={classes.switchRow}>
       <div className={classes.switchText}>
@@ -139,9 +145,10 @@ function BoolPropertyEditor({ value, onChange, attribute }: PropertyEditorProps)
         ) : null}
       </div>
       <Switch
-        checked={value === true}
+        checked={checked}
+        disabled={disabled}
         inputProps={{ 'aria-label': attribute.label }}
-        onChange={(event) => onChange(event.target.checked)}
+        onChange={(event) => onChange(attribute.invert ? !event.target.checked : event.target.checked)}
       />
     </div>
   );
@@ -327,14 +334,12 @@ function OptionListPropertyEditor({ value, onChange, attribute }: PropertyEditor
           className={classes.addButton}
           startIcon={<editorIcons.add />}
           onClick={() =>
-            onChange([
-              ...items,
-              {
-                ...shape.template,
-                [shape.idKey]: `option-${crypto.randomUUID().slice(0, 8)}`,
-                [shape.labelKey]: `Вариант ${items.length + 1}`,
-              },
-            ])
+            onChange(
+              appendVariantItem(items, shape, {
+                id: newVariantId(),
+                label: variantNumberLabel(items.length + 1),
+              }),
+            )
           }
         >
           Добавить вариант

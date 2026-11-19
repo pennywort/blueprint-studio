@@ -24,7 +24,8 @@ import {
   kindRules,
 } from '@domain/element-kinds';
 import { containerCapabilities, variantsVisible, type ElementContainerKind } from '@domain/connection-matrix';
-import type { ElementCatalog } from '@presentation/features/element-catalog/element-catalog';
+import type { CardChip, ElementCatalog } from '@presentation/features/element-catalog/element-catalog';
+import { canAddVariantOnCanvas } from '@domain/variant-source';
 import {
   NODE_KIND_LABELS,
   NODE_SUBTITLES,
@@ -122,6 +123,8 @@ export type CanvasElementData = {
   secondaryText?: string;
   /** Подпись чипа типа («List item», «Text field»…). */
   kindLabel: string;
+  /** Чипы по атрибутам (card.chips политики, [owner 2026-11-19]). */
+  chips?: readonly CardChip[];
   /** Выбранная иконка фреймворка (card.icon политики); нет — плейсхолдер. */
   icon?: string;
   /**
@@ -129,17 +132,16 @@ export type CanvasElementData = {
    * available — на карточке есть чип-переключатель (complexLogicToggle);
    * enabled — атрибут complexLogic включён (варианты — источники правил);
    * options — строки option'ов для рендера с handle-id, если из вариантов
-   * есть связи в блоке (variantsVisible, connection-matrix).
+   * есть связи в блоке (variantsVisible, connection-matrix); canAdd — под
+   * ними кнопка «Значение» (variant-source, [owner 2026-11-19]).
    */
   complexLogic?: {
     available: boolean;
     enabled: boolean;
     options: ReadonlyArray<{ handleId: string; label: string; value: string; isDefault: boolean }>;
+    canAdd: boolean;
   };
-  /**
-   * Колонка элемента внутри шага формы (step-element-depths, [owner
-   * 2026-10-13]); у элементов страниц не задаётся.
-   */
+  /** Колонка элемента в шаге формы (step-element-depths, [owner 2026-10-13]); у страниц нет. */
   layerDepth?: number;
   /**
    * Option-handle варианта-источника правила, от которого зависит элемент:
@@ -206,16 +208,10 @@ export type CanvasNodeData = {
 export type CanvasNode = Node<CanvasNodeData, CanvasNodeType>;
 export type CanvasEdge = Edge;
 
-/**
- * Стрелка на конце ребра (дизайн): два закруглённых отрезка под углом.
- * SVG-маркер объявлен в EdgeArrowMarkerDefs (editor-canvas.tsx).
- */
+/** Стрелка на конце ребра (дизайн); SVG-маркер — EdgeArrowMarkerDefs (editor-canvas.tsx). */
 export const EDGE_ARROW_MARKER_ID = 'editor-edge-arrow';
 
-export type FlowGraph = {
-  nodes: CanvasNode[];
-  edges: CanvasEdge[];
-};
+export type FlowGraph = { nodes: CanvasNode[]; edges: CanvasEdge[] };
 
 // Контекст маппинга элементов: связи и правила графа, описания элементов.
 type ElementMapContext = {
@@ -276,6 +272,7 @@ function elementToElementData(
     props: element.props,
     title: catalog.title(element),
     kindLabel: catalog.kindLabel(element.kind),
+    chips: catalog.chips(element),
     logicTarget: false,
   };
   const subtitle = catalog.subtitle(element);
@@ -289,19 +286,18 @@ function elementToElementData(
   if (hasElementVariants(rules, element)) {
     // Элемент выбора — вариантами источник переходов между шагами [owner
     // 2026-10-14] и, с атрибутом complexLogic, правил «Сложной логики» (L4/L5).
-    const toggle = complexLogicToggle(catalog, rules, element, containerKind);
+    // Карточки вариантов — только если из них есть куда тянуть связь (connection-matrix).
+    const visible = variantsVisible(rules, element, containerKind);
     data.complexLogic = {
-      available: toggle !== null,
+      available: complexLogicToggle(catalog, rules, element, containerKind) !== null,
       enabled: isLogicSource(rules, element),
-      // Карточки вариантов — только если из них есть куда тянуть связь (connection-matrix).
-      options: (variantsVisible(rules, element, containerKind) ? elementVariants(rules, element) : []).map(
-        (variant) => ({
-          handleId: logicSourceHandleId(element.id, variant.id),
-          label: variant.label,
-          value: variant.id,
-          isDefault: variant.isDefault,
-        }),
-      ),
+      canAdd: visible && canAddVariantOnCanvas(rules, element),
+      options: (visible ? elementVariants(rules, element) : []).map((variant) => ({
+        handleId: logicSourceHandleId(element.id, variant.id),
+        label: variant.label,
+        value: variant.id,
+        isDefault: variant.isDefault,
+      })),
     };
   }
   const note = developerComment(element);

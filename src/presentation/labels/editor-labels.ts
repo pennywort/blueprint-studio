@@ -40,3 +40,38 @@ export function navigationLevelLabel(level: number): string {
 export function formStepLabel(level: number): string {
   return `Шаг ${level}`;
 }
+
+// Варианты элемента выбора (Selection list) [owner 2026-11-19]: кнопка под
+// элементом, номер значения на карточке варианта, загрузка списка файлом.
+export const VARIANT_LABELS = {
+  addOnCanvas: 'Значение',
+  isDefault: 'Предвыбор',
+  fileTemplate: 'Шаблон для заполнения',
+  fileTemplateFormat: 'csv',
+  fileTemplateDownload: 'Скачать шаблон',
+  fileTemplateName: 'шаблон-списка.csv',
+  /** Заголовок колонки шаблона CSV; при загрузке строка-заголовок пропускается. */
+  fileTemplateHeader: 'Значение',
+  fileAttachment: 'Вложение',
+  fileChoose: 'Выберите файл',
+  fileLoaded: 'Загружено',
+  fileRemove: 'Удалить файл',
+  fileEmpty: 'В файле нет значений',
+  /** Карточка вложения после перезагрузки: имени файла в карте нет, только значения. */
+  fileFromMap: 'Список из файла',
+} as const;
+
+/** Подпись нового варианта и номер значения на карточке варианта. */
+export function variantNumberLabel(index: number): string {
+  return `Значение ${index}`;
+}
+
+/** Размер файла для карточки вложения. */
+export function fileSizeLabel(bytes: number): string {
+  return bytes < 1024 ? `${bytes} Б` : `${Math.round(bytes / 1024)} КБ`;
+}
+
+/** Число значений, загруженных из файла. */
+export function variantCountLabel(count: number): string {
+  return `Значений: ${count}`;
+}

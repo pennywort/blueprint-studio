@@ -41,16 +41,16 @@ export function FieldSketch({ props, title }: ElementSketchProps) {
   );
 }
 
-/** Выпадающий список: поле со стрелкой. */
-export function SelectSketch({ props, title }: ElementSketchProps) {
+/**
+ * Только подпись поля: Selection list [owner 2026-11-19] — значения идут
+ * карточками под элементом, тип группы и настройки — чипами карточки.
+ */
+export function TitleSketch({ props, title }: ElementSketchProps) {
   const classes = useSketchStyles();
   return (
-    <Field
-      label={textOf(props, 'label') ?? title}
-      hint={textOf(props, 'placeholder') ?? labelsOf(props.options)[0]}
-      caret
-      classes={classes}
-    />
+    <div className={classes.column}>
+      <div className={classes.title}>{textOf(props, 'label') ?? title}</div>
+    </div>
   );
 }
 

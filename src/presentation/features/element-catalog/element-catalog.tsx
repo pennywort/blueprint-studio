@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import type { ElementSchema } from '@application/ports/element-schema-provider';
+import type { ElementCardChip, ElementSchema } from '@application/ports/element-schema-provider';
 import type { CanvasElement, CanvasElementKind } from '@domain/model/canvas-element';
 import { useContainer } from '@presentation/app/App';
 import { useSettingsSnapshot } from '@presentation/features/settings/use-settings';
@@ -21,7 +21,32 @@ export type ElementCatalog = {
   badge(element: CanvasElement): string | undefined;
   /** Имя иконки фреймворка на карточке: props[card.icon] [owner 2026-10-28]. */
   icon(element: CanvasElement): string | undefined;
+  /** Чипы карточки по значениям атрибутов (card.chips политики) [owner 2026-11-19]. */
+  chips(element: CanvasElement): readonly CardChip[];
 };
+
+export type CardChip = { text: string; tone: NonNullable<ElementCardChip['tone']> };
+
+// Чип по значению атрибута: bool — при значении when (не заданное = false),
+// enum — короткая подпись или подпись варианта; нет значения — чипа нет.
+function chipOf(chip: ElementCardChip, schema: ElementSchema, element: CanvasElement): CardChip | null {
+  const attribute = schema.attributes.find((item) => item.key === chip.key);
+  if (!attribute) {
+    return null;
+  }
+  const value = (attribute.store === 'props' ? element.props : element.ext)?.[chip.key];
+  const tone = chip.tone ?? 'default';
+  if (attribute.type === 'bool') {
+    return chip.label && (value === true) === (chip.when ?? true) ? { text: chip.label, tone } : null;
+  }
+  const text =
+    typeof value === 'string'
+      ? (chip.labels?.[value] ?? attribute.options?.find((option) => option.value === value)?.label)
+      : undefined;
+  return text ? { text, tone } : null;
+}
+
+const NO_CHIPS: readonly CardChip[] = [];
 
 const textProp = (element: CanvasElement, key: string | undefined): string | undefined => {
   const value = key === undefined ? undefined : element.props[key];
@@ -39,6 +64,14 @@ export function createElementCatalog(schemas: readonly ElementSchema[]): Element
     subtitle: (element) => textProp(element, byKind.get(element.kind)?.card.subtitle),
     badge: (element) => textProp(element, byKind.get(element.kind)?.card.badge),
     icon: (element) => textProp(element, byKind.get(element.kind)?.card.icon),
+    chips: (element) => {
+      const schema = byKind.get(element.kind);
+      return schema?.card.chips
+        ? schema.card.chips
+            .map((chip) => chipOf(chip, schema, element))
+            .filter((chip): chip is CardChip => chip !== null)
+        : NO_CHIPS;
+    },
   };
   return catalog;
 }

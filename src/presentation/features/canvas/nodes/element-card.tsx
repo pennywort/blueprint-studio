@@ -84,6 +84,11 @@ const useStyles = makeStyles<EditorTheme>((theme) => ({
     backgroundColor: theme.palette.primary.main,
     color: theme.palette.primary.contrastText,
   },
+  // Чип атрибута с tone: error («Обязательно», макет Selection list).
+  chipError: {
+    backgroundColor: theme.palette.error.main,
+    color: theme.palette.error.contrastText,
+  },
   // Ряд чипов внизу слева; иконки в ряду — не выше чипа (16px).
   chips: {
     display: 'flex',
@@ -274,6 +279,15 @@ export const ElementCard = memo(function ElementCard({ element }: ElementCardPro
             />
             <div className={classes.chips}>
               <span className={`${classes.chip} ${classes.chipAccent}`}>{element.kindLabel}</span>
+              {/* Чипы по значениям атрибутов — card.chips политики [owner 2026-11-19]. */}
+              {element.chips?.map((chip) => (
+                <span
+                  key={chip.text}
+                  className={`${classes.chip} ${chip.tone === 'error' ? classes.chipError : ''}`}
+                >
+                  {chip.text}
+                </span>
+              ))}
               {element.complexLogic?.available ? (
                 <button
                   type="button"

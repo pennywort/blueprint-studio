@@ -1,4 +1,5 @@
 import { ServiceGraphSchema, type ServiceGraph } from '@domain/model/service-graph';
+import { GROUP_TYPE, GROUP_TYPE_KEY, VARIANTS_SOURCE, VARIANTS_SOURCE_KEY } from '@domain/variant-source';
 import {
   toApplicationFormId,
   toBlueprintId,
@@ -84,7 +85,12 @@ export function createSampleGraph(): ServiceGraph {
                 // Режим «Сложной логики» включён (T-037): у вариантов —
                 // source-handle'ы; правила ниже показывают чекбокс при выборе
                 // «6 месяцев» и выплату процентов при «12 месяцах» (L-I5/ADR-14).
-                ext: { complexLogic: true },
+                // Selection list — радио, значения вручную [owner 2026-11-19].
+                ext: {
+                  complexLogic: true,
+                  [GROUP_TYPE_KEY]: GROUP_TYPE.radio,
+                  [VARIANTS_SOURCE_KEY]: VARIANTS_SOURCE.manual,
+                },
                 props: {
                   label: 'Срок вклада',
                   required: true,
@@ -105,7 +111,11 @@ export function createSampleGraph(): ServiceGraph {
                 id: toElementId('demo-field-payout'),
                 // Select, а не radio-group: атрибут «Сложная логика» — только в схеме select [owner 2026-10-27].
                 kind: 'select',
-                ext: { complexLogic: true },
+                ext: {
+                  complexLogic: true,
+                  [GROUP_TYPE_KEY]: GROUP_TYPE.select,
+                  [VARIANTS_SOURCE_KEY]: VARIANTS_SOURCE.manual,
+                },
                 props: {
                   label: 'Выплата процентов',
                   required: true,

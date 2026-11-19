@@ -9,6 +9,7 @@ import type { CanvasNode } from '../graph-flow-adapter';
 import { anchorFromPoint, type DropAnchorPosition, type ElementDragPayload } from '../element-dnd';
 import { ElementCard } from './element-card';
 import { OptionCard } from './option-card';
+import { AddVariantButton } from './add-variant-button';
 import { useCanvasActions, useCanvasInteraction } from '../canvas-interaction';
 import { useNodeStyles } from './node-styles';
 import { useHandlesSync } from './use-handles-sync';
@@ -143,9 +144,15 @@ function ScenarioNodeView({ id, data, type }: NodeProps<CanvasNode>) {
                   варианта на странице есть связь (variantsVisible, connection-matrix). */}
               {element.complexLogic && element.complexLogic.options.length > 0 ? (
                 <div className={classes.options}>
-                  {element.complexLogic.options.map((option) => (
-                    <OptionCard key={option.handleId} option={option} elementId={element.id} />
+                  {element.complexLogic.options.map((option, index) => (
+                    <OptionCard
+                      key={option.handleId}
+                      option={option}
+                      index={index + 1}
+                      elementId={element.id}
+                    />
                   ))}
+                  {element.complexLogic.canAdd ? <AddVariantButton elementId={element.id} /> : null}
                 </div>
               ) : null}
               <DropIndicator anchor={anchor} elementId={element.id} placement="after" gap={ELEMENTS_GAP} />

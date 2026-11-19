@@ -1,4 +1,5 @@
 import { DEVELOPER_COMMENT_KEY } from '@domain/element-kinds';
+import { GROUP_TYPE, GROUP_TYPE_KEY, VARIANTS_SOURCE, VARIANTS_SOURCE_KEY } from '@domain/variant-source';
 
 // Общее для шагов миграции записи карты (ревью A11, R4): обход списков
 // элементов всех блоков. Вынесено из graph-record-migration — файл > 400 строк.
@@ -45,3 +46,22 @@ export const migrateDeveloperCommentToExt = (raw: unknown): unknown =>
   mapGraphElements(raw, (elements) =>
     Array.isArray(elements) ? elements.map(migrateDeveloperComment) : elements,
   );
+
+// Версия 8 → 9 [owner 2026-11-19]: Select стал Selection list — тип группы и
+// способ заполнения вариантов в ext. Прежний Select — обычный выпадающий
+// список, варианты которого заданы вручную; заданные значения не меняются.
+const SELECTION_LIST_KIND = 'select';
+const LEGACY_SELECT_EXT = {
+  [GROUP_TYPE_KEY]: GROUP_TYPE.select,
+  [VARIANTS_SOURCE_KEY]: VARIANTS_SOURCE.manual,
+};
+
+function migrateSelect(element: unknown): unknown {
+  if (!isRecord(element) || element.kind !== SELECTION_LIST_KIND) {
+    return element;
+  }
+  return { ...element, ext: { ...LEGACY_SELECT_EXT, ...(isRecord(element.ext) ? element.ext : {}) } };
+}
+
+export const migrateSelectToSelectionList = (raw: unknown): unknown =>
+  mapGraphElements(raw, (elements) => (Array.isArray(elements) ? elements.map(migrateSelect) : elements));

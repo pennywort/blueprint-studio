@@ -8,6 +8,7 @@ import { computeFormStepDepths } from '@domain/form-step-depths';
 import { groupByLayer } from '@domain/layer-depths';
 import { elementVariants } from '@domain/element-kinds';
 import { variantsVisible } from '@domain/connection-matrix';
+import { canAddVariantOnCanvas } from '@domain/variant-source';
 import type { EditorRules } from '@domain/editor-rules';
 import { logicRulesToAnchorLinks, logicSourceHandleId } from './graph-flow-adapter';
 import {
@@ -37,8 +38,6 @@ export const CANVAS_LAYOUT = {
    * сторон (FORM_STEP_LAYOUT), отступы у краёв равные, как на странице [owner 2026-10-16].
    */
   formStepWidth: 376,
-  /** Отступ карточек вариантов Select'а слева — видно, чьи они (страница и шаг формы, [owner 2026-10-16]). */
-  optionIndent: 24,
   /**
    * Зазор между колонками шагов и между шагами одного уровня в узле формы;
    * вмещает полосу вставки с точками и отступом (DropBar, [owner 2026-10-15])
@@ -89,18 +88,19 @@ export const FORM_STEP_LAYOUT = {
    */
   rowGap: 24,
   /** Зазор Select → первый вариант и между вариантами (общий для страницы и шага, [owner 2026-10-16]). */
-  optionGap: 8,
+  optionGap: 12,
   stepPadding: 24,
   /** Высота карточки элемента/комментария (без комментария-части) [owner 2026-10-22]. */
   elementHeight: 200,
-  /** Оценка высоты карточки варианта Select'а. */
-  optionHeight: 44,
+  /** Высота карточки варианта: подпись + чип «Значение N» (макет Selection list, [owner 2026-11-19]). */
+  optionHeight: 80,
+  /** Высота кнопки «Значение» под вариантами (способ — вручную, [owner 2026-11-19]). */
+  addVariantHeight: 40,
   /**
    * Высота точки входа/выхода ребра правила от верха карточки [owner 2026-10-13]:
    * source-handle варианта и якорь цели на одной высоте — цель стоит верхом
    * вровень с вариантом, ребро идёт прямой горизонталью без «ступеньки».
-   * Равна половине высоты однострочного варианта (optionHeight) — handle по
-   * центру карточки, когда чипа значения нет [owner 2026-10-16].
+   * На уровне строки подписи варианта (отступ 12 + половина строки).
    */
   logicHandleTop: 22,
 } as const;
@@ -137,13 +137,23 @@ function estimateStepHeight(
     // Строки элемента: карточка, затем варианты элемента выбора — если из них
     // в шаге есть связи (variantsVisible; сейчас всегда — переходы на шаги, [owner 2026-10-14]).
     const rows: AnchorRow<string>[] = [{ top: 0, height: S.elementHeight, children: [] }];
-    const variants = variantsVisible(rules, component, 'formStep') ? elementVariants(rules, component) : [];
+    const visible = variantsVisible(rules, component, 'formStep');
+    const variants = visible ? elementVariants(rules, component) : [];
     for (const variant of variants) {
       const previous = rows.at(-1)!;
       rows.push({
         top: previous.top + previous.height + S.optionGap,
         height: S.optionHeight,
         children: childrenOf.get(logicSourceHandleId(id, variant.id)) ?? [],
+      });
+    }
+    // Кнопка «Значение» под вариантами — та же проверка, что у карточки (graph-flow-adapter).
+    if (visible && canAddVariantOnCanvas(rules, component)) {
+      const previous = rows.at(-1)!;
+      rows.push({
+        top: previous.top + previous.height + S.optionGap,
+        height: S.addVariantHeight,
+        children: [],
       });
     }
     const last = rows.at(-1)!;

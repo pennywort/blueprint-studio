@@ -75,9 +75,19 @@ const CHOICE_EDITORS: Readonly<
     { fallback: ElementAttributeType; editors: Readonly<Partial<Record<PolicyEditor, ElementAttributeType>>> }
   >
 > = {
-  enum: { fallback: 'select', editors: { select: 'select', radio: 'radio', chips: 'chips' } },
+  enum: {
+    fallback: 'select',
+    editors: { select: 'select', radio: 'radio', chips: 'chips', switches: 'switches' },
+  },
   // Несколько вариантов: переключатели не подходят — для них нужны флажки.
   enumList: { fallback: 'chips', editors: { chips: 'chips', select: 'select' } },
+};
+
+// Поле ввода массива вариантов (item) по ключу `editor` [owner 2026-11-19]:
+// один массив — разные способы его заполнить.
+const OPTION_LIST_EDITORS: Readonly<Partial<Record<PolicyEditor, ElementAttributeType>>> = {
+  file: 'optionFile',
+  text: 'optionText',
 };
 
 const stringEnum = (schema: JsonSchema): string[] | null =>
@@ -281,21 +291,27 @@ function assembleAttribute(
     label: policy.label ?? policy.key,
     ...(policy.visibleWhen && { visibleWhen: policy.visibleWhen }),
     ...(policy.toggle && { toggle: true }),
+    ...(policy.lockedWhen && { lockedWhen: policy.lockedWhen }),
+    ...(policy.invert && { invert: true }),
   };
-  for (const field of ['placeholder', 'helperText', 'section'] as const) {
+  for (const field of ['placeholder', 'helperText', 'section', 'view', 'delimiter'] as const) {
     if (policy[field] !== undefined) {
       attribute[field] = policy[field];
     }
   }
-  if (policy.multiline && kind.type !== 'text') {
-    fail('multiline — только у строкового атрибута');
-  }
-  if ((policy.options || policy.editor) && kind.type !== 'enum' && kind.type !== 'enumList') {
-    fail('options/editor — только у атрибута с enum в схеме');
-  }
-  if (policy.item && kind.type !== 'objectList') {
-    fail('item — только у массива объектов');
-  }
+  const listEditor = policy.editor ? OPTION_LIST_EDITORS[policy.editor] : undefined;
+  const isEnum = kind.type === 'enum' || kind.type === 'enumList';
+  // Поля политики, не подходящие значению атрибута, — ошибки `schemas:check`.
+  const misuse: [unknown, string][] = [
+    [policy.multiline && kind.type !== 'text', 'multiline — только у строкового атрибута'],
+    [policy.invert && kind.type !== 'bool', 'invert — только у bool'],
+    [policy.lockedWhen && policy.required, 'lockedWhen — только у необязательного атрибута'],
+    [policy.options && !isEnum, 'options — только у атрибута с enum в схеме'],
+    [policy.editor && !isEnum && !listEditor, 'editor — у enum или массива вариантов (file, text)'],
+    [policy.delimiter !== undefined && listEditor !== 'optionText', 'delimiter — только у editor: text'],
+    [policy.item && kind.type !== 'objectList', 'item — только у массива объектов'],
+  ];
+  misuse.filter(([wrong]) => wrong).forEach(([, message]) => fail(message));
   // Частая ошибка: «один / несколько» — свойство данных, не вида поля.
   if ('multiple' in policy) {
     fail('multiple задаётся в схеме (extensions схем проекта рядом с enum), не в политике');
@@ -336,7 +352,7 @@ function assembleAttribute(
       }
       const required = Array.isArray(kind.item.required) ? kind.item.required.map(String) : [];
       const template = Object.fromEntries(required.map((key) => [key, neutralValue(properties[key] ?? {})]));
-      attribute.type = 'optionList';
+      attribute.type = listEditor ?? 'optionList';
       attribute.item = { idKey: policy.item.id, labelKey: policy.item.label, template };
       return attribute;
     }
@@ -435,11 +451,13 @@ function assembleElement(
   const listed = [...policy.attributes, ...common.filter((attribute) => !ownKeys.has(attribute.key))];
 
   for (const attributePolicy of listed) {
-    if (seen.has(attributePolicy.key)) {
-      fail(attributePolicy.key)('атрибут указан в политике дважды');
+    // Ключ повторяется только с разными view — виды ввода одного значения.
+    const entry = `${attributePolicy.key}#${attributePolicy.view ?? ''}`;
+    if (seen.has(entry)) {
+      fail(attributePolicy.key)('атрибут указан в политике дважды (повтор ключа — только с другим view)');
       continue;
     }
-    seen.add(attributePolicy.key);
+    seen.add(entry);
     const property = properties[attributePolicy.key];
     const extProperty = property ? undefined : extProperties[attributePolicy.key];
     if (!property && !extProperty) {
@@ -469,12 +487,23 @@ function assembleElement(
   }
 
   for (const attribute of attributes) {
-    const target = attribute.visibleWhen?.key;
-    if (target !== undefined && !attributes.some((item) => item.key === target)) {
-      fail(attribute.key)(`visibleWhen ссылается на атрибут вне политики или скрытый: ${target}`);
+    const targets = [attribute.visibleWhen?.key, ...(attribute.lockedWhen ?? []).map((lock) => lock.key)];
+    for (const target of targets) {
+      if (target !== undefined && !attributes.some((item) => item.key === target)) {
+        fail(attribute.key)(
+          `visibleWhen/lockedWhen ссылается на атрибут вне политики или скрытый: ${target}`,
+        );
+      }
     }
   }
+  // Чипы карточки (card.chips) — по видимому bool (с label) или enum атрибуту политики.
   const card = policy.card ?? {};
+  for (const chip of card.chips ?? []) {
+    const attribute = attributes.find((item) => item.key === chip.key);
+    if (!attribute || (attribute.type === 'bool' ? !chip.label : !attribute.options)) {
+      fail(`card.chips.${chip.key}`)('чип — по bool (с label) или enum атрибуту политики');
+    }
+  }
   for (const key of [card.title, card.subtitle, card.badge]) {
     if (key !== undefined && !properties[key]) {
       fail(`card.${key}`)('нет в схеме элемента');
@@ -489,13 +518,16 @@ function assembleElement(
     }
   }
 
-  const defaults = policy.defaults ?? {};
-  for (const [key, value] of Object.entries(defaults)) {
-    const property = properties[key];
+  // Умолчания — по ключу: свойство схемы → props, надстройка проекта → ext [owner 2026-11-19].
+  const defaults: Record<string, unknown> = {};
+  const extDefaults: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(policy.defaults ?? {})) {
+    const property = properties[key] ?? extProperties[key];
     const kind = property ? valueKind(property, refs) : null;
     if (!kind || !matchesKind(kind, value)) {
       fail(`defaults.${key}`)('значения нет в схеме или оно не подходит по типу');
     }
+    (properties[key] ? defaults : extDefaults)[key] = value;
   }
 
   const title = typeof schema.title === 'string' ? schema.title : policy.kind;
@@ -507,6 +539,7 @@ function assembleElement(
     ...(policy.description ? { description: policy.description } : null),
     card,
     defaults,
+    extDefaults,
     attributes,
   };
 }

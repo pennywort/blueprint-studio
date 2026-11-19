@@ -58,6 +58,7 @@ import { useSelection } from './use-selection';
 import { useConnection } from './use-connection';
 import { searchCanvasNodes, useCanvasSearch } from './use-canvas-search';
 import { useCanvasNodes } from './use-canvas-nodes';
+import { useAddElementVariant } from './use-add-element-variant';
 
 export type { SelectedElementInfo } from './use-selection';
 
@@ -96,10 +97,9 @@ export function useEditorGraph() {
   const notifications = useEditorNotifications();
   const idGenerator = container.cradle.idGenerator;
   const catalog = useElementCatalog();
-  // props нового элемента — defaults его описания (политика редактора).
+  // Новый элемент — defaults и extDefaults его описания (политика редактора).
   const newElement = useCallback(
-    (kind: CanvasElementKind) =>
-      createDefaultElement(kind, idGenerator.next(), catalog.schema(kind)?.defaults ?? {}),
+    (kind: CanvasElementKind) => createDefaultElement(kind, idGenerator.next(), catalog.schema(kind)),
     [catalog, idGenerator],
   );
 
@@ -470,11 +470,8 @@ export function useEditorGraph() {
     [graphRef, notifications, runCommand],
   );
 
-  // Чип «Сложная логика» на карточке (T-037/T-066, L4) — тот же атрибут
-  // complexLogic, что свитч панели: та же команда UpdateElementProps, каскад
-  // правил и переходов — внутри неё, undo возвращает и флаг, и рёбра. Чип
-  // спрашивает подтверждение каскада. TEMPORARY: нативный confirm до диалогов
-  // дизайн-системы.
+  // Чип «Сложная логика» (T-037/T-066, L4) — атрибут complexLogic, команда UpdateElementProps
+  // (каскад правил и переходов внутри, undo — целиком). TEMPORARY: confirm до диалогов ДС.
   const toggleComplexLogic = useCallback(
     (elementId: string) => {
       const found = findElementInGraph(graphRef.current, elementId);
@@ -516,10 +513,12 @@ export function useEditorGraph() {
 
   // Действия узлов и карточек — стабильный объект в контексте канваса
   // (ревью A4): все обработчики стабильны, замыканий в data больше нет.
+  const addElementVariant = useAddElementVariant(graphRef, runCommand, rules);
   const canvasActions = useMemo<CanvasActions>(
     () => ({
       selectElement,
       toggleComplexLogic,
+      addElementVariant,
       removeNode,
       addElementToStep,
       removeStep,
@@ -536,6 +535,7 @@ export function useEditorGraph() {
       reportElementRows,
       selectElement,
       toggleComplexLogic,
+      addElementVariant,
       removeNode,
       addElementToStep,
       removeStep,

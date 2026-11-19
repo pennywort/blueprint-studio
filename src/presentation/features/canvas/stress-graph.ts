@@ -1,5 +1,6 @@
 import { ServiceGraphSchema, type ServiceGraph } from '@domain/model/service-graph';
 import type { CanvasElement } from '@domain/model/canvas-element';
+import { GROUP_TYPE, GROUP_TYPE_KEY, VARIANTS_SOURCE, VARIANTS_SOURCE_KEY } from '@domain/variant-source';
 import {
   toApplicationFormId,
   toBlueprintId,
@@ -53,7 +54,11 @@ function stepFields(prefix: string, count: number): { elements: unknown[]; rules
       elements.push({
         id,
         kind: 'select',
-        ext: { complexLogic: true },
+        ext: {
+          complexLogic: true,
+          [GROUP_TYPE_KEY]: GROUP_TYPE.select,
+          [VARIANTS_SOURCE_KEY]: VARIANTS_SOURCE.manual,
+        },
         props: {
           label: `Список ${index + 1}`,
           options: OPTION_VALUES.map((value) => ({ id: value, label: `Вариант ${value}` })),

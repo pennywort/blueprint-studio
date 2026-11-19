@@ -1,3 +1,4 @@
+import { Fragment, type ReactNode } from 'react';
 import { TextField, Typography, makeStyles } from '@material-ui/core';
 import type { ElementAttribute, ElementSchema } from '@application/ports/element-schema-provider';
 import type { ElementPropsPatch } from '@application/commands/update-element-props';
@@ -8,6 +9,9 @@ import { resolvePropertyEditor } from './property-editor-registry';
 import './builtin-property-editors';
 import { useBufferedProps } from './use-buffered-props';
 import { ToggleGate } from './toggle-gate';
+import { activeLock } from '@domain/attribute-locks';
+import { patchWithLocks } from './attribute-locks';
+import './choice-list-editors';
 
 // Вёрстка по макетам docs/design-mockups/настройка-атрибутов-*: шапка с
 // разделителем, поля с подписью над ними (AttributeField), секции —
@@ -75,27 +79,77 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
     ...buffer.draft?.ext,
   };
 
+  const all = schema?.attributes ?? [];
+  // Поля варианта переключателей (switches) рисуются под его switch, а не в потоке.
+  const switchKeys = new Set(all.filter((item) => item.type === 'switches').map((item) => item.key));
+  const nestedIn = (attribute: ElementAttribute) =>
+    attribute.visibleWhen !== undefined && switchKeys.has(attribute.visibleWhen.key);
+  const isVisible = (attribute: ElementAttribute) =>
+    !attribute.visibleWhen || values[attribute.visibleWhen.key] === attribute.visibleWhen.equals;
   // Атрибут виден, если выполнено его условие видимости (политика).
-  const attributes = (schema?.attributes ?? []).filter(
-    (attribute) =>
-      !attribute.visibleWhen || values[attribute.visibleWhen.key] === attribute.visibleWhen.equals,
-  );
+  const attributes = all.filter((attribute) => !nestedIn(attribute) && isVisible(attribute));
 
-  // Группировка по секциям: поля без секции — первыми, далее — каждая
-  // именованная секция один раз (порядок — первое появление в политике),
-  // поля внутри сохраняют порядок политики.
+  // Группировка по секциям — подряд идущие поля одной секции [owner 2026-11-19]:
+  // порядок панели — порядок политики (общий комментарий — внизу, как в
+  // макете); секция — заголовок над своей группой («Тип группы», «Настройки»).
   const groups: { section: string | null; attributes: ElementAttribute[] }[] = [];
-  const groupIndex = new Map<string | null, number>();
   for (const attribute of attributes) {
     const section = attribute.section ?? null;
-    const existing = groupIndex.get(section);
-    if (existing !== undefined) {
-      groups[existing]!.attributes.push(attribute);
+    const last = groups.at(-1);
+    if (last && last.section === section) {
+      last.attributes.push(attribute);
     } else {
-      groupIndex.set(section, groups.length);
       groups.push({ section, attributes: [attribute] });
     }
   }
+
+  const renderAttribute = (attribute: ElementAttribute): ReactNode => {
+    const id = `${attribute.key}#${attribute.view ?? ''}`;
+    const lock = activeLock(attribute, values);
+    const value = lock ? lock.value : values[attribute.key];
+    const Editor = resolvePropertyEditor(attribute.type);
+    // Значение иной ветви схемы (например, объект в «строка | объект»)
+    // или без редактора — read-only сводка: данные не портятся.
+    if (!Editor || (value !== undefined && !isValueCompatible(attribute, value))) {
+      return (
+        <AttributeField key={id} attribute={attribute}>
+          <TextField fullWidth size="small" variant="outlined" disabled value={formatReadonlyValue(value)} />
+        </AttributeField>
+      );
+    }
+    const onChange = (next: unknown) => buffer.change(patchWithLocks(all, values, attribute, next));
+    // Поля варианта switches (visibleWhen на этот атрибут) — под его переключателем.
+    const renderOption = (option: string) => {
+      const children = all.filter(
+        (item) => item.visibleWhen?.key === attribute.key && item.visibleWhen.equals === option,
+      );
+      return children.length > 0 ? children.map(renderAttribute) : null;
+    };
+    const editor = (
+      <Editor
+        value={value}
+        attribute={attribute.toggle ? { ...attribute, label: '' } : attribute}
+        onChange={onChange}
+        disabled={lock !== undefined}
+        renderOption={renderOption}
+      />
+    );
+    if (!attribute.toggle) {
+      return <Fragment key={id}>{editor}</Fragment>;
+    }
+    // Поле под переключателем (toggle политики): подпись — у переключателя;
+    // ключ с id элемента сбрасывает «раскрыто» при смене выделения.
+    return (
+      <ToggleGate
+        key={`${component.id}:${id}`}
+        attribute={attribute}
+        hasValue={value !== undefined}
+        onClear={() => onChange(undefined)}
+      >
+        {editor}
+      </ToggleGate>
+    );
+  };
 
   return (
     <div className={classes.panel} data-testid="attributes-panel" onBlur={buffer.flush}>
@@ -110,9 +164,9 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
         </Typography>
       </div>
 
-      {groups.map((group) => (
+      {groups.map((group, index) => (
         <div
-          key={group.section ?? ''}
+          key={`${index}:${group.section ?? ''}`}
           className={`${classes.group} ${group.section !== null ? classes.section : ''}`}
         >
           {group.section !== null ? (
@@ -120,42 +174,7 @@ export function AttributesPanel({ component, schema, onUpdateProps }: Attributes
               {group.section}
             </Typography>
           ) : null}
-          {group.attributes.map((attribute) => {
-            const value = values[attribute.key];
-            const Editor = resolvePropertyEditor(attribute.type);
-            // Значение иной ветви схемы (например, объект в «строка | объект»)
-            // или без редактора — read-only сводка: данные не портятся.
-            if (!Editor || (value !== undefined && !isValueCompatible(attribute, value))) {
-              return (
-                <AttributeField key={attribute.key} attribute={attribute}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    variant="outlined"
-                    disabled
-                    value={formatReadonlyValue(value)}
-                  />
-                </AttributeField>
-              );
-            }
-            const onChange = (next: unknown) =>
-              buffer.change({ [attribute.store]: { [attribute.key]: next } });
-            if (!attribute.toggle) {
-              return <Editor key={attribute.key} value={value} attribute={attribute} onChange={onChange} />;
-            }
-            // Поле под переключателем (toggle политики): подпись — у переключателя;
-            // ключ с id элемента сбрасывает «раскрыто» при смене выделения.
-            return (
-              <ToggleGate
-                key={`${component.id}:${attribute.key}`}
-                attribute={attribute}
-                hasValue={value !== undefined}
-                onClear={() => onChange(undefined)}
-              >
-                <Editor value={value} attribute={{ ...attribute, label: '' }} onChange={onChange} />
-              </ToggleGate>
-            );
-          })}
+          {group.attributes.map((attribute) => renderAttribute(attribute))}
         </div>
       ))}
     </div>
@@ -176,6 +195,7 @@ function isValueCompatible({ type, multiple }: ElementAttribute, value: unknown)
     case 'radio':
     case 'select':
     case 'chips':
+    case 'switches':
     case 'icon':
       return typeof value === 'string';
     case 'bool':
@@ -185,6 +205,8 @@ function isValueCompatible({ type, multiple }: ElementAttribute, value: unknown)
     case 'stringList':
       return Array.isArray(value) && value.every((item) => typeof item === 'string');
     case 'optionList':
+    case 'optionFile':
+    case 'optionText':
       return Array.isArray(value) && value.every((item) => typeof item === 'object' && item !== null);
   }
 }

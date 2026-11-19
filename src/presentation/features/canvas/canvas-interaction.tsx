@@ -75,6 +75,8 @@ export type CanvasActions = {
   /** Режим — ElementSelectMode (use-selection): only по умолчанию. */
   selectElement: (elementId: string, mode?: ElementSelectMode) => void;
   toggleComplexLogic: (elementId: string) => void;
+  /** Кнопка «Значение» под вариантами: новый вариант в конец [owner 2026-11-19]. */
+  addElementVariant: (elementId: string) => void;
   removeNode: (nodeId: string, nodeType: CanvasNodeType) => void;
   addElementToStep: (formId: string, stepId: string, kind: CanvasElementKind) => void;
   removeStep: (formId: string, stepId: string) => void;

@@ -3,9 +3,13 @@ import type { SvgIconProps } from '@material-ui/core';
 import {
   AccountTree,
   Add,
+  AttachFile,
   Code,
   Delete,
+  DescriptionOutlined,
   ErrorOutline,
+  GetApp,
+  InfoOutlined,
   Map as MapIcon,
   NoteAdd,
   PanTool,
@@ -45,7 +49,11 @@ export type EditorIconRole =
   | 'structurePanel'
   | 'elementPlaceholder'
   | 'visibilityDependency'
-  | 'violation';
+  | 'violation'
+  | 'info'
+  | 'download'
+  | 'attach'
+  | 'file';
 
 export type EditorIcon = ComponentType<SvgIconProps>;
 export type EditorIconOverrides = Partial<Record<EditorIconRole, EditorIcon>>;
@@ -70,6 +78,11 @@ const muiIcons: Record<EditorIconRole, EditorIcon> = {
   elementPlaceholder: ShowChart,
   visibilityDependency: Visibility,
   violation: ErrorOutline,
+  // Selection list [owner 2026-11-19]: подсказка варианта, шаблон CSV, вложение.
+  info: InfoOutlined,
+  download: GetApp,
+  attach: AttachFile,
+  file: DescriptionOutlined,
 };
 
 export const editorIcons: Record<EditorIconRole, EditorIcon> = { ...muiIcons, ...localIcons };

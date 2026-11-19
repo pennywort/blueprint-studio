@@ -8,7 +8,7 @@ import {
   CheckboxSketch,
   FieldSketch,
   RadioGroupSketch,
-  SelectSketch,
+  TitleSketch,
   TypographySketch,
 } from './control-sketches';
 
@@ -19,7 +19,8 @@ const SKETCHES: Readonly<Record<string, ElementSketchComponent>> = {
   'list-item': ListItemSketch,
   'text-field': FieldSketch,
   'date-range-field-picker': FieldSketch,
-  select: SelectSketch,
+  // Selection list: подпись, значения — карточками под элементом [owner 2026-11-19].
+  select: TitleSketch,
   checkbox: CheckboxSketch,
   'radio-group': RadioGroupSketch,
   button: ButtonSketch,

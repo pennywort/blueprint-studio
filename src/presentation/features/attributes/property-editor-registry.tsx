@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import type { ElementAttribute, ElementAttributeType } from '@application/ports/element-schema-provider';
 
 // Реестр редакторов свойств (T-040): маппинг «тип атрибута → React-компонент
@@ -15,6 +15,13 @@ export type PropertyEditorProps = {
   onChange: (value: unknown) => void;
   /** Описание атрибута (схема + политика): подпись, подсказки, варианты, обязательность. */
   attribute: ElementAttribute;
+  /** Значение зафиксировано другим атрибутом (lockedWhen) — поле недоступно. */
+  disabled?: boolean;
+  /**
+   * Вложенные поля выбранного варианта (switches): атрибуты, видимые при
+   * этом значении (visibleWhen), рисуются под его переключателем [owner 2026-11-19].
+   */
+  renderOption?: (value: string) => ReactNode;
 };
 
 export type PropertyEditor = ComponentType<PropertyEditorProps>;
